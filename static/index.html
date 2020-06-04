@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Quetz</title>
+</head>
+<body>
+<h1>Quetz</h1>
+<a href="/auth/github/login" style="margin-right: 100px" id="login">login with github</a>
+<a href="/auth/github/revoke" style="margin-right: 100px" id="revoke">revoke github</a>
+<a href="/auth/logout" id="logout">logout</a>
+<div id="status"></div>
+
+<script>
+
+    const status = document.getElementById('status');
+
+    getProfile();
+
+    function getProfile() {
+        fetch('/me')
+            .then(response => {
+                if (response.status === 200) {
+                    return response.json()
+                } else if (response.status === 401) {
+                    status.innerHTML = 'not logged in';
+                    throw Error("");
+                } else {
+                    status.innerHTML = `error: ${response.status}`;
+                    throw Error(`error: ${response.status}`);
+                }
+            })
+            .then(data => {
+                status.innerHTML = `<h2>Welcome ${data.name}</h2><img height="50px" src="${data.avatar_url}"/><br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            });
+    }
+
+</script>
+</body>
+</html>

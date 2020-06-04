@@ -1,0 +1,176 @@
+from sqlalchemy.orm import Session, joinedload
+from .db_models import Profile, User, Channel, ChannelMember, Package, PackageMember, ApiKey
+from quetz import rest_models
+import uuid
+
+
+class Dao:
+
+    def __init__(self, db: Session):
+        self.db = db
+
+    def get_profile(self, user_id):
+        return self.db.query(Profile).filter(Profile.user_id == user_id).one()
+
+    def get_user(self, user_id):
+        return self.db.query(User).filter(User.id == user_id).one()
+
+    def get_users(self, skip: int, limit: int, q: str):
+        query = self.db.query(User) \
+            .filter(User.username.isnot(None))
+
+        if q:
+            query = query.filter(User.username.ilike(f'%{q}%'))
+
+        return query \
+            .options(joinedload(User.profile)) \
+            .offset(skip) \
+            .limit(limit) \
+            .all()
+
+    def get_user_by_username(self, username: str):
+        return self.db.query(User) \
+            .filter(User.username == username) \
+            .options(joinedload(User.profile)) \
+            .one_or_none()
+
+    def get_channels(self, skip: int, limit: int, q: str):
+        query = self.db.query(Channel)
+
+        if q:
+            query = query.filter(Channel.name.ilike(f'%{q}%'))
+
+        return query \
+            .offset(skip) \
+            .limit(limit) \
+            .all()
+
+    def create_channel(self, data: rest_models.Channel, user_id: bytes, role: str):
+        channel = Channel(
+            name=data.name,
+            description=data.description)
+
+        member = ChannelMember(
+            channel=channel,
+            user_id=user_id, role=role)
+
+        self.db.add(channel)
+        self.db.add(member)
+        self.db.commit()
+
+    def get_packages(self, channel_name: str, skip: int, limit: int, q: str):
+        query = self.db.query(Package) \
+            .filter(Package.channel_name == channel_name)
+
+        if q:
+            query = query.filter(Package.name.like(f'%{q}%'))
+
+        return query \
+            .offset(skip) \
+            .limit(limit) \
+            .all()
+
+    def get_channel(self, channel_name: str):
+        return self.db.query(Channel) \
+            .filter(Channel.name == channel_name).one_or_none()
+
+    def get_package(self, channel_name: str, package_name: str):
+        return self.db.query(Package).join(Channel) \
+            .filter(Channel.name == channel_name) \
+            .filter(Package.name == package_name) \
+            .one_or_none()
+
+    def create_package(self, channel_name: str, new_package: rest_models.Package, user_id: bytes,
+                       role: str):
+        package = Package(
+            name=new_package.name,
+            description=new_package.description)
+
+        package.channel = self.db.query(Channel) \
+            .filter(Channel.name == channel_name) \
+            .one()
+
+        member = PackageMember(
+            channel=package.channel,
+            package=package,
+            user_id=user_id, role=role)
+
+        self.db.add(package)
+        self.db.add(member)
+        self.db.commit()
+
+    def get_channel_members(self, channel_name: str):
+        return self.db.query(ChannelMember).join(User) \
+            .filter(ChannelMember.channel_name == channel_name) \
+            .all()
+
+    def get_channel_member(self, channel_name, username):
+        return self.db.query(ChannelMember).join(User) \
+            .filter(ChannelMember.channel_name == channel_name) \
+            .filter(User.username == username) \
+            .one_or_none()
+
+    def create_channel_member(self, channel_name, new_member):
+        user = self.get_user_by_username(new_member.username)
+
+        member = ChannelMember(
+            channel_name=channel_name,
+            user_id=user.id,
+            role=new_member.role)
+
+        self.db.add(member)
+        self.db.commit()
+
+    def get_package_members(self, channel_name, package_name):
+        return self.db.query(PackageMember).join(User) \
+            .filter(User.username.isnot(None)) \
+            .filter(PackageMember.channel_name == channel_name) \
+            .filter(PackageMember.package_name == package_name) \
+            .all()
+
+    def get_package_member(self, channel_name, package_name, username):
+        return self.db.query(PackageMember).join(User) \
+            .filter(PackageMember.channel_name == channel_name) \
+            .filter(PackageMember.package_name == package_name) \
+            .filter(User.username == username) \
+            .one_or_none()
+
+    def create_package_member(self, channel_name, package_name, new_member):
+        user = self.get_user_by_username(new_member.username)
+
+        member = PackageMember(
+            channel_name=channel_name,
+            package_name=package_name,
+            user_id=user.id,
+            role=new_member.role)
+
+        self.db.add(member)
+        self.db.commit()
+
+    def get_api_keys(self, user_id):
+        return self.db.query(PackageMember, ApiKey) \
+            .join(User, PackageMember.user_id == User.id) \
+            .join(ApiKey, ApiKey.user_id == User.id) \
+            .filter(ApiKey.owner_id == user_id) \
+            .all()
+
+    def create_api_key(self, user_id, api_key: rest_models.BaseApiKey, key):
+        user = User(id=uuid.uuid4().bytes)
+        owner = self.get_user(user_id)
+        db_api_key = ApiKey(
+            key=key,
+            description=api_key.description,
+            user=user,
+            owner=owner
+        )
+
+        self.db.add(db_api_key)
+        for role in api_key.roles:
+            package_member = PackageMember(
+                user=user,
+                channel_name=role.channel,
+                package_name=role.package,
+                role=role.role)
+            self.db.add(package_member)
+
+        self.db.commit()
