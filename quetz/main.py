@@ -28,7 +28,7 @@ app.add_middleware(
     secret_key=config.QUETZ_SESSION_SECRET,
     https_only=config.QUETZ_SESSION_HTTPS_ONLY)
 
-app.mount('/static', StaticFiles(directory='static'), name='static')
+app.mount('/static', StaticFiles(directory='static', html=True), name='static')
 
 app.include_router(auth_github.router)
 

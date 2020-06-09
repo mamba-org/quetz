@@ -28,7 +28,7 @@ uvicorn quetz.main:app --reload
 ```
 
 Links:
- * http://localhost:8000/static/index.html - Login with your github account
+ * http://localhost:8000/static - Login with your github account
  * http://localhost:8000/dummylogin/[ alice | bob | carol | dave] - Login with test user
  * http://localhost:8000/docs - Swagger UI for this REST service
 
@@ -66,4 +66,9 @@ Output:
 
 ─────────────────────────────────────────────────────────────────────────────────────────────────────
 ...
+```
+
+Browse channels:
+```
+http://localhost:8000/static/channels/channel0/
 ```
