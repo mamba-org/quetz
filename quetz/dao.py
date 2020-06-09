@@ -1,3 +1,6 @@
+# Copyright 2020 QuantStack
+# Distributed under the terms of the Modified BSD License.
+
 from sqlalchemy.orm import Session, joinedload
 from .db_models import Profile, User, Channel, ChannelMember, Package, PackageMember, ApiKey
 from quetz import rest_models

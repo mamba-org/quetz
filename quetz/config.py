@@ -1,3 +1,6 @@
+# Copyright 2020 QuantStack
+# Distributed under the terms of the Modified BSD License.
+
 import os
 
 QUETZ_GITHUB_CLIENT_ID = os.getenv('QUETZ_GITHUB_CLIENT_ID')

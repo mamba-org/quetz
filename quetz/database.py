@@ -1,3 +1,6 @@
+# Copyright 2020 QuantStack
+# Distributed under the terms of the Modified BSD License.
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker

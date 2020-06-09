@@ -1,3 +1,6 @@
+# Copyright 2020 QuantStack
+# Distributed under the terms of the Modified BSD License.
+
 from pydantic import BaseModel, Field
 from typing import List
 

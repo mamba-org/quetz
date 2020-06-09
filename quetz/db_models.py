@@ -1,3 +1,6 @@
+# Copyright 2020 QuantStack
+# Distributed under the terms of the Modified BSD License.
+
 from sqlalchemy import Column, ForeignKey, String, BLOB, Index, Boolean
 from sqlalchemy.orm import relationship
 
