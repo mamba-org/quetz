@@ -7,7 +7,7 @@ Usage
 Create environment:
 ```
 mamba create -n quetz -c conda-forge python fastapi authlib httpx=0.12.0 sqlalchemy sqlite \
-python-multipart uvicorn
+python-multipart uvicorn conda-build
 
 conda activate quetz
 ```
@@ -32,9 +32,38 @@ Links:
  * http://localhost:8000/dummylogin/[ alice | bob | carol | dave] - Login with test user
  * http://localhost:8000/docs - Swagger UI for this REST service
 
-Run test CLI client:
+Download `xtensor` as test package:
+```
+./download-test-package.sh
+```
+
+Run test upload CLI client:
 ```
 ./test-cli-client.sh
 ```
 
-This uploads `testupload.txt` to `./files/Channel 0/Package 0/`
+Install the test package with conda:
+```
+mamba install -c http://localhost:8000/static/channels/channel0 -c conda-forge xtensor
+```
+
+Output:
+```
+...
+  Package  Version  Build          Channel                                                     Size
+─────────────────────────────────────────────────────────────────────────────────────────────────────
+  Install:
+─────────────────────────────────────────────────────────────────────────────────────────────────────
+
+  xtensor   0.16.1  0              http://localhost:8000/static/channels/channel0/osx-64     109 KB
+  xtl       0.4.16  h04f5b5a_1000  conda-forge/osx-64                                         47 KB
+
+  Summary:
+
+  Install: 2 packages
+
+  Total download: 156 KB
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────
+...
+```

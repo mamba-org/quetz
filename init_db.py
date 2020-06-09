@@ -31,14 +31,14 @@ try:
 
     for channel_index in range(30):
         channel = Channel(
-            name=f'Channel {channel_index}',
-            description=f'Description of Channel {channel_index}',
+            name=f'channel{channel_index}',
+            description=f'Description of channel{channel_index}',
             private=False)
 
         for package_index in range(random.randint(5, 100)):
             package = Package(
-                name=f'Package {package_index}',
-                description=f'Description of Package {package_index}')
+                name=f'package{package_index}',
+                description=f'Description of package{package_index}')
             channel.packages.append(package)
 
             test_user = testUsers[random.randint(0, len(testUsers) - 1)]
@@ -50,26 +50,40 @@ try:
 
             db.add(package_member)
 
-            if channel_index == 0 and package_index == 0:
-                # create API key
-                key = 'E_KaBFstCKI9hTdPM7DQq56GglRHf2HW7tQtq6si370'
+        if channel_index == 0:
+            package = Package(
+                name=f'xtensor',
+                description=f'Description of xtensor')
+            channel.packages.append(package)
 
-                key_user = User(id=uuid.uuid4().bytes)
+            test_user = testUsers[random.randint(0, len(testUsers) - 1)]
+            package_member = PackageMember(
+                package=package,
+                channel=channel,
+                user=test_user,
+                role='owner')
 
-                api_key = ApiKey(
-                    key=key,
-                    description='test API key',
-                    user=key_user,
-                    owner=test_user
-                )
-                db.add(api_key)
+            db.add(package_member)
 
-                key_package_member = PackageMember(
-                    user=key_user,
-                    channel_name=channel.name,
-                    package_name=package.name,
-                    role='maintainer')
-                db.add(key_package_member)
+            # create API key
+            key = 'E_KaBFstCKI9hTdPM7DQq56GglRHf2HW7tQtq6si370'
+
+            key_user = User(id=uuid.uuid4().bytes)
+
+            api_key = ApiKey(
+                key=key,
+                description='test API key',
+                user=key_user,
+                owner=test_user
+            )
+            db.add(api_key)
+
+            key_package_member = PackageMember(
+                user=key_user,
+                channel_name=channel.name,
+                package_name=package.name,
+                role='maintainer')
+            db.add(key_package_member)
 
         db.add(channel)
 

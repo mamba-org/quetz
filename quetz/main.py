@@ -1,6 +1,5 @@
 from typing import List
 from fastapi import Depends, FastAPI, HTTPException, status, Request, File, UploadFile
-from fastapi.responses import FileResponse
 
 from starlette.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
@@ -10,6 +9,9 @@ import uuid
 import secrets
 import shutil
 import os
+import tarfile
+import json
+import subprocess
 
 from quetz import auth_github
 from quetz import config
@@ -342,28 +344,25 @@ def post_api_key(
 @app.post('/channels/{channel_name}/packages/{package_name}/files/', status_code=201,
           tags=['files'])
 def post_file(
-        file: UploadFile = File(...),
+        files: List[UploadFile] = File(...),
         package: db_models.Package = Depends(get_package_or_fail),
         auth: authorization.Rules = Depends(get_rules)):
     auth.assert_upload_file(package.channel.name, package.name)
 
-    dir = f'files/{package.channel.name}/{package.name}/'
-    os.makedirs(dir, exist_ok=True)
+    channel_dir = f'static/channels/{package.channel.name}'
+    for file in files:
+        with tarfile.open(fileobj=file.file._file, mode="r:bz2") as tar:
+            info = json.load(tar.extractfile('info/index.json'))
 
-    with open(f'{dir}/{file.filename}', 'wb') as my_file:
-        shutil.copyfileobj(file.file, my_file)
+        parts = file.filename.split('-')
+        if parts[0] != package.name or info['name'] != package.name:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
+        dir = f'{channel_dir}/{info["subdir"]}/'
+        os.makedirs(dir, exist_ok=True)
 
-@app.get('/channels/{channel_name}/packages/{package_name}/files/{filename}',
-         response_class=FileResponse, tags=['files'])
-def get_file(
-        filename: str,
-        package: db_models.Package = Depends(get_package_or_fail)):
+        file.file._file.seek(0)
+        with open(f'{dir}/{file.filename}', 'wb') as my_file:
+            shutil.copyfileobj(file.file, my_file)
 
-    path = f'files/{package.channel.name}/{package.name}/{filename}'
-    if not os.path.exists(path):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'File \'{filename}\' not found')
-
-    return FileResponse(path)
+    subprocess.run(['conda', 'index', channel_dir])
