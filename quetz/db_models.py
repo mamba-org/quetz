@@ -67,8 +67,8 @@ class Package(Base):
     __tablename__ = 'packages'
 
     name = Column(String, primary_key=True, index=True)
-    description = Column(String)
     channel_name = Column(String, ForeignKey('channels.name'), primary_key=True, index=True)
+    description = Column(String)
 
     channel = relationship('Channel', uselist=False, back_populates='packages')
 
