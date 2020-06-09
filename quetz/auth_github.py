@@ -1,3 +1,6 @@
+# Copyright 2020 QuantStack
+# Distributed under the terms of the Modified BSD License.
+
 from starlette.responses import RedirectResponse
 from fastapi import APIRouter, Request
 from authlib.integrations.starlette_client import OAuth
