@@ -1,8 +1,9 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-from sqlalchemy.orm import Session, joinedload
-from .db_models import Profile, User, Channel, ChannelMember, Package, PackageMember, ApiKey
+from sqlalchemy.orm import Session, joinedload, aliased
+from .db_models import Profile, User, Channel, ChannelMember, Package, PackageMember, ApiKey, \
+    PackageVersion
 from quetz import rest_models
 import uuid
 
@@ -177,3 +178,31 @@ class Dao:
             self.db.add(package_member)
 
         self.db.commit()
+
+    def create_version(self, package, platform, version, build_number, build_string, filename, info,
+                       uploader_id):
+        version = PackageVersion(
+            id=uuid.uuid4().bytes,
+            channel_name=package.channel_name,
+            package_name=package.name,
+            platform=platform,
+            version=version,
+            build_number=build_number,
+            build_string=build_string,
+            filename=filename,
+            info=info,
+            uploader_id=uploader_id
+        )
+        self.db.add(version)
+        self.db.commit()
+
+    def get_package_versions(self, package):
+        ApiKeyProfile = aliased(Profile)
+
+        return self.db.query(PackageVersion, Profile, ApiKeyProfile) \
+            .outerjoin(Profile, Profile.user_id == PackageVersion.uploader_id) \
+            .outerjoin(ApiKey, ApiKey.user_id == PackageVersion.uploader_id) \
+            .outerjoin(ApiKeyProfile, ApiKey.owner_id == ApiKeyProfile.user_id) \
+            .filter(PackageVersion.channel_name == package.channel_name) \
+            .filter(PackageVersion.package_name == package.name) \
+            .all()

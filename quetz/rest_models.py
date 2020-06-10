@@ -3,6 +3,7 @@
 
 from pydantic import BaseModel, Field
 from typing import List
+from datetime import datetime
 
 
 class Profile(BaseModel):
@@ -68,3 +69,21 @@ class BaseApiKey(BaseModel):
 
 class ApiKey(BaseApiKey):
     key: str
+
+
+class PackageVersion(BaseModel):
+    id: str
+    channel_name: str
+    package_name: str
+    platform: str
+    version: str
+    build_string: str
+    build_number: int
+
+    filename: str
+    info: dict
+    uploader: Profile
+    time_created: datetime
+
+    class Config:
+        orm_mode = True

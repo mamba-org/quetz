@@ -306,6 +306,25 @@ def post_package_member(
     dao.create_package_member(package.channel.name, package.name, new_member)
 
 
+@app.get('/channels/{channel_name}/packages/{package_name}/versions',
+         response_model=List[rest_models.PackageVersion], tags=['packages'])
+def get_package_versions(
+        package: db_models.Package = Depends(get_package_or_fail),
+        dao: Dao = Depends(get_dao)):
+
+    version_profile_list = dao.get_package_versions(package)
+    version_list = []
+
+    for version, profile, api_key_profile in version_profile_list:
+        # TODO: don't abuse db models for this.
+        version.id = str(uuid.UUID(bytes=version.id))
+        version.info = json.loads(version.info)
+        version.uploader = profile if profile else api_key_profile
+        version_list.append(version)
+
+    return version_list
+
+
 @app.get('/api-keys', response_model=List[rest_models.ApiKey], tags=['API keys'])
 def get_api_keys(
         dao: Dao = Depends(get_dao),
@@ -349,6 +368,7 @@ def post_api_key(
 def post_file(
         files: List[UploadFile] = File(...),
         package: db_models.Package = Depends(get_package_or_fail),
+        dao: Dao = Depends(get_dao),
         auth: authorization.Rules = Depends(get_rules)):
     auth.assert_upload_file(package.channel.name, package.name)
 
@@ -367,5 +387,17 @@ def post_file(
         file.file._file.seek(0)
         with open(f'{dir}/{file.filename}', 'wb') as my_file:
             shutil.copyfileobj(file.file, my_file)
+
+        user_id = auth.assert_user()
+
+        dao.create_version(
+            package=package,
+            platform=info['subdir'],
+            version=info['version'],
+            build_number=info['build_number'],
+            build_string=info['build'],
+            filename=file.filename,
+            info=json.dumps(info),
+            uploader_id=user_id)
 
     subprocess.run(['conda', 'index', channel_dir])

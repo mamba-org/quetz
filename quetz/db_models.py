@@ -1,7 +1,8 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-from sqlalchemy import Column, ForeignKey, String, BLOB, Index, Boolean
+from sqlalchemy import (Column, ForeignKey, String, BLOB, Index, Boolean, Integer, DateTime, func,
+                        UniqueConstraint)
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -110,3 +111,33 @@ class ApiKey(Base):
 
     def __repr__(self):
         return f'<ApiKey key={self.key}>'
+
+
+class PackageVersion(Base):
+    __tablename__ = 'package_versions'
+
+    id = Column(UUID, primary_key=True)
+    channel_name = Column(String, ForeignKey('channels.name'))
+    package_name = Column(String, ForeignKey('packages.name'))
+    platform = Column(String)
+    version = Column(String)
+    build_string = Column(String)
+    build_number = Column(Integer)
+
+    filename = Column(String)
+    info = Column(String)
+    uploader_id = Column(UUID, ForeignKey('users.id'))
+    time_created = Column(DateTime(timezone=True), server_default=func.now())
+
+    uploader = relationship('User')
+
+
+Index('package_version_name_index', PackageVersion.channel_name, PackageVersion.package_name)
+
+UniqueConstraint(PackageVersion.channel_name,
+                 PackageVersion.package_name,
+                 PackageVersion.platform,
+                 PackageVersion.version,
+                 PackageVersion.build_string,
+                 PackageVersion.build_number,
+                 name='package_version_index')
