@@ -2,7 +2,8 @@
 # Distributed under the terms of the Modified BSD License.
 
 from typing import List
-from fastapi import Depends, FastAPI, HTTPException, status, Request, File, UploadFile
+from fastapi import Depends, FastAPI, HTTPException, status, Request, File, UploadFile, APIRouter
+from fastapi.responses import HTMLResponse
 
 from starlette.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
@@ -31,10 +32,11 @@ app.add_middleware(
     secret_key=config.QUETZ_SESSION_SECRET,
     https_only=config.QUETZ_SESSION_HTTPS_ONLY)
 
-app.mount('/static', StaticFiles(directory='static', html=True), name='static')
+api_router = APIRouter()
 
 app.include_router(auth_github.router)
 
+app.mount("/static", StaticFiles(directory='static/dist/', html=True), name="static")
 
 # Dependency injection
 
@@ -97,22 +99,19 @@ async def check_token_revocation(session):
                 detail='Not logged in',
             )
 
-
 def logout(session):
     session.pop('user_id', None)
     session.pop('identity_provider', None)
     session.pop('token', None)
 
-
 # endpoints
-
 @app.route('/auth/logout')
 async def route_logout(request):
     logout(request.session)
     return RedirectResponse('/static/index.html')
 
 
-@app.get('/dummylogin/{username}', tags=['dev'])
+@api_router.get('/dummylogin/{username}', tags=['dev'])
 def dummy_login(
         username: str,
         dao: Dao = Depends(get_dao),
@@ -126,7 +125,7 @@ def dummy_login(
     return RedirectResponse('/static/index.html')
 
 
-@app.get('/me', response_model=rest_models.Profile, tags=['users'])
+@api_router.get('/me', response_model=rest_models.Profile, tags=['users'])
 async def me(
         session: dict = Depends(get_session),
         dao: Dao = Depends(get_dao),
@@ -142,7 +141,7 @@ async def me(
     return profile
 
 
-@app.get('/users', response_model=List[rest_models.User], tags=['users'])
+@api_router.get('/users', response_model=List[rest_models.User], tags=['users'])
 def get_users(
         dao: Dao = Depends(get_dao),
         skip: int = 0, limit: int = 10, q: str = None):
@@ -153,7 +152,7 @@ def get_users(
     return user_list
 
 
-@app.get('/users/{username}', response_model=rest_models.User, tags=['users'])
+@api_router.get('/users/{username}', response_model=rest_models.User, tags=['users'])
 def get_user(
         username: str,
         dao: Dao = Depends(get_dao)):
@@ -169,7 +168,7 @@ def get_user(
     return user
 
 
-@app.get('/channels', response_model=List[rest_models.Channel], tags=['channels'])
+@api_router.get('/channels', response_model=List[rest_models.Channel], tags=['channels'])
 def get_channels(
         dao: Dao = Depends(get_dao),
         skip: int = 0, limit: int = 10, q: str = None):
@@ -178,12 +177,12 @@ def get_channels(
     return dao.get_channels(skip, limit, q)
 
 
-@app.get('/channels/{channel_name}', response_model=rest_models.Channel, tags=['channels'])
+@api_router.get('/channels/{channel_name}', response_model=rest_models.Channel, tags=['channels'])
 def get_channel(channel: db_models.Channel = Depends(get_channel_or_fail)):
     return channel
 
 
-@app.post('/channels', status_code=201, tags=['channels'])
+@api_router.post('/channels', status_code=201, tags=['channels'])
 def post_channel(
         new_channel: rest_models.Channel,
         dao: Dao = Depends(get_dao),
@@ -201,7 +200,7 @@ def post_channel(
     dao.create_channel(new_channel, user_id, authorization.OWNER)
 
 
-@app.get('/channels/{channel_name}/packages', response_model=List[rest_models.Package],
+@api_router.get('/channels/{channel_name}/packages', response_model=List[rest_models.Package],
          tags=['packages'])
 def get_packages(
         channel: db_models.Channel = Depends(get_channel_or_fail),
@@ -211,14 +210,14 @@ def get_packages(
     return dao.get_packages(channel.name, skip, limit, q)
 
 
-@app.get('/channels/{channel_name}/packages/{package_name}', response_model=rest_models.Package,
+@api_router.get('/channels/{channel_name}/packages/{package_name}', response_model=rest_models.Package,
          tags=['packages'])
 def get_package(
         package: db_models.Package = Depends(get_package_or_fail)):
     return package
 
 
-@app.post('/channels/{channel_name}/packages', status_code=201, tags=['packages'])
+@api_router.post('/channels/{channel_name}/packages', status_code=201, tags=['packages'])
 def post_package(
         new_package: rest_models.Package,
         channel: db_models.Channel = Depends(get_channel_or_fail),
@@ -235,7 +234,7 @@ def post_package(
     dao.create_package(channel.name, new_package, user_id, authorization.OWNER)
 
 
-@app.get('/channels/{channel_name}/members', response_model=List[rest_models.Member],
+@api_router.get('/channels/{channel_name}/members', response_model=List[rest_models.Member],
          tags=['channels'])
 def get_channel_members(
         channel: db_models.Channel = Depends(get_channel_or_fail),
@@ -252,7 +251,7 @@ def get_channel_members(
     return member_list
 
 
-@app.post('/channels/{channel_name}/members', status_code=201, tags=['channels'])
+@api_router.post('/channels/{channel_name}/members', status_code=201, tags=['channels'])
 def post_channel_member(
         new_member: rest_models.PostMember,
         channel: db_models.Channel = Depends(get_channel_or_fail),
@@ -270,7 +269,7 @@ def post_channel_member(
     dao.create_channel_member(channel.name, new_member)
 
 
-@app.get('/channels/{channel_name}/packages/{package_name}/members',
+@api_router.get('/channels/{channel_name}/packages/{package_name}/members',
          response_model=List[rest_models.Member], tags=['packages'])
 def get_package_members(
         package: db_models.Package = Depends(get_package_or_fail),
@@ -287,7 +286,7 @@ def get_package_members(
     return member_list
 
 
-@app.post('/channels/{channel_name}/packages/{package_name}/members', status_code=201,
+@api_router.post('/channels/{channel_name}/packages/{package_name}/members', status_code=201,
           tags=['packages'])
 def post_package_member(
         new_member: rest_models.PostMember,
@@ -306,7 +305,7 @@ def post_package_member(
     dao.create_package_member(package.channel.name, package.name, new_member)
 
 
-@app.get('/channels/{channel_name}/packages/{package_name}/versions',
+@api_router.get('/channels/{channel_name}/packages/{package_name}/versions',
          response_model=List[rest_models.PackageVersion], tags=['packages'])
 def get_package_versions(
         package: db_models.Package = Depends(get_package_or_fail),
@@ -325,7 +324,7 @@ def get_package_versions(
     return version_list
 
 
-@app.get('/api-keys', response_model=List[rest_models.ApiKey], tags=['API keys'])
+@api_router.get('/api-keys', response_model=List[rest_models.ApiKey], tags=['API keys'])
 def get_api_keys(
         dao: Dao = Depends(get_dao),
         auth: authorization.Rules = Depends(get_rules)):
@@ -349,7 +348,7 @@ def get_api_keys(
         lambda member_api_key: member_api_key[1])]
 
 
-@app.post('/api-keys', status_code=201, tags=['API keys'])
+@api_router.post('/api-keys', status_code=201, tags=['API keys'])
 def post_api_key(
         api_key: rest_models.BaseApiKey,
         dao: Dao = Depends(get_dao),
@@ -363,7 +362,7 @@ def post_api_key(
     dao.create_api_key(user_id, api_key, key)
 
 
-@app.post('/channels/{channel_name}/packages/{package_name}/files/', status_code=201,
+@api_router.post('/channels/{channel_name}/packages/{package_name}/files/', status_code=201,
           tags=['files'])
 def post_file(
         files: List[UploadFile] = File(...),
@@ -401,3 +400,16 @@ def post_file(
             uploader_id=user_id)
 
     subprocess.run(['conda', 'index', channel_dir])
+
+app.include_router(
+    api_router,
+    prefix="/api",
+)
+
+@app.get("/api/.*", status_code=404, include_in_schema=False)
+def invalid_api():
+    return None
+
+@app.get("/", include_in_schema=False)
+def root():
+    return HTMLResponse(open('static/dist/index.html').read())

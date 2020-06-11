@@ -34,7 +34,7 @@
     },
     methods: {
       fetchData: function() {
-        return fetch("http://localhost:8000/channels").then((msg) => {
+        return fetch("/api/channels").then((msg) => {
           console.log(msg);
           return msg.json().then((decoded) => {
               this.columns = ["Name", "Description", "Private"];

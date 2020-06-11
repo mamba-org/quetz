@@ -29,7 +29,7 @@
     },
     methods: {
       fetchData: function() {
-        return fetch("http://localhost:8000/channels/" + this.$route.params.channel_id + "/packages").then((msg) => {
+        return fetch("/api/channels/" + this.$route.params.channel_id + "/packages").then((msg) => {
           return msg.json().then((decoded) => {
               console.log(decoded);
               this.columns = ["Name", "Description"];

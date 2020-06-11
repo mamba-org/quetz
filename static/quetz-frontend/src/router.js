@@ -18,6 +18,11 @@ export default new Router({
       component: Channels
     },
     {
+      path: '/',
+      name: 'root_channels',
+      component: Channels
+    },
+    {
       path: '/users',
       name: 'users',
       component: Users

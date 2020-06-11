@@ -10,6 +10,7 @@
     <template slot="header-global">
       <template v-if="avatar_url">
         <div class="user_welcome">Welcome, <i>{{ name }}</i></div>
+        <cv-button v-on:click="logout">Logout</cv-button>
         <img class="avatar-img" :src="avatar_url"  />
       </template>
       <template v-else>
@@ -58,17 +59,19 @@
     },
     methods: {
       signin() {
-        window.location.href = "http://localhost:8000/auth/github/login";
+        window.location.href = "/auth/github/login";
         console.log("Signing in");
       },
+      logout() {
+        window.location.href = "/auth/logout";
+        console.log("Signing out.")
+      },
       me() {
-        fetch("http://localhost:8000/me").then((msg) => {
-          console.log("Found myself");
-          console.log(msg);
-          // msg.json().then((decoded) => {
-          //   this.name = decoded.name;
-          //   this.avatar_url = decoded.avatar_url;
-          // })
+        fetch("/api/me").then((msg) => {
+          msg.json().then((decoded) => {
+            this.name = decoded.name;
+            this.avatar_url = decoded.avatar_url;
+          })
         })
       },
       onClick() {

@@ -2,7 +2,7 @@
 <div class="bx--grid">
   <div class="bx--row">
     <div class="bx--col-lg-13 bx--offset-lg-3">
-        <h1>Channels</h1>
+        <h1>Users</h1>
         <cv-data-table
           :columns="columns" :data="data" ref="table"></cv-data-table>
 
@@ -10,6 +10,7 @@
   </div>
 </div>
 </template>
+
 
 <script>
   export default {
@@ -22,7 +23,7 @@
     },
     methods: {
       fetchData: function() {
-        return fetch("http://localhost:8000/users").then((msg) => {
+        return fetch("/api/users").then((msg) => {
           console.log(msg);
           return msg.json().then((decoded) => {
               this.columns = ["Username", "Name", "Avatar URL"];
