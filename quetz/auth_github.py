@@ -38,7 +38,7 @@ async def validate_token(token):
 @router.route('/auth/github/login')
 async def login(request):
     github = oauth.create_client('github')
-    redirect_uri = f'{config.QUETZ_URL}/auth/github/authorize'
+    redirect_uri = request.url_for('authorize')
     return await github.authorize_redirect(request, redirect_uri)
 
 
