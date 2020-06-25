@@ -42,7 +42,7 @@ Run test upload CLI client:
 
 Install the test package with conda:
 ```
-mamba install -c http://localhost:8000/static/channels/channel0 -c conda-forge xtensor
+mamba install --strict-channel-priority -c http://localhost:8000/static/channels/channel0 -c conda-forge xtensor
 ```
 
 Output:
