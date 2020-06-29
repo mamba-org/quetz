@@ -3,3 +3,4 @@ files
 quetz.sqlite
 static/channels/
 xtensor/
+build

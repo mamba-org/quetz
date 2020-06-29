@@ -1,0 +1,37 @@
+{% set name = "quetz-client" %}
+{% set version = "0.0.1" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: .
+
+build:
+  noarch: python
+  skip: true  # [win and py27]
+  number: 0
+  script: {{ PYTHON }} -m pip install . --no-deps -vv
+
+requirements:
+  build:
+    - python
+    - setuptools
+
+  run:
+    - python
+    - requests >=2,<3
+    - conda-verify >=3,<4
+    - conda-build >=3,<4
+
+test:
+  imports:
+    - quetz_client
+
+about:
+  home: http://thesnakepit/quetz
+  license: BSD-3-Clause
+  license_family: BSD
+  license_file: ../LICENSE
+  summary: A client for the Quetz package server
