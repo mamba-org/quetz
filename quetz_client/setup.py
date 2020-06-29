@@ -17,5 +17,9 @@ setuptools.setup(
     url="https://github.com/thesnakepit/quetz",
     packages=setuptools.find_packages(),
     python_requires='>=3.6',
-    scripts=['quetz'],
+    entry_points={
+        'console_scripts': [
+            'quetz-client = quetz_client:main'
+        ]
+    },
 )
