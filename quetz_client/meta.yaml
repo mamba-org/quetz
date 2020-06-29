@@ -23,6 +23,7 @@ requirements:
     - python
     - requests >=2,<3
     - conda-verify >=3,<4
+    - conda-build >=3,<4
 
 test:
   imports:
