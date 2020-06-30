@@ -68,6 +68,14 @@ class Rules:
         return self.has_channel_role(user_id, channel_name, channel_roles) \
                or self.has_package_role(user_id, channel_name, package_name, package_roles)
 
+    def assert_channel_roles(self, channel_name: str, channel_roles:list):
+        user_id = self.assert_user()
+
+        if not self.has_channel_role(user_id, channel_name, channel_roles):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='No permission')
+
     def assert_channel_or_package_roles(self, channel_name: str, channel_roles: list,
                                         package_name: str, package_roles: list):
         user_id = self.assert_user()
@@ -90,9 +98,13 @@ class Rules:
 
     def assert_create_api_key_roles(self, roles):
         for role in roles:
-            required_package_role = [OWNER] if role.role == OWNER else [OWNER, MAINTAINER]
-            self.assert_channel_or_package_roles(role.channel, [OWNER, MAINTAINER], role.package,
-                                                 required_package_role)
+            if role.package:
+                required_package_role = [OWNER] if role.role == OWNER else [OWNER, MAINTAINER]
+                self.assert_channel_or_package_roles(role.channel, [OWNER, MAINTAINER], role.package,
+                                                     required_package_role)
+            else:
+                required_channel_roles = [OWNER] if role.role == OWNER else [OWNER, MAINTAINER]
+                self.assert_channel_roles(role.channel, required_channel_roles)
 
     def assert_upload_file(self, channel_name, package_name):
         self.assert_channel_or_package_roles(channel_name, [OWNER, MAINTAINER], package_name,

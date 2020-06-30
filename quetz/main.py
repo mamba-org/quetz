@@ -332,7 +332,8 @@ def get_api_keys(
     """Get API keys for current user"""
 
     user_id = auth.assert_user()
-    api_key_list = dao.get_api_keys(user_id)
+    api_key_list = dao.get_package_api_keys(user_id)
+    api_channel_key_list = dao.get_channel_api_keys(user_id)
 
     from itertools import groupby
 
@@ -341,11 +342,11 @@ def get_api_keys(
         description=api_key.description,
         roles=[rest_models.CPRole(
             channel=member.channel_name,
-            package=member.package_name,
+            package=member.package_name if hasattr(member, 'package_name') else None,
             role=member.role
         ) for member, api_key in member_key_list]
     ) for api_key, member_key_list in groupby(
-        api_key_list,
+        [*api_key_list, *api_channel_key_list],
         lambda member_api_key: member_api_key[1])]
 
 
