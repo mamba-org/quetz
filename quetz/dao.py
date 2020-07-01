@@ -193,12 +193,12 @@ class Dao:
 
         self.db.commit()
 
-    def create_version(self, package, platform, version, build_number, build_string, filename, info,
+    def create_version(self, channel_name, package_name, platform, version, build_number, build_string, filename, info,
                        uploader_id):
         version = PackageVersion(
             id=uuid.uuid4().bytes,
-            channel_name=package.channel_name,
-            package_name=package.name,
+            channel_name=channel_name,
+            package_name=package_name,
             platform=platform,
             version=version,
             build_number=build_number,
