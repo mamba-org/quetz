@@ -13,6 +13,12 @@ def main():
         usage="%(prog)s url package",
         description="Uploads package to Quetz."
     )
+
+    parser.add_argument(
+        "--verify-ignore",
+        type=str,
+        help="Ignore specific checks. Each check must be separated by a single comma")
+
     parser.add_argument(
         "-v", "--version", action="version",
         version=f"quetz-client version {quetz_client.__version__}"
@@ -23,8 +29,11 @@ def main():
     args = parser.parse_args()
 
     verifier = Verify()
+
+    verify_ignore = args.verify_ignore.split(',') if args.verify_ignore else None
     for package in args.packages:
-        verifier.verify_package(path_to_package=package, exit_on_error=True)
+        verifier.verify_package(path_to_package=package, checks_to_ignore=verify_ignore,
+                                exit_on_error=True,)
 
     files = [('files', open(package, 'rb')) for package in args.packages]
 
