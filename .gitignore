@@ -4,3 +4,4 @@ quetz.sqlite
 static/channels/
 xtensor/
 build
+dist/
