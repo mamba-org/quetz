@@ -13,28 +13,33 @@ def main():
         usage="%(prog)s url package",
         description="Uploads package to Quetz."
     )
+
+    parser.add_argument(
+        "--verify-ignore",
+        type=str,
+        help="Ignore specific checks. Each check must be separated by a single comma")
+
     parser.add_argument(
         "-v", "--version", action="version",
         version=f"quetz-client version {quetz_client.__version__}"
     )
 
     parser.add_argument("channel_url")
-    parser.add_argument("package")
+    parser.add_argument("packages", nargs='+')
     args = parser.parse_args()
 
     verifier = Verify()
 
-    verifier.verify_package(path_to_package=args.package, exit_on_error=True)
+    verify_ignore = args.verify_ignore.split(',') if args.verify_ignore else None
+    for package in args.packages:
+        verifier.verify_package(path_to_package=package, checks_to_ignore=verify_ignore,
+                                exit_on_error=True,)
 
-    head, tail = os.path.split(args.package)
-    file_name = tail
-    package_name = file_name.split('-')[0]
-
-    files = [('files', open(args.package, 'rb'))]
+    files = [('files', open(package, 'rb')) for package in args.packages]
 
     api_key = os.getenv('QUETZ_API_KEY')
 
-    response = requests.post(f'{args.channel_url}/packages/{package_name}/files/',
+    response = requests.post(f'{args.channel_url}/files/',
                              files=files,
                              headers={'X-API-Key': api_key})
 

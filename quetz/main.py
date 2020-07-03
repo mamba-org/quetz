@@ -332,7 +332,8 @@ def get_api_keys(
     """Get API keys for current user"""
 
     user_id = auth.assert_user()
-    api_key_list = dao.get_api_keys(user_id)
+    api_key_list = dao.get_package_api_keys(user_id)
+    api_channel_key_list = dao.get_channel_api_keys(user_id)
 
     from itertools import groupby
 
@@ -341,11 +342,11 @@ def get_api_keys(
         description=api_key.description,
         roles=[rest_models.CPRole(
             channel=member.channel_name,
-            package=member.package_name,
+            package=member.package_name if hasattr(member, 'package_name') else None,
             role=member.role
         ) for member, api_key in member_key_list]
     ) for api_key, member_key_list in groupby(
-        api_key_list,
+        [*api_key_list, *api_channel_key_list],
         lambda member_api_key: member_api_key[1])]
 
 
@@ -370,16 +371,41 @@ def post_file(
         package: db_models.Package = Depends(get_package_or_fail),
         dao: Dao = Depends(get_dao),
         auth: authorization.Rules = Depends(get_rules)):
-    auth.assert_upload_file(package.channel.name, package.name)
 
-    channel_dir = f'static/channels/{package.channel.name}'
+    handle_package_files(package.channel.name, files, dao, auth, package=package)
+
+
+@app.post('/channels/{channel_name}/files/', status_code=201, tags=['files'])
+def post_file(
+        files: List[UploadFile] = File(...),
+        channel: db_models.Channel = Depends(get_channel_or_fail),
+        dao: Dao = Depends(get_dao),
+        auth: authorization.Rules = Depends(get_rules)):
+
+    handle_package_files(channel.name, files, dao, auth)
+
+
+def handle_package_files(channel_name, files, dao, auth, package=None):
+    channel_dir = f'static/channels/{channel_name}'
     for file in files:
         with tarfile.open(fileobj=file.file._file, mode="r:bz2") as tar:
             info = json.load(tar.extractfile('info/index.json'))
 
+        package_name = info['name']
+
         parts = file.filename.split('-')
-        if parts[0] != package.name or info['name'] != package.name:
+        if package and (parts[0] != package.name or info['name'] != package.name):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+
+        if not package and not dao.get_package(channel_name, package_name):
+            dao.create_package(
+                channel_name,
+                rest_models.Package(name=package_name, description='n/a'),
+                auth.assert_user(),
+                authorization.OWNER
+            )
+
+        auth.assert_upload_file(channel_name, package_name)
 
         dir = f'{channel_dir}/{info["subdir"]}/'
         os.makedirs(dir, exist_ok=True)
@@ -391,7 +417,8 @@ def post_file(
         user_id = auth.assert_user()
 
         dao.create_version(
-            package=package,
+            channel_name=channel_name,
+            package_name=package_name,
             platform=info['subdir'],
             version=info['version'],
             build_number=info['build_number'],

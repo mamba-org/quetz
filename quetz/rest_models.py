@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 
 
@@ -58,7 +58,7 @@ class PostMember(BaseModel):
 
 class CPRole(BaseModel):
     channel: str
-    package: str
+    package: Optional[str]
     role: str = Role
 
 
