@@ -1,8 +1,20 @@
+![quetz header image](docs/assets/quetz_header.png)
+
 # Quetz
+
+The quetz project is an open source server for conda packages.
+It is built upon FastAPI with an API-first approach.
+A quetz server can have many users, channels and packages.
+With quetz, fine-grained permissions on channel and package-name level will be possible.
+
+Quetz also comes with the `quetz-client` that can be used to upload packages to a quetz server instance.
 
 ## Usage
 
-Create environment:
+You should have [mamba](https://github.com/thesnakepit/mamba) or conda installed.
+
+Then create an environment:
+
 ```
 mamba create -n quetz -c conda-forge python fastapi authlib httpx=0.12.0 sqlalchemy sqlite \
 python-multipart uvicorn conda-build
@@ -11,16 +23,19 @@ conda activate quetz
 ```
 
 Initialize environment variables:
+
 ```
 source ./set_env_dev.sh
 ```
 
 Initialize test database:
+
 ```
 python init_db.py
 ```
 
 Run the fastapi server:
+
 ```
 uvicorn quetz.main:app --reload
 ```
@@ -36,16 +51,19 @@ Download `xtensor` as test package:
 ```
 
 Run test upload CLI client:
+
 ```
 ./test-cli-client.sh
 ```
 
 Install the test package with conda:
+
 ```
 mamba install --strict-channel-priority -c http://localhost:8000/static/channels/channel0 -c conda-forge xtensor
 ```
 
 Output:
+
 ```
 ...
   Package  Version  Build          Channel                                                     Size
@@ -67,6 +85,7 @@ Output:
 ```
 
 Browse channels:
+
 ```
 http://localhost:8000/static/channels/channel0/
 ```
