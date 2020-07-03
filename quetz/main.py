@@ -439,4 +439,7 @@ def invalid_api():
 
 @app.get("/", include_in_schema=False)
 def root():
-    return HTMLResponse(open('static/jsbuild/index.html').read())
+    if (os.path.isfile('static/jsbuild/index.html')):
+        return HTMLResponse(open('static/jsbuild/index.html').read())
+    else:
+        return HTMLResponse(open('static/index.html').read())

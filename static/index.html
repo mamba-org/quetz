@@ -18,7 +18,7 @@
     getProfile();
 
     function getProfile() {
-        fetch('/me')
+        fetch('/api/me')
             .then(response => {
                 if (response.status === 200) {
                     return response.json()
