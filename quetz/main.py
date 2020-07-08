@@ -108,7 +108,7 @@ def logout(session):
 @app.route('/auth/logout')
 async def route_logout(request):
     logout(request.session)
-    return RedirectResponse('/static/index.html')
+    return RedirectResponse('/')
 
 
 @api_router.get('/dummylogin/{username}', tags=['dev'])
@@ -122,7 +122,7 @@ def dummy_login(
     session['user_id'] = str(uuid.UUID(bytes=user.id))
 
     session['identity_provider'] = 'dummy'
-    return RedirectResponse('/static/index.html')
+    return RedirectResponse('/')
 
 
 @api_router.get('/me', response_model=rest_models.Profile, tags=['users'])
