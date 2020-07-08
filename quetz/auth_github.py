@@ -59,7 +59,7 @@ async def authorize(request: Request):
 
     request.session['token'] = json.dumps(token)
 
-    resp = RedirectResponse('/static/index.html')
+    resp = RedirectResponse('/')
 
     return resp
 
