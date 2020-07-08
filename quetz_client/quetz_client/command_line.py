@@ -4,7 +4,10 @@
 import argparse
 import requests
 import os
+from urllib.parse import urlparse, urlunparse
+
 from conda_verify.verify import Verify
+
 import quetz_client
 
 
@@ -27,6 +30,12 @@ def main():
     parser.add_argument("channel_url")
     parser.add_argument("packages", nargs='+')
     args = parser.parse_args()
+
+    channel_url = args.channel_url
+    parts = urlparse(channel_url)
+    if parts.path[:4] != "/api":
+        parts = parts._replace(path=f"/api{parts.path}")
+        channel_url = urlunparse(parts)
 
     verifier = Verify()
 
