@@ -374,7 +374,7 @@ def post_file(
     handle_package_files(package.channel.name, files, dao, auth, package=package)
 
 
-@app.post('/channels/{channel_name}/files/', status_code=201, tags=['files'])
+@api_router.post('/channels/{channel_name}/files/', status_code=201, tags=['files'])
 def post_file(
         files: List[UploadFile] = File(...),
         channel: db_models.Channel = Depends(get_channel_or_fail),
