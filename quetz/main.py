@@ -16,6 +16,9 @@ import os
 import tarfile
 import json
 import subprocess
+from io import BytesIO
+from zipfile import ZipFile
+import zstandard
 
 from quetz import auth_github
 from quetz import config
@@ -387,8 +390,23 @@ def post_file(
 def handle_package_files(channel_name, files, dao, auth, package=None):
     channel_dir = f'static/channels/{channel_name}'
     for file in files:
-        with tarfile.open(fileobj=file.file._file, mode="r:bz2") as tar:
-            info = json.load(tar.extractfile('info/index.json'))
+        if file.filename.endswith(".conda"):
+            with ZipFile(file.file._file) as zf:
+                infotar = [_ for _ in zf.namelist()
+                           if _.startswith("info-")][0]
+                with zf.open(infotar) as zfobj:
+                    if infotar.endswith(".zst"):
+                        zstd = zstandard.ZstdDecompressor()
+                        # zstandard.stream_reader cannot seek backwards
+                        # and tarfile.extractfile() seeks backwards
+                        fobj = BytesIO(zstd.stream_reader(zfobj).read())
+                    else:
+                        fobj = zfobj
+                    with tarfile.open(fileobj=fobj, mode="r") as tar:
+                        info = json.load(tar.extractfile("info/index.json"))
+        else:
+            with tarfile.open(fileobj=file.file._file, mode="r:bz2") as tar:
+                info = json.load(tar.extractfile('info/index.json'))
 
         package_name = info['name']
 
