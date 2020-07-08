@@ -37,7 +37,7 @@ Index('identity_index', Identity.provider, Identity.identity_id, unique=True)
 class Profile(Base):
     __tablename__ = 'profiles'
 
-    name = Column(String)
+    name = Column(String, nullable=True)
     avatar_url = Column(String)
     user_id = Column(UUID, ForeignKey('users.id'), primary_key=True)
     user = relationship('User', back_populates='profile')

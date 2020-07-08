@@ -141,6 +141,7 @@ async def me(
     user_id = auth.assert_user()
 
     profile = dao.get_profile(user_id)
+    profile.user.id = str(uuid.UUID(bytes=profile.user.id))
     return profile
 
 

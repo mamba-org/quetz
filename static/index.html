@@ -31,7 +31,8 @@
                 }
             })
             .then(data => {
-                status.innerHTML = `<h2>Welcome ${data.name}</h2><img height="50px" src="${data.avatar_url}"/><br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                var name = data.name || data.user.username;
+                status.innerHTML = `<h2>Welcome ${name}</h2><img height="50px" src="${data.avatar_url}"/><br><pre>${JSON.stringify(data, null, 2)}</pre>`;
             });
     }
 
