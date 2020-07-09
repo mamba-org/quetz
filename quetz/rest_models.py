@@ -1,26 +1,37 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
+from __future__ import annotations
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
 
 
-class Profile(BaseModel):
-    name: str
+class BaseProfile(BaseModel):
+    name: Optional[str]
     avatar_url: str
 
     class Config:
         orm_mode = True
 
 
-class User(BaseModel):
+class Profile(BaseProfile):
+    user: BaseUser
+
+
+class BaseUser(BaseModel):
     id: str
     username: str
-    profile: Profile
 
     class Config:
         orm_mode = True
+
+
+class User(BaseUser):
+    profile: BaseProfile
+
+
+Profile.update_forward_refs()
 
 
 class Member(BaseModel):

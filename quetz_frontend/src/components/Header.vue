@@ -69,7 +69,7 @@
       me() {
         fetch("/api/me").then((msg) => {
           msg.json().then((decoded) => {
-            this.name = decoded.name;
+            this.name = decoded.name || decoded.user.username;
             this.avatar_url = decoded.avatar_url;
           })
         })

@@ -28,13 +28,34 @@ def create_user_with_github_identity(db: Session, github_profile) -> User:
     return user
 
 
+def user_github_profile_changed(user, identity, profile):
+    if (identity.username != profile['login']
+          or user.profile.name != profile['name']
+          or user.profile.avatar_url != profile['avatar_url']):
+        return True
+
+    return False
+
+
+def update_user_from_github_profile(db: Session, user, identity, profile) -> User:
+    identity.username = profile['login']
+    user.profile.name = profile['name']
+    user.profile.avatar_url = profile['avatar_url']
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 def get_user_by_github_identity(db: Session, profile) -> User:
-    user = db.query(User).join(Identity) \
+    user, identity = db.query(User, Identity).join(Identity) \
         .filter(Identity.provider == 'github') \
         .filter(Identity.identity_id == profile['id']) \
-        .one_or_none()
+        .one_or_none() or (None, None)
 
     if user:
+        if user_github_profile_changed(user, identity, profile):
+            return update_user_from_github_profile(db, user, identity, profile)
         return user
 
     return create_user_with_github_identity(db, profile)
