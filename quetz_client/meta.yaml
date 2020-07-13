@@ -10,17 +10,17 @@ source:
 
 build:
   noarch: python
-  skip: true  # [win and py27]
   number: 0
   script: {{ PYTHON }} -m pip install . --no-deps -vv
 
 requirements:
-  build:
-    - python
+  host:
+    - python >=3.6
+    - pip
     - setuptools
 
   run:
-    - python
+    - python >=3.6
     - requests >=2,<3
     - conda-verify >=3,<4
     - conda-build >=3,<4
