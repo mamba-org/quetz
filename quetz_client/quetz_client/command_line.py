@@ -48,7 +48,7 @@ def main():
 
     api_key = os.getenv('QUETZ_API_KEY')
 
-    response = requests.post(f'{args.channel_url}/files/',
+    response = requests.post(f'{channel_url}/files/',
                              files=files,
                              headers={'X-API-Key': api_key})
 
