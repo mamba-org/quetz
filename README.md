@@ -56,8 +56,8 @@ uvicorn quetz.main:app --reload
 ```
 
 Links:
- * http://localhost:8000/static - Login with your github account
- * http://localhost:8000/dummylogin/[ alice | bob | carol | dave] - Login with test user
+ * http://localhost:8000/ - Login with your github account
+ * http://localhost:8000/api/dummylogin/[ alice | bob | carol | dave] - Login with test user
  * http://localhost:8000/docs - Swagger UI for this REST service
 
 Download `xtensor` as test package:
@@ -74,7 +74,7 @@ Run test upload CLI client:
 Install the test package with conda:
 
 ```
-mamba install --strict-channel-priority -c http://localhost:8000/static/channels/channel0 -c conda-forge xtensor
+mamba install --strict-channel-priority -c http://localhost:8000/channels/channel0 -c conda-forge xtensor
 ```
 
 Output:
@@ -86,7 +86,7 @@ Output:
   Install:
 ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
-  xtensor   0.16.1  0              http://localhost:8000/static/channels/channel0/osx-64     109 KB
+  xtensor   0.16.1  0              http://localhost:8000/channels/channel0/osx-64            109 KB
   xtl       0.4.16  h04f5b5a_1000  conda-forge/osx-64                                         47 KB
 
   Summary:
@@ -102,7 +102,7 @@ Output:
 Browse channels:
 
 ```
-http://localhost:8000/static/channels/channel0/
+http://localhost:8000/channels/channel0/
 ```
 
 ## Frontend
@@ -119,7 +119,7 @@ npm run build
 npm run watch
 ```
 
-This will build the javascript files and place them in `/static/jsbuild/` from where they are automatically picked up by the quetz server.
+This will build the javascript files and place them in `/quetz_frontend/dist/` from where they are automatically picked up by the quetz server.
 
 ## License
 

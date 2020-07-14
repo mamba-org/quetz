@@ -13,6 +13,7 @@ import uuid
 import secrets
 import shutil
 import os
+import sys
 import tarfile
 import json
 import subprocess
@@ -38,8 +39,6 @@ app.add_middleware(
 api_router = APIRouter()
 
 app.include_router(auth_github.router)
-
-app.mount("/static", StaticFiles(directory='static/', html=True), name="static")
 
 # Dependency injection
 
@@ -389,7 +388,7 @@ def post_file(
 
 
 def handle_package_files(channel_name, files, dao, auth, package=None):
-    channel_dir = f'static/channels/{channel_name}'
+    channel_dir = f'channels/{channel_name}'
     for file in files:
         if file.filename.endswith(".conda"):
             with ZipFile(file.file._file) as zf:
@@ -456,9 +455,16 @@ app.include_router(
 def invalid_api():
     return None
 
-@app.get("/", include_in_schema=False)
-def root():
-    if (os.path.isfile('static/jsbuild/index.html')):
-        return HTMLResponse(open('static/jsbuild/index.html').read())
-    else:
-        return HTMLResponse(open('static/index.html').read())
+
+app.mount("/channels", StaticFiles(directory='channels', html=True), name="channels")
+
+
+if os.path.isfile('quetz_frontend/dist/index.html'):
+    print('dev frontend found')
+    app.mount("/", StaticFiles(directory='quetz_frontend/dist', html=True), name="frontend")
+elif os.path.isfile(f'{sys.prefix}/share/quetz/frontend/index.html'):
+    print('installed frontend found')
+    app.mount("/", StaticFiles(directory=f'{sys.prefix}/share/quetz/frontend/', html=True), name="frontend")
+else:
+    print('basic frontend')
+    app.mount("/", StaticFiles(directory='basic_frontend', html=True), name="frontend")

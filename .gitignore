@@ -1,7 +1,7 @@
 __pycache__
 files
 quetz.sqlite
-static/channels/
+/channels/
 xtensor/
 build
 dist/
