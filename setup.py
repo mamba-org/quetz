@@ -16,5 +16,6 @@ setuptools.setup(
     long_description="The Mamba package server",
     url="https://github.com/thesnakepit/quetz",
     packages=setuptools.find_packages(),
+    include_package_data=True,
     python_requires='>=3.6',
 )

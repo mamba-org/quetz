@@ -466,5 +466,6 @@ elif os.path.isfile(f'{sys.prefix}/share/quetz/frontend/index.html'):
     print('installed frontend found')
     app.mount("/", StaticFiles(directory=f'{sys.prefix}/share/quetz/frontend/', html=True), name="frontend")
 else:
-    print('basic frontend')
-    app.mount("/", StaticFiles(directory='basic_frontend', html=True), name="frontend")
+    print(f'basic frontend')
+    basic_frontend_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'basic_frontend')
+    app.mount("/", StaticFiles(directory=basic_frontend_dir, html=True), name="frontend")
