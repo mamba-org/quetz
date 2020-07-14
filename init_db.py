@@ -25,7 +25,7 @@ try:
 
         profile = Profile(
             name=username.capitalize(),
-            avatar_url='/static/avatar.jpg')
+            avatar_url='/avatar.jpg')
 
         user.identities.append(identity)
         user.profile = profile
