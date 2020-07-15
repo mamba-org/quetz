@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse
 from starlette.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 import uuid
 import secrets
@@ -424,6 +425,20 @@ def handle_package_files(channel_name, files, dao, auth, package=None):
 
         auth.assert_upload_file(channel_name, package_name)
 
+        try:
+            dao.create_version(
+                channel_name=channel_name,
+                package_name=package_name,
+                platform=info['subdir'],
+                version=info['version'],
+                build_number=info['build_number'],
+                build_string=info['build'],
+                filename=file.filename,
+                info=json.dumps(info),
+                uploader_id=user_id)
+        except IntegrityError:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT)
+
         dir = f'{channel_dir}/{info["subdir"]}/'
         os.makedirs(dir, exist_ok=True)
 
@@ -432,17 +447,6 @@ def handle_package_files(channel_name, files, dao, auth, package=None):
             shutil.copyfileobj(file.file, my_file)
 
         user_id = auth.assert_user()
-
-        dao.create_version(
-            channel_name=channel_name,
-            package_name=package_name,
-            platform=info['subdir'],
-            version=info['version'],
-            build_number=info['build_number'],
-            build_string=info['build'],
-            filename=file.filename,
-            info=json.dumps(info),
-            uploader_id=user_id)
 
     subprocess.run(['conda', 'index', channel_dir])
 
