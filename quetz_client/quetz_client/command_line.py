@@ -23,6 +23,11 @@ def main():
         help="Print what would happen, without uploading the package(s)")
 
     parser.add_argument(
+        "--verify",
+        action='store_true',
+        help="Verify package(s) with conda-verify")
+
+    parser.add_argument(
         "--verify-ignore",
         type=str,
         help="Ignore specific checks. Each check must be separated by a single comma")
@@ -44,10 +49,11 @@ def main():
 
     verifier = Verify()
 
-    verify_ignore = args.verify_ignore.split(',') if args.verify_ignore else None
-    for package in args.packages:
-        verifier.verify_package(path_to_package=package, checks_to_ignore=verify_ignore,
-                                exit_on_error=True,)
+    if args.verify:
+        verify_ignore = args.verify_ignore.split(',') if args.verify_ignore else None
+        for package in args.packages:
+            verifier.verify_package(path_to_package=package, checks_to_ignore=verify_ignore,
+                                    exit_on_error=True,)
 
     files = [('files', open(package, 'rb')) for package in args.packages]
 
