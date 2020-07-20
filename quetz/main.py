@@ -34,8 +34,8 @@ app = FastAPI()
 
 app.add_middleware(
     SessionMiddleware,
-    secret_key=config.QUETZ_SESSION_SECRET,
-    https_only=config.QUETZ_SESSION_HTTPS_ONLY)
+    secret_key=config.session_secret,
+    https_only=config.session_https_only)
 
 api_router = APIRouter()
 
