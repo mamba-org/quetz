@@ -4,6 +4,7 @@
 import argparse
 import requests
 import os
+import sys
 from urllib.parse import urlparse, urlunparse
 
 from conda_verify.verify import Verify
@@ -79,4 +80,8 @@ def main():
                                  files=files,
                                  headers={'X-API-Key': api_key})
 
-        print(response.status_code)
+        if response.status_code != 201:
+            print('Request failed:\n'
+                  f'  HTTP status code: {response.status_code}\n'
+                  f'  Message: {str(response.content.decode("utf-8"))}')
+            sys.exit(1)
