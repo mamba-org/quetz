@@ -18,6 +18,11 @@ def main():
     )
 
     parser.add_argument(
+        "--dry-run",
+        action='store_true',
+        help="Print what would happen, without uploading the package(s)")
+
+    parser.add_argument(
         "--verify-ignore",
         type=str,
         help="Ignore specific checks. Each check must be separated by a single comma")
@@ -48,8 +53,15 @@ def main():
 
     api_key = os.getenv('QUETZ_API_KEY')
 
-    response = requests.post(f'{channel_url}/files/',
-                             files=files,
-                             headers={'X-API-Key': api_key})
+    url = f'{channel_url}/files/'
+    if args.dry_run:
+        package_lines = "\n  ".join(args.packages)
+        print(f'QUETZ_API_KEY found: {not not api_key}\n'
+              f'URL: {url}\n'
+              f'packages:\n  {package_lines} ')
+    else:
+        response = requests.post(url,
+                                 files=files,
+                                 headers={'X-API-Key': api_key})
 
-    print(response.status_code)
+        print(response.status_code)
