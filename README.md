@@ -32,7 +32,7 @@ Then create an environment:
 
 ```
 mamba create -n quetz -c conda-forge python fastapi authlib httpx=0.12.0 sqlalchemy sqlite \
-python-multipart uvicorn zstandard conda-build
+python-multipart uvicorn zstandard conda-build appdirs toml
 
 conda activate quetz
 ```

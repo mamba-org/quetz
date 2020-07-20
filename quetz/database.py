@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from quetz import config
 
 engine = create_engine(
-    config.QUETZ_SQLALCHEMY_DATABASE_URL,
+    config.sqlalchemy_database_url,
     connect_args={'check_same_thread': False},
     echo=False
 )

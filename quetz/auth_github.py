@@ -16,8 +16,8 @@ oauth = OAuth()
 # Register the app here: https://github.com/settings/applications/new
 oauth.register(
     name='github',
-    client_id=config.QUETZ_GITHUB_CLIENT_ID,
-    client_secret=config.QUETZ_GITHUB_CLIENT_SECRET,
+    client_id=config.github_client_id,
+    client_secret=config.github_client_secret,
     access_token_url='https://github.com/login/oauth/access_token',
     access_token_params=None,
     authorize_url='https://github.com/login/oauth/authorize',
@@ -67,4 +67,4 @@ async def authorize(request: Request):
 @router.route('/auth/github/revoke')
 async def revoke(request):
     return RedirectResponse(
-        f'https://github.com/settings/connections/applications/{config.QUETZ_GITHUB_CLIENT_ID}')
+        f'https://github.com/settings/connections/applications/{config.github_client_id}')
