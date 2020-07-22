@@ -61,7 +61,7 @@ _configs = (
 def _get_value(entry):
     value = os.getenv(entry.env_var)
     if value:
-        return value
+        return entry.casted(value)
 
     try:
         if entry.section:
