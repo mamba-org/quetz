@@ -93,7 +93,7 @@ class PackageVersion(BaseModel):
 
     filename: str
     info: dict
-    uploader: Profile
+    uploader: BaseProfile
     time_created: datetime
 
     class Config:
