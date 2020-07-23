@@ -425,6 +425,8 @@ def handle_package_files(channel_name, files, dao, auth, package=None):
 
         auth.assert_upload_file(channel_name, package_name)
 
+        user_id = auth.assert_user()
+
         try:
             dao.create_version(
                 channel_name=channel_name,
@@ -445,8 +447,6 @@ def handle_package_files(channel_name, files, dao, auth, package=None):
         file.file._file.seek(0)
         with open(f'{dir}/{file.filename}', 'wb') as my_file:
             shutil.copyfileobj(file.file, my_file)
-
-        user_id = auth.assert_user()
 
     subprocess.run(['conda', 'index', channel_dir])
 
