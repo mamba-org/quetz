@@ -50,8 +50,8 @@
       return {
         yourName: '',
         visible: false,
-        name: 'Dummy User',
-        avatar_url: 'https://avatars0.githubusercontent.com/u/885054?v=4'
+        name: '',
+        avatar_url: undefined
       };
     },
     created() {
@@ -68,10 +68,16 @@
       },
       me() {
         fetch("/api/me").then((msg) => {
-          msg.json().then((decoded) => {
-            this.name = decoded.name || decoded.user.username;
-            this.avatar_url = decoded.avatar_url;
-          })
+          if (msg.status === 200) {
+            msg.json().then((decoded) => {
+              this.name = decoded.name || decoded.user.username;
+              this.avatar_url = decoded.avatar_url;
+            })
+          } else if (msg.status === 401) {
+            this.name = '';
+            this.avatar_url = undefined;
+          }
+
         })
       },
       onClick() {
