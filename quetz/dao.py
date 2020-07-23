@@ -13,6 +13,9 @@ class Dao:
     def __init__(self, db: Session):
         self.db = db
 
+    def rollback(self):
+        self.db.rollback()
+
     def get_profile(self, user_id):
         return self.db.query(Profile).filter(Profile.user_id == user_id).one()
 
