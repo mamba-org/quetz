@@ -34,6 +34,11 @@ def main():
         help="Ignore specific checks. Each check must be separated by a single comma")
 
     parser.add_argument(
+        "--force",
+        action='store_true',
+        help="Allow overwriting an exiting package version. (Only allowed with channel owner role)")
+
+    parser.add_argument(
         "-v", "--version", action="version",
         version=f"quetz-client version {quetz_client.__version__}"
     )
@@ -66,6 +71,9 @@ def main():
                                     exit_on_error=True,)
 
     files = [('files', open(package, 'rb')) for package in package_file_names]
+
+    if args.force:
+        files.append(('force', (None, 'true')))
 
     api_key = os.getenv('QUETZ_API_KEY')
 

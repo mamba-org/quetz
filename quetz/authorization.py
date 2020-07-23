@@ -109,3 +109,6 @@ class Rules:
     def assert_upload_file(self, channel_name, package_name):
         self.assert_channel_or_package_roles(channel_name, [OWNER, MAINTAINER], package_name,
                                              [OWNER, MAINTAINER])
+
+    def assert_overwrite_package_version(self, channel_name):
+        self.assert_channel_roles(channel_name, [OWNER])

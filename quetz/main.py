@@ -1,8 +1,9 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-from typing import List
-from fastapi import Depends, FastAPI, HTTPException, status, Request, File, UploadFile, APIRouter
+from typing import List, Optional
+from fastapi import Depends, FastAPI, HTTPException, status, Request, File, UploadFile, APIRouter,\
+    Form
 from fastapi.responses import HTMLResponse
 
 from starlette.staticfiles import StaticFiles
@@ -371,25 +372,31 @@ def post_api_key(
           tags=['files'])
 def post_file(
         files: List[UploadFile] = File(...),
+        force: Optional[bool] = Form(None),
         package: db_models.Package = Depends(get_package_or_fail),
         dao: Dao = Depends(get_dao),
         auth: authorization.Rules = Depends(get_rules)):
 
-    handle_package_files(package.channel.name, files, dao, auth, package=package)
+    handle_package_files(package.channel.name, files, dao, auth, force, package=package)
 
 
 @api_router.post('/channels/{channel_name}/files/', status_code=201, tags=['files'])
 def post_file(
         files: List[UploadFile] = File(...),
+        force: Optional[bool] = Form(None),
         channel: db_models.Channel = Depends(get_channel_or_fail),
         dao: Dao = Depends(get_dao),
         auth: authorization.Rules = Depends(get_rules)):
 
-    handle_package_files(channel.name, files, dao, auth)
+    handle_package_files(channel.name, files, dao, auth, force)
 
 
-def handle_package_files(channel_name, files, dao, auth, package=None):
+def handle_package_files(channel_name, files, dao, auth, force, package=None):
     channel_dir = f'channels/{channel_name}'
+
+    if force:
+        auth.assert_overwrite_package_version(channel_name)
+
     for file in files:
         if file.filename.endswith(".conda"):
             with ZipFile(file.file._file) as zf:
@@ -439,7 +446,10 @@ def handle_package_files(channel_name, files, dao, auth, package=None):
                 info=json.dumps(info),
                 uploader_id=user_id)
         except IntegrityError:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT)
+            if force:
+                dao.rollback()
+            else:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT)
 
         dir = f'{channel_dir}/{info["subdir"]}/'
         os.makedirs(dir, exist_ok=True)
