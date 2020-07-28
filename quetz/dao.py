@@ -4,8 +4,9 @@
 from sqlalchemy.orm import Session, joinedload, aliased
 from .db_models import Profile, User, Channel, ChannelMember, Package, PackageMember, ApiKey, \
     PackageVersion
-from quetz import rest_models
+from quetz import rest_models, channel_data
 import uuid
+import json
 
 
 class Dao:
@@ -91,7 +92,9 @@ class Dao:
                        role: str):
         package = Package(
             name=new_package.name,
-            description=new_package.description)
+            description=new_package.description,
+            channeldata="{}"
+        )
 
         package.channel = self.db.query(Channel) \
             .filter(Channel.name == channel_name) \
@@ -104,6 +107,17 @@ class Dao:
 
         self.db.add(package)
         self.db.add(member)
+        self.db.commit()
+
+    def update_package_channeldata(self, channel_name, package_name,
+                                   channeldata):
+        package = self.get_package(channel_name, package_name)
+        if package.channeldata:
+            old_data = json.loads(package.channeldata)
+        else:
+            old_data = None
+        data = channel_data.combine(old_data, channeldata)
+        package.channeldata = json.dumps(data)
         self.db.commit()
 
     def get_channel_members(self, channel_name: str):
@@ -196,12 +210,14 @@ class Dao:
 
         self.db.commit()
 
-    def create_version(self, channel_name, package_name, platform, version, build_number, build_string, filename, info,
-                       uploader_id):
+    def create_version(self, channel_name, package_name, package_format,
+                       platform, version, build_number, build_string,
+                       filename, info, uploader_id):
         version = PackageVersion(
             id=uuid.uuid4().bytes,
             channel_name=channel_name,
             package_name=package_name,
+            package_format=package_format,
             platform=platform,
             version=version,
             build_number=build_number,
@@ -223,3 +239,23 @@ class Dao:
             .filter(PackageVersion.channel_name == package.channel_name) \
             .filter(PackageVersion.package_name == package.name) \
             .all()
+
+    def is_active_platform(self, channel_name: str, platform: str):
+        return self.db.query(PackageVersion) \
+                      .filter(PackageVersion.channel_name == channel_name) \
+                      .filter(PackageVersion.platform == platform) \
+                      .count() > 0
+
+    def get_package_infos(self, channel_name: str, subdir: str):
+        # Returns iterator
+        return self.db.query(PackageVersion.filename, PackageVersion.info,
+                             PackageVersion.package_format) \
+                      .filter(PackageVersion.channel_name == channel_name) \
+                      .filter(PackageVersion.platform.in_([subdir, "noarch"])) \
+                      .order_by(PackageVersion.filename)
+
+    def get_channel_datas(self, channel_name: str):
+        # Returns iterator
+        return self.db.query(Package.name, Package.channeldata) \
+                      .filter(Package.channel_name == channel_name) \
+                      .order_by(Package.name)

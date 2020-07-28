@@ -16,12 +16,8 @@ import secrets
 import shutil
 import os
 import sys
-import tarfile
 import json
 import subprocess
-from io import BytesIO
-from zipfile import ZipFile
-import zstandard
 
 from quetz import auth_github
 from quetz import config
@@ -30,6 +26,9 @@ from .database import SessionLocal
 from quetz import rest_models
 from quetz import db_models
 from quetz import authorization
+from .condainfo import CondaInfo
+from quetz import channel_data
+from quetz import repo_data
 
 app = FastAPI()
 
@@ -398,28 +397,12 @@ def handle_package_files(channel_name, files, dao, auth, force, package=None):
         auth.assert_overwrite_package_version(channel_name)
 
     for file in files:
-        if file.filename.endswith(".conda"):
-            with ZipFile(file.file._file) as zf:
-                infotar = [_ for _ in zf.namelist()
-                           if _.startswith("info-")][0]
-                with zf.open(infotar) as zfobj:
-                    if infotar.endswith(".zst"):
-                        zstd = zstandard.ZstdDecompressor()
-                        # zstandard.stream_reader cannot seek backwards
-                        # and tarfile.extractfile() seeks backwards
-                        fobj = BytesIO(zstd.stream_reader(zfobj).read())
-                    else:
-                        fobj = zfobj
-                    with tarfile.open(fileobj=fobj, mode="r") as tar:
-                        info = json.load(tar.extractfile("info/index.json"))
-        else:
-            with tarfile.open(fileobj=file.file._file, mode="r:bz2") as tar:
-                info = json.load(tar.extractfile('info/index.json'))
-
-        package_name = info['name']
-
+        condainfo = CondaInfo(file.file, file.filename)
+        package_name = condainfo.info['name']
         parts = file.filename.split('-')
-        if package and (parts[0] != package.name or info['name'] != package.name):
+
+        if package and (parts[0] != package.name or
+                        package_name != package.name):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
         if not package and not dao.get_package(channel_name, package_name):
@@ -430,6 +413,11 @@ def handle_package_files(channel_name, files, dao, auth, force, package=None):
                 authorization.OWNER
             )
 
+        # Update channeldata info
+        dao.update_package_channeldata(channel_name,
+                                       package_name,
+                                       condainfo.channeldata)
+
         auth.assert_upload_file(channel_name, package_name)
 
         user_id = auth.assert_user()
@@ -438,20 +426,22 @@ def handle_package_files(channel_name, files, dao, auth, force, package=None):
             dao.create_version(
                 channel_name=channel_name,
                 package_name=package_name,
-                platform=info['subdir'],
-                version=info['version'],
-                build_number=info['build_number'],
-                build_string=info['build'],
+                package_format=condainfo.package_format,
+                platform=condainfo.info['subdir'],
+                version=condainfo.info['version'],
+                build_number=condainfo.info['build_number'],
+                build_string=condainfo.info['build'],
                 filename=file.filename,
-                info=json.dumps(info),
+                info=json.dumps(condainfo.info),
                 uploader_id=user_id)
         except IntegrityError:
             if force:
                 dao.rollback()
             else:
-                raise HTTPException(status_code=status.HTTP_409_CONFLICT)
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                                    detail="Duplicate")
 
-        dir = f'{channel_dir}/{info["subdir"]}/'
+        dir = f'{channel_dir}/{condainfo.info["subdir"]}/'
         os.makedirs(dir, exist_ok=True)
 
         file.file._file.seek(0)
@@ -459,6 +449,27 @@ def handle_package_files(channel_name, files, dao, auth, force, package=None):
             shutil.copyfileobj(file.file, my_file)
 
     subprocess.run(['conda', 'index', channel_dir])
+
+# Test code
+@api_router.get('/channeldata/{channel_name}')
+def get_channeldata(channel: db_models.Channel = Depends(get_channel_or_fail),
+                    dao = Depends(get_dao)):
+    return json.loads(channel_data.export(dao, channel.name))
+
+@api_router.get('/repodata/{channel_name}/{subdir}')
+def get_repodata(channel: db_models.Channel = Depends(get_channel_or_fail),
+                 subdir: str = "noarch",
+                 dao = Depends(get_dao)):
+    data = repo_data.export(dao, channel.name, subdir)
+    if data:
+        return json.loads(data)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Platform {subdir} not found')
+
+
+
 
 app.include_router(
     api_router,
