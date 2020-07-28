@@ -31,7 +31,7 @@ You should have [mamba](https://github.com/thesnakepit/mamba) or conda installed
 Then create an environment:
 
 ```
-mamba create -n quetz -c conda-forge python fastapi authlib httpx=0.12.0 sqlalchemy sqlite \
+mamba create -n quetz -c conda-forge 'python>=3.7' fastapi authlib httpx=0.12.0 sqlalchemy sqlite \
 python-multipart uvicorn zstandard conda-build appdirs toml
 
 conda activate quetz
