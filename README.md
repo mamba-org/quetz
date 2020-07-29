@@ -32,7 +32,7 @@ Then create an environment:
 
 ```
 mamba create -n quetz -c conda-forge python fastapi authlib httpx=0.12.0 sqlalchemy sqlite \
-python-multipart uvicorn zstandard conda-build appdirs toml
+python-multipart uvicorn zstandard conda-build appdirs toml curl
 
 conda activate quetz
 ```
@@ -47,6 +47,12 @@ Initialize test database:
 
 ```
 python init_db.py
+```
+
+Create a directory to store channels
+
+```
+mkdir channels
 ```
 
 Run the fastapi server:
