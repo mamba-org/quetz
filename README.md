@@ -32,7 +32,7 @@ Then create an environment:
 
 ```
 mamba create -n quetz -c conda-forge 'python>=3.7' fastapi authlib httpx=0.12.0 sqlalchemy sqlite \
-python-multipart uvicorn zstandard conda-build appdirs toml
+python-multipart uvicorn zstandard conda-build appdirs toml quetz-client
 
 conda activate quetz
 ```
@@ -47,6 +47,12 @@ Initialize test database:
 
 ```
 python init_db.py
+```
+
+Create a directory to store channels
+
+```
+mkdir channels
 ```
 
 Run the fastapi server:
@@ -65,10 +71,11 @@ Download `xtensor` as test package:
 ./download-test-package.sh
 ```
 
-Run test upload CLI client:
+Run test upload using quetz-client:
 
 ```
-./test-cli-client.sh
+export QUETZ_API_KEY=E_KaBFstCKI9hTdPM7DQq56GglRHf2HW7tQtq6si370
+quetz-client http://localhost:8000/api/channels/channel0 xtensor/linux-64/xtensor-0.16.1-0.tar.bz2 xtensor/osx-64/xtensor-0.16.1-0.tar.bz2
 ```
 
 Install the test package with conda:
