@@ -35,6 +35,7 @@ mamba create -n quetz -c conda-forge 'python>=3.7' fastapi authlib httpx=0.12.0 
 python-multipart uvicorn zstandard conda-build appdirs toml quetz-client
 
 conda activate quetz
+pip install typer
 ```
 
 Get `Quetz` sources:
@@ -47,7 +48,7 @@ git clone https://github.com/TheSnakePit/quetz.git quetz
 Install `Quetz` in editable mode:
 
 ```
-pip install -no-deps -e ./quetz 
+pip install --no-deps -e ./quetz 
 ```
 
 Use the CLI to create a `Quetz` instance:
