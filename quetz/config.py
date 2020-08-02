@@ -4,6 +4,8 @@
 from distutils.util import strtobool
 import os
 from typing import Any, Optional, NamedTuple, Type
+from secrets import token_bytes
+from base64 import b64encode
 
 import appdirs
 import toml
@@ -58,16 +60,16 @@ _configs = (
 )
 
 
-def _get_value(entry):
+def _get_value(entry, config):
     value = os.getenv(entry.env_var)
     if value:
         return entry.casted(value)
 
     try:
         if entry.section:
-            value = __dict[entry.section][entry.name]
+            value = config[entry.section][entry.name]
         else:
-            value = __dict[entry.name]
+            value = config[entry.name]
 
         return entry.casted(value)
     except KeyError:
@@ -83,27 +85,41 @@ def _get_value(entry):
     raise ConfigError(f"'{entry.name}' unset but no default specified")
 
 
-def _load_config(filename):
+def _read_config(filename):
     with open(filename) as f:
         try:
             t = toml.load(f)
-            __dict.update(t)
+            return t
         except toml.TomlDecodeError as e:
             raise ConfigError(f"failed to load config file '{filename}': {e}")
 
 
-__dict = dict()
-for _dir in (_site_dir, _user_dir):
-    _conf = os.path.join(_dir, _filename)
-    if os.path.isfile(_conf):
-        _load_config(_conf)
-_config_env = os.getenv(f"{_env_prefix}{_env_config_file}")
-if _config_env and  os.path.isfile(_config_env):
-    _load_config(_config_env)
-del _dir, _conf
+def create_config(client_id: str = "",
+                  client_secret: str = "", 
+                  database_url: str = "sqlite:///./quetz.sqlite",
+                  secret: str = b64encode(token_bytes(32)).decode()):
+
+    with open(os.path.join(os.path.dirname(__file__), "config.toml"), 'r') as f:
+        config = ''.join(f.readlines())
+
+    return config.format(client_id, client_secret, database_url, secret)
 
 
-for _entry in _configs:
-    _value = _get_value(_entry)
-    globals()[_entry.full_name] = _value
-del _entry, _value
+def load_configs(configuration: str = None):
+
+    config = {}
+    config_dirs = [_site_dir, _user_dir]
+    config_files = [os.path.join(d, _filename) for d in config_dirs]
+    config_env = os.getenv(f"{_env_prefix}{_env_config_file}")
+
+    for f in (config_env, configuration):
+        if f and os.path.isfile(f):
+            config_files.append(f)
+
+    for f in config_files:
+        if os.path.isfile(f):
+            config.update(_read_config(f))
+
+    for entry in _configs:
+        value = _get_value(entry, config)
+        globals()[entry.full_name] = value

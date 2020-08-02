@@ -4,7 +4,7 @@
 from starlette.responses import RedirectResponse
 from fastapi import APIRouter, Request
 from authlib.integrations.starlette_client import OAuth
-from .database import SessionLocal
+from .database import get_session
 from .dao_github import get_user_by_github_identity
 from quetz import config
 import json
@@ -47,7 +47,7 @@ async def authorize(request: Request):
     token = await oauth.github.authorize_access_token(request)
     resp = await oauth.github.get('user', token=token)
     profile = resp.json()
-    db = SessionLocal()
+    db = get_session()
     try:
         user = get_user_by_github_identity(db, profile)
     finally:

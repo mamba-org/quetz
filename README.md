@@ -37,28 +37,23 @@ python-multipart uvicorn zstandard conda-build appdirs toml quetz-client
 conda activate quetz
 ```
 
-Initialize environment variables:
+Get `Quetz` sources:
 
 ```
-source ./set_env_dev.sh
+mkdir quetz
+git clone https://github.com/TheSnakePit/quetz.git quetz
 ```
 
-Initialize test database:
+Install `Quetz` in editable mode:
 
 ```
-python init_db.py
+pip install -no-deps -e ./quetz 
 ```
 
-Create a directory to store channels
+Use the CLI to create a `Quetz` instance:
 
 ```
-mkdir channels
-```
-
-Run the fastapi server:
-
-```
-uvicorn quetz.main:app --reload
+python quetz/quetz/cli.py run test_quetz --create-conf --test --reload
 ```
 
 Links:
