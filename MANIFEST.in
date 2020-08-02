@@ -1,1 +1,2 @@
 graft quetz/basic_frontend
+include quetz/config.toml

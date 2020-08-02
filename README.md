@@ -45,16 +45,18 @@ mkdir quetz
 git clone https://github.com/TheSnakePit/quetz.git quetz
 ```
 
-Install `Quetz` in editable mode:
+Install `Quetz`:
+
+> Use the editable mode `-e` if you are developer and want to take advantage of the `reload` option of `Quetz`
 
 ```
-pip install --no-deps -e ./quetz 
+pip install -e quetz 
 ```
 
 Use the CLI to create a `Quetz` instance:
 
 ```
-python quetz/quetz/cli.py run test_quetz --create-conf --test --reload
+quetz run test_quetz --create-conf --test --reload
 ```
 
 Links:
