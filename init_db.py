@@ -3,14 +3,15 @@
 
 import random
 import uuid
+from quetz.config import load_configs
 from quetz.database import init_db, get_session
 from quetz.db_models import (User, Identity, Profile, Channel, ChannelMember, Package,
                              PackageMember, ApiKey)
 
 
 def init_test_db():
+    load_configs()
     init_db()
-
     db = get_session()
 
     testUsers = []

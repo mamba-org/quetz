@@ -28,7 +28,7 @@ config.load_configs()
 
 from quetz import auth_github
 from quetz.dao import Dao
-from .database import get_session as get_db_sessions
+from .database import get_session as get_db_session
 from quetz import rest_models
 from quetz import db_models
 from quetz import authorization
@@ -47,7 +47,7 @@ app.include_router(auth_github.router)
 # Dependency injection
 
 def get_db():
-    db = get_db_sessions()
+    db = get_db_session()
     try:
         yield db
     finally:
