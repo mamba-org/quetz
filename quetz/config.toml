@@ -8,4 +8,4 @@ database_url = "{}"
 
 [session]
 secret = "{}"
-https_only = false
+https_only = {}

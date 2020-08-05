@@ -97,12 +97,13 @@ def _read_config(filename):
 def create_config(client_id: str = "",
                   client_secret: str = "", 
                   database_url: str = "sqlite:///./quetz.sqlite",
-                  secret: str = b64encode(token_bytes(32)).decode()):
+                  secret: str = b64encode(token_bytes(32)).decode(),
+                  https: str = 'true'):
 
     with open(os.path.join(os.path.dirname(__file__), "config.toml"), 'r') as f:
         config = ''.join(f.readlines())
 
-    return config.format(client_id, client_secret, database_url, secret)
+    return config.format(client_id, client_secret, database_url, secret, https)
 
 
 def load_configs(configuration: str = None):
@@ -112,7 +113,7 @@ def load_configs(configuration: str = None):
     config_files = [os.path.join(d, _filename) for d in config_dirs]
     config_env = os.getenv(f"{_env_prefix}{_env_config_file}")
 
-    for f in (config_env, configuration):
+    for f in (configuration, config_env):
         if f and os.path.isfile(f):
             config_files.append(f)
 

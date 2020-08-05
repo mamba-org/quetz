@@ -13,18 +13,20 @@ import uuid
 router = APIRouter()
 oauth = OAuth()
 
-# Register the app here: https://github.com/settings/applications/new
-oauth.register(
-    name='github',
-    client_id=config.github_client_id,
-    client_secret=config.github_client_secret,
-    access_token_url='https://github.com/login/oauth/access_token',
-    access_token_params=None,
-    authorize_url='https://github.com/login/oauth/authorize',
-    authorize_params=None,
-    api_base_url='https://api.github.com/',
-    client_kwargs={'scope': 'user:email'},
-)
+
+def register():
+    # Register the app here: https://github.com/settings/applications/new
+    oauth.register(
+        name='github',
+        client_id=config.github_client_id,
+        client_secret=config.github_client_secret,
+        access_token_url='https://github.com/login/oauth/access_token',
+        access_token_params=None,
+        authorize_url='https://github.com/login/oauth/authorize',
+        authorize_params=None,
+        api_base_url='https://api.github.com/',
+        client_kwargs={'scope': 'user:email'},
+    )
 
 
 async def validate_token(token):

@@ -18,7 +18,7 @@ from quetz.db_models import (User, Identity, Profile, Channel, ChannelMember, Pa
 
 app = typer.Typer()
 
-_deployements_file = os.path.join(_user_dir, 'deployements.json')
+_deployments_file = os.path.join(_user_dir, 'deployments.json')
 
 
 def _fill_test_database():
@@ -112,10 +112,10 @@ def _fill_test_database():
         db.close()
 
 
-def _get_deployements():
+def _get_deployments():
 
-    if os.path.exists(_deployements_file):
-        return _cleaned_deployements()
+    if os.path.exists(_deployments_file):
+        return _cleaned_deployments()
     else:
         Path(_user_dir).mkdir(parents=True, exist_ok=True) 
         return {}
@@ -124,56 +124,56 @@ def _get_deployements():
 def _store_deployement(path: str, config_file_name: str):
 
     json_ = {path: config_file_name}
-    deployements = _get_deployements()
+    deployments = _get_deployments()
 
-    deployements.update(json_)
-    with open(_deployements_file, 'w') as f:
-        json.dump(deployements, f)
+    deployments.update(json_)
+    with open(_deployments_file, 'w') as f:
+        json.dump(deployments, f)
 
 
-def _cleaned_deployements():
+def _cleaned_deployments():
 
-    with open(_deployements_file, 'r') as f:
-        deployements = json.load(f)
+    with open(_deployments_file, 'r') as f:
+        deployments = json.load(f)
 
     to_delete = []
-    for path, f in deployements.items():
+    for path, f in deployments.items():
         config_file = os.path.join(path, f)
         if not os.path.exists(config_file):  # User has deleted the instance without CLI
             to_delete.append(path)
 
-    cleaned_deployements = {path: f for path, f in deployements.items() 
+    cleaned_deployments = {path: f for path, f in deployments.items() 
                             if path not in to_delete}
 
     if len(to_delete) > 0:
-        with open(_deployements_file, 'w') as f:
-            json.dump(cleaned_deployements, f)
+        with open(_deployments_file, 'w') as f:
+            json.dump(cleaned_deployments, f)
 
-    return cleaned_deployements
+    return cleaned_deployments
 
 
-def _clean_deployements():
+def _clean_deployments():
 
-    _ = _cleaned_deployements()
+    _ = _cleaned_deployments()
 
 
 @app.command()
 def create(path: str, 
            config_file_name: str = "config.toml", 
            create_conf: bool = False, 
-           test: bool = False):
+           dev: bool = False):
 
     abs_path = os.path.abspath(path)
     config_file = os.path.join(path, config_file_name)
-    deployements = _get_deployements()
+    deployments = _get_deployments()
 
     if os.path.exists(path):
-        if abs_path in deployements:
+        if abs_path in deployments:
             delete_ = typer.confirm('Quetz deployement exists at {}.\n'.format(path) +
                                     'Overwrite it?')
             if delete_:
                 delete(path, force=True)
-                create(path, config_file_name, create_conf, test)
+                create(path, config_file_name, create_conf, dev)
                 return
             else:
                 typer.echo('Use the start command to start a deployement.')
@@ -200,7 +200,11 @@ def create(path: str,
         Path(path).mkdir(parents=True)
 
     if not os.path.exists(config_file):
-        conf = create_config()
+        if dev:
+            https = 'false'
+        else:
+            https = 'true'
+        conf = create_config(https=https)
         with open(config_file, 'w') as f:
             f.write(conf)
 
@@ -211,20 +215,25 @@ def create(path: str,
     Path('channels').mkdir()
     init_db()
  
-    if test:
+    if dev:
         _fill_test_database()
 
     _store_deployement(abs_path, config_file_name)
 
 
 @app.command()
-def start(path: str, port: int = 8000, reload: bool = False):
+def start(path: str, 
+          port: int = 8000, 
+          host: str = "127.0.0.1",
+          proxy_headers: bool = True,
+          log_level: str = 'info',
+          reload: bool = False):
 
     abs_path = os.path.abspath(path)
-    deployements = _get_deployements()
+    deployments = _get_deployments()
 
     try:
-        config_file_name = deployements[abs_path]
+        config_file_name = deployments[abs_path]
     except KeyError:
         typer.echo('No Quetz deployement found at {}.'.format(path))
         raise typer.Abort()
@@ -235,30 +244,34 @@ def start(path: str, port: int = 8000, reload: bool = False):
 
     import quetz
     quetz_src = os.path.dirname(quetz.__file__)
-    uvicorn.run("quetz.main:app", reload=reload, reload_dirs=(quetz_src, ), port=port)
+    uvicorn.run("quetz.main:app", reload=reload, reload_dirs=(quetz_src, ), port=port,
+                proxy_headers=proxy_headers, host=host, log_level=log_level)
 
 
 @app.command()
 def run(path: str, 
         config_file_name: str = "config.toml", 
         create_conf: bool = False, 
-        test: bool = False,
+        dev: bool = False,
         port: int = 8000,
+        host: str = "127.0.0.1",
+        proxy_headers: bool = True,
+        log_level: str = 'info',
         reload: bool = False):
 
     abs_path = os.path.abspath(path)
-    create(abs_path, config_file_name, create_conf, test)
-    start(abs_path, port, reload)
+    create(abs_path, config_file_name, create_conf, dev)
+    start(abs_path, port, host, proxy_headers, log_level, reload)
 
 
 @app.command()
 def delete(path: str, force: bool = False):
 
     abs_path = os.path.abspath(path)
-    deployements = _get_deployements()
+    deployments = _get_deployments()
 
     try:
-        _ = deployements[abs_path]
+        _ = deployments[abs_path]
     except KeyError:
         typer.echo('No Quetz deployement found at {}.'.format(path))
         raise typer.Abort()
@@ -268,15 +281,15 @@ def delete(path: str, force: bool = False):
         raise typer.Abort()
 
     shutil.rmtree(abs_path)
-    _clean_deployements()
+    _clean_deployments()
 
 
 @app.command()
 def list():
-    deployements = _get_deployements()
+    deployments = _get_deployments()
 
-    if len(deployements) > 0:
-        typer.echo('\n'.join([p for p in deployements]))
+    if len(deployments) > 0:
+        typer.echo('\n'.join([p for p in deployments]))
 
 
 if __name__ == "__main__":

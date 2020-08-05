@@ -24,16 +24,17 @@ from zipfile import ZipFile
 import zstandard
 
 from quetz import config
-config.load_configs()
-
 from quetz import auth_github
 from quetz.dao import Dao
-from .database import get_session as get_db_session
+from quetz.database import get_session as get_db_session
 from quetz import rest_models
 from quetz import db_models
 from quetz import authorization
 
 app = FastAPI()
+
+config.load_configs()
+auth_github.register()
 
 app.add_middleware(
     SessionMiddleware,
