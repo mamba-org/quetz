@@ -55,7 +55,7 @@ pip install -e quetz
 Use the CLI to create a `Quetz` instance:
 
 ```
-quetz run test_quetz --create-conf --test --reload
+quetz run test_quetz --create-conf --dev --reload
 ```
 
 Links:

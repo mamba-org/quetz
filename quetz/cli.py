@@ -10,6 +10,8 @@ import random
 import uuid
 from pathlib import Path
 
+from typing import NoReturn, Dict
+
 from quetz.config import (create_config, load_configs, _user_dir, _env_prefix,
                           _env_config_file)
 from quetz.database import init_db, get_session
@@ -21,7 +23,9 @@ app = typer.Typer()
 _deployments_file = os.path.join(_user_dir, 'deployments.json')
 
 
-def _fill_test_database():
+def _fill_test_database() -> NoReturn:
+    """ Create dummy users and channels to allow further testing in dev mode."""
+
     db = get_session()
     testUsers = []
     try:
@@ -112,16 +116,32 @@ def _fill_test_database():
         db.close()
 
 
-def _get_deployments():
+def _get_deployments() -> Dict[str, str]:
+    """ Get a mapping of the current Quetz deployments.
+
+    Returns
+    -------
+    deployments : Dict[str, str]
+        The mapping of deployments
+    """
 
     if os.path.exists(_deployments_file):
-        return _cleaned_deployments()
+        return _get_cleaned_deployments()
     else:
         Path(_user_dir).mkdir(parents=True, exist_ok=True) 
         return {}
 
 
-def _store_deployement(path: str, config_file_name: str):
+def _store_deployement(path: str, config_file_name: str) -> NoReturn:
+    """ Store a new Quetz deployment.
+
+    Parameters
+    ----------
+    path : str
+        The location of the deployment
+    config_file_name : str
+        The configuration file name, including its extension
+    """
 
     json_ = {path: config_file_name}
     deployments = _get_deployments()
@@ -131,7 +151,17 @@ def _store_deployement(path: str, config_file_name: str):
         json.dump(deployments, f)
 
 
-def _cleaned_deployments():
+def _get_cleaned_deployments() -> Dict[str, str]:
+    """ Get a cleaned version of deployments.
+
+    This could be necessary to clean-up if the user delete manually a deployment directory without updating
+    the deployments files in its profile.
+
+    Returns
+    -------
+    deployments : Dict[str, str]
+        The mapping of deployments
+    """
 
     with open(_deployments_file, 'r') as f:
         deployments = json.load(f)
@@ -152,16 +182,29 @@ def _cleaned_deployments():
     return cleaned_deployments
 
 
-def _clean_deployments():
-
-    _ = _cleaned_deployments()
+def _clean_deployments() -> NoReturn:
+    """ Clean the deployments without returning anything."""
+    _ = _get_cleaned_deployments()
 
 
 @app.command()
 def create(path: str, 
            config_file_name: str = "config.toml", 
            create_conf: bool = False, 
-           dev: bool = False):
+           dev: bool = False) -> NoReturn:
+    """ Create a new Quetz deployment.
+
+    Parameters
+    ----------
+    path : str
+        The path where to create the deployment (will be created if does not exist)
+    config_file_name : str, optional
+        The configuration file name expected in the provided path {default="config.toml"}
+    create_conf : bool, optional
+        Whether to create a default configuration file if not found in the path, or not {default=False}
+    dev : bool, optional
+        Whether to activate the dev mode, or not (includes filling the database with test data, http instead of https)
+    """
 
     abs_path = os.path.abspath(path)
     config_file = os.path.join(path, config_file_name)
@@ -227,7 +270,28 @@ def start(path: str,
           host: str = "127.0.0.1",
           proxy_headers: bool = True,
           log_level: str = 'info',
-          reload: bool = False):
+          reload: bool = False) -> NoReturn:
+    """ Start a Quetz deployment.
+
+    To be started, a deployment has to be already created.
+    At this time, only Uvicorn is supported as manager.
+
+    Parameters
+    ----------
+    path : str
+        The path of the deployment
+    port : int, optional
+        The port to bind {default=8000}
+    host : str, optional
+        The network interface to bind {default="127.0.0.1"}
+    proxy_headers : bool, optional
+        Whether to enable the X-forwarding, or not {default=True}
+    log_level : str, optional
+        The logging level among 'critical', 'error', 'warning', 'info', 'debug', 'trace' {default='info'}
+    reload : bool, optional
+        Whether to activate the automatic reload of the server when Quetz source code is modified,
+        or not {default=False}
+    """
 
     abs_path = os.path.abspath(path)
     deployments = _get_deployments()
@@ -257,7 +321,33 @@ def run(path: str,
         host: str = "127.0.0.1",
         proxy_headers: bool = True,
         log_level: str = 'info',
-        reload: bool = False):
+        reload: bool = False) -> NoReturn:
+    """ Run a Quetz deployment.
+
+    It performs sequentially create and start operations.
+
+    Parameters
+    ----------
+    path : str
+        The path of the deployment
+    config_file_name : str, optional
+        The configuration file name expected in the provided path {default="config.toml"}
+    create_conf : bool, optional
+        Whether to create a default configuration file if not found in the path, or not {default=False}
+    dev : bool, optional
+        Whether to activate the dev mode, or not (includes filling the database with test data, http instead of https)
+    port : int, optional
+        The port to bind {default=8000}
+    host : str, optional
+        The network interface to bind {default="127.0.0.1"}
+    proxy_headers : bool, optional
+        Whether to enable the X-forwarding, or not {default=True}
+    log_level : str, optional
+        The logging level among 'critical', 'error', 'warning', 'info', 'debug', 'trace' {default='info'}
+    reload : bool, optional
+        Whether to activate the automatic reload of the server when Quetz source code is modified,
+        or not {default=False}
+    """
 
     abs_path = os.path.abspath(path)
     create(abs_path, config_file_name, create_conf, dev)
@@ -265,7 +355,16 @@ def run(path: str,
 
 
 @app.command()
-def delete(path: str, force: bool = False):
+def delete(path: str, force: bool = False) -> NoReturn:
+    """ Delete a Quetz deployment.
+
+    Parameters
+    ----------
+    path : str
+        The path of the deployment
+    force : bool, optional
+        Whether to skip manual confirmation, or not {default=False}
+    """
 
     abs_path = os.path.abspath(path)
     deployments = _get_deployments()
@@ -285,7 +384,9 @@ def delete(path: str, force: bool = False):
 
 
 @app.command()
-def list():
+def list() -> NoReturn:
+    """ List Quetz deployments."""
+
     deployments = _get_deployments()
 
     if len(deployments) > 0:
