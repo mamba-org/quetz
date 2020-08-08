@@ -1,0 +1,11 @@
+[github]
+# Register the app here: https://github.com/settings/applications/new
+client_id = "{}"
+client_secret = "{}"
+
+[sqlalchemy]
+database_url = "{}"
+
+[session]
+secret = "{}"
+https_only = {}

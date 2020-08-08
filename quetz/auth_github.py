@@ -4,7 +4,7 @@
 from starlette.responses import RedirectResponse
 from fastapi import APIRouter, Request
 from authlib.integrations.starlette_client import OAuth
-from .database import SessionLocal
+from .database import get_session
 from .dao_github import get_user_by_github_identity
 from quetz import config
 import json
@@ -13,18 +13,20 @@ import uuid
 router = APIRouter()
 oauth = OAuth()
 
-# Register the app here: https://github.com/settings/applications/new
-oauth.register(
-    name='github',
-    client_id=config.github_client_id,
-    client_secret=config.github_client_secret,
-    access_token_url='https://github.com/login/oauth/access_token',
-    access_token_params=None,
-    authorize_url='https://github.com/login/oauth/authorize',
-    authorize_params=None,
-    api_base_url='https://api.github.com/',
-    client_kwargs={'scope': 'user:email'},
-)
+
+def register():
+    # Register the app here: https://github.com/settings/applications/new
+    oauth.register(
+        name='github',
+        client_id=config.github_client_id,
+        client_secret=config.github_client_secret,
+        access_token_url='https://github.com/login/oauth/access_token',
+        access_token_params=None,
+        authorize_url='https://github.com/login/oauth/authorize',
+        authorize_params=None,
+        api_base_url='https://api.github.com/',
+        client_kwargs={'scope': 'user:email'},
+    )
 
 
 async def validate_token(token):
@@ -47,7 +49,7 @@ async def authorize(request: Request):
     token = await oauth.github.authorize_access_token(request)
     resp = await oauth.github.get('user', token=token)
     profile = resp.json()
-    db = SessionLocal()
+    db = get_session()
     try:
         user = get_user_by_github_identity(db, profile)
     finally:

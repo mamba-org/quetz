@@ -31,34 +31,31 @@ You should have [mamba](https://github.com/thesnakepit/mamba) or conda installed
 Then create an environment:
 
 ```
-mamba create -n quetz -c conda-forge 'python>=3.7' fastapi authlib httpx=0.12.0 sqlalchemy sqlite \
+mamba create -n quetz -c conda-forge 'python>=3.7' fastapi typer authlib httpx=0.12.0 sqlalchemy sqlite \
 python-multipart uvicorn zstandard conda-build appdirs toml quetz-client
 
 conda activate quetz
 ```
 
-Initialize environment variables:
+Get `Quetz` sources:
 
 ```
-source ./set_env_dev.sh
+mkdir quetz
+git clone https://github.com/TheSnakePit/quetz.git quetz
 ```
 
-Initialize test database:
+Install `Quetz`:
+
+> Use the editable mode `-e` if you are developer and want to take advantage of the `reload` option of `Quetz`
 
 ```
-python init_db.py
+pip install -e quetz 
 ```
 
-Create a directory to store channels
+Use the CLI to create a `Quetz` instance:
 
 ```
-mkdir channels
-```
-
-Run the fastapi server:
-
-```
-uvicorn quetz.main:app --reload
+quetz run test_quetz --create-conf --dev --reload
 ```
 
 Links:
