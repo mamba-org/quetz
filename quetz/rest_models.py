@@ -3,9 +3,11 @@
 
 from __future__ import annotations
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from pydantic.generics import GenericModel
+from typing import List, Optional, TypeVar, Generic
 from datetime import datetime
 
+T = TypeVar('T')
 
 class BaseProfile(BaseModel):
     name: Optional[str]
@@ -44,6 +46,10 @@ class Member(BaseModel):
 
 Role = Field(None, regex='owner|maintainer|member')
 
+class Pagination(BaseModel):
+    skip: int = Field(0, title='The number of skipped records')
+    limit: int = Field(0, title='The maximum number of returned records')
+    all_records_count: int = Field(0, title="The number of available records")
 
 class Channel(BaseModel):
     name: str = Field(None, title='The name of the channel', max_length=50)
@@ -53,7 +59,6 @@ class Channel(BaseModel):
     class Config:
         orm_mode = True
 
-
 class Package(BaseModel):
     name: str = Field(None, title='The name of package', max_length=50)
     description: str = Field(None, title='The description of the package', max_length=300)
@@ -61,6 +66,9 @@ class Package(BaseModel):
     class Config:
         orm_mode = True
 
+class PaginatedResponse(GenericModel, Generic[T]):
+    pagination: Pagination = Field(None, title="Pagination object")
+    result: List[T] = Field([], title="Result objects")
 
 class PostMember(BaseModel):
     username: str

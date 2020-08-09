@@ -1,7 +1,7 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-from sqlalchemy.orm import Session, joinedload, aliased
+from sqlalchemy.orm import Session, joinedload, aliased, Query
 from .db_models import Profile, User, Channel, ChannelMember, Package, PackageMember, ApiKey, \
     PackageVersion
 from quetz import rest_models, channel_data
@@ -66,6 +66,16 @@ class Dao:
         self.db.add(member)
         self.db.commit()
 
+    def get_paginated_result(self, query: Query, skip: int, limit: int):
+        return {
+            'pagination': {
+                'skip': skip,
+                'limit': limit,
+                'all_records_count': query.order_by(None).count()
+            },
+            'result': query.offset(skip).limit(limit).all()
+        }
+
     def get_packages(self, channel_name: str, skip: int, limit: int, q: str):
         query = self.db.query(Package) \
             .filter(Package.channel_name == channel_name)
@@ -73,10 +83,7 @@ class Dao:
         if q:
             query = query.filter(Package.name.like(f'%{q}%'))
 
-        return query \
-            .offset(skip) \
-            .limit(limit) \
-            .all()
+        return self.get_paginated_result(query, skip, limit)
 
     def get_channel(self, channel_name: str):
         return self.db.query(Channel) \

@@ -1,7 +1,7 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-from typing import List, Optional
+from typing import List, Optional, Generic, TypeVar
 from fastapi import Depends, FastAPI, HTTPException, status, Request, File, UploadFile, APIRouter,\
     Form
 from fastapi.responses import HTMLResponse
@@ -207,7 +207,7 @@ def post_channel(
     dao.create_channel(new_channel, user_id, authorization.OWNER)
 
 
-@api_router.get('/channels/{channel_name}/packages', response_model=List[rest_models.Package],
+@api_router.get('/channels/{channel_name}/packages', response_model=rest_models.PaginatedResponse[rest_models.Package],
          tags=['packages'])
 def get_packages(
         channel: db_models.Channel = Depends(get_channel_or_fail),
@@ -486,10 +486,10 @@ def invalid_api():
 
 app.mount("/channels", StaticFiles(directory='channels', html=True), name="channels")
 
-
-if os.path.isfile('quetz_frontend/dist/index.html'):
+print(os.getcwd())
+if os.path.isfile('../quetz_frontend/dist/index.html'):
     print('dev frontend found')
-    app.mount("/", StaticFiles(directory='quetz_frontend/dist', html=True), name="frontend")
+    app.mount("/", StaticFiles(directory='../quetz_frontend/dist', html=True), name="frontend")
 elif os.path.isfile(f'{sys.prefix}/share/quetz/frontend/index.html'):
     print('installed frontend found')
     app.mount("/", StaticFiles(directory=f'{sys.prefix}/share/quetz/frontend/', html=True), name="frontend")
