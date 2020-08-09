@@ -1,9 +1,10 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-from sqlalchemy import (Column, ForeignKey, String, BLOB, Index, Boolean, Integer, DateTime, func,
-                        UniqueConstraint)
+from sqlalchemy import (Column, ForeignKey, String, BLOB, Index, Boolean,
+                        Integer, DateTime, func, Enum, UniqueConstraint)
 from sqlalchemy.orm import relationship
+import enum
 
 from .database import Base
 
@@ -76,6 +77,9 @@ class Package(Base):
 
     channel = relationship('Channel', uselist=False, back_populates='packages')
 
+    # channeldata is always from the most recent version
+    channeldata = Column(String)
+
     def __repr__(self):
         return f'<Package name={self.name}, description={self.description}, channel={self.channel}>'
 
@@ -113,12 +117,18 @@ class ApiKey(Base):
         return f'<ApiKey key={self.key}>'
 
 
+class PackageFormatEnum(enum.Enum):
+    tarbz2 = 1
+    conda = 2
+
+
 class PackageVersion(Base):
     __tablename__ = 'package_versions'
 
     id = Column(UUID, primary_key=True)
     channel_name = Column(String, ForeignKey('channels.name'))
     package_name = Column(String, ForeignKey('packages.name'))
+    package_format = Column(Enum(PackageFormatEnum))
     platform = Column(String)
     version = Column(String)
     build_string = Column(String)
@@ -136,6 +146,7 @@ Index('package_version_name_index', PackageVersion.channel_name, PackageVersion.
 
 UniqueConstraint(PackageVersion.channel_name,
                  PackageVersion.package_name,
+                 PackageVersion.package_format,
                  PackageVersion.platform,
                  PackageVersion.version,
                  PackageVersion.build_string,
