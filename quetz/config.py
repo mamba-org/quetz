@@ -10,16 +10,15 @@ from base64 import b64encode
 import appdirs
 import toml
 
+from quetz import pkgstores
+from quetz.errors import ConfigError
+
 
 _filename = "config.toml"
 _env_prefix = "QUETZ_"
 _env_config_file = "CONFIG_FILE"
 _site_dir = appdirs.site_config_dir("quetz")
 _user_dir = appdirs.user_config_dir("quetz")
-
-
-class ConfigError(Exception):
-    pass
 
 
 class ConfigEntry(NamedTuple):
@@ -63,7 +62,14 @@ class Config:
         ConfigSection("session", [
             ConfigEntry("secret", str),
             ConfigEntry("https_only", bool, default=True)
-        ])
+        ]),
+        ConfigSection("s3", [
+            ConfigEntry("access_key", str),
+            ConfigEntry("secret_key", str),
+            ConfigEntry("url", str, default=""),
+            ConfigEntry("bucket_prefix", str, default=""),
+            ConfigEntry("bucket_suffix", str, default="")
+        ], required=False)
     )
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]
@@ -164,6 +170,27 @@ class Config:
                 return toml.load(f)
             except toml.TomlDecodeError as e:
                 raise ConfigError(f"failed to load config file '{filename}': {e}")
+
+    def get_package_store(self) -> pkgstores.PackageStore:
+        """Return the appropriate package store as set in the config.
+
+        Returns
+        -------
+        package_store : pkgstores.PackageStore
+            The package store instance to enact package operations against
+        """
+        if self.config.get('s3'):
+            return pkgstores.S3Store({
+                'key': self.s3_access_key,
+                'secret': self.s3_secret_key,
+                'url': self.s3_url,
+                'bucket_prefix': self.s3_bucket_prefix,
+                'bucket_suffix': self.s3_bucket_suffix
+            })
+        else:
+            return pkgstores.LocalStore({
+                'channels_dir': 'channels'
+            })
 
 
 def create_config(client_id: str = "",
