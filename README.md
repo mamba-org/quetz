@@ -115,7 +115,7 @@ Quetz comes with a initial frontend implementation. It can be found in quetz_fro
 To build it, one needs to install:
 
 ```
-mamba install nodejs>=14
+mamba install 'nodejs>=14'
 cd quetz_frontend
 npm install
 npm run build
