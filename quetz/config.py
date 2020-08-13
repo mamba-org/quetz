@@ -63,9 +63,9 @@ class Config:
     _config_file_env = os.getenv(f"{_env_prefix}{_env_config_file}")
 
     def __init__(self, deployment_config: str = None) -> NoReturn:
-        """ Load configurations from various places.
+        """Load configurations from various places.
 
-        Order of importance for configuration is :
+        Order of importance for configuration is:
         host < user profile < deployment < configuration file from env var < value from env var
 
         Parameters
@@ -99,7 +99,7 @@ class Config:
             setattr(self, entry.full_name, value)
 
     def _get_value(self, entry: ConfigEntry) -> Union[str, bool]:
-        """ Get an entry value from a configuration mapping.
+        """Get an entry value from a configuration mapping.
 
         Parameters
         ----------
@@ -129,7 +129,7 @@ class Config:
         raise ConfigError(msg)
 
     def _read_config(self, filename: str) -> Dict[str, str]:
-        """ Read a configuration file from its path.
+        """Read a configuration file from its path.
 
         Parameters
         ----------
@@ -153,7 +153,7 @@ def create_config(client_id: str = "",
                   database_url: str = "sqlite:///./quetz.sqlite",
                   secret: str = b64encode(token_bytes(32)).decode(),
                   https: str = 'true') -> str:
-    """ Create a configuration file from a template.
+    """Create a configuration file from a template.
 
     Parameters
     ----------
