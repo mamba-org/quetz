@@ -19,8 +19,8 @@ import sys
 import json
 import subprocess
 
-from quetz import config
 from quetz import auth_github
+from quetz.config import Config
 from quetz.dao import Dao
 from quetz.database import get_session as get_db_session
 from quetz import rest_models
@@ -32,8 +32,8 @@ from quetz import repo_data
 
 app = FastAPI()
 
-config.load_configs()
-auth_github.register()
+config = Config()
+auth_github.register(config)
 
 app.add_middleware(
     SessionMiddleware,
@@ -47,7 +47,7 @@ app.include_router(auth_github.router)
 # Dependency injection
 
 def get_db():
-    db = get_db_session()
+    db = get_db_session(config.sqlalchemy_database_url)
     try:
         yield db
     finally:

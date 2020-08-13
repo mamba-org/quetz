@@ -3,16 +3,16 @@
 
 import random
 import uuid
-from quetz.config import load_configs
+from quetz.config import Config
 from quetz.database import init_db, get_session
 from quetz.db_models import (User, Identity, Profile, Channel, ChannelMember, Package,
                              PackageMember, ApiKey)
 
 
 def init_test_db():
-    load_configs()
-    init_db()
-    db = get_session()
+    config = Config()
+    init_db(config.sqlalchemy_database_url)
+    db = get_session(config.sqlalchemy_database_url)
 
     testUsers = []
 

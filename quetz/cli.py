@@ -12,8 +12,8 @@ from pathlib import Path
 
 from typing import NoReturn, Dict
 
-from quetz.config import (create_config, load_configs, _user_dir, _env_prefix,
-                          _env_config_file)
+from quetz.config import (Config, create_config,
+                          _user_dir, _env_prefix, _env_config_file)
 from quetz.database import init_db, get_session
 from quetz.db_models import (User, Identity, Profile, Channel, ChannelMember, Package,
                              PackageMember, ApiKey)
@@ -23,10 +23,10 @@ app = typer.Typer()
 _deployments_file = os.path.join(_user_dir, 'deployments.json')
 
 
-def _fill_test_database() -> NoReturn:
+def _fill_test_database(database_url: str) -> NoReturn:
     """ Create dummy users and channels to allow further testing in dev mode."""
 
-    db = get_session()
+    db = get_session(database_url)
     testUsers = []
     try:
         for index, username in enumerate(['alice', 'bob', 'carol', 'dave']):
@@ -252,14 +252,14 @@ def create(path: str,
             f.write(conf)
 
     os.environ['QUETZ_CONFIG_FILE'] = config_file
-    load_configs(config_file)
+    config = Config(config_file)
 
     os.chdir(path)
     Path('channels').mkdir()
-    init_db()
+    init_db(config.sqlalchemy_database_url)
  
     if dev:
-        _fill_test_database()
+        _fill_test_database(config.sqlalchemy_database_url)
 
     _store_deployement(abs_path, config_file_name)
 

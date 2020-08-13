@@ -51,74 +51,109 @@ class ConfigEntry(NamedTuple):
         return self.cast(value)
 
 
-_configs = (
-    ConfigEntry("client_id", str, section="github", required=True),
-    ConfigEntry("client_secret", str, section="github", required=True),
-    ConfigEntry("database_url", str, section="sqlalchemy", required=True),
-    ConfigEntry("secret", str, section="session", required=True),
-    ConfigEntry("https_only", bool, section="session", default=True)
-)
+class Config:
+    _config_map = (
+        ConfigEntry("client_id", str, section="github", required=True),
+        ConfigEntry("client_secret", str, section="github", required=True),
+        ConfigEntry("database_url", str, section="sqlalchemy", required=True),
+        ConfigEntry("secret", str, section="session", required=True),
+        ConfigEntry("https_only", bool, section="session", default=True)
+    )
+    _config_dirs = [_site_dir, _user_dir]
+    _config_files = [os.path.join(d, _filename) for d in _config_dirs]
+    _config_file_env = os.getenv(f"{_env_prefix}{_env_config_file}")
 
+    def __init__(self, deployment_config: str = None) -> NoReturn:
+        """ Load configurations from various places.
 
-def _get_value(entry: ConfigEntry, config: Dict[str, Union[str, Dict[str, str]]]) -> Union[str, bool]:
-    """ Get an entry value from a configuration mapping.
+        Order of importance for configuration is :
+        host < user profile < deployment < configuration file from env var < value from env var
 
-    Parameters
-    ----------
-    entry : ConfigEntry
-        The entry to search
-    config : Dict[str, Union[str, Dict[str, str]]]
-        A mapping where to search the entry
+        Parameters
+        ----------
+        deployment_config : str, optional
+            The configuration stored at deployment level
+        """
 
-    Returns
-    -------
-    value : Union[str, bool]
-        The entry value
-    """
-    try:
-        if entry.section:
-            value = config[entry.section][entry.name]
-        else:
-            value = config[entry.name]
+        self.config = {}
 
-        return entry.casted(value)
+        for f in (deployment_config, self._config_file_env):
+            if f and os.path.isfile(f):
+                self._config_files.append(f)
 
-    except KeyError:
-        if entry.required:
-            if entry.section:
-                raise ConfigError(
-                    f"'{entry.name}' not found for section '{entry.section}'")
-            raise ConfigError(f"'{entry.name}' not found")
+        # In order, get configuration from:
+        # _site_dir, _user_dir, deployment_config, config_file_env
+        for f in self._config_files:
+            if os.path.isfile(f):
+                self.config.update(self._read_config(f))
 
-        if entry.default:
-            return entry.default
+        for entry in self._config_map:
+            env_var_value = os.getenv(entry.env_var)
 
-    raise ConfigError(f"'{entry.name}' unset but no default specified")
+            # Override the configuration files if an env variable is defined for
+            # the entry.
+            if env_var_value:
+                value = entry.casted(env_var_value)
+            else:
+                value = self._get_value(entry)
 
+            setattr(self, entry.full_name, value)
 
-def _read_config(filename: str) -> Dict[str, str]:
-    """ Read a configuration file from its path.
+    def _get_value(self, entry: ConfigEntry) -> Union[str, bool]:
+        """ Get an entry value from a configuration mapping.
 
-    Parameters
-    ----------
-    filename : str
-        The path of the configuration file
+        Parameters
+        ----------
+        entry : ConfigEntry
+            The entry to search
 
-    Returns
-    -------
-    configuration : Dict[str, str]
-        The mapping of configuration variables found in the file
-    """
-    with open(filename) as f:
+        Returns
+        -------
+        value : Union[str, bool]
+            The entry value
+        """
         try:
-            t = toml.load(f)
-            return t
-        except toml.TomlDecodeError as e:
-            raise ConfigError(f"failed to load config file '{filename}': {e}")
+            if entry.section:
+                value = self.config[entry.section][entry.name]
+            else:
+                value = self.config[entry.name]
+
+            return entry.casted(value)
+
+        except KeyError:
+            if entry.required:
+                if entry.section:
+                    raise ConfigError(
+                        f"'{entry.name}' not found for section '{entry.section}'")
+                raise ConfigError(f"'{entry.name}' not found")
+
+            if entry.default:
+                return entry.default
+
+        raise ConfigError(f"'{entry.name}' unset but no default specified")
+
+    def _read_config(self, filename: str) -> Dict[str, str]:
+        """ Read a configuration file from its path.
+
+        Parameters
+        ----------
+        filename : str
+            The path of the configuration file
+
+        Returns
+        -------
+        configuration : Dict[str, str]
+            The mapping of configuration variables found in the file
+        """
+        with open(filename) as f:
+            try:
+                return toml.load(f)
+            except toml.TomlDecodeError as e:
+                raise ConfigError(f"failed to load config file '{filename}': {e}")
 
 
 def create_config(client_id: str = "",
-                  client_secret: str = "", 
+                  client_secret: str = "",
                   database_url: str = "sqlite:///./quetz.sqlite",
                   secret: str = b64encode(token_bytes(32)).decode(),
                   https: str = 'true') -> str:
@@ -146,41 +181,3 @@ def create_config(client_id: str = "",
         config = ''.join(f.readlines())
 
     return config.format(client_id, client_secret, database_url, secret, https)
-
-
-def load_configs(deployment_config: str = None) -> NoReturn:
-    """ Load configurations from various places.
-
-    Order of importance for configuration is :
-    host < user profile < deployment < configuration file from env var < value from env var
-
-    Parameters
-    ----------
-    deployment_config: str, optional
-        The configuration stored at deployment level
-    """
-
-    config = {}
-    config_dirs = [_site_dir, _user_dir]
-    config_files = [os.path.join(d, _filename) for d in config_dirs]
-    config_file_env = os.getenv(f"{_env_prefix}{_env_config_file}")
-
-    for f in (deployment_config, config_file_env):
-        if f and os.path.isfile(f):
-            config_files.append(f)
-
-    # In order, get configuration from _site_dir, _user_dir, deployment_config, config_file_env
-    for f in config_files:
-        if os.path.isfile(f):
-            config.update(_read_config(f))
-
-    for entry in _configs:
-        env_var_value = os.getenv(entry.env_var)
-
-        # Override the configuration files if an env variable is defined for the entry
-        if env_var_value:
-            value = entry.casted(env_var_value)
-        else:
-            value = _get_value(entry, config)
-
-        globals()[entry.full_name] = value
