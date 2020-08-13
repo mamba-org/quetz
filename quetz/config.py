@@ -127,7 +127,7 @@ class Config:
                         f"'{entry.name}' not found for section '{entry.section}'")
                 raise ConfigError(f"'{entry.name}' not found")
 
-            if entry.default:
+            if entry.default is not None:
                 return entry.default
 
         raise ConfigError(f"'{entry.name}' unset but no default specified")
