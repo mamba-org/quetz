@@ -3,7 +3,7 @@
 
 from distutils.util import strtobool
 import os
-from typing import Any, NamedTuple, Type, Dict, NoReturn, Union
+from typing import Any, List, NamedTuple, Type, Dict, NoReturn, Union
 from secrets import token_bytes
 from base64 import b64encode
 
@@ -25,20 +25,15 @@ class ConfigError(Exception):
 class ConfigEntry(NamedTuple):
     name: str
     cast: Type
-    section: str = None
     default: Any = None
 
-    @property
-    def full_name(self):
-        if self.section:
-            return f"{self.section}_{self.name}"
-        return self.name
+    def full_name(self, section=""):
+        if section:
+            section += "_"
+        return f"{section}{self.name}"
 
-    @property
-    def env_var(self):
-        if self.section:
-            return f"{_env_prefix}{self.full_name.upper()}"
-        return f"{_env_prefix}{self.name.upper()}"
+    def env_var(self, section=""):
+        return f"{_env_prefix}{self.full_name(section).upper()}"
 
     def casted(self, value):
         if self.cast is bool:
@@ -50,13 +45,25 @@ class ConfigEntry(NamedTuple):
         return self.cast(value)
 
 
+class ConfigSection(NamedTuple):
+    name: str
+    entries: List[ConfigEntry]
+    required: bool = True
+
+
 class Config:
     _config_map = (
-        ConfigEntry("client_id", str, section="github"),
-        ConfigEntry("client_secret", str, section="github"),
-        ConfigEntry("database_url", str, section="sqlalchemy"),
-        ConfigEntry("secret", str, section="session"),
-        ConfigEntry("https_only", bool, section="session", default=True)
+        ConfigSection("github", [
+            ConfigEntry("client_id", str),
+            ConfigEntry("client_secret", str)
+        ]),
+        ConfigSection("sqlalchemy", [
+            ConfigEntry("database_url", str)
+        ]),
+        ConfigSection("session", [
+            ConfigEntry("secret", str),
+            ConfigEntry("https_only", bool, default=True)
+        ])
     )
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]
@@ -86,25 +93,36 @@ class Config:
             if os.path.isfile(f):
                 self.config.update(self._read_config(f))
 
-        for entry in self._config_map:
-            env_var_value = os.getenv(entry.env_var)
+        def set_entry_attr(entry, section=""):
+            env_var_value = os.getenv(entry.env_var(section))
 
             # Override the configuration files if an env variable is defined for
             # the entry.
             if env_var_value:
                 value = entry.casted(env_var_value)
             else:
-                value = self._get_value(entry)
+                value = self._get_value(entry, section)
 
-            setattr(self, entry.full_name, value)
+            setattr(self, entry.full_name(section), value)
 
-    def _get_value(self, entry: ConfigEntry) -> Union[str, bool]:
+        for item in self._config_map:
+            if (isinstance(item, ConfigSection)
+                    and (item.required or item.name in self.config)):
+                for entry in item.entries:
+                    set_entry_attr(entry, item.name)
+            elif isinstance(item, ConfigEntry):
+                set_entry_attr(item)
+
+    def _get_value(self, entry: ConfigEntry, section: str = "") \
+                   -> Union[str, bool]:
         """Get an entry value from a configuration mapping.
 
         Parameters
         ----------
         entry : ConfigEntry
             The entry to search
+        section : str
+            The section the entry belongs to
 
         Returns
         -------
@@ -112,8 +130,8 @@ class Config:
             The entry value
         """
         try:
-            if entry.section:
-                value = self.config[entry.section][entry.name]
+            if section:
+                value = self.config[section][entry.name]
             else:
                 value = self.config[entry.name]
 
@@ -124,8 +142,8 @@ class Config:
                 return entry.default
 
         msg = f"'{entry.name}' unset but no default specified"
-        if entry.section:
-            msg += f" for section '{entry.section}'"
+        if section:
+            msg += f" for section '{section}'"
         raise ConfigError(msg)
 
     def _read_config(self, filename: str) -> Dict[str, str]:
