@@ -70,8 +70,8 @@ def _fill_test_database() -> NoReturn:
 
             if channel_index == 0:
                 package = Package(
-                    name=f'xtensor',
-                    description=f'Description of xtensor')
+                    name='xtensor',
+                    description='Description of xtensor')
                 channel.packages.append(package)
 
                 test_user = testUsers[random.randint(0, len(testUsers) - 1)]
