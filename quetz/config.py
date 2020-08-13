@@ -44,7 +44,7 @@ class ConfigEntry(NamedTuple):
     def casted(self, value):
         if self.cast is bool:
             try:
-                return strtobool(str(value))
+                value = strtobool(str(value))
             except ValueError as e:
                 raise ConfigError(f"{self.name}: {e}")
 
