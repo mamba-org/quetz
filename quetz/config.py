@@ -26,7 +26,6 @@ class ConfigEntry(NamedTuple):
     name: str
     cast: Type
     section: str = None
-    required: bool = False
     default: Any = None
 
     @property
@@ -53,10 +52,10 @@ class ConfigEntry(NamedTuple):
 
 class Config:
     _config_map = (
-        ConfigEntry("client_id", str, section="github", required=True),
-        ConfigEntry("client_secret", str, section="github", required=True),
-        ConfigEntry("database_url", str, section="sqlalchemy", required=True),
-        ConfigEntry("secret", str, section="session", required=True),
+        ConfigEntry("client_id", str, section="github"),
+        ConfigEntry("client_secret", str, section="github"),
+        ConfigEntry("database_url", str, section="sqlalchemy"),
+        ConfigEntry("secret", str, section="session"),
         ConfigEntry("https_only", bool, section="session", default=True)
     )
     _config_dirs = [_site_dir, _user_dir]
@@ -121,16 +120,13 @@ class Config:
             return entry.casted(value)
 
         except KeyError:
-            if entry.required:
-                if entry.section:
-                    raise ConfigError(
-                        f"'{entry.name}' not found for section '{entry.section}'")
-                raise ConfigError(f"'{entry.name}' not found")
-
             if entry.default is not None:
                 return entry.default
 
-        raise ConfigError(f"'{entry.name}' unset but no default specified")
+        msg = f"'{entry.name}' unset but no default specified"
+        if entry.section:
+            msg += f" for section '{entry.section}'"
+        raise ConfigError(msg)
 
     def _read_config(self, filename: str) -> Dict[str, str]:
         """ Read a configuration file from its path.
