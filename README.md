@@ -1,5 +1,7 @@
 ![quetz header image](docs/assets/quetz_header.png)
 
+## The Open-Source Server for Conda Packages
+
 <table>
 <thead align="center" cellspacing="10">
   <tr>
