@@ -1,7 +1,7 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-from typing import List, Optional, Generic, TypeVar
+from typing import List, Optional, Generic, TypeVar, Union
 from fastapi import Depends, FastAPI, HTTPException, status, Request, File, UploadFile, APIRouter,\
     Form
 from fastapi.responses import HTMLResponse
@@ -207,12 +207,17 @@ def post_channel(
     dao.create_channel(new_channel, user_id, authorization.OWNER)
 
 
-@api_router.get('/channels/{channel_name}/packages', response_model=rest_models.PaginatedResponse[rest_models.Package],
-         tags=['packages'])
+@api_router.get('/channels/{channel_name}/packages',
+                response_model=Union[rest_models.PaginatedResponse[rest_models.Package], List[rest_models.Package]],
+                tags=['packages'])
 def get_packages(
         channel: db_models.Channel = Depends(get_channel_or_fail),
         dao: Dao = Depends(get_dao),
-        skip: int = 0, limit: int = 10, q: str = None):
+        skip: int = 0, limit: int = -1, q: str = None):
+    """
+    Retrieve all packages in a channel.
+    A limit of -1 returns an unpaginated result with all packages. Otherwise, pagination is applied.
+    """
 
     return dao.get_packages(channel.name, skip, limit, q)
 

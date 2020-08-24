@@ -83,6 +83,9 @@ class Dao:
         if q:
             query = query.filter(Package.name.like(f'%{q}%'))
 
+        if limit < 0:
+            return query.all()
+
         return self.get_paginated_result(query, skip, limit)
 
     def get_channel(self, channel_name: str):
