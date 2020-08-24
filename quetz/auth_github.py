@@ -6,7 +6,6 @@ from fastapi import APIRouter, Request
 from authlib.integrations.starlette_client import OAuth
 from .database import get_session
 from .dao_github import get_user_by_github_identity
-from quetz import config
 import json
 import uuid
 
@@ -14,7 +13,7 @@ router = APIRouter()
 oauth = OAuth()
 
 
-def register():
+def register(config):
     # Register the app here: https://github.com/settings/applications/new
     oauth.register(
         name='github',
@@ -68,5 +67,6 @@ async def authorize(request: Request):
 
 @router.route('/auth/github/revoke')
 async def revoke(request):
+    client_id = oauth._clients['github'].client_id
     return RedirectResponse(
-        f'https://github.com/settings/connections/applications/{config.github_client_id}')
+        f'https://github.com/settings/connections/applications/{client_id}')

@@ -5,23 +5,22 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from quetz import config
-
 Base = declarative_base()
 
 
-def _get_engine():
+def _get_engine(db_url):
     engine = create_engine(
-        config.sqlalchemy_database_url,
+        db_url,
         connect_args={'check_same_thread': False},
         echo=False
     )
     return engine
 
 
-def get_session():
-    return sessionmaker(autocommit=False, autoflush=False, bind=_get_engine())()
+def get_session(db_url):
+    return sessionmaker(autocommit=False, autoflush=False,
+                        bind=_get_engine(db_url))()
 
 
-def init_db():
-    Base.metadata.create_all(_get_engine())
+def init_db(db_url):
+    Base.metadata.create_all(_get_engine(db_url))
