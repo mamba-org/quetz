@@ -40,11 +40,11 @@ async def validate_token(token):
 @router.route('/auth/github/login')
 async def login(request):
     github = oauth.create_client('github')
-    redirect_uri = request.url_for('authorize')
+    redirect_uri = request.url_for('authorize_github')
     return await github.authorize_redirect(request, redirect_uri)
 
 
-@router.route('/auth/github/authorize')
+@router.route('/auth/github/authorize', name='authorize_github')
 async def authorize(request: Request):
     token = await oauth.github.authorize_access_token(request)
     resp = await oauth.github.get('user', token=token)

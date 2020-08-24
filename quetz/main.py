@@ -18,6 +18,7 @@ import sys
 import json
 
 from quetz import auth_github
+from quetz import auth_google
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.database import get_session as get_db_session
@@ -44,6 +45,10 @@ api_router = APIRouter()
 pkgstore = config.get_package_store()
 
 app.include_router(auth_github.router)
+
+if config.configured_section('google'):
+    auth_google.register(config)
+    app.include_router(auth_google.router)
 
 # Dependency injection
 
@@ -96,15 +101,18 @@ def get_package_or_fail(
 # helper functions
 
 async def check_token_revocation(session):
+    valid = False
     identity_provider = session.get('identity_provider')
-    if identity_provider and identity_provider == 'github':
+    if identity_provider == 'github':
         valid = await auth_github.validate_token(session.get('token'))
-        if not valid:
-            logout(session)
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail='Not logged in',
-            )
+    elif identity_provider == 'google':
+        valid = await auth_google.validate_token(session.get('token'))
+    if not valid:
+        logout(session)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Not logged in',
+        )
 
 def logout(session):
     session.pop('user_id', None)

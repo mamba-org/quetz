@@ -69,6 +69,10 @@ class Config:
             ConfigEntry("url", str, default=""),
             ConfigEntry("bucket_prefix", str, default=""),
             ConfigEntry("bucket_suffix", str, default="")
+        ], required=False),
+        ConfigSection("google", [
+            ConfigEntry("client_id", str),
+            ConfigEntry("client_secret", str)
         ], required=False)
     )
     _config_dirs = [_site_dir, _user_dir]
@@ -192,6 +196,21 @@ class Config:
                 'channels_dir': 'channels'
             })
 
+    def configured_section(self, section: str) -> bool:
+        """Return if a given section has been configured.
+
+        Parameters
+        ----------
+        provider: str
+            The section name in config
+
+        Returns
+        -------
+        bool
+            Wether or not the given section is configured
+        """
+
+        return bool(self.config.get(section))
 
 def create_config(client_id: str = "",
                   client_secret: str = "",
@@ -203,9 +222,9 @@ def create_config(client_id: str = "",
     Parameters
     ----------
     client_id : str, optional
-        The Github client ID {default=""}
+        The client ID {default=""}
     client_secret : str, optional
-        The Github client secret {default=""}
+        The client secret {default=""}
     database_url : str, optional
         The URL of the database {default="sqlite:///./quetz.sqlite"}
     secret : str, optional
