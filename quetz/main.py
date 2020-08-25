@@ -457,24 +457,6 @@ def handle_package_files(channel_name, files, dao, auth, force, package=None):
     # subprocess.run(['conda', 'index', channel_dir])
 
 
-# Test code
-@api_router.get('/channeldata/{channel_name}')
-def get_channeldata(channel: db_models.Channel = Depends(get_channel_or_fail),
-                    dao = Depends(get_dao)):
-    return json.loads(channel_data.export(dao, channel.name))
-
-@api_router.get('/repodata/{channel_name}/{subdir}')
-def get_repodata(channel: db_models.Channel = Depends(get_channel_or_fail),
-                 subdir: str = "noarch",
-                 dao = Depends(get_dao)):
-    data = repo_data.export(dao, channel.name, subdir)
-    if data:
-        return json.loads(data)
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Platform {subdir} not found')
-
 
 app.include_router(
     api_router,

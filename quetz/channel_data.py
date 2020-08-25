@@ -92,4 +92,4 @@ def export(dao, channel_name):
 
     channeldata["subdirs"] = list(subdirs)
 
-    return json.dumps(channeldata)
+    return channeldata
