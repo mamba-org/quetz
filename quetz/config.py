@@ -19,10 +19,13 @@ _user_dir = appdirs.user_config_dir("quetz")
 
 
 class ConfigError(Exception):
+    """An exception class for Quetz configuration errors."""
     pass
 
 
 class ConfigEntry(NamedTuple):
+    """A configuration entry"""
+
     name: str
     cast: Type
     default: Any = None
@@ -46,12 +49,15 @@ class ConfigEntry(NamedTuple):
 
 
 class ConfigSection(NamedTuple):
+    """A configuration section."""
     name: str
     entries: List[ConfigEntry]
     required: bool = True
 
 
 class Config:
+    """A configuration of a Quetz deployment."""
+
     _config_map = (
         ConfigSection("github", [
             ConfigEntry("client_id", str),
