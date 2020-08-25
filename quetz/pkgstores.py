@@ -44,8 +44,9 @@ class LocalStore(PackageStore):
         full_path = path.join(self.channels_dir, channel, dest)
         self.fs.makedirs(path.dirname(full_path), exist_ok=True)
 
-        with self.fs.open(full_path, "wb") as pkg:
-            shutil.copyfileobj(src, pkg)
+        with self.fs.transaction:
+            with self.fs.open(full_path, "wb") as pkg:
+                shutil.copyfileobj(src, pkg)
 
     def serve_path(self, channel, src):
         return self.fs.open(path.join(self.channels_dir, channel, src)).f
@@ -88,8 +89,9 @@ class S3Store(PackageStore):
     def add_package(self, channel, src, dest):
         with self._get_fs() as fs:
             bucket = self._bucket_map(channel)
-            with fs.open(path.join(bucket, dest), "wb") as pkg:
-                shutil.copyfileobj(src, pkg)
+            with fs.transaction:
+                with fs.open(path.join(bucket, dest), "wb") as pkg:
+                    shutil.copyfileobj(src, pkg)
 
     def serve_path(self, channel, src):
         with self._get_fs() as fs:
