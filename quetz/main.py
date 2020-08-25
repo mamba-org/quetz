@@ -463,21 +463,23 @@ app.include_router(
     prefix="/api",
 )
 
+
 @app.get("/api/.*", status_code=404, include_in_schema=False)
 def invalid_api():
     return None
 
 
-@app.get("/channels/{channel_name}/{package:path}")
-def serve_package(
-        package,
+@app.get("/channels/{channel_name}/{path:path}")
+def serve_path(
+        path,
         channel: db_models.Channel = Depends(get_channel_or_fail)):
     try:
-        return StreamingResponse(pkgstore.serve_package(channel.name, package))
+        return StreamingResponse(pkgstore.serve_path(channel.name, path))
     except FileNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'{channel.name}/{package} not found')
+            detail=f'{channel.name}/{path} not found')
+
 
 print(os.getcwd())
 if os.path.isfile('../quetz_frontend/dist/index.html'):

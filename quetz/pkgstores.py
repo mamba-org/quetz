@@ -29,7 +29,7 @@ class PackageStore(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def serve_package(self, channel, package):
+    def serve_path(self, channel, src):
         pass
 
 class LocalStore(PackageStore):
@@ -47,8 +47,8 @@ class LocalStore(PackageStore):
         with self.fs.open(full_path, "wb") as pkg:
             shutil.copyfileobj(src, pkg)
 
-    def serve_package(self, channel, package):
-        return self.fs.open(path.join(self.channels_dir, channel, package)).f
+    def serve_path(self, channel, src):
+        return self.fs.open(path.join(self.channels_dir, channel, src)).f
 
 
 class S3Store(PackageStore):
@@ -91,7 +91,7 @@ class S3Store(PackageStore):
             with fs.open(path.join(bucket, dest), "wb") as pkg:
                 shutil.copyfileobj(src, pkg)
 
-    def serve_package(self, channel, package):
+    def serve_path(self, channel, src):
         with self._get_fs() as fs:
             return fs.open(
-                path.join(self._bucket_map(channel), package))
+                path.join(self._bucket_map(channel), src))
