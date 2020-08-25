@@ -1,9 +1,9 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-from typing import List, Optional, Generic, TypeVar, Union
-from fastapi import Depends, FastAPI, HTTPException, status, Request, File, UploadFile, APIRouter,\
-    Form
+from typing import List, Optional, Union
+from fastapi import Depends, FastAPI, HTTPException, status, Request, \
+    File, UploadFile, APIRouter, Form, BackgroundTasks
 from fastapi.responses import StreamingResponse
 
 from starlette.staticfiles import StaticFiles
@@ -16,7 +16,6 @@ import secrets
 import os
 import sys
 import json
-# import subprocess
 
 from quetz import auth_github
 from quetz.config import Config
@@ -28,6 +27,7 @@ from quetz import authorization
 from .condainfo import CondaInfo
 from quetz import channel_data
 from quetz import repo_data
+from quetz import indexing
 
 app = FastAPI()
 
@@ -379,27 +379,30 @@ def post_api_key(
 @api_router.post('/channels/{channel_name}/packages/{package_name}/files/', status_code=201,
           tags=['files'])
 def post_file(
+        background_tasks: BackgroundTasks,
         files: List[UploadFile] = File(...),
         force: Optional[bool] = Form(None),
         package: db_models.Package = Depends(get_package_or_fail),
         dao: Dao = Depends(get_dao),
         auth: authorization.Rules = Depends(get_rules)):
-
-    handle_package_files(package.channel.name, files, dao, auth, force, package=package)
+    handle_package_files(package.channel.name, files, dao, auth, force,
+                         background_tasks, package=package)
 
 
 @api_router.post('/channels/{channel_name}/files/', status_code=201, tags=['files'])
 def post_file(
+        background_tasks: BackgroundTasks,
         files: List[UploadFile] = File(...),
         force: Optional[bool] = Form(None),
         channel: db_models.Channel = Depends(get_channel_or_fail),
         dao: Dao = Depends(get_dao),
         auth: authorization.Rules = Depends(get_rules)):
+    handle_package_files(channel.name, files, dao, auth, force,
+                         background_tasks)
 
-    handle_package_files(channel.name, files, dao, auth, force)
 
-
-def handle_package_files(channel_name, files, dao, auth, force, package=None):
+def handle_package_files(channel_name, files, dao, auth, force,
+                         background_tasks, package=None):
     if force:
         auth.assert_overwrite_package_version(channel_name)
 
@@ -454,8 +457,9 @@ def handle_package_files(channel_name, files, dao, auth, force, package=None):
         file.file._file.seek(0)
         pkgstore.add_package(channel_name, file.file, dest)
 
-    # subprocess.run(['conda', 'index', channel_dir])
-
+    # Background task to update indexes
+    background_tasks.add_task(indexing.update_indexes,
+                              dao, pkgstore, channel_name)
 
 
 app.include_router(
