@@ -68,6 +68,6 @@ async def authorize(request: Request):
 
 @router.route('/auth/github/revoke')
 async def revoke(request):
-    client_id = oauth._clients['github'].client_id
+    client_id = oauth.github.client_id
     return RedirectResponse(
         f'https://github.com/settings/connections/applications/{client_id}')
