@@ -25,6 +25,7 @@ def register(config):
         authorize_params=None,
         api_base_url='https://api.github.com/',
         client_kwargs={'scope': 'user:email'},
+        quetz_db_url=config.sqlalchemy_database_url
     )
 
 
@@ -48,7 +49,7 @@ async def authorize(request: Request):
     token = await oauth.github.authorize_access_token(request)
     resp = await oauth.github.get('user', token=token)
     profile = resp.json()
-    db = get_session()
+    db = get_session(oauth.github.server_metadata['quetz_db_url'])
     try:
         user = get_user_by_github_identity(db, profile)
     finally:
