@@ -29,8 +29,13 @@ class PackageStore(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def add_file(self, channel, data, dest):
+        pass
+
+    @abc.abstractmethod
     def serve_path(self, channel, src):
         pass
+
 
 class LocalStore(PackageStore):
     def __init__(self, config):
@@ -47,6 +52,19 @@ class LocalStore(PackageStore):
         with self.fs.transaction:
             with self.fs.open(full_path, "wb") as pkg:
                 shutil.copyfileobj(src, pkg)
+
+    def add_file(self, channel, data, dest):
+        full_path = path.join(self.channels_dir, channel, dest)
+        self.fs.makedirs(path.dirname(full_path), exist_ok=True)
+
+        if type(data) is str:
+            mode = "w"
+        else:
+            mode = "wb"
+
+        with self.fs.transaction:
+            with self.fs.open(full_path, mode) as f:
+                f.write(data)
 
     def serve_path(self, channel, src):
         return self.fs.open(path.join(self.channels_dir, channel, src)).f
@@ -92,6 +110,18 @@ class S3Store(PackageStore):
             with fs.transaction:
                 with fs.open(path.join(bucket, dest), "wb") as pkg:
                     shutil.copyfileobj(src, pkg)
+
+    def add_file(self, channel, data, dest):
+        if type(data) is str:
+            mode = "w"
+        else:
+            mode = "wb"
+
+        with self._get_fs() as fs:
+            bucket = self._bucket_map(channel)
+            with fs.transaction:
+                with fs.open(path.join(bucket, dest), mode) as f:
+                    f.write(data)
 
     def serve_path(self, channel, src):
         with self._get_fs() as fs:
