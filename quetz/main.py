@@ -477,12 +477,22 @@ def invalid_api():
 def serve_path(
         path,
         channel: db_models.Channel = Depends(get_channel_or_fail)):
+    if path == "" or path.endswith("/"):
+        path += "index.html"
     try:
         return StreamingResponse(pkgstore.serve_path(channel.name, path))
     except FileNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'{channel.name}/{path} not found')
+    except IsADirectoryError:
+        try:
+            path += "/index.html"
+            return StreamingResponse(pkgstore.serve_path(channel.name, path))
+        except FileNotFoundError:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f'{channel.name}/{path} not found')
 
 
 print(os.getcwd())
