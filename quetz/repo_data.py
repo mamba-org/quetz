@@ -27,6 +27,6 @@ def export(dao, channel_name, subdir):
             else:
                 packages[filename] = data
 
-        return json.dumps(repodata)
+        return repodata
     else:
         return None

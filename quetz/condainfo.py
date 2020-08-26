@@ -38,6 +38,7 @@ ABOUT_OPTIONAL_FIELDS = (
 )
 ABOUT_MAP_FIELDS = ("keywords", "identifiers", "tags")
 
+MAX_CONDA_TIMESTAMP = 253402300799
 
 class CondaInfo:
     def __init__(self, file, filename):
@@ -53,7 +54,7 @@ class CondaInfo:
         channeldata = {}
         channeldata["packagename"] = self.info["name"]
         timestamp = int(self.info.get("timestamp", time.time()))
-        if timestamp > 253402300799:
+        if timestamp > MAX_CONDA_TIMESTAMP:
             # Convert timestamp from milliseconds to seconds
             timestamp //= 1000
         channeldata["timestamp"] = timestamp

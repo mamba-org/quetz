@@ -34,7 +34,7 @@ Then create an environment:
 
 ```
 mamba create -n quetz -c conda-forge 'python>=3.7' fastapi typer authlib httpx=0.12.0 sqlalchemy sqlite \
-python-multipart uvicorn zstandard conda-build appdirs toml quetz-client
+python-multipart uvicorn zstandard conda-build appdirs toml quetz-client fsspec
 
 conda activate quetz
 ```
@@ -110,6 +110,24 @@ Browse channels:
 ```
 http://localhost:8000/channels/channel0/
 ```
+
+## S3 Backend
+
+To enable the S3 backend, you will first require the s3fs library:
+
+    mamba install -c conda-forge s3fs
+
+Then add your access and secret keys to the `s3` section with your
+`config.toml`, like so:
+
+```
+[s3]
+access_key = "AKIAIOSFODNN7EXAMPLE"
+secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+url = "https://..."
+```
+
+Be sure to set the url field if not using AWS.
 
 ## Frontend
 

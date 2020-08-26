@@ -1,10 +1,10 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-from typing import List, Optional, Generic, TypeVar, Union
-from fastapi import Depends, FastAPI, HTTPException, status, Request, File, UploadFile, APIRouter,\
-    Form
-from fastapi.responses import HTMLResponse
+from typing import List, Optional, Union
+from fastapi import Depends, FastAPI, HTTPException, status, Request, \
+    File, UploadFile, APIRouter, Form, BackgroundTasks
+from fastapi.responses import StreamingResponse
 
 from starlette.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
@@ -13,11 +13,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 import uuid
 import secrets
-import shutil
 import os
 import sys
 import json
-import subprocess
 
 from quetz import auth_github
 from quetz.config import Config
@@ -29,6 +27,7 @@ from quetz import authorization
 from .condainfo import CondaInfo
 from quetz import channel_data
 from quetz import repo_data
+from quetz import indexing
 
 app = FastAPI()
 
@@ -41,6 +40,8 @@ app.add_middleware(
     https_only=config.session_https_only)
 
 api_router = APIRouter()
+
+pkgstore = config.get_package_store()
 
 app.include_router(auth_github.router)
 
@@ -378,29 +379,30 @@ def post_api_key(
 @api_router.post('/channels/{channel_name}/packages/{package_name}/files/', status_code=201,
           tags=['files'])
 def post_file(
+        background_tasks: BackgroundTasks,
         files: List[UploadFile] = File(...),
         force: Optional[bool] = Form(None),
         package: db_models.Package = Depends(get_package_or_fail),
         dao: Dao = Depends(get_dao),
         auth: authorization.Rules = Depends(get_rules)):
-
-    handle_package_files(package.channel.name, files, dao, auth, force, package=package)
+    handle_package_files(package.channel.name, files, dao, auth, force,
+                         background_tasks, package=package)
 
 
 @api_router.post('/channels/{channel_name}/files/', status_code=201, tags=['files'])
 def post_file(
+        background_tasks: BackgroundTasks,
         files: List[UploadFile] = File(...),
         force: Optional[bool] = Form(None),
         channel: db_models.Channel = Depends(get_channel_or_fail),
         dao: Dao = Depends(get_dao),
         auth: authorization.Rules = Depends(get_rules)):
+    handle_package_files(channel.name, files, dao, auth, force,
+                         background_tasks)
 
-    handle_package_files(channel.name, files, dao, auth, force)
 
-
-def handle_package_files(channel_name, files, dao, auth, force, package=None):
-    channel_dir = f'channels/{channel_name}'
-
+def handle_package_files(channel_name, files, dao, auth, force,
+                         background_tasks, package=None):
     if force:
         auth.assert_overwrite_package_version(channel_name)
 
@@ -449,34 +451,15 @@ def handle_package_files(channel_name, files, dao, auth, force, package=None):
                 raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                                     detail="Duplicate")
 
-        dir = f'{channel_dir}/{condainfo.info["subdir"]}/'
-        os.makedirs(dir, exist_ok=True)
+        pkgstore.create_channel(channel_name)
 
+        dest = os.path.join(condainfo.info["subdir"], file.filename)
         file.file._file.seek(0)
-        with open(f'{dir}/{file.filename}', 'wb') as my_file:
-            shutil.copyfileobj(file.file, my_file)
+        pkgstore.add_package(channel_name, file.file, dest)
 
-    subprocess.run(['conda', 'index', channel_dir])
-
-# Test code
-@api_router.get('/channeldata/{channel_name}')
-def get_channeldata(channel: db_models.Channel = Depends(get_channel_or_fail),
-                    dao = Depends(get_dao)):
-    return json.loads(channel_data.export(dao, channel.name))
-
-@api_router.get('/repodata/{channel_name}/{subdir}')
-def get_repodata(channel: db_models.Channel = Depends(get_channel_or_fail),
-                 subdir: str = "noarch",
-                 dao = Depends(get_dao)):
-    data = repo_data.export(dao, channel.name, subdir)
-    if data:
-        return json.loads(data)
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Platform {subdir} not found')
-
-
+    # Background task to update indexes
+    background_tasks.add_task(indexing.update_indexes,
+                              dao, pkgstore, channel_name)
 
 
 app.include_router(
@@ -484,12 +467,33 @@ app.include_router(
     prefix="/api",
 )
 
+
 @app.get("/api/.*", status_code=404, include_in_schema=False)
 def invalid_api():
     return None
 
 
-app.mount("/channels", StaticFiles(directory='channels', html=True), name="channels")
+@app.get("/channels/{channel_name}/{path:path}")
+def serve_path(
+        path,
+        channel: db_models.Channel = Depends(get_channel_or_fail)):
+    if path == "" or path.endswith("/"):
+        path += "index.html"
+    try:
+        return StreamingResponse(pkgstore.serve_path(channel.name, path))
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'{channel.name}/{path} not found')
+    except IsADirectoryError:
+        try:
+            path += "/index.html"
+            return StreamingResponse(pkgstore.serve_path(channel.name, path))
+        except FileNotFoundError:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f'{channel.name}/{path} not found')
+
 
 print(os.getcwd())
 if os.path.isfile('../quetz_frontend/dist/index.html'):
