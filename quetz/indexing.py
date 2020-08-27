@@ -100,6 +100,7 @@ def update_indexes(dao, pkgstore, channel_name):
             title=channel_name,
             packages=channeldata["packages"],
             subdirs=subdirs,
+            current_time=datetime.now(timezone.utc),
         ),
         "index.html",
     )
