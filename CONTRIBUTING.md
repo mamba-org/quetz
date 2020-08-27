@@ -11,3 +11,13 @@ we are here to help awesome pull requests over the finish line.
 Please note we have a code of conduct, and follow it in all your interactions with the project.
 
 We follow the [NumFOCUS code of conduct](https://numfocus.org/code-of-conduct).
+
+# Developing
+
+You can install all development dependencies via:
+
+    pip install -e .[dev]
+    pre-commit install
+
+This will also setup hooks in your local repository to run linting and code
+formatting checks prior to making a commit.
