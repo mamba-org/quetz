@@ -18,7 +18,8 @@ def register(config):
         name='google',
         client_id=config.google_client_id,
         client_secret=config.google_client_secret,
-        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+        server_metadata_url=('https://accounts.google.com'
+                             '/.well-known/openid-configuration'),
         client_kwargs={'scope': 'openid email profile'},
         quetz_db_url=config.sqlalchemy_database_url,
         prompt='select_account'
@@ -61,4 +62,4 @@ async def authorize(request: Request):
 @router.route('/auth/google/revoke')
 async def revoke(request):
     return RedirectResponse(
-        f'https://myaccount.google.com/permissions')
+        'https://myaccount.google.com/permissions')

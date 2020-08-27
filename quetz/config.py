@@ -82,7 +82,8 @@ class Config:
         """Load configurations from various places.
 
         Order of importance for configuration is:
-        host < user profile < deployment < configuration file from env var < value from env var
+        host < user profile < deployment < configuration file from env var < value from
+        env var
 
         Parameters
         ----------

@@ -154,8 +154,8 @@ def _store_deployement(path: str, config_file_name: str) -> NoReturn:
 def _get_cleaned_deployments() -> Dict[str, str]:
     """ Get a cleaned version of deployments.
 
-    This could be necessary to clean-up if the user delete manually a deployment directory without updating
-    the deployments files in its profile.
+    This could be necessary to clean-up if the user delete manually a deployment
+    directory without updating the deployments files in its profile.
 
     Returns
     -------
@@ -199,11 +199,14 @@ def create(path: str,
     path : str
         The path where to create the deployment (will be created if does not exist)
     config_file_name : str, optional
-        The configuration file name expected in the provided path {default="config.toml"}
+        The configuration file name expected in the provided path
+        {default="config.toml"}
     create_conf : bool, optional
-        Whether to create a default configuration file if not found in the path, or not {default=False}
+        Whether to create a default configuration file if not found in the path, or not
+        {default=False}
     dev : bool, optional
-        Whether to activate the dev mode, or not (includes filling the database with test data, http instead of https)
+        Whether to activate the dev mode, or not (includes filling the database with
+        test data, http instead of https)
     """
 
     abs_path = os.path.abspath(path)
@@ -287,10 +290,11 @@ def start(path: str,
     proxy_headers : bool, optional
         Whether to enable the X-forwarding, or not {default=True}
     log_level : str, optional
-        The logging level among 'critical', 'error', 'warning', 'info', 'debug', 'trace' {default='info'}
+        The logging level among 'critical', 'error', 'warning', 'info', 'debug', 'trace'
+        {default='info'}
     reload : bool, optional
-        Whether to activate the automatic reload of the server when Quetz source code is modified,
-        or not {default=False}
+        Whether to activate the automatic reload of the server when Quetz source code is
+         modified, or not {default=False}
     """
 
     abs_path = os.path.abspath(path)
@@ -331,11 +335,14 @@ def run(path: str,
     path : str
         The path of the deployment
     config_file_name : str, optional
-        The configuration file name expected in the provided path {default="config.toml"}
+        The configuration file name expected in the provided path
+        {default="config.toml"}
     create_conf : bool, optional
-        Whether to create a default configuration file if not found in the path, or not {default=False}
+        Whether to create a default configuration file if not found in the path, or not
+        {default=False}
     dev : bool, optional
-        Whether to activate the dev mode, or not (includes filling the database with test data, http instead of https)
+        Whether to activate the dev mode, or not (includes filling the database with
+        test data, http instead of https)
     port : int, optional
         The port to bind {default=8000}
     host : str, optional
@@ -343,10 +350,11 @@ def run(path: str,
     proxy_headers : bool, optional
         Whether to enable the X-forwarding, or not {default=True}
     log_level : str, optional
-        The logging level among 'critical', 'error', 'warning', 'info', 'debug', 'trace' {default='info'}
+        The logging level among 'critical', 'error', 'warning', 'info', 'debug', 'trace'
+        {default='info'}
     reload : bool, optional
-        Whether to activate the automatic reload of the server when Quetz source code is modified,
-        or not {default=False}
+        Whether to activate the automatic reload of the server when Quetz source code is
+         modified, or not {default=False}
     """
 
     abs_path = os.path.abspath(path)

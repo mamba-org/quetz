@@ -1,7 +1,7 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-from typing import List, Optional, Union
+from typing import List, Optional
 from fastapi import Depends, FastAPI, HTTPException, status, Request, \
     File, UploadFile, APIRouter, Form, BackgroundTasks
 from fastapi.responses import StreamingResponse
@@ -26,8 +26,6 @@ from quetz import rest_models
 from quetz import db_models
 from quetz import authorization
 from .condainfo import CondaInfo
-from quetz import channel_data
-from quetz import repo_data
 from quetz import indexing
 
 app = FastAPI()
@@ -168,7 +166,7 @@ def get_users(
     return user_list
 
 @api_router.get('/paginated/users', response_model=rest_models.PaginatedResponse[rest_models.User], tags=['users'])
-def get_users(
+def get_paginated_users(
         dao: Dao = Depends(get_dao),
         skip: int = 0, limit: int = 10, q: str = None):
     user_list = dao.get_users(skip, limit, q)
@@ -203,7 +201,7 @@ def get_channels(
     return dao.get_channels(0, -1, q)
 
 @api_router.get('/paginated/channels', response_model=rest_models.PaginatedResponse[rest_models.Channel], tags=['channels'])
-def get_channels(
+def get_paginated_channels(
         dao: Dao = Depends(get_dao),
         skip: int = 0, limit: int = 10, q: str = None):
     """List all channels, as a paginated response"""
@@ -249,13 +247,14 @@ def get_packages(
 @api_router.get('/paginated/channels/{channel_name}/packages',
                 response_model=rest_models.PaginatedResponse[rest_models.Package],
                 tags=['packages'])
-def get_packages(
+def get_paginated_packages(
         channel: db_models.Channel = Depends(get_channel_or_fail),
         dao: Dao = Depends(get_dao),
         skip: int = 0, limit: int = -1, q: str = None):
     """
     Retrieve all packages in a channel.
-    A limit of -1 returns an unpaginated result with all packages. Otherwise, pagination is applied.
+    A limit of -1 returns an unpaginated result with all packages. Otherwise, pagination
+    is applied.
     """
 
     return dao.get_packages(channel.name, skip, limit, q)
@@ -293,7 +292,8 @@ def get_channel_members(
 
     member_list = dao.get_channel_members(channel.name)
     for member in member_list:
-        # force loading of profile before changing attributes to prevent sqlalchemy errors.
+        # force loading of profile before changing attributes to prevent sqlalchemy
+        # errors.
         # TODO: don't abuse db models for this.
 
         member.user.profile
@@ -329,7 +329,8 @@ def get_package_members(
     member_list = dao.get_package_members(package.channel.name, package.name)
 
     for member in member_list:
-        # force loading of profile before changing attributes to prevent sqlalchemy errors.
+        # force loading of profile before changing attributes to prevent sqlalchemy
+        # errors.
         # TODO: don't abuse db models for this.
         member.user.profile
         setattr(member.user, 'id', str(uuid.UUID(bytes=member.user.id)))
@@ -351,7 +352,11 @@ def post_package_member(
     if channel_member:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f'Member {new_member.username} in {package.channel.name}/{package.name} exists')
+            detail=(
+                f"Member {new_member.username} in "
+                "{package.channel.name}/{package.name} exists"
+            )
+        )
 
     dao.create_package_member(package.channel.name, package.name, new_member)
 
@@ -416,7 +421,7 @@ def post_api_key(
 
 @api_router.post('/channels/{channel_name}/packages/{package_name}/files/', status_code=201,
           tags=['files'])
-def post_file(
+def post_file_to_package(
         background_tasks: BackgroundTasks,
         files: List[UploadFile] = File(...),
         force: Optional[bool] = Form(None),
@@ -428,7 +433,7 @@ def post_file(
 
 
 @api_router.post('/channels/{channel_name}/files/', status_code=201, tags=['files'])
-def post_file(
+def post_file_to_channel(
         background_tasks: BackgroundTasks,
         files: List[UploadFile] = File(...),
         force: Optional[bool] = Form(None),

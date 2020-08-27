@@ -54,7 +54,11 @@ class Channel(Base):
     packages = relationship('Package', back_populates='channel')
 
     def __repr__(self):
-        return f'<Channel name={self.name}, description={self.description}, private={self.private}>'
+        return (
+            f"<Channel name={self.name}, "
+            "description={self.description}, "
+            "private={self.private}>"
+        )
 
 
 class ChannelMember(Base):
@@ -81,7 +85,11 @@ class Package(Base):
     channeldata = Column(String)
 
     def __repr__(self):
-        return f'<Package name={self.name}, description={self.description}, channel={self.channel}>'
+        return (
+            f"<Package name={self.name}, "
+            "description={self.description}, "
+            "channel={self.channel}>"
+        )
 
 
 class PackageMember(Base):

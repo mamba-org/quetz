@@ -36,7 +36,11 @@ def main():
     parser.add_argument(
         "--force",
         action='store_true',
-        help="Allow overwriting an exiting package version. (Only allowed with channel owner role)")
+        help=(
+            "Allow overwriting an exiting package version. "
+            "(Only allowed with channel owner role)"
+        ),
+    )
 
     parser.add_argument(
         "-v", "--version", action="version",
