@@ -73,7 +73,6 @@ class Config:
     )
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]
-    _config_file_env = os.getenv(f"{_env_prefix}{_env_config_file}")
 
     def __init__(self, deployment_config: str = None) -> NoReturn:
         """Load configurations from various places.
@@ -88,14 +87,16 @@ class Config:
         """
 
         self.config = {}
+        config_file_env = os.getenv(f"{_env_prefix}{_env_config_file}")
 
-        for f in (deployment_config, self._config_file_env):
+        deployment_config_files = []
+        for f in (deployment_config, config_file_env):
             if f and os.path.isfile(f):
-                self._config_files.append(f)
+                deployment_config_files.append(f)
 
         # In order, get configuration from:
         # _site_dir, _user_dir, deployment_config, config_file_env
-        for f in self._config_files:
+        for f in self._config_files + deployment_config_files:
             if os.path.isfile(f):
                 self.config.update(self._read_config(f))
 
