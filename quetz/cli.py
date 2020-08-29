@@ -84,17 +84,17 @@ def _fill_test_database(database_url: str) -> NoReturn:
                 db.add(package_member)
 
                 # create API key
-                key = 'E_KaBFstCKI9hTdPM7DQq56GglRHf2HW7tQtq6si370'
+                key = uuid.uuid4().hex
 
                 key_user = User(id=uuid.uuid4().bytes)
-
                 api_key = ApiKey(
                     key=key,
                     description='test API key',
-                    user=key_user,
+                    user=test_user,
                     owner=test_user
                 )
                 db.add(api_key)
+                print(f'Test API key created for user "{test_user.username}": {key}')
 
                 key_package_member = PackageMember(
                     user=key_user,

@@ -403,12 +403,13 @@ def post_file(
 
 def handle_package_files(channel_name, files, dao, auth, force,
                          background_tasks, package=None):
-    if force:
-        auth.assert_overwrite_package_version(channel_name)
 
     for file in files:
         condainfo = CondaInfo(file.file, file.filename)
         package_name = condainfo.info['name']
+        if force:
+            auth.assert_overwrite_package_version(channel_name, package_name)
+
         parts = file.filename.split('-')
 
         if package and (parts[0] != package.name or

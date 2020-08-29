@@ -110,5 +110,5 @@ class Rules:
         self.assert_channel_or_package_roles(channel_name, [OWNER, MAINTAINER], package_name,
                                              [OWNER, MAINTAINER])
 
-    def assert_overwrite_package_version(self, channel_name):
-        self.assert_channel_roles(channel_name, [OWNER])
+    def assert_overwrite_package_version(self, channel_name, package_name):
+        self.assert_channel_or_package_roles(channel_name, [OWNER], package_name, [OWNER])
