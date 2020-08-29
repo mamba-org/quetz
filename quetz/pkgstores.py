@@ -49,9 +49,8 @@ class LocalStore(PackageStore):
         full_path = path.join(self.channels_dir, channel, dest)
         self.fs.makedirs(path.dirname(full_path), exist_ok=True)
 
-        with self.fs.transaction:
-            with self.fs.open(full_path, "wb") as pkg:
-                shutil.copyfileobj(src, pkg)
+        with open(full_path, 'wb') as pkg:
+            shutil.copyfileobj(src, pkg)
 
     def add_file(self, channel, data, dest):
         full_path = path.join(self.channels_dir, channel, dest)
@@ -62,9 +61,8 @@ class LocalStore(PackageStore):
         else:
             mode = "wb"
 
-        with self.fs.transaction:
-            with self.fs.open(full_path, mode) as f:
-                f.write(data)
+        with self.fs.open(full_path, mode) as f:
+            f.write(data)
 
     def serve_path(self, channel, src):
         return self.fs.open(path.join(self.channels_dir, channel, src)).f
