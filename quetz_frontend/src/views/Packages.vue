@@ -28,7 +28,7 @@
     methods: {
       // TODO double request currently, also save value of #packages to display in local storage?
       loadPagination: function(args, searchquery) {
-        let url = "/api/channels/" + this.$route.params.channel_id + "/packages?"
+        let url = "/api/paginated/channels/" + this.$route.params.channel_id + "/packages?"
         this.selected_pagesize = args['length'];
         url += new URLSearchParams({
           limit: args['length'],
