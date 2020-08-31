@@ -456,7 +456,7 @@ def handle_package_files(channel_name, files, dao, auth, force,
 
         dest = os.path.join(condainfo.info["subdir"], file.filename)
         file.file._file.seek(0)
-        pkgstore.add_package(channel_name, file.file, dest)
+        pkgstore.add_package(file.file, channel_name, dest)
 
     # Background task to update indexes
     background_tasks.add_task(indexing.update_indexes,

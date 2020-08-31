@@ -86,22 +86,22 @@ def update_indexes(dao, pkgstore, channel_name):
     # Generate channeldata.json and its compressed version
     chandata_json = json.dumps(channeldata, indent=2, sort_keys=True)
     pkgstore.add_file(
-        channel_name,
         bz2.compress(chandata_json.encode("utf-8")),
+        channel_name,
         "channeldata.json.bz2",
     )
-    pkgstore.add_file(channel_name, chandata_json, "channeldata.json")
+    pkgstore.add_file(chandata_json, channel_name, "channeldata.json")
 
     # Generate index.html for the "root" directory
     channel_template = jinjaenv.get_template("channeldata-index.html.j2")
     pkgstore.add_file(
-        channel_name,
         channel_template.render(
             title=channel_name,
             packages=channeldata["packages"],
             subdirs=subdirs,
             current_time=datetime.now(timezone.utc),
         ),
+        channel_name,
         "index.html",
     )
 
@@ -126,9 +126,9 @@ def update_indexes(dao, pkgstore, channel_name):
         add_files = []
         for fname in ("repodata.json", "current_repodata.json"):
             pkgstore.add_file(
-                channel_name, compressed_repodata, f"{dir}/{fname}.bz2"
+                compressed_repodata, channel_name, f"{dir}/{fname}.bz2"
             )
-            pkgstore.add_file(channel_name, repodata, f"{dir}/{fname}")
+            pkgstore.add_file(repodata, channel_name, f"{dir}/{fname}")
             add_files.append(
                 {
                     "name": f"{fname}",
@@ -150,12 +150,12 @@ def update_indexes(dao, pkgstore, channel_name):
 
         # Generate subdir index.html
         pkgstore.add_file(
-            channel_name,
             subdir_template.render(
                 title=f"{channel_name}/{dir}",
                 packages=raw_repodata["packages"],
                 current_time=datetime.now(timezone.utc),
                 add_files=add_files,
             ),
+            channel_name,
             f"{dir}/index.html",
         )

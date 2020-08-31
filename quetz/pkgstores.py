@@ -3,21 +3,23 @@
 
 import abc
 import contextlib
+import os
 import os.path as path
 import shutil
+import tempfile
+from contextlib import contextmanager
+from typing import NoReturn, Union, BinaryIO, IO
 
 import fsspec
-try:
-    import s3fs
-except ModuleNotFoundError:
-    s3fs = None
+from fastapi import File
 
 from quetz.errors import ConfigError
 
 
 class PackageStore(abc.ABC):
+
     @abc.abstractmethod
-    def __init__(self, config):
+    def __init__(self):
         pass
 
     @abc.abstractmethod
@@ -25,11 +27,11 @@ class PackageStore(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def add_package(self, channel, src, dest):
+    def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
         pass
 
     @abc.abstractmethod
-    def add_file(self, channel, data, dest):
+    def add_file(self, data: Union[str, BinaryIO], channel: str, destination: str) -> NoReturn:
         pass
 
     @abc.abstractmethod
@@ -38,30 +40,43 @@ class PackageStore(abc.ABC):
 
 
 class LocalStore(PackageStore):
+
     def __init__(self, config):
         self.fs = fsspec.filesystem("file")
         self.channels_dir = config['channels_dir']
 
+    @contextmanager
+    def _atomic_open(self, channel: str, destination: str, mode="wb") -> IO:
+        full_path = path.join(self.channels_dir, channel, destination)
+        self.fs.makedirs(path.dirname(full_path), exist_ok=True)
+
+        # Creates a tempfile in the same directory as the target filename.
+        # Renames it into place when it's closed.
+        fh, tmpname = tempfile.mkstemp(dir=os.path.dirname(full_path), prefix=".")
+        f = open(fh, mode)
+        try:
+            yield f
+        except:  # noqa
+            f.close()
+            os.remove(tmpname)
+            raise
+        else:
+            f.flush()  # Belt and braces (network file systems)
+            f.close()
+            os.rename(tmpname, full_path)
+
     def create_channel(self, name):
         self.fs.makedirs(path.join(self.channels_dir, name), exist_ok=True)
 
-    def add_package(self, channel, src, dest):
-        full_path = path.join(self.channels_dir, channel, dest)
-        self.fs.makedirs(path.dirname(full_path), exist_ok=True)
+    def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
 
-        with open(full_path, 'wb') as pkg:
-            shutil.copyfileobj(src, pkg)
+        with self._atomic_open(channel, destination) as f:
+            shutil.copyfileobj(package, f)
 
-    def add_file(self, channel, data, dest):
-        full_path = path.join(self.channels_dir, channel, dest)
-        self.fs.makedirs(path.dirname(full_path), exist_ok=True)
+    def add_file(self, data: Union[str, BinaryIO], channel: str, destination: str) -> NoReturn:
 
-        if type(data) is str:
-            mode = "w"
-        else:
-            mode = "wb"
-
-        with self.fs.open(full_path, mode) as f:
+        mode = "w" if isinstance(data, str) else "wb"
+        with self._atomic_open(channel, destination, mode) as f:
             f.write(data)
 
     def serve_path(self, channel, src):
@@ -69,8 +84,11 @@ class LocalStore(PackageStore):
 
 
 class S3Store(PackageStore):
+
     def __init__(self, config):
-        if not s3fs:
+        try:
+            import s3fs
+        except ModuleNotFoundError:
             raise ModuleNotFoundError("S3 package store requires s3fs module")
 
         client_kwargs = {}
@@ -102,14 +120,14 @@ class S3Store(PackageStore):
             except FileExistsError:
                 pass
 
-    def add_package(self, channel, src, dest):
+    def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
         with self._get_fs() as fs:
             bucket = self._bucket_map(channel)
             with fs.transaction:
-                with fs.open(path.join(bucket, dest), "wb") as pkg:
-                    shutil.copyfileobj(src, pkg)
+                with fs.open(path.join(bucket, destination), "wb") as pkg:
+                    shutil.copyfileobj(package, pkg)
 
-    def add_file(self, channel, data, dest):
+    def add_file(self, data: Union[str, BinaryIO], channel: str, destination: str) -> NoReturn:
         if type(data) is str:
             mode = "w"
         else:
@@ -118,7 +136,7 @@ class S3Store(PackageStore):
         with self._get_fs() as fs:
             bucket = self._bucket_map(channel)
             with fs.transaction:
-                with fs.open(path.join(bucket, dest), mode) as f:
+                with fs.open(path.join(bucket, destination), mode) as f:
                     f.write(data)
 
     def serve_path(self, channel, src):
