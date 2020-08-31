@@ -9,6 +9,16 @@ import uuid
 import json
 
 
+def get_paginated_result(query: Query, skip: int, limit: int):
+    return {
+        'pagination': {
+            'skip': skip,
+            'limit': limit,
+            'all_records_count': query.order_by(None).count()
+        },
+        'result': query.offset(skip).limit(limit).all()
+    }
+
 class Dao:
 
     def __init__(self, db: Session):
@@ -30,11 +40,12 @@ class Dao:
         if q:
             query = query.filter(User.username.ilike(f'%{q}%'))
 
-        return query \
-            .options(joinedload(User.profile)) \
-            .offset(skip) \
-            .limit(limit) \
-            .all()
+        query = query.options(joinedload(User.profile))
+
+        if limit < 0:
+            return query.all()
+
+        return get_paginated_result(query, skip, limit)
 
     def get_user_by_username(self, username: str):
         return self.db.query(User) \
@@ -48,10 +59,10 @@ class Dao:
         if q:
             query = query.filter(Channel.name.ilike(f'%{q}%'))
 
-        return query \
-            .offset(skip) \
-            .limit(limit) \
-            .all()
+        if limit < 0:
+            return query.all()
+
+        return get_paginated_result(query, skip, limit)
 
     def create_channel(self, data: rest_models.Channel, user_id: bytes, role: str):
         channel = Channel(
@@ -66,16 +77,6 @@ class Dao:
         self.db.add(member)
         self.db.commit()
 
-    def get_paginated_result(self, query: Query, skip: int, limit: int):
-        return {
-            'pagination': {
-                'skip': skip,
-                'limit': limit,
-                'all_records_count': query.order_by(None).count()
-            },
-            'result': query.offset(skip).limit(limit).all()
-        }
-
     def get_packages(self, channel_name: str, skip: int, limit: int, q: str):
         query = self.db.query(Package) \
             .filter(Package.channel_name == channel_name)
@@ -86,7 +87,7 @@ class Dao:
         if limit < 0:
             return query.all()
 
-        return self.get_paginated_result(query, skip, limit)
+        return get_paginated_result(query, skip, limit)
 
     def get_channel(self, channel_name: str):
         return self.db.query(Channel) \

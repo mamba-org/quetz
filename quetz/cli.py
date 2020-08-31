@@ -128,7 +128,7 @@ def _get_deployments() -> Dict[str, str]:
     if os.path.exists(_deployments_file):
         return _get_cleaned_deployments()
     else:
-        Path(_user_dir).mkdir(parents=True, exist_ok=True) 
+        Path(_user_dir).mkdir(parents=True, exist_ok=True)
         return {}
 
 
@@ -172,7 +172,7 @@ def _get_cleaned_deployments() -> Dict[str, str]:
         if not os.path.exists(config_file):  # User has deleted the instance without CLI
             to_delete.append(path)
 
-    cleaned_deployments = {path: f for path, f in deployments.items() 
+    cleaned_deployments = {path: f for path, f in deployments.items()
                             if path not in to_delete}
 
     if len(to_delete) > 0:
@@ -188,9 +188,9 @@ def _clean_deployments() -> NoReturn:
 
 
 @app.command()
-def create(path: str, 
-           config_file_name: str = "config.toml", 
-           create_conf: bool = False, 
+def create(path: str,
+           config_file_name: str = "config.toml",
+           create_conf: bool = False,
            dev: bool = False) -> NoReturn:
     """ Create a new Quetz deployment.
 
@@ -231,12 +231,12 @@ def create(path: str,
 
         if not os.path.exists(config_file) and not create_conf:
             typer.echo('Config file "{}" does not exist at {}.\n'.format(config_file_name,
-                                                                         path) + 
+                                                                         path) +
                        'Use --create-conf option to generate a default config file.')
             raise typer.Abort()
     else:
         if not create_conf:
-            typer.echo('No configuration file provided.\n' + 
+            typer.echo('No configuration file provided.\n' +
                        'Use --create-conf option to generate a default config file.')
             raise typer.Abort()
 
@@ -257,7 +257,7 @@ def create(path: str,
     os.chdir(path)
     Path('channels').mkdir()
     init_db(config.sqlalchemy_database_url)
- 
+
     if dev:
         _fill_test_database(config.sqlalchemy_database_url)
 
@@ -265,8 +265,8 @@ def create(path: str,
 
 
 @app.command()
-def start(path: str, 
-          port: int = 8000, 
+def start(path: str,
+          port: int = 8000,
           host: str = "127.0.0.1",
           proxy_headers: bool = True,
           log_level: str = 'info',
@@ -313,9 +313,9 @@ def start(path: str,
 
 
 @app.command()
-def run(path: str, 
-        config_file_name: str = "config.toml", 
-        create_conf: bool = False, 
+def run(path: str,
+        config_file_name: str = "config.toml",
+        create_conf: bool = False,
         dev: bool = False,
         port: int = 8000,
         host: str = "127.0.0.1",

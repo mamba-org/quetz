@@ -152,9 +152,19 @@ async def me(
 @api_router.get('/users', response_model=List[rest_models.User], tags=['users'])
 def get_users(
         dao: Dao = Depends(get_dao),
+        q: str = None):
+    user_list = dao.get_users(0, -1, q)
+    for user in user_list:
+        user.id = str(uuid.UUID(bytes=user.id))
+
+    return user_list
+
+@api_router.get('/paginated/users', response_model=rest_models.PaginatedResponse[rest_models.User], tags=['users'])
+def get_users(
+        dao: Dao = Depends(get_dao),
         skip: int = 0, limit: int = 10, q: str = None):
     user_list = dao.get_users(skip, limit, q)
-    for user in user_list:
+    for user in user_list['result']:
         user.id = str(uuid.UUID(bytes=user.id))
 
     return user_list
@@ -179,8 +189,16 @@ def get_user(
 @api_router.get('/channels', response_model=List[rest_models.Channel], tags=['channels'])
 def get_channels(
         dao: Dao = Depends(get_dao),
-        skip: int = 0, limit: int = 10, q: str = None):
+        q: str = None):
     """List all channels"""
+
+    return dao.get_channels(0, -1, q)
+
+@api_router.get('/paginated/channels', response_model=rest_models.PaginatedResponse[rest_models.Channel], tags=['channels'])
+def get_channels(
+        dao: Dao = Depends(get_dao),
+        skip: int = 0, limit: int = 10, q: str = None):
+    """List all channels, as a paginated response"""
 
     return dao.get_channels(skip, limit, q)
 
@@ -209,7 +227,19 @@ def post_channel(
 
 
 @api_router.get('/channels/{channel_name}/packages',
-                response_model=Union[rest_models.PaginatedResponse[rest_models.Package], List[rest_models.Package]],
+                response_model=List[rest_models.Package],
+                tags=['packages'])
+def get_packages(
+        channel: db_models.Channel = Depends(get_channel_or_fail),
+        dao: Dao = Depends(get_dao),
+        q: str = None):
+    """
+    Retrieve all packages in a channel, optionally matching a query `q`.
+    """
+    return dao.get_packages(channel.name, 0, -1, q)
+
+@api_router.get('/paginated/channels/{channel_name}/packages',
+                response_model=rest_models.PaginatedResponse[rest_models.Package],
                 tags=['packages'])
 def get_packages(
         channel: db_models.Channel = Depends(get_channel_or_fail),
@@ -495,8 +525,6 @@ def serve_path(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f'{channel.name}/{path} not found')
 
-
-print(os.getcwd())
 if os.path.isfile('../quetz_frontend/dist/index.html'):
     print('dev frontend found')
     app.mount("/", StaticFiles(directory='../quetz_frontend/dist', html=True), name="frontend")
