@@ -14,8 +14,11 @@
         <img class="avatar-img" :src="avatar_url"  />
       </template>
       <template v-else>
-        <cv-button v-on:click="signin">
-          Sign In
+        <cv-button v-on:click="signinGithub">
+          Sign In Via Github
+        </cv-button>
+        <cv-button v-on:click="signinGoogle">
+          Sign In Via Google
         </cv-button>
       <cv-header-global-action aria-label="User avatar" aria-controls="user-panel">
         <!-- <img :src="avatar_url" v-if="avatar_url" /> -->
@@ -58,9 +61,13 @@
       this.me();
     },
     methods: {
-      signin() {
+      signinGithub() {
         window.location.href = "/auth/github/login";
-        console.log("Signing in");
+        console.log("Signing in via github");
+      },
+      signinGoogle() {
+        window.location.href = "/auth/google/login";
+        console.log("Signing in via google");
       },
       logout() {
         window.location.href = "/auth/logout";

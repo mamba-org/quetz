@@ -129,6 +129,18 @@ url = "https://..."
 
 Be sure to set the url field if not using AWS.
 
+## Google OAuth 2.0 OpenID Connect
+
+To enable auth via Google, you will need to register an application at: https://console.developers.google.com/apis/credentials
+
+Then add the client secret & ID to a `google` section of your `config.toml`:
+
+```
+[google]
+client_id = "EXAMPLEID420127570681-6rbcgdj683l3odc3nqearn2dr3pnaisq.apps.googleusercontent.com"
+client_secret = "EXAMPLESECRETmD-7UXVCMZV3C7b-kZ9yf70"
+```
+
 ## Frontend
 
 Quetz comes with a initial frontend implementation. It can be found in quetz_frontend.
