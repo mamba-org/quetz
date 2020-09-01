@@ -30,4 +30,9 @@ export default {
 {
   background: $carbon--gray-90;
 }
+
+.quetz-main-table {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
 </style>

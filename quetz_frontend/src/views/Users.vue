@@ -1,7 +1,7 @@
 <template>
 <div class="bx--grid">
   <div class="bx--row">
-    <div class="bx--col-lg-13 bx--offset-lg-3">
+    <div class="bx--col-lg-13 bx--offset-lg-3 quetz-main-table">
         <h3 class="bx--data-table-header">Users</h3>
         <cv-data-table
           :columns="columns" :data="data" ref="table">

@@ -4,6 +4,7 @@ import Channels from './views/Channels.vue';
 import Users from './views/Users.vue';
 import Header from './components/Header';
 import Packages from './views/Packages';
+import Package from './views/Package';
 
 import CarbonComponentsVue from '@carbon/vue';
 Vue.use(CarbonComponentsVue);
@@ -31,6 +32,11 @@ export default new Router({
       path: '/channel/:channel_id/packages',
       name: 'packages',
       component: Packages
+    },
+    {
+      path: '/channel/:channel_id/packages/:package',
+      name: 'package',
+      component: Package
     },
     {
       path: '/header',
