@@ -62,7 +62,7 @@ quetz run test_quetz --create-conf --dev --reload
 
 Links:
  * http://localhost:8000/ - Login with your github account
- * http://localhost:8000/api/dummylogin/[ alice | bob | carol | dave] - Login with test user
+ * http://localhost:8000/api/dummylogin/alice  - Login with test user, one of [alice | bob | carol | dave]
  * http://localhost:8000/docs - Swagger UI for this REST service
 
 Download `xtensor` as test package:

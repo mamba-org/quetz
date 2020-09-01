@@ -47,13 +47,13 @@ def _fill_test_database(database_url: str) -> NoReturn:
             db.add(user)
             testUsers.append(user)
 
-        for channel_index in range(30):
+        for channel_index in range(3):
             channel = Channel(
                 name=f'channel{channel_index}',
                 description=f'Description of channel{channel_index}',
                 private=False)
 
-            for package_index in range(random.randint(5, 100)):
+            for package_index in range(random.randint(5, 10)):
                 package = Package(
                     name=f'package{package_index}',
                     description=f'Description of package{package_index}')
