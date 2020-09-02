@@ -18,15 +18,19 @@ def register(config):
         name='google',
         client_id=config.google_client_id,
         client_secret=config.google_client_secret,
-        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+        server_metadata_url=(
+            'https://accounts.google.com' '/.well-known/openid-configuration'
+        ),
         client_kwargs={'scope': 'openid email profile'},
         quetz_db_url=config.sqlalchemy_database_url,
-        prompt='select_account'
+        prompt='select_account',
     )
 
 
 async def validate_token(token):
-    resp = await oauth.google.get('https://openidconnect.googleapis.com/v1/userinfo', token=token)
+    resp = await oauth.google.get(
+        'https://openidconnect.googleapis.com/v1/userinfo', token=token
+    )
     if resp.status_code == 401:
         return False
     return True
@@ -42,7 +46,7 @@ async def login_google(request: Request):
 @router.route('/auth/google/authorize', name='authorize_google')
 async def authorize(request: Request):
     token = await oauth.google.authorize_access_token(request)
-    profile= await oauth.google.parse_id_token(request, token)
+    profile = await oauth.google.parse_id_token(request, token)
     db = get_session(oauth.google.server_metadata['quetz_db_url'])
     try:
         user = get_user_by_google_identity(db, profile)
@@ -60,5 +64,4 @@ async def authorize(request: Request):
 
 @router.route('/auth/google/revoke')
 async def revoke(request):
-    return RedirectResponse(
-        f'https://myaccount.google.com/permissions')
+    return RedirectResponse('https://myaccount.google.com/permissions')

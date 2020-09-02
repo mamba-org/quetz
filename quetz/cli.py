@@ -12,11 +12,18 @@ from pathlib import Path
 
 from typing import NoReturn, Dict
 
-from quetz.config import (Config, create_config,
-                          _user_dir, _env_prefix, _env_config_file)
+from quetz.config import Config, create_config, _user_dir, _env_prefix, _env_config_file
 from quetz.database import init_db, get_session
-from quetz.db_models import (User, Identity, Profile, Channel, ChannelMember, Package,
-                             PackageMember, ApiKey)
+from quetz.db_models import (
+    User,
+    Identity,
+    Profile,
+    Channel,
+    ChannelMember,
+    Package,
+    PackageMember,
+    ApiKey,
+)
 
 app = typer.Typer()
 
@@ -38,9 +45,7 @@ def _fill_test_database(database_url: str) -> NoReturn:
                 username=username,
             )
 
-            profile = Profile(
-                name=username.capitalize(),
-                avatar_url='/avatar.jpg')
+            profile = Profile(name=username.capitalize(), avatar_url='/avatar.jpg')
 
             user.identities.append(identity)
             user.profile = profile
@@ -51,35 +56,31 @@ def _fill_test_database(database_url: str) -> NoReturn:
             channel = Channel(
                 name=f'channel{channel_index}',
                 description=f'Description of channel{channel_index}',
-                private=False)
+                private=False,
+            )
 
             for package_index in range(random.randint(5, 10)):
                 package = Package(
                     name=f'package{package_index}',
-                    description=f'Description of package{package_index}')
+                    description=f'Description of package{package_index}',
+                )
                 channel.packages.append(package)
 
                 test_user = testUsers[random.randint(0, len(testUsers) - 1)]
                 package_member = PackageMember(
-                    package=package,
-                    channel=channel,
-                    user=test_user,
-                    role='owner')
+                    package=package, channel=channel, user=test_user, role='owner'
+                )
 
                 db.add(package_member)
 
             if channel_index == 0:
-                package = Package(
-                    name='xtensor',
-                    description='Description of xtensor')
+                package = Package(name='xtensor', description='Description of xtensor')
                 channel.packages.append(package)
 
                 test_user = testUsers[random.randint(0, len(testUsers) - 1)]
                 package_member = PackageMember(
-                    package=package,
-                    channel=channel,
-                    user=test_user,
-                    role='owner')
+                    package=package, channel=channel, user=test_user, role='owner'
+                )
 
                 db.add(package_member)
 
@@ -88,10 +89,7 @@ def _fill_test_database(database_url: str) -> NoReturn:
 
                 key_user = User(id=uuid.uuid4().bytes)
                 api_key = ApiKey(
-                    key=key,
-                    description='test API key',
-                    user=test_user,
-                    owner=test_user
+                    key=key, description='test API key', user=test_user, owner=test_user
                 )
                 db.add(api_key)
                 print(f'Test API key created for user "{test_user.username}": {key}')
@@ -100,15 +98,17 @@ def _fill_test_database(database_url: str) -> NoReturn:
                     user=key_user,
                     channel_name=channel.name,
                     package_name=package.name,
-                    role='maintainer')
+                    role='maintainer',
+                )
                 db.add(key_package_member)
 
             db.add(channel)
 
             channel_member = ChannelMember(
                 channel=channel,
-                user=testUsers[random.randint(0, len(testUsers)-1)],
-                role='owner')
+                user=testUsers[random.randint(0, len(testUsers) - 1)],
+                role='owner',
+            )
 
             db.add(channel_member)
         db.commit()
@@ -117,7 +117,7 @@ def _fill_test_database(database_url: str) -> NoReturn:
 
 
 def _get_deployments() -> Dict[str, str]:
-    """ Get a mapping of the current Quetz deployments.
+    """Get a mapping of the current Quetz deployments.
 
     Returns
     -------
@@ -133,7 +133,7 @@ def _get_deployments() -> Dict[str, str]:
 
 
 def _store_deployement(path: str, config_file_name: str) -> NoReturn:
-    """ Store a new Quetz deployment.
+    """Store a new Quetz deployment.
 
     Parameters
     ----------
@@ -152,10 +152,10 @@ def _store_deployement(path: str, config_file_name: str) -> NoReturn:
 
 
 def _get_cleaned_deployments() -> Dict[str, str]:
-    """ Get a cleaned version of deployments.
+    """Get a cleaned version of deployments.
 
-    This could be necessary to clean-up if the user delete manually a deployment directory without updating
-    the deployments files in its profile.
+    This could be necessary to clean-up if the user delete manually a deployment
+    directory without updating the deployments files in its profile.
 
     Returns
     -------
@@ -172,8 +172,9 @@ def _get_cleaned_deployments() -> Dict[str, str]:
         if not os.path.exists(config_file):  # User has deleted the instance without CLI
             to_delete.append(path)
 
-    cleaned_deployments = {path: f for path, f in deployments.items()
-                            if path not in to_delete}
+    cleaned_deployments = {
+        path: f for path, f in deployments.items() if path not in to_delete
+    }
 
     if len(to_delete) > 0:
         with open(_deployments_file, 'w') as f:
@@ -188,22 +189,27 @@ def _clean_deployments() -> NoReturn:
 
 
 @app.command()
-def create(path: str,
-           config_file_name: str = "config.toml",
-           create_conf: bool = False,
-           dev: bool = False) -> NoReturn:
-    """ Create a new Quetz deployment.
+def create(
+    path: str,
+    config_file_name: str = "config.toml",
+    create_conf: bool = False,
+    dev: bool = False,
+) -> NoReturn:
+    """Create a new Quetz deployment.
 
     Parameters
     ----------
     path : str
         The path where to create the deployment (will be created if does not exist)
     config_file_name : str, optional
-        The configuration file name expected in the provided path {default="config.toml"}
+        The configuration file name expected in the provided path
+        {default="config.toml"}
     create_conf : bool, optional
-        Whether to create a default configuration file if not found in the path, or not {default=False}
+        Whether to create a default configuration file if not found in the path, or not
+        {default=False}
     dev : bool, optional
-        Whether to activate the dev mode, or not (includes filling the database with test data, http instead of https)
+        Whether to activate the dev mode, or not (includes filling the database with
+        test data, http instead of https)
     """
 
     abs_path = os.path.abspath(path)
@@ -212,8 +218,9 @@ def create(path: str,
 
     if os.path.exists(path):
         if abs_path in deployments:
-            delete_ = typer.confirm('Quetz deployement exists at {}.\n'.format(path) +
-                                    'Overwrite it?')
+            delete_ = typer.confirm(
+                'Quetz deployement exists at {}.\n'.format(path) + 'Overwrite it?'
+            )
             if delete_:
                 delete(path, force=True)
                 create(path, config_file_name, create_conf, dev)
@@ -225,19 +232,26 @@ def create(path: str,
         # only authorize path with a config file to avoid deletion of unexpected files
         # when deleting Quetz instance
         if not all([f in [config_file_name] for f in os.listdir(path)]):
-            typer.echo('Quetz deployement not allowed at {}.\n'.format(path) +
-                       'The path should not contain more than the configuration file.')
+            typer.echo(
+                'Quetz deployement not allowed at {}.\n'.format(path)
+                + 'The path should not contain more than the configuration file.'
+            )
             raise typer.Abort()
 
         if not os.path.exists(config_file) and not create_conf:
-            typer.echo('Config file "{}" does not exist at {}.\n'.format(config_file_name,
-                                                                         path) +
-                       'Use --create-conf option to generate a default config file.')
+            typer.echo(
+                'Config file "{}" does not exist at {}.\n'.format(
+                    config_file_name, path
+                )
+                + 'Use --create-conf option to generate a default config file.'
+            )
             raise typer.Abort()
     else:
         if not create_conf:
-            typer.echo('No configuration file provided.\n' +
-                       'Use --create-conf option to generate a default config file.')
+            typer.echo(
+                'No configuration file provided.\n'
+                + 'Use --create-conf option to generate a default config file.'
+            )
             raise typer.Abort()
 
         Path(path).mkdir(parents=True)
@@ -265,13 +279,15 @@ def create(path: str,
 
 
 @app.command()
-def start(path: str,
-          port: int = 8000,
-          host: str = "127.0.0.1",
-          proxy_headers: bool = True,
-          log_level: str = 'info',
-          reload: bool = False) -> NoReturn:
-    """ Start a Quetz deployment.
+def start(
+    path: str,
+    port: int = 8000,
+    host: str = "127.0.0.1",
+    proxy_headers: bool = True,
+    log_level: str = 'info',
+    reload: bool = False,
+) -> NoReturn:
+    """Start a Quetz deployment.
 
     To be started, a deployment has to be already created.
     At this time, only Uvicorn is supported as manager.
@@ -287,10 +303,11 @@ def start(path: str,
     proxy_headers : bool, optional
         Whether to enable the X-forwarding, or not {default=True}
     log_level : str, optional
-        The logging level among 'critical', 'error', 'warning', 'info', 'debug', 'trace' {default='info'}
+        The logging level among 'critical', 'error', 'warning', 'info', 'debug', 'trace'
+        {default='info'}
     reload : bool, optional
-        Whether to activate the automatic reload of the server when Quetz source code is modified,
-        or not {default=False}
+        Whether to activate the automatic reload of the server when Quetz source code is
+         modified, or not {default=False}
     """
 
     abs_path = os.path.abspath(path)
@@ -307,22 +324,32 @@ def start(path: str,
     os.chdir(path)
 
     import quetz
+
     quetz_src = os.path.dirname(quetz.__file__)
-    uvicorn.run("quetz.main:app", reload=reload, reload_dirs=(quetz_src, ), port=port,
-                proxy_headers=proxy_headers, host=host, log_level=log_level)
+    uvicorn.run(
+        "quetz.main:app",
+        reload=reload,
+        reload_dirs=(quetz_src,),
+        port=port,
+        proxy_headers=proxy_headers,
+        host=host,
+        log_level=log_level,
+    )
 
 
 @app.command()
-def run(path: str,
-        config_file_name: str = "config.toml",
-        create_conf: bool = False,
-        dev: bool = False,
-        port: int = 8000,
-        host: str = "127.0.0.1",
-        proxy_headers: bool = True,
-        log_level: str = 'info',
-        reload: bool = False) -> NoReturn:
-    """ Run a Quetz deployment.
+def run(
+    path: str,
+    config_file_name: str = "config.toml",
+    create_conf: bool = False,
+    dev: bool = False,
+    port: int = 8000,
+    host: str = "127.0.0.1",
+    proxy_headers: bool = True,
+    log_level: str = 'info',
+    reload: bool = False,
+) -> NoReturn:
+    """Run a Quetz deployment.
 
     It performs sequentially create and start operations.
 
@@ -331,11 +358,14 @@ def run(path: str,
     path : str
         The path of the deployment
     config_file_name : str, optional
-        The configuration file name expected in the provided path {default="config.toml"}
+        The configuration file name expected in the provided path
+        {default="config.toml"}
     create_conf : bool, optional
-        Whether to create a default configuration file if not found in the path, or not {default=False}
+        Whether to create a default configuration file if not found in the path, or not
+        {default=False}
     dev : bool, optional
-        Whether to activate the dev mode, or not (includes filling the database with test data, http instead of https)
+        Whether to activate the dev mode, or not (includes filling the database with
+        test data, http instead of https)
     port : int, optional
         The port to bind {default=8000}
     host : str, optional
@@ -343,10 +373,11 @@ def run(path: str,
     proxy_headers : bool, optional
         Whether to enable the X-forwarding, or not {default=True}
     log_level : str, optional
-        The logging level among 'critical', 'error', 'warning', 'info', 'debug', 'trace' {default='info'}
+        The logging level among 'critical', 'error', 'warning', 'info', 'debug', 'trace'
+        {default='info'}
     reload : bool, optional
-        Whether to activate the automatic reload of the server when Quetz source code is modified,
-        or not {default=False}
+        Whether to activate the automatic reload of the server when Quetz source code is
+         modified, or not {default=False}
     """
 
     abs_path = os.path.abspath(path)
@@ -356,7 +387,7 @@ def run(path: str,
 
 @app.command()
 def delete(path: str, force: bool = False) -> NoReturn:
-    """ Delete a Quetz deployment.
+    """Delete a Quetz deployment.
 
     Parameters
     ----------

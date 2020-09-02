@@ -17,7 +17,6 @@ from quetz.errors import ConfigError
 
 
 class PackageStore(abc.ABC):
-
     @abc.abstractmethod
     def __init__(self):
         pass
@@ -31,7 +30,9 @@ class PackageStore(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def add_file(self, data: Union[str, BinaryIO], channel: str, destination: str) -> NoReturn:
+    def add_file(
+        self, data: Union[str, BinaryIO], channel: str, destination: str
+    ) -> NoReturn:
         pass
 
     @abc.abstractmethod
@@ -40,7 +41,6 @@ class PackageStore(abc.ABC):
 
 
 class LocalStore(PackageStore):
-
     def __init__(self, config):
         self.fs = fsspec.filesystem("file")
         self.channels_dir = config['channels_dir']
@@ -73,7 +73,9 @@ class LocalStore(PackageStore):
         with self._atomic_open(channel, destination) as f:
             shutil.copyfileobj(package, f)
 
-    def add_file(self, data: Union[str, BinaryIO], channel: str, destination: str) -> NoReturn:
+    def add_file(
+        self, data: Union[str, BinaryIO], channel: str, destination: str
+    ) -> NoReturn:
 
         mode = "w" if isinstance(data, str) else "wb"
         with self._atomic_open(channel, destination, mode) as f:
@@ -84,7 +86,6 @@ class LocalStore(PackageStore):
 
 
 class S3Store(PackageStore):
-
     def __init__(self, config):
         try:
             import s3fs
@@ -97,8 +98,8 @@ class S3Store(PackageStore):
             client_kwargs['endpoint_url'] = url
 
         self.fs = s3fs.S3FileSystem(
-            key=config['key'], secret=config['secret'],
-            client_kwargs=client_kwargs)
+            key=config['key'], secret=config['secret'], client_kwargs=client_kwargs
+        )
 
         self.bucket_prefix = config['bucket_prefix']
         self.bucket_suffix = config['bucket_suffix']
@@ -127,7 +128,9 @@ class S3Store(PackageStore):
                 with fs.open(path.join(bucket, destination), "wb") as pkg:
                     shutil.copyfileobj(package, pkg)
 
-    def add_file(self, data: Union[str, BinaryIO], channel: str, destination: str) -> NoReturn:
+    def add_file(
+        self, data: Union[str, BinaryIO], channel: str, destination: str
+    ) -> NoReturn:
         if type(data) is str:
             mode = "w"
         else:
@@ -141,5 +144,4 @@ class S3Store(PackageStore):
 
     def serve_path(self, channel, src):
         with self._get_fs() as fs:
-            return fs.open(
-                path.join(self._bucket_map(channel), src))
+            return fs.open(path.join(self._bucket_map(channel), src))

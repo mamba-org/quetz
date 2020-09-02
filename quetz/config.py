@@ -52,28 +52,30 @@ class ConfigSection(NamedTuple):
 
 class Config:
     _config_map = (
-        ConfigSection("github", [
-            ConfigEntry("client_id", str),
-            ConfigEntry("client_secret", str)
-        ]),
-        ConfigSection("sqlalchemy", [
-            ConfigEntry("database_url", str)
-        ]),
-        ConfigSection("session", [
-            ConfigEntry("secret", str),
-            ConfigEntry("https_only", bool, default=True)
-        ]),
-        ConfigSection("s3", [
-            ConfigEntry("access_key", str),
-            ConfigEntry("secret_key", str),
-            ConfigEntry("url", str, default=""),
-            ConfigEntry("bucket_prefix", str, default=""),
-            ConfigEntry("bucket_suffix", str, default="")
-        ], required=False),
-        ConfigSection("google", [
-            ConfigEntry("client_id", str),
-            ConfigEntry("client_secret", str)
-        ], required=False)
+        ConfigSection(
+            "github", [ConfigEntry("client_id", str), ConfigEntry("client_secret", str)]
+        ),
+        ConfigSection("sqlalchemy", [ConfigEntry("database_url", str)]),
+        ConfigSection(
+            "session",
+            [ConfigEntry("secret", str), ConfigEntry("https_only", bool, default=True)],
+        ),
+        ConfigSection(
+            "s3",
+            [
+                ConfigEntry("access_key", str),
+                ConfigEntry("secret_key", str),
+                ConfigEntry("url", str, default=""),
+                ConfigEntry("bucket_prefix", str, default=""),
+                ConfigEntry("bucket_suffix", str, default=""),
+            ],
+            required=False,
+        ),
+        ConfigSection(
+            "google",
+            [ConfigEntry("client_id", str), ConfigEntry("client_secret", str)],
+            required=False,
+        ),
     )
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]
@@ -82,7 +84,8 @@ class Config:
         """Load configurations from various places.
 
         Order of importance for configuration is:
-        host < user profile < deployment < configuration file from env var < value from env var
+        host < user profile < deployment < configuration file from env var < value from
+        env var
 
         Parameters
         ----------
@@ -117,15 +120,15 @@ class Config:
             setattr(self, entry.full_name(section), value)
 
         for item in self._config_map:
-            if (isinstance(item, ConfigSection)
-                    and (item.required or item.name in self.config)):
+            if isinstance(item, ConfigSection) and (
+                item.required or item.name in self.config
+            ):
                 for entry in item.entries:
                     set_entry_attr(entry, item.name)
             elif isinstance(item, ConfigEntry):
                 set_entry_attr(item)
 
-    def _get_value(self, entry: ConfigEntry, section: str = "") \
-                   -> Union[str, bool]:
+    def _get_value(self, entry: ConfigEntry, section: str = "") -> Union[str, bool]:
         """Get an entry value from a configuration mapping.
 
         Parameters
@@ -185,17 +188,17 @@ class Config:
             The package store instance to enact package operations against
         """
         if self.config.get('s3'):
-            return pkgstores.S3Store({
-                'key': self.s3_access_key,
-                'secret': self.s3_secret_key,
-                'url': self.s3_url,
-                'bucket_prefix': self.s3_bucket_prefix,
-                'bucket_suffix': self.s3_bucket_suffix
-            })
+            return pkgstores.S3Store(
+                {
+                    'key': self.s3_access_key,
+                    'secret': self.s3_secret_key,
+                    'url': self.s3_url,
+                    'bucket_prefix': self.s3_bucket_prefix,
+                    'bucket_suffix': self.s3_bucket_suffix,
+                }
+            )
         else:
-            return pkgstores.LocalStore({
-                'channels_dir': 'channels'
-            })
+            return pkgstores.LocalStore({'channels_dir': 'channels'})
 
     def configured_section(self, section: str) -> bool:
         """Return if a given section has been configured.
@@ -213,11 +216,14 @@ class Config:
 
         return bool(self.config.get(section))
 
-def create_config(client_id: str = "",
-                  client_secret: str = "",
-                  database_url: str = "sqlite:///./quetz.sqlite",
-                  secret: str = b64encode(token_bytes(32)).decode(),
-                  https: str = 'true') -> str:
+
+def create_config(
+    client_id: str = "",
+    client_secret: str = "",
+    database_url: str = "sqlite:///./quetz.sqlite",
+    secret: str = b64encode(token_bytes(32)).decode(),
+    https: str = 'true',
+) -> str:
     """Create a configuration file from a template.
 
     Parameters

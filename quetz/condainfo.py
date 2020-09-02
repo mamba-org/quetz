@@ -40,6 +40,7 @@ ABOUT_MAP_FIELDS = ("keywords", "identifiers", "tags")
 
 MAX_CONDA_TIMESTAMP = 253402300799
 
+
 class CondaInfo:
     def __init__(self, file, filename):
         self.channeldata = {}

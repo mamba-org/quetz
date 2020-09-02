@@ -125,9 +125,7 @@ def update_indexes(dao, pkgstore, channel_name):
 
         add_files = []
         for fname in ("repodata.json", "current_repodata.json"):
-            pkgstore.add_file(
-                compressed_repodata, channel_name, f"{dir}/{fname}.bz2"
-            )
+            pkgstore.add_file(compressed_repodata, channel_name, f"{dir}/{fname}.bz2")
             pkgstore.add_file(repodata, channel_name, f"{dir}/{fname}")
             add_files.append(
                 {
