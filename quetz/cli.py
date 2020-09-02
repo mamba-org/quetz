@@ -1,5 +1,6 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
+# flake8: noqa
 
 import typer
 import os
@@ -10,7 +11,7 @@ import random
 import uuid
 from pathlib import Path
 
-from typing import NoReturn, Dict
+from typing import NoReturn, Dict, Union
 
 from quetz.config import Config, create_config, _user_dir, _env_prefix, _env_config_file
 from quetz.database import init_db, get_session
@@ -191,27 +192,26 @@ def _clean_deployments() -> NoReturn:
 
 @app.command()
 def create(
-    path: str,
-    config_file_name: str = "config.toml",
-    create_conf: bool = False,
-    dev: bool = False,
+    path: str = typer.Option(
+        None,
+        help="The path where to create the deployment (will be created if does not exist)",
+    ),
+    config_file_name: str = typer.Option(
+        "config.toml", help="The configuration file name expected in the provided path"
+    ),
+    copy_conf: Union[str, None] = typer.Option(
+        None, help="The configuration to copy from (e.g. dev_config.toml)"
+    ),
+    create_conf: bool = typer.Option(
+        False,
+        help="Whether to create a default configuration file if not found in the path, or not",
+    ),
+    dev: bool = typer.Option(
+        False,
+        help="Whether to activate the dev mode, or not (includes filling the database with test data, http instead of https)",
+    ),
 ) -> NoReturn:
-    """Create a new Quetz deployment.
-
-    Parameters
-    ----------
-    path : str
-        The path where to create the deployment (will be created if does not exist)
-    config_file_name : str, optional
-        The configuration file name expected in the provided path
-        {default="config.toml"}
-    create_conf : bool, optional
-        Whether to create a default configuration file if not found in the path, or not
-        {default=False}
-    dev : bool, optional
-        Whether to activate the dev mode, or not (includes filling the database with
-        test data, http instead of https)
-    """
+    """Create a new Quetz deployment."""
 
     abs_path = os.path.abspath(path)
     config_file = os.path.join(path, config_file_name)
@@ -281,34 +281,25 @@ def create(
 
 @app.command()
 def start(
-    path: str,
-    port: int = 8000,
-    host: str = "127.0.0.1",
-    proxy_headers: bool = True,
-    log_level: str = 'info',
-    reload: bool = False,
+    path: str = typer.Argument(None, help="The path of the deployment"),
+    port: int = typer.Option(8000, help="The port to bind"),
+    host: str = typer.Option("127.0.0.1", help="The network interface to bind"),
+    proxy_headers: bool = typer.Option(
+        True, help="Whether to enable the X-forwarding, or not"
+    ),
+    log_level: str = typer.Option(
+        'info',
+        help="The logging level among 'critical', 'error', 'warning', 'info', 'debug', 'trace'",
+    ),
+    reload: bool = typer.Option(
+        False,
+        help="Whether to activate the automatic reload of the server when Quetz source code is modified, or not",
+    ),
 ) -> NoReturn:
     """Start a Quetz deployment.
 
     To be started, a deployment has to be already created.
     At this time, only Uvicorn is supported as manager.
-
-    Parameters
-    ----------
-    path : str
-        The path of the deployment
-    port : int, optional
-        The port to bind {default=8000}
-    host : str, optional
-        The network interface to bind {default="127.0.0.1"}
-    proxy_headers : bool, optional
-        Whether to enable the X-forwarding, or not {default=True}
-    log_level : str, optional
-        The logging level among 'critical', 'error', 'warning', 'info', 'debug', 'trace'
-        {default='info'}
-    reload : bool, optional
-        Whether to activate the automatic reload of the server when Quetz source code is
-         modified, or not {default=False}
     """
 
     abs_path = os.path.abspath(path)
@@ -340,46 +331,35 @@ def start(
 
 @app.command()
 def run(
-    path: str,
-    config_file_name: str = "config.toml",
-    create_conf: bool = False,
-    dev: bool = False,
-    port: int = 8000,
-    host: str = "127.0.0.1",
-    proxy_headers: bool = True,
-    log_level: str = 'info',
-    reload: bool = False,
+    path: str = typer.Argument(None, help="The path of the deployment"),
+    config_file_name: str = typer.Option(
+        "config.toml", help="The configuration file name expected in the provided path"
+    ),
+    create_conf: bool = typer.Option(
+        False,
+        help="Whether to create a default configuration file if not found in the path, or not",
+    ),
+    dev: bool = typer.Option(
+        False,
+        help="Whether to activate the dev mode, or not (includes filling the database with test data, http instead of https)",
+    ),
+    port: int = typer.Option(8000, help="The port to bind"),
+    host: str = typer.Option("127.0.0.1", help="The network interface to bind"),
+    proxy_headers: bool = typer.Option(
+        True, help="Whether to enable the X-forwarding, or not"
+    ),
+    log_level: str = typer.Option(
+        'info',
+        help="The logging level among 'critical', 'error', 'warning', 'info', 'debug', 'trace'",
+    ),
+    reload: bool = typer.Option(
+        False,
+        help="Whether to activate the automatic reload of the server when Quetz source code is modified, or not",
+    ),
 ) -> NoReturn:
     """Run a Quetz deployment.
 
-    It performs sequentially create and start operations.
-
-    Parameters
-    ----------
-    path : str
-        The path of the deployment
-    config_file_name : str, optional
-        The configuration file name expected in the provided path
-        {default="config.toml"}
-    create_conf : bool, optional
-        Whether to create a default configuration file if not found in the path, or not
-        {default=False}
-    dev : bool, optional
-        Whether to activate the dev mode, or not (includes filling the database with
-        test data, http instead of https)
-    port : int, optional
-        The port to bind {default=8000}
-    host : str, optional
-        The network interface to bind {default="127.0.0.1"}
-    proxy_headers : bool, optional
-        Whether to enable the X-forwarding, or not {default=True}
-    log_level : str, optional
-        The logging level among 'critical', 'error', 'warning', 'info', 'debug', 'trace'
-        {default='info'}
-    reload : bool, optional
-        Whether to activate the automatic reload of the server when Quetz source code is
-         modified, or not {default=False}
-    """
+    It performs sequentially create and start operations."""
 
     abs_path = os.path.abspath(path)
     create(abs_path, config_file_name, create_conf, dev)
@@ -387,16 +367,13 @@ def run(
 
 
 @app.command()
-def delete(path: str, force: bool = False) -> NoReturn:
-    """Delete a Quetz deployment.
-
-    Parameters
-    ----------
-    path : str
-        The path of the deployment
-    force : bool, optional
-        Whether to skip manual confirmation, or not {default=False}
-    """
+def delete(
+    path: str = typer.Argument(None, help="The path of the deployment"),
+    force: bool = typer.Option(
+        False, help="Whether to skip manual confirmation, or not"
+    ),
+) -> NoReturn:
+    """Delete a Quetz deployment."""
 
     abs_path = os.path.abspath(path)
     deployments = _get_deployments()
