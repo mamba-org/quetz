@@ -67,9 +67,8 @@ class Channel(BaseModel):
 
 class Package(BaseModel):
     name: str = Field(None, title='The name of package', max_length=50)
-    description: str = Field(
-        None, title='The description of the package', max_length=300
-    )
+    summary: str = Field(None, title='The summary of the package')
+    description: str = Field(None, title='The description of the package')
 
     class Config:
         orm_mode = True

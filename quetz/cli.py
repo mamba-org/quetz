@@ -62,6 +62,7 @@ def _fill_test_database(database_url: str) -> NoReturn:
             for package_index in range(random.randint(5, 10)):
                 package = Package(
                     name=f'package{package_index}',
+                    summary=f'package {package_index} summary text',
                     description=f'Description of package{package_index}',
                 )
                 channel.packages.append(package)
@@ -106,7 +107,7 @@ def _fill_test_database(database_url: str) -> NoReturn:
 
             channel_member = ChannelMember(
                 channel=channel,
-                user=testUsers[random.randint(0, len(testUsers) - 1)],
+                user=test_user,
                 role='owner',
             )
 
