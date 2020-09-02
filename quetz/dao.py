@@ -113,7 +113,10 @@ class Dao:
         role: str,
     ):
         package = Package(
-            name=new_package.name, description=new_package.description, channeldata="{}"
+            name=new_package.name,
+            summary=new_package.summary,
+            description=new_package.description,
+            channeldata="{}",
         )
 
         package.channel = (

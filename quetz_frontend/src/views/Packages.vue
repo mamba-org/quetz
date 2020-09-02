@@ -43,14 +43,14 @@ export default {
       return fetch(url).then((msg) => {
         return msg.json().then((decoded) => {
             console.log(decoded);
-            this.columns = ["Name", "Description"];
+            this.columns = ["Name", "Summary"];
             console.log(decoded.pagination)
             this.pagination = {
               numberOfItems: decoded.pagination.all_records_count,
               pageSizes: [25, 50, 100, 1000]
             };
             this.numberOfItems = decoded.pagination.all_records_count;
-            this.data = decoded.result.map((el) => [el.name, el.description]);
+            this.data = decoded.result.map((el) => [el.name, el.summary]);
         });
       });
     },

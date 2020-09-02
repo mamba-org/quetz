@@ -545,7 +545,11 @@ def handle_package_files(
         if not package and not dao.get_package(channel_name, package_name):
             dao.create_package(
                 channel_name,
-                rest_models.Package(name=package_name, description='n/a'),
+                rest_models.Package(
+                    name=package_name,
+                    summary=condainfo.about.get('summary', 'n/a'),
+                    description=condainfo.about.get('description', 'n/a'),
+                ),
                 auth.assert_user(),
                 authorization.OWNER,
             )

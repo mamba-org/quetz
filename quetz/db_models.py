@@ -13,6 +13,7 @@ from sqlalchemy import (
     func,
     Enum,
     UniqueConstraint,
+    Text,
 )
 from sqlalchemy.orm import relationship
 import enum
@@ -92,7 +93,8 @@ class Package(Base):
     channel_name = Column(
         String, ForeignKey('channels.name'), primary_key=True, index=True
     )
-    description = Column(String)
+    description = Column(Text)
+    summary = Column(Text)
 
     channel = relationship('Channel', uselist=False, back_populates='packages')
 
@@ -102,7 +104,7 @@ class Package(Base):
     def __repr__(self):
         return (
             f"<Package name={self.name}, "
-            "description={self.description}, "
+            "summary={self.summary}, "
             "channel={self.channel}>"
         )
 
