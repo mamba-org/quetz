@@ -5,8 +5,16 @@ import random
 import uuid
 from quetz.config import Config
 from quetz.database import init_db, get_session
-from quetz.db_models import (User, Identity, Profile, Channel, ChannelMember, Package,
-                             PackageMember, ApiKey)
+from quetz.db_models import (
+    User,
+    Identity,
+    Profile,
+    Channel,
+    ChannelMember,
+    Package,
+    PackageMember,
+    ApiKey,
+)
 
 
 def init_test_db():
@@ -26,9 +34,7 @@ def init_test_db():
                 username=username,
             )
 
-            profile = Profile(
-                name=username.capitalize(),
-                avatar_url='/avatar.jpg')
+            profile = Profile(name=username.capitalize(), avatar_url='/avatar.jpg')
 
             user.identities.append(identity)
             user.profile = profile
@@ -39,35 +45,31 @@ def init_test_db():
             channel = Channel(
                 name=f'channel{channel_index}',
                 description=f'Description of channel{channel_index}',
-                private=False)
+                private=False,
+            )
 
             for package_index in range(random.randint(5, 100)):
                 package = Package(
                     name=f'package{package_index}',
-                    description=f'Description of package{package_index}')
+                    description=f'Description of package{package_index}',
+                )
                 channel.packages.append(package)
 
                 test_user = testUsers[random.randint(0, len(testUsers) - 1)]
                 package_member = PackageMember(
-                    package=package,
-                    channel=channel,
-                    user=test_user,
-                    role='owner')
+                    package=package, channel=channel, user=test_user, role='owner'
+                )
 
                 db.add(package_member)
 
             if channel_index == 0:
-                package = Package(
-                    name='xtensor',
-                    description='Description of xtensor')
+                package = Package(name='xtensor', description='Description of xtensor')
                 channel.packages.append(package)
 
                 test_user = testUsers[random.randint(0, len(testUsers) - 1)]
                 package_member = PackageMember(
-                    package=package,
-                    channel=channel,
-                    user=test_user,
-                    role='owner')
+                    package=package, channel=channel, user=test_user, role='owner'
+                )
 
                 db.add(package_member)
 
@@ -77,10 +79,7 @@ def init_test_db():
                 key_user = User(id=uuid.uuid4().bytes)
 
                 api_key = ApiKey(
-                    key=key,
-                    description='test API key',
-                    user=key_user,
-                    owner=test_user
+                    key=key, description='test API key', user=key_user, owner=test_user
                 )
                 db.add(api_key)
 
@@ -88,20 +87,23 @@ def init_test_db():
                     user=key_user,
                     channel_name=channel.name,
                     package_name=package.name,
-                    role='maintainer')
+                    role='maintainer',
+                )
                 db.add(key_package_member)
 
             db.add(channel)
 
             channel_member = ChannelMember(
                 channel=channel,
-                user=testUsers[random.randint(0, len(testUsers)-1)],
-                role='owner')
+                user=testUsers[random.randint(0, len(testUsers) - 1)],
+                role='owner',
+            )
 
             db.add(channel_member)
         db.commit()
     finally:
         db.close()
+
 
 if __name__ == '__main__':
     init_test_db()

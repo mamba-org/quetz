@@ -1,8 +1,19 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-from sqlalchemy import (Column, ForeignKey, String, BLOB, Index, Boolean,
-                        Integer, DateTime, func, Enum, UniqueConstraint)
+from sqlalchemy import (
+    Column,
+    ForeignKey,
+    String,
+    BLOB,
+    Index,
+    Boolean,
+    Integer,
+    DateTime,
+    func,
+    Enum,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 import enum
 
@@ -64,7 +75,9 @@ class Channel(Base):
 class ChannelMember(Base):
     __tablename__ = 'channel_members'
 
-    channel_name = Column(String, ForeignKey('channels.name'), primary_key=True, index=True)
+    channel_name = Column(
+        String, ForeignKey('channels.name'), primary_key=True, index=True
+    )
     user_id = Column(UUID, ForeignKey('users.id'), primary_key=True, index=True)
     role = Column(String)
 
@@ -76,7 +89,9 @@ class Package(Base):
     __tablename__ = 'packages'
 
     name = Column(String, primary_key=True, index=True)
-    channel_name = Column(String, ForeignKey('channels.name'), primary_key=True, index=True)
+    channel_name = Column(
+        String, ForeignKey('channels.name'), primary_key=True, index=True
+    )
     description = Column(String)
 
     channel = relationship('Channel', uselist=False, back_populates='packages')
@@ -95,8 +110,12 @@ class Package(Base):
 class PackageMember(Base):
     __tablename__ = 'package_members'
 
-    channel_name = Column(String, ForeignKey('channels.name'), primary_key=True, index=True)
-    package_name = Column(String, ForeignKey('packages.name'), primary_key=True, index=True)
+    channel_name = Column(
+        String, ForeignKey('channels.name'), primary_key=True, index=True
+    )
+    package_name = Column(
+        String, ForeignKey('packages.name'), primary_key=True, index=True
+    )
     user_id = Column(UUID, ForeignKey('users.id'), primary_key=True, index=True)
     role = Column(String)
 
@@ -150,13 +169,19 @@ class PackageVersion(Base):
     uploader = relationship('User')
 
 
-Index('package_version_name_index', PackageVersion.channel_name, PackageVersion.package_name)
+Index(
+    'package_version_name_index',
+    PackageVersion.channel_name,
+    PackageVersion.package_name,
+)
 
-UniqueConstraint(PackageVersion.channel_name,
-                 PackageVersion.package_name,
-                 PackageVersion.package_format,
-                 PackageVersion.platform,
-                 PackageVersion.version,
-                 PackageVersion.build_string,
-                 PackageVersion.build_number,
-                 name='package_version_index')
+UniqueConstraint(
+    PackageVersion.channel_name,
+    PackageVersion.package_name,
+    PackageVersion.package_format,
+    PackageVersion.platform,
+    PackageVersion.version,
+    PackageVersion.build_string,
+    PackageVersion.build_number,
+    name='package_version_index',
+)

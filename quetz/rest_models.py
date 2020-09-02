@@ -9,6 +9,7 @@ from datetime import datetime
 
 T = TypeVar('T')
 
+
 class BaseProfile(BaseModel):
     name: Optional[str]
     avatar_url: str
@@ -46,29 +47,38 @@ class Member(BaseModel):
 
 Role = Field(None, regex='owner|maintainer|member')
 
+
 class Pagination(BaseModel):
     skip: int = Field(0, title='The number of skipped records')
     limit: int = Field(0, title='The maximum number of returned records')
     all_records_count: int = Field(0, title="The number of available records")
 
+
 class Channel(BaseModel):
     name: str = Field(None, title='The name of the channel', max_length=50)
-    description: str = Field(None, title='The description of the channel', max_length=300)
+    description: str = Field(
+        None, title='The description of the channel', max_length=300
+    )
     private: bool
 
     class Config:
         orm_mode = True
 
+
 class Package(BaseModel):
     name: str = Field(None, title='The name of package', max_length=50)
-    description: str = Field(None, title='The description of the package', max_length=300)
+    description: str = Field(
+        None, title='The description of the package', max_length=300
+    )
 
     class Config:
         orm_mode = True
 
+
 class PaginatedResponse(GenericModel, Generic[T]):
     pagination: Pagination = Field(None, title="Pagination object")
     result: List[T] = Field([], title="Result objects")
+
 
 class PostMember(BaseModel):
     username: str

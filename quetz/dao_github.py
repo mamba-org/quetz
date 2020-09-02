@@ -17,8 +17,8 @@ def create_user_with_github_identity(db: Session, github_profile) -> User:
     )
 
     profile = Profile(
-        name=github_profile['name'],
-        avatar_url=github_profile['avatar_url'])
+        name=github_profile['name'], avatar_url=github_profile['avatar_url']
+    )
 
     user.identities.append(identity)
     user.profile = profile
@@ -29,9 +29,11 @@ def create_user_with_github_identity(db: Session, github_profile) -> User:
 
 
 def user_github_profile_changed(user, identity, profile):
-    if (identity.username != profile['login']
-          or user.profile.name != profile['name']
-          or user.profile.avatar_url != profile['avatar_url']):
+    if (
+        identity.username != profile['login']
+        or user.profile.name != profile['name']
+        or user.profile.avatar_url != profile['avatar_url']
+    ):
         return True
 
     return False
@@ -48,10 +50,9 @@ def update_user_from_github_profile(db: Session, user, identity, profile) -> Use
 
 
 def get_user_by_github_identity(db: Session, profile) -> User:
-    user, identity = db.query(User, Identity).join(Identity) \
-        .filter(Identity.provider == 'github') \
-        .filter(Identity.identity_id == profile['id']) \
-        .one_or_none() or (None, None)
+    user, identity = db.query(User, Identity).join(Identity).filter(
+        Identity.provider == 'github'
+    ).filter(Identity.identity_id == profile['id']).one_or_none() or (None, None)
 
     if user:
         if user_github_profile_changed(user, identity, profile):

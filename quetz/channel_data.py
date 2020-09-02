@@ -41,9 +41,7 @@ def combine(old_data, new_data):
             new_data.get("version", "0")
         )
         for field in CHANNELDATA_BINARY_FIELDS:
-            data[field] = any(
-                (new_data.get(field, False), old_data.get(field, False))
-            )
+            data[field] = any((new_data.get(field, False), old_data.get(field, False)))
 
         for field in ("keywords", "identifiers", "tags"):
             if newer and new_data.get(field):
@@ -68,10 +66,7 @@ def combine(old_data, new_data):
         )
 
         data["subdirs"] = sorted(
-            list(
-                set(new_data.get("subdirs", []))
-                | set(old_data.get("subdirs", []))
-            )
+            list(set(new_data.get("subdirs", [])) | set(old_data.get("subdirs", [])))
         )
 
     data = dict(sorted(data.items(), key=lambda item: item[0]))

@@ -16,9 +16,7 @@ def create_user_with_google_identity(db: Session, google_profile) -> User:
         username=google_profile['email'],
     )
 
-    profile = Profile(
-        name=google_profile['name'],
-        avatar_url=google_profile['picture'])
+    profile = Profile(name=google_profile['name'], avatar_url=google_profile['picture'])
 
     user.identities.append(identity)
     user.profile = profile
@@ -29,9 +27,11 @@ def create_user_with_google_identity(db: Session, google_profile) -> User:
 
 
 def user_google_profile_changed(user, identity, profile):
-    if (identity.username != profile['email']
-          or user.profile.name != profile['name']
-          or user.profile.avatar_url != profile['picture']):
+    if (
+        identity.username != profile['email']
+        or user.profile.name != profile['name']
+        or user.profile.avatar_url != profile['picture']
+    ):
         return True
 
     return False
@@ -48,10 +48,9 @@ def update_user_from_google_profile(db: Session, user, identity, profile) -> Use
 
 
 def get_user_by_google_identity(db: Session, profile) -> User:
-    user, identity = db.query(User, Identity).join(Identity) \
-        .filter(Identity.provider == 'google') \
-        .filter(Identity.identity_id == profile['sub']) \
-        .one_or_none() or (None, None)
+    user, identity = db.query(User, Identity).join(Identity).filter(
+        Identity.provider == 'google'
+    ).filter(Identity.identity_id == profile['sub']).one_or_none() or (None, None)
 
     if user:
         if user_google_profile_changed(user, identity, profile):

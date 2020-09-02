@@ -25,7 +25,7 @@ def register(config):
         authorize_params=None,
         api_base_url='https://api.github.com/',
         client_kwargs={'scope': 'user:email'},
-        quetz_db_url=config.sqlalchemy_database_url
+        quetz_db_url=config.sqlalchemy_database_url,
     )
 
 
@@ -70,4 +70,5 @@ async def authorize(request: Request):
 async def revoke(request):
     client_id = oauth.github.client_id
     return RedirectResponse(
-        f'https://github.com/settings/connections/applications/{client_id}')
+        f'https://github.com/settings/connections/applications/{client_id}'
+    )

@@ -10,16 +10,13 @@ Base = declarative_base()
 
 def _get_engine(db_url):
     engine = create_engine(
-        db_url,
-        connect_args={'check_same_thread': False},
-        echo=False
+        db_url, connect_args={'check_same_thread': False}, echo=False
     )
     return engine
 
 
 def get_session(db_url):
-    return sessionmaker(autocommit=False, autoflush=False,
-                        bind=_get_engine(db_url))()
+    return sessionmaker(autocommit=False, autoflush=False, bind=_get_engine(db_url))()
 
 
 def init_db(db_url):

@@ -2,8 +2,18 @@
 # Distributed under the terms of the Modified BSD License.
 
 from typing import List, Optional
-from fastapi import Depends, FastAPI, HTTPException, status, Request, \
-    File, UploadFile, APIRouter, Form, BackgroundTasks
+from fastapi import (
+    Depends,
+    FastAPI,
+    HTTPException,
+    status,
+    Request,
+    File,
+    UploadFile,
+    APIRouter,
+    Form,
+    BackgroundTasks,
+)
 from fastapi.responses import StreamingResponse
 
 from starlette.staticfiles import StaticFiles
@@ -36,7 +46,8 @@ auth_github.register(config)
 app.add_middleware(
     SessionMiddleware,
     secret_key=config.session_secret,
-    https_only=config.session_https_only)
+    https_only=config.session_https_only,
+)
 
 api_router = APIRouter()
 
@@ -49,6 +60,7 @@ if config.configured_section('google'):
     app.include_router(auth_google.router)
 
 # Dependency injection
+
 
 def get_db():
     db = get_db_session(config.sqlalchemy_database_url)
@@ -66,37 +78,46 @@ def get_session(request: Request):
     return request.session
 
 
-def get_rules(request: Request, session: dict = Depends(get_session),
-              db: Session = Depends(get_db)):
+def get_rules(
+    request: Request,
+    session: dict = Depends(get_session),
+    db: Session = Depends(get_db),
+):
     return authorization.Rules(request.headers.get('x-api-key'), session, db)
 
 
-def get_channel_or_fail(channel_name: str, dao: Dao = Depends(get_dao)) -> db_models.Channel:
+def get_channel_or_fail(
+    channel_name: str, dao: Dao = Depends(get_dao)
+) -> db_models.Channel:
     channel = dao.get_channel(channel_name)
 
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Channel {channel_name} not found')
+            detail=f'Channel {channel_name} not found',
+        )
 
     return channel
 
 
 def get_package_or_fail(
-        package_name: str,
-        channel: db_models.Channel = Depends(get_channel_or_fail),
-        dao: Dao = Depends(get_dao)) -> db_models.Package:
+    package_name: str,
+    channel: db_models.Channel = Depends(get_channel_or_fail),
+    dao: Dao = Depends(get_dao),
+) -> db_models.Package:
 
     package = dao.get_package(channel.name, package_name)
     if not package:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Package {channel.name}/{package_name} not found')
+            detail=f'Package {channel.name}/{package_name} not found',
+        )
 
     return package
 
 
 # helper functions
+
 
 async def check_token_revocation(session):
     valid = False
@@ -112,10 +133,12 @@ async def check_token_revocation(session):
             detail='Not logged in',
         )
 
+
 def logout(session):
     session.pop('user_id', None)
     session.pop('identity_provider', None)
     session.pop('token', None)
+
 
 # endpoints
 @app.route('/auth/logout')
@@ -126,9 +149,8 @@ async def route_logout(request):
 
 @api_router.get('/dummylogin/{username}', tags=['dev'])
 def dummy_login(
-        username: str,
-        dao: Dao = Depends(get_dao),
-        session=Depends(get_session)):
+    username: str, dao: Dao = Depends(get_dao), session=Depends(get_session)
+):
     user = dao.get_user_by_username(username)
 
     logout(session)
@@ -140,9 +162,10 @@ def dummy_login(
 
 @api_router.get('/me', response_model=rest_models.Profile, tags=['users'])
 async def me(
-        session: dict = Depends(get_session),
-        dao: Dao = Depends(get_dao),
-        auth: authorization.Rules = Depends(get_rules)):
+    session: dict = Depends(get_session),
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
     """Returns your quetz profile"""
 
     # Check if token is still valid
@@ -156,19 +179,22 @@ async def me(
 
 
 @api_router.get('/users', response_model=List[rest_models.User], tags=['users'])
-def get_users(
-        dao: Dao = Depends(get_dao),
-        q: str = None):
+def get_users(dao: Dao = Depends(get_dao), q: str = None):
     user_list = dao.get_users(0, -1, q)
     for user in user_list:
         user.id = str(uuid.UUID(bytes=user.id))
 
     return user_list
 
-@api_router.get('/paginated/users', response_model=rest_models.PaginatedResponse[rest_models.User], tags=['users'])
+
+@api_router.get(
+    '/paginated/users',
+    response_model=rest_models.PaginatedResponse[rest_models.User],
+    tags=['users'],
+)
 def get_paginated_users(
-        dao: Dao = Depends(get_dao),
-        skip: int = 0, limit: int = 10, q: str = None):
+    dao: Dao = Depends(get_dao), skip: int = 0, limit: int = 10, q: str = None
+):
     user_list = dao.get_users(skip, limit, q)
     for user in user_list['result']:
         user.id = str(uuid.UUID(bytes=user.id))
@@ -177,48 +203,54 @@ def get_paginated_users(
 
 
 @api_router.get('/users/{username}', response_model=rest_models.User, tags=['users'])
-def get_user(
-        username: str,
-        dao: Dao = Depends(get_dao)):
+def get_user(username: str, dao: Dao = Depends(get_dao)):
     user = dao.get_user_by_username(username)
 
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'User {username} not found')
+            status_code=status.HTTP_404_NOT_FOUND, detail=f'User {username} not found'
+        )
 
     user.id = str(uuid.UUID(bytes=user.id))
 
     return user
 
 
-@api_router.get('/channels', response_model=List[rest_models.Channel], tags=['channels'])
-def get_channels(
-        dao: Dao = Depends(get_dao),
-        q: str = None):
+@api_router.get(
+    '/channels', response_model=List[rest_models.Channel], tags=['channels']
+)
+def get_channels(dao: Dao = Depends(get_dao), q: str = None):
     """List all channels"""
 
     return dao.get_channels(0, -1, q)
 
-@api_router.get('/paginated/channels', response_model=rest_models.PaginatedResponse[rest_models.Channel], tags=['channels'])
+
+@api_router.get(
+    '/paginated/channels',
+    response_model=rest_models.PaginatedResponse[rest_models.Channel],
+    tags=['channels'],
+)
 def get_paginated_channels(
-        dao: Dao = Depends(get_dao),
-        skip: int = 0, limit: int = 10, q: str = None):
+    dao: Dao = Depends(get_dao), skip: int = 0, limit: int = 10, q: str = None
+):
     """List all channels, as a paginated response"""
 
     return dao.get_channels(skip, limit, q)
 
 
-@api_router.get('/channels/{channel_name}', response_model=rest_models.Channel, tags=['channels'])
+@api_router.get(
+    '/channels/{channel_name}', response_model=rest_models.Channel, tags=['channels']
+)
 def get_channel(channel: db_models.Channel = Depends(get_channel_or_fail)):
     return channel
 
 
 @api_router.post('/channels', status_code=201, tags=['channels'])
 def post_channel(
-        new_channel: rest_models.Channel,
-        dao: Dao = Depends(get_dao),
-        auth: authorization.Rules = Depends(get_rules)):
+    new_channel: rest_models.Channel,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
 
     user_id = auth.assert_user()
 
@@ -227,30 +259,40 @@ def post_channel(
     if channel:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f'Channel {new_channel.name} exists')
+            detail=f'Channel {new_channel.name} exists',
+        )
 
     dao.create_channel(new_channel, user_id, authorization.OWNER)
 
 
-@api_router.get('/channels/{channel_name}/packages',
-                response_model=List[rest_models.Package],
-                tags=['packages'])
+@api_router.get(
+    '/channels/{channel_name}/packages',
+    response_model=List[rest_models.Package],
+    tags=['packages'],
+)
 def get_packages(
-        channel: db_models.Channel = Depends(get_channel_or_fail),
-        dao: Dao = Depends(get_dao),
-        q: str = None):
+    channel: db_models.Channel = Depends(get_channel_or_fail),
+    dao: Dao = Depends(get_dao),
+    q: str = None,
+):
     """
     Retrieve all packages in a channel, optionally matching a query `q`.
     """
     return dao.get_packages(channel.name, 0, -1, q)
 
-@api_router.get('/paginated/channels/{channel_name}/packages',
-                response_model=rest_models.PaginatedResponse[rest_models.Package],
-                tags=['packages'])
+
+@api_router.get(
+    '/paginated/channels/{channel_name}/packages',
+    response_model=rest_models.PaginatedResponse[rest_models.Package],
+    tags=['packages'],
+)
 def get_paginated_packages(
-        channel: db_models.Channel = Depends(get_channel_or_fail),
-        dao: Dao = Depends(get_dao),
-        skip: int = 0, limit: int = -1, q: str = None):
+    channel: db_models.Channel = Depends(get_channel_or_fail),
+    dao: Dao = Depends(get_dao),
+    skip: int = 0,
+    limit: int = -1,
+    q: str = None,
+):
     """
     Retrieve all packages in a channel.
     A limit of -1 returns an unpaginated result with all packages. Otherwise, pagination
@@ -260,35 +302,45 @@ def get_paginated_packages(
     return dao.get_packages(channel.name, skip, limit, q)
 
 
-@api_router.get('/channels/{channel_name}/packages/{package_name}', response_model=rest_models.Package,
-         tags=['packages'])
-def get_package(
-        package: db_models.Package = Depends(get_package_or_fail)):
+@api_router.get(
+    '/channels/{channel_name}/packages/{package_name}',
+    response_model=rest_models.Package,
+    tags=['packages'],
+)
+def get_package(package: db_models.Package = Depends(get_package_or_fail)):
     return package
 
 
-@api_router.post('/channels/{channel_name}/packages', status_code=201, tags=['packages'])
+@api_router.post(
+    '/channels/{channel_name}/packages', status_code=201, tags=['packages']
+)
 def post_package(
-        new_package: rest_models.Package,
-        channel: db_models.Channel = Depends(get_channel_or_fail),
-        auth: authorization.Rules = Depends(get_rules),
-        dao: Dao = Depends(get_dao)):
+    new_package: rest_models.Package,
+    channel: db_models.Channel = Depends(get_channel_or_fail),
+    auth: authorization.Rules = Depends(get_rules),
+    dao: Dao = Depends(get_dao),
+):
 
     user_id = auth.assert_user()
     package = dao.get_package(channel.name, new_package.name)
     if package:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f'Package {channel.name}/{new_package.name} exists')
+            detail=f'Package {channel.name}/{new_package.name} exists',
+        )
 
     dao.create_package(channel.name, new_package, user_id, authorization.OWNER)
 
 
-@api_router.get('/channels/{channel_name}/members', response_model=List[rest_models.Member],
-         tags=['channels'])
+@api_router.get(
+    '/channels/{channel_name}/members',
+    response_model=List[rest_models.Member],
+    tags=['channels'],
+)
 def get_channel_members(
-        channel: db_models.Channel = Depends(get_channel_or_fail),
-        dao: Dao = Depends(get_dao)):
+    channel: db_models.Channel = Depends(get_channel_or_fail),
+    dao: Dao = Depends(get_dao),
+):
 
     member_list = dao.get_channel_members(channel.name)
     for member in member_list:
@@ -304,10 +356,11 @@ def get_channel_members(
 
 @api_router.post('/channels/{channel_name}/members', status_code=201, tags=['channels'])
 def post_channel_member(
-        new_member: rest_models.PostMember,
-        channel: db_models.Channel = Depends(get_channel_or_fail),
-        dao: Dao = Depends(get_dao),
-        auth: authorization.Rules = Depends(get_rules)):
+    new_member: rest_models.PostMember,
+    channel: db_models.Channel = Depends(get_channel_or_fail),
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
 
     auth.assert_add_channel_member(channel.name, new_member.role)
 
@@ -315,16 +368,21 @@ def post_channel_member(
     if channel_member:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f'Member {new_member.username} in {channel.name} exists')
+            detail=f'Member {new_member.username} in {channel.name} exists',
+        )
 
     dao.create_channel_member(channel.name, new_member)
 
 
-@api_router.get('/channels/{channel_name}/packages/{package_name}/members',
-         response_model=List[rest_models.Member], tags=['packages'])
+@api_router.get(
+    '/channels/{channel_name}/packages/{package_name}/members',
+    response_model=List[rest_models.Member],
+    tags=['packages'],
+)
 def get_package_members(
-        package: db_models.Package = Depends(get_package_or_fail),
-        dao: Dao = Depends(get_dao)):
+    package: db_models.Package = Depends(get_package_or_fail),
+    dao: Dao = Depends(get_dao),
+):
 
     member_list = dao.get_package_members(package.channel.name, package.name)
 
@@ -338,34 +396,44 @@ def get_package_members(
     return member_list
 
 
-@api_router.post('/channels/{channel_name}/packages/{package_name}/members', status_code=201,
-          tags=['packages'])
+@api_router.post(
+    '/channels/{channel_name}/packages/{package_name}/members',
+    status_code=201,
+    tags=['packages'],
+)
 def post_package_member(
-        new_member: rest_models.PostMember,
-        package: db_models.Package = Depends(get_package_or_fail),
-        dao: Dao = Depends(get_dao),
-        auth: authorization.Rules = Depends(get_rules)):
+    new_member: rest_models.PostMember,
+    package: db_models.Package = Depends(get_package_or_fail),
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
 
     auth.assert_add_package_member(package.channel.name, package.name, new_member.role)
 
-    channel_member = dao.get_package_member(package.channel.name, package.name, new_member.username)
+    channel_member = dao.get_package_member(
+        package.channel.name, package.name, new_member.username
+    )
     if channel_member:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
                 f"Member {new_member.username} in "
                 "{package.channel.name}/{package.name} exists"
-            )
+            ),
         )
 
     dao.create_package_member(package.channel.name, package.name, new_member)
 
 
-@api_router.get('/channels/{channel_name}/packages/{package_name}/versions',
-         response_model=List[rest_models.PackageVersion], tags=['packages'])
+@api_router.get(
+    '/channels/{channel_name}/packages/{package_name}/versions',
+    response_model=List[rest_models.PackageVersion],
+    tags=['packages'],
+)
 def get_package_versions(
-        package: db_models.Package = Depends(get_package_or_fail),
-        dao: Dao = Depends(get_dao)):
+    package: db_models.Package = Depends(get_package_or_fail),
+    dao: Dao = Depends(get_dao),
+):
 
     version_profile_list = dao.get_package_versions(package)
     version_list = []
@@ -382,8 +450,8 @@ def get_package_versions(
 
 @api_router.get('/api-keys', response_model=List[rest_models.ApiKey], tags=['API keys'])
 def get_api_keys(
-        dao: Dao = Depends(get_dao),
-        auth: authorization.Rules = Depends(get_rules)):
+    dao: Dao = Depends(get_dao), auth: authorization.Rules = Depends(get_rules)
+):
     """Get API keys for current user"""
 
     user_id = auth.assert_user()
@@ -392,24 +460,34 @@ def get_api_keys(
 
     from itertools import groupby
 
-    return [rest_models.ApiKey(
-        key=api_key.key,
-        description=api_key.description,
-        roles=[rest_models.CPRole(
-            channel=member.channel_name,
-            package=member.package_name if hasattr(member, 'package_name') else None,
-            role=member.role
-        ) for member, api_key in member_key_list]
-    ) for api_key, member_key_list in groupby(
-        [*api_key_list, *api_channel_key_list],
-        lambda member_api_key: member_api_key[1])]
+    return [
+        rest_models.ApiKey(
+            key=api_key.key,
+            description=api_key.description,
+            roles=[
+                rest_models.CPRole(
+                    channel=member.channel_name,
+                    package=member.package_name
+                    if hasattr(member, 'package_name')
+                    else None,
+                    role=member.role,
+                )
+                for member, api_key in member_key_list
+            ],
+        )
+        for api_key, member_key_list in groupby(
+            [*api_key_list, *api_channel_key_list],
+            lambda member_api_key: member_api_key[1],
+        )
+    ]
 
 
 @api_router.post('/api-keys', status_code=201, tags=['API keys'])
 def post_api_key(
-        api_key: rest_models.BaseApiKey,
-        dao: Dao = Depends(get_dao),
-        auth: authorization.Rules = Depends(get_rules)):
+    api_key: rest_models.BaseApiKey,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
 
     auth.assert_create_api_key_roles(api_key.roles)
 
@@ -419,33 +497,39 @@ def post_api_key(
     dao.create_api_key(user_id, api_key, key)
 
 
-@api_router.post('/channels/{channel_name}/packages/{package_name}/files/', status_code=201,
-          tags=['files'])
+@api_router.post(
+    '/channels/{channel_name}/packages/{package_name}/files/',
+    status_code=201,
+    tags=['files'],
+)
 def post_file_to_package(
-        background_tasks: BackgroundTasks,
-        files: List[UploadFile] = File(...),
-        force: Optional[bool] = Form(None),
-        package: db_models.Package = Depends(get_package_or_fail),
-        dao: Dao = Depends(get_dao),
-        auth: authorization.Rules = Depends(get_rules)):
-    handle_package_files(package.channel.name, files, dao, auth, force,
-                         background_tasks, package=package)
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(...),
+    force: Optional[bool] = Form(None),
+    package: db_models.Package = Depends(get_package_or_fail),
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    handle_package_files(
+        package.channel.name, files, dao, auth, force, background_tasks, package=package
+    )
 
 
 @api_router.post('/channels/{channel_name}/files/', status_code=201, tags=['files'])
 def post_file_to_channel(
-        background_tasks: BackgroundTasks,
-        files: List[UploadFile] = File(...),
-        force: Optional[bool] = Form(None),
-        channel: db_models.Channel = Depends(get_channel_or_fail),
-        dao: Dao = Depends(get_dao),
-        auth: authorization.Rules = Depends(get_rules)):
-    handle_package_files(channel.name, files, dao, auth, force,
-                         background_tasks)
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(...),
+    force: Optional[bool] = Form(None),
+    channel: db_models.Channel = Depends(get_channel_or_fail),
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    handle_package_files(channel.name, files, dao, auth, force, background_tasks)
 
 
-def handle_package_files(channel_name, files, dao, auth, force,
-                         background_tasks, package=None):
+def handle_package_files(
+    channel_name, files, dao, auth, force, background_tasks, package=None
+):
 
     for file in files:
         condainfo = CondaInfo(file.file, file.filename)
@@ -455,8 +539,7 @@ def handle_package_files(channel_name, files, dao, auth, force,
 
         parts = file.filename.split('-')
 
-        if package and (parts[0] != package.name or
-                        package_name != package.name):
+        if package and (parts[0] != package.name or package_name != package.name):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
         if not package and not dao.get_package(channel_name, package_name):
@@ -464,13 +547,13 @@ def handle_package_files(channel_name, files, dao, auth, force,
                 channel_name,
                 rest_models.Package(name=package_name, description='n/a'),
                 auth.assert_user(),
-                authorization.OWNER
+                authorization.OWNER,
             )
 
         # Update channeldata info
-        dao.update_package_channeldata(channel_name,
-                                       package_name,
-                                       condainfo.channeldata)
+        dao.update_package_channeldata(
+            channel_name, package_name, condainfo.channeldata
+        )
 
         auth.assert_upload_file(channel_name, package_name)
 
@@ -487,13 +570,15 @@ def handle_package_files(channel_name, files, dao, auth, force,
                 build_string=condainfo.info['build'],
                 filename=file.filename,
                 info=json.dumps(condainfo.info),
-                uploader_id=user_id)
+                uploader_id=user_id,
+            )
         except IntegrityError:
             if force:
                 dao.rollback()
             else:
-                raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                                    detail="Duplicate")
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT, detail="Duplicate"
+                )
 
         pkgstore.create_channel(channel_name)
 
@@ -502,8 +587,7 @@ def handle_package_files(channel_name, files, dao, auth, force,
         pkgstore.add_package(file.file, channel_name, dest)
 
     # Background task to update indexes
-    background_tasks.add_task(indexing.update_indexes,
-                              dao, pkgstore, channel_name)
+    background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel_name)
 
 
 app.include_router(
@@ -518,9 +602,7 @@ def invalid_api():
 
 
 @app.get("/channels/{channel_name}/{path:path}")
-def serve_path(
-        path,
-        channel: db_models.Channel = Depends(get_channel_or_fail)):
+def serve_path(path, channel: db_models.Channel = Depends(get_channel_or_fail)):
     if path == "" or path.endswith("/"):
         path += "index.html"
     try:
@@ -528,7 +610,8 @@ def serve_path(
     except FileNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'{channel.name}/{path} not found')
+            detail=f'{channel.name}/{path} not found',
+        )
     except IsADirectoryError:
         try:
             path += "/index.html"
@@ -536,15 +619,27 @@ def serve_path(
         except FileNotFoundError:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f'{channel.name}/{path} not found')
+                detail=f'{channel.name}/{path} not found',
+            )
+
 
 if os.path.isfile('../quetz_frontend/dist/index.html'):
     print('dev frontend found')
-    app.mount("/", StaticFiles(directory='../quetz_frontend/dist', html=True), name="frontend")
+    app.mount(
+        "/", StaticFiles(directory='../quetz_frontend/dist', html=True), name="frontend"
+    )
 elif os.path.isfile(f'{sys.prefix}/share/quetz/frontend/index.html'):
     print('installed frontend found')
-    app.mount("/", StaticFiles(directory=f'{sys.prefix}/share/quetz/frontend/', html=True), name="frontend")
+    app.mount(
+        "/",
+        StaticFiles(directory=f'{sys.prefix}/share/quetz/frontend/', html=True),
+        name="frontend",
+    )
 else:
     print('basic frontend')
-    basic_frontend_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'basic_frontend')
-    app.mount("/", StaticFiles(directory=basic_frontend_dir, html=True), name="frontend")
+    basic_frontend_dir = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)), 'basic_frontend'
+    )
+    app.mount(
+        "/", StaticFiles(directory=basic_frontend_dir, html=True), name="frontend"
+    )
