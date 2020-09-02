@@ -57,7 +57,7 @@ pip install -e quetz
 Use the CLI to create a `Quetz` instance:
 
 ```
-quetz run test_quetz --create-conf --dev --reload
+quetz run test_quetz --copy-conf ./dev_config.toml --dev --reload
 ```
 
 Links:

@@ -192,14 +192,14 @@ def _clean_deployments() -> NoReturn:
 
 @app.command()
 def create(
-    path: str = typer.Option(
+    path: str = typer.Argument(
         None,
         help="The path where to create the deployment (will be created if does not exist)",
     ),
     config_file_name: str = typer.Option(
         "config.toml", help="The configuration file name expected in the provided path"
     ),
-    copy_conf: Union[str, None] = typer.Option(
+    copy_conf: str = typer.Option(
         None, help="The configuration to copy from (e.g. dev_config.toml)"
     ),
     create_conf: bool = typer.Option(
@@ -224,7 +224,7 @@ def create(
             )
             if delete_:
                 delete(path, force=True)
-                create(path, config_file_name, create_conf, dev)
+                create(path, config_file_name, create_conf, copy_conf, dev)
                 return
             else:
                 typer.echo('Use the start command to start a deployement.')
@@ -248,14 +248,22 @@ def create(
             )
             raise typer.Abort()
     else:
-        if not create_conf:
+        if not create_conf and not copy_conf:
             typer.echo(
                 'No configuration file provided.\n'
                 + 'Use --create-conf option to generate a default config file.'
             )
             raise typer.Abort()
 
+        if copy_conf and not os.path.exists(copy_conf):
+            typer.echo(f'Config file to copy does not exist {copy_conf}.')
+            raise typer.Abort()
+
         Path(path).mkdir(parents=True)
+
+        if copy_conf:
+            print(f"Copying config file from {copy_conf} to {config_file}")
+            shutil.copyfile(copy_conf, config_file)
 
     if not os.path.exists(config_file):
         if dev:
@@ -335,6 +343,9 @@ def run(
     config_file_name: str = typer.Option(
         "config.toml", help="The configuration file name expected in the provided path"
     ),
+    copy_conf: str = typer.Option(
+        None, help="The configuration to copy from (e.g. dev_config.toml)"
+    ),
     create_conf: bool = typer.Option(
         False,
         help="Whether to create a default configuration file if not found in the path, or not",
@@ -362,7 +373,7 @@ def run(
     It performs sequentially create and start operations."""
 
     abs_path = os.path.abspath(path)
-    create(abs_path, config_file_name, create_conf, dev)
+    create(abs_path, config_file_name, create_conf, copy_conf, dev)
     start(abs_path, port, host, proxy_headers, log_level, reload)
 
 
