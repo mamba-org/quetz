@@ -229,7 +229,7 @@ def create(
             )
             if delete_:
                 delete(path, force=True)
-                create(path, config_file_name, create_conf, copy_conf, dev)
+                create(abs_path, config_file_name, copy_conf, create_conf, dev)
                 return
             else:
                 typer.echo('Use the start command to start a deployment.')
@@ -379,7 +379,7 @@ def run(
     It performs sequentially create and start operations."""
 
     abs_path = os.path.abspath(path)
-    create(abs_path, config_file_name, create_conf, copy_conf, dev)
+    create(abs_path, config_file_name, copy_conf, create_conf, dev)
     start(abs_path, port, host, proxy_headers, log_level, reload)
 
 
