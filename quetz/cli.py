@@ -242,7 +242,7 @@ def create(
                 create(abs_path, config_file_name, copy_conf, create_conf, dev)
                 return
             else:
-                typer.echo('Use the start command to start a deployment.')
+                typer.echo('Use the start command to start a deployment.', err=True)
                 raise typer.Abort()
 
         # only authorize path with a config file to avoid deletion of unexpected files
@@ -250,26 +250,29 @@ def create(
         if not all(f == config_file_name for f in os.listdir(path)):
             typer.echo(
                 f'Quetz deployment not allowed at {path}.\n'
-                'The path should not contain more than the configuration file.'
+                'The path should not contain more than the configuration file.',
+                err=True,
             )
             raise typer.Abort()
 
         if not os.path.exists(config_file) and not create_conf:
             typer.echo(
                 f'Config file "{config_file_name}" does not exist at {path}.\n'
-                'Use --create-conf option to generate a default config file.'
+                'Use --create-conf option to generate a default config file.',
+                err=True,
             )
             raise typer.Abort()
     else:
         if not create_conf and not copy_conf:
             typer.echo(
                 'No configuration file provided.\n'
-                'Use --create-conf option to generate a default config file.'
+                'Use --create-conf option to generate a default config file.',
+                err=True,
             )
             raise typer.Abort()
 
         if copy_conf and not os.path.exists(copy_conf):
-            typer.echo(f'Config file to copy does not exist {copy_conf}.')
+            typer.echo(f'Config file to copy does not exist {copy_conf}.', err=True)
             raise typer.Abort()
 
         Path(path).mkdir(parents=True)
@@ -329,7 +332,7 @@ def start(
     try:
         config_file_name = deployments[abs_path]
     except KeyError:
-        typer.echo(f'No Quetz deployment found at {path}.')
+        typer.echo(f'No Quetz deployment found at {path}.', err=True)
         raise typer.Abort()
 
     config_file = os.path.join(abs_path, config_file_name)
@@ -408,7 +411,7 @@ def delete(
     try:
         _ = deployments[abs_path]
     except KeyError:
-        typer.echo(f'No Quetz deployment found at {path}.')
+        typer.echo(f'No Quetz deployment found at {path}.', err=True)
         raise typer.Abort()
 
     delete = force or typer.confirm(f"Delete Quetz deployment at {path}?")
