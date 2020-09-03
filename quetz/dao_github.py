@@ -1,8 +1,9 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-from sqlalchemy.orm import Session
 import uuid
+
+from sqlalchemy.orm import Session
 
 from .db_models import Identity, Profile, User
 

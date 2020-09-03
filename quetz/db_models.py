@@ -1,22 +1,23 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
+import enum
+
 from sqlalchemy import (
-    Column,
-    ForeignKey,
-    String,
     BLOB,
-    Index,
     Boolean,
-    Integer,
+    Column,
     DateTime,
-    func,
     Enum,
-    UniqueConstraint,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
     Text,
+    UniqueConstraint,
+    func,
 )
 from sqlalchemy.orm import relationship
-import enum
 
 from .database import Base
 

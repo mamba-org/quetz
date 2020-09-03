@@ -3,17 +3,18 @@
 
 import random
 import uuid
+
 from quetz.config import Config
-from quetz.database import init_db, get_session
+from quetz.database import get_session, init_db
 from quetz.db_models import (
-    User,
-    Identity,
-    Profile,
+    ApiKey,
     Channel,
     ChannelMember,
+    Identity,
     Package,
     PackageMember,
-    ApiKey,
+    Profile,
+    User,
 )
 
 

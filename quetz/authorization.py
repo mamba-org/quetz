@@ -1,9 +1,11 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-from sqlalchemy.orm import Session
-from fastapi import status, HTTPException
 import uuid
+
+from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
+
 from .db_models import ApiKey, ChannelMember, PackageMember
 
 OWNER = 'owner'
