@@ -232,56 +232,44 @@ def create(
     config_file = os.path.join(path, config_file_name)
     deployments = _get_deployments()
 
-    if os.path.exists(path):
-        if abs_path in deployments:
-            delete_ = typer.confirm(
-                f'Quetz deployment exists at {path}.\nOverwrite it?'
-            )
-            if delete_:
-                delete(path, force=True)
-                create(abs_path, config_file_name, copy_conf, create_conf, dev)
-                return
-            else:
-                typer.echo('Use the start command to start a deployment.', err=True)
-                raise typer.Abort()
-
-        # only authorize path with a config file to avoid deletion of unexpected files
-        # when deleting Quetz instance
-        if not all(f == config_file_name for f in os.listdir(path)):
-            typer.echo(
-                f'Quetz deployment not allowed at {path}.\n'
-                'The path should not contain more than the configuration file.',
-                err=True,
-            )
+    if os.path.exists(path) and abs_path in deployments:
+        delete_ = typer.confirm(f'Quetz deployment exists at {path}.\nOverwrite it?')
+        if delete_:
+            delete(path, force=True)
+            del deployments[abs_path]
+        else:
+            typer.echo('Use the start command to start a deployment.', err=True)
             raise typer.Abort()
 
-        if not os.path.exists(config_file) and not create_conf:
-            typer.echo(
-                f'Config file "{config_file_name}" does not exist at {path}.\n'
-                'Use --create-conf option to generate a default config file.',
-                err=True,
-            )
-            raise typer.Abort()
-    else:
-        if not create_conf and not copy_conf:
-            typer.echo(
-                'No configuration file provided.\n'
-                'Use --create-conf option to generate a default config file.',
-                err=True,
-            )
-            raise typer.Abort()
+    Path(path).mkdir(parents=True)
 
-        if copy_conf and not os.path.exists(copy_conf):
+    # only authorize path with a config file to avoid deletion of unexpected files
+    # when deleting Quetz instance
+    if not all(f == config_file_name for f in os.listdir(path)):
+        typer.echo(
+            f'Quetz deployment not allowed at {path}.\n'
+            'The path should not contain more than the configuration file.',
+            err=True,
+        )
+        raise typer.Abort()
+
+    if not os.path.exists(config_file) and not (create_conf or copy_conf):
+        typer.echo(
+            'No configuration file provided.\n'
+            'Use --create-conf or --copy-conf to produce a config file.',
+            err=True,
+        )
+        raise typer.Abort()
+
+    if copy_conf:
+        if not os.path.exists(copy_conf):
             typer.echo(f'Config file to copy does not exist {copy_conf}.', err=True)
             raise typer.Abort()
 
-        Path(path).mkdir(parents=True)
+        typer.echo(f"Copying config file from {copy_conf} to {config_file}")
+        shutil.copyfile(copy_conf, config_file)
 
-        if copy_conf:
-            print(f"Copying config file from {copy_conf} to {config_file}")
-            shutil.copyfile(copy_conf, config_file)
-
-    if not os.path.exists(config_file):
+    if not os.path.exists(config_file) and create_conf:
         if dev:
             https = 'false'
         else:
@@ -290,7 +278,7 @@ def create(
         with open(config_file, 'w') as f:
             f.write(conf)
 
-    os.environ['QUETZ_CONFIG_FILE'] = config_file
+    os.environ[_env_prefix + _env_config_file] = config_file
     config = Config(config_file)
 
     os.chdir(path)
