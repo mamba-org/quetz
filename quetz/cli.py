@@ -1,6 +1,5 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
-# flake8: noqa
 
 import typer
 import os
@@ -11,7 +10,7 @@ import random
 import uuid
 from pathlib import Path
 
-from typing import NoReturn, Dict, Union
+from typing import NoReturn, Dict
 
 from quetz.config import Config, create_config, _user_dir, _env_prefix, _env_config_file
 from quetz.database import init_db, get_session
@@ -32,7 +31,7 @@ _deployments_file = os.path.join(_user_dir, 'deployments.json')
 
 
 def _fill_test_database(database_url: str) -> NoReturn:
-    """ Create dummy users and channels to allow further testing in dev mode."""
+    """Create dummy users and channels to allow further testing in dev mode."""
 
     db = get_session(database_url)
     testUsers = []
@@ -186,7 +185,7 @@ def _get_cleaned_deployments() -> Dict[str, str]:
 
 
 def _clean_deployments() -> NoReturn:
-    """ Clean the deployments without returning anything."""
+    """Clean the deployments without returning anything."""
     _ = _get_cleaned_deployments()
 
 
@@ -194,7 +193,10 @@ def _clean_deployments() -> NoReturn:
 def create(
     path: str = typer.Argument(
         None,
-        help="The path where to create the deployment (will be created if does not exist)",
+        help=(
+            "The directory in which the deployment will be created "
+            "(will be created if does not exist)"
+        ),
     ),
     config_file_name: str = typer.Option(
         "config.toml", help="The configuration file name expected in the provided path"
@@ -204,11 +206,14 @@ def create(
     ),
     create_conf: bool = typer.Option(
         False,
-        help="Whether to create a default configuration file if not found in the path, or not",
+        help="Enable/disable creation of a default configuration file",
     ),
     dev: bool = typer.Option(
         False,
-        help="Whether to activate the dev mode, or not (includes filling the database with test data, http instead of https)",
+        help=(
+            "Enable/disable dev mode "
+            "(fills the database with test data and allows http access)"
+        ),
     ),
 ) -> NoReturn:
     """Create a new Quetz deployment."""
@@ -220,7 +225,7 @@ def create(
     if os.path.exists(path):
         if abs_path in deployments:
             delete_ = typer.confirm(
-                'Quetz deployement exists at {}.\n'.format(path) + 'Overwrite it?'
+                f'Quetz deployement exists at {path}.\nOverwrite it?'
             )
             if delete_:
                 delete(path, force=True)
@@ -234,24 +239,22 @@ def create(
         # when deleting Quetz instance
         if not all([f in [config_file_name] for f in os.listdir(path)]):
             typer.echo(
-                'Quetz deployement not allowed at {}.\n'.format(path)
-                + 'The path should not contain more than the configuration file.'
+                f'Quetz deployement not allowed at {path}.\n'
+                'The path should not contain more than the configuration file.'
             )
             raise typer.Abort()
 
         if not os.path.exists(config_file) and not create_conf:
             typer.echo(
-                'Config file "{}" does not exist at {}.\n'.format(
-                    config_file_name, path
-                )
-                + 'Use --create-conf option to generate a default config file.'
+                f'Config file "{config_file_name}" does not exist at {path}.\n'
+                'Use --create-conf option to generate a default config file.'
             )
             raise typer.Abort()
     else:
         if not create_conf and not copy_conf:
             typer.echo(
                 'No configuration file provided.\n'
-                + 'Use --create-conf option to generate a default config file.'
+                'Use --create-conf option to generate a default config file.'
             )
             raise typer.Abort()
 
@@ -292,16 +295,16 @@ def start(
     path: str = typer.Argument(None, help="The path of the deployment"),
     port: int = typer.Option(8000, help="The port to bind"),
     host: str = typer.Option("127.0.0.1", help="The network interface to bind"),
-    proxy_headers: bool = typer.Option(
-        True, help="Whether to enable the X-forwarding, or not"
-    ),
+    proxy_headers: bool = typer.Option(True, help="Enable/disable X-Forwarded headers"),
     log_level: str = typer.Option(
         'info',
         help="The logging level among 'critical', 'error', 'warning', 'info', 'debug', 'trace'",
     ),
     reload: bool = typer.Option(
         False,
-        help="Whether to activate the automatic reload of the server when Quetz source code is modified, or not",
+        help=(
+            "Enable/disable automatic reloading of the server when sources are modified"
+        ),
     ),
 ) -> NoReturn:
     """Start a Quetz deployment.
@@ -316,7 +319,7 @@ def start(
     try:
         config_file_name = deployments[abs_path]
     except KeyError:
-        typer.echo('No Quetz deployement found at {}.'.format(path))
+        typer.echo(f'No Quetz deployement found at {path}.')
         raise typer.Abort()
 
     config_file = os.path.join(abs_path, config_file_name)
@@ -348,24 +351,27 @@ def run(
     ),
     create_conf: bool = typer.Option(
         False,
-        help="Whether to create a default configuration file if not found in the path, or not",
+        help="Enable/disable creation of a default configuration file",
     ),
     dev: bool = typer.Option(
         False,
-        help="Whether to activate the dev mode, or not (includes filling the database with test data, http instead of https)",
+        help=(
+            "Enable/disable dev mode "
+            "(fills the database with test data and allows http access)"
+        ),
     ),
     port: int = typer.Option(8000, help="The port to bind"),
     host: str = typer.Option("127.0.0.1", help="The network interface to bind"),
-    proxy_headers: bool = typer.Option(
-        True, help="Whether to enable the X-forwarding, or not"
-    ),
+    proxy_headers: bool = typer.Option(True, help="Enable/disable X-Forwarded headers"),
     log_level: str = typer.Option(
         'info',
         help="The logging level among 'critical', 'error', 'warning', 'info', 'debug', 'trace'",
     ),
     reload: bool = typer.Option(
         False,
-        help="Whether to activate the automatic reload of the server when Quetz source code is modified, or not",
+        help=(
+            "Enable/disable automatic reloading of the server when sources are modified"
+        ),
     ),
 ) -> NoReturn:
     """Run a Quetz deployment.
@@ -381,7 +387,7 @@ def run(
 def delete(
     path: str = typer.Argument(None, help="The path of the deployment"),
     force: bool = typer.Option(
-        False, help="Whether to skip manual confirmation, or not"
+        False, help="Enable/disable removal without confirmation prompt"
     ),
 ) -> NoReturn:
     """Delete a Quetz deployment."""
@@ -392,10 +398,10 @@ def delete(
     try:
         _ = deployments[abs_path]
     except KeyError:
-        typer.echo('No Quetz deployement found at {}.'.format(path))
+        typer.echo(f'No Quetz deployement found at {path}.')
         raise typer.Abort()
 
-    delete = force or typer.confirm("Delete Quetz deployement at {}?".format(path))
+    delete = force or typer.confirm(f"Delete Quetz deployement at {path}?")
     if not delete:
         raise typer.Abort()
 
@@ -405,7 +411,7 @@ def delete(
 
 @app.command()
 def list() -> NoReturn:
-    """ List Quetz deployments."""
+    """List Quetz deployments."""
 
     deployments = _get_deployments()
 
