@@ -247,7 +247,7 @@ def create(
 
         # only authorize path with a config file to avoid deletion of unexpected files
         # when deleting Quetz instance
-        if not all([f in [config_file_name] for f in os.listdir(path)]):
+        if not all(f == config_file_name for f in os.listdir(path)):
             typer.echo(
                 f'Quetz deployment not allowed at {path}.\n'
                 'The path should not contain more than the configuration file.'
