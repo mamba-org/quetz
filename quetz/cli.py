@@ -1,6 +1,7 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
+from enum import Enum
 import typer
 import os
 import shutil
@@ -28,6 +29,15 @@ from quetz.db_models import (
 app = typer.Typer()
 
 _deployments_file = os.path.join(_user_dir, 'deployments.json')
+
+
+class LogLevel(str, Enum):
+    critical = "critical"
+    error = "error"
+    warning = "warning"
+    info = "info"
+    debug = "debug"
+    trace = "trace"
 
 
 def _fill_test_database(database_url: str) -> NoReturn:
@@ -296,9 +306,9 @@ def start(
     port: int = typer.Option(8000, help="The port to bind"),
     host: str = typer.Option("127.0.0.1", help="The network interface to bind"),
     proxy_headers: bool = typer.Option(True, help="Enable/disable X-Forwarded headers"),
-    log_level: str = typer.Option(
-        'info',
-        help="The logging level among 'critical', 'error', 'warning', 'info', 'debug', 'trace'",
+    log_level: LogLevel = typer.Option(
+        LogLevel.info,
+        help="Set the logging level",
     ),
     reload: bool = typer.Option(
         False,
@@ -363,9 +373,9 @@ def run(
     port: int = typer.Option(8000, help="The port to bind"),
     host: str = typer.Option("127.0.0.1", help="The network interface to bind"),
     proxy_headers: bool = typer.Option(True, help="Enable/disable X-Forwarded headers"),
-    log_level: str = typer.Option(
-        'info',
-        help="The logging level among 'critical', 'error', 'warning', 'info', 'debug', 'trace'",
+    log_level: LogLevel = typer.Option(
+        LogLevel.info,
+        help="Set the logging level",
     ),
     reload: bool = typer.Option(
         False,
