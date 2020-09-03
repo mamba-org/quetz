@@ -1,13 +1,15 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-from starlette.responses import RedirectResponse
-from fastapi import APIRouter, Request
-from authlib.integrations.starlette_client import OAuth
-from .database import get_session
-from .dao_github import get_user_by_github_identity
 import json
 import uuid
+
+from authlib.integrations.starlette_client import OAuth
+from fastapi import APIRouter, Request
+from starlette.responses import RedirectResponse
+
+from .dao_github import get_user_by_github_identity
+from .database import get_session
 
 router = APIRouter()
 oauth = OAuth()

@@ -2,11 +2,11 @@
 # Distributed under the terms of the Modified BSD License.
 
 import argparse
-import requests
 import os
 import sys
 from urllib.parse import urlparse, urlunparse
 
+import requests
 from conda_verify.verify import Verify
 
 import quetz_client

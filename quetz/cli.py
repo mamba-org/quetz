@@ -1,29 +1,29 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-from enum import Enum
-import typer
-import os
-import shutil
-import uvicorn
 import json
+import os
 import random
+import shutil
 import uuid
+from enum import Enum
 from pathlib import Path
+from typing import Dict, NoReturn
 
-from typing import NoReturn, Dict
+import typer
+import uvicorn
 
-from quetz.config import Config, create_config, _user_dir, _env_prefix, _env_config_file
-from quetz.database import init_db, get_session
+from quetz.config import Config, _env_config_file, _env_prefix, _user_dir, create_config
+from quetz.database import get_session, init_db
 from quetz.db_models import (
-    User,
-    Identity,
-    Profile,
+    ApiKey,
     Channel,
     ChannelMember,
+    Identity,
     Package,
     PackageMember,
-    ApiKey,
+    Profile,
+    User,
 )
 
 app = typer.Typer()
