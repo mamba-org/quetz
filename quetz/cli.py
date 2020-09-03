@@ -133,7 +133,7 @@ def _get_deployments() -> Dict[str, str]:
         return {}
 
 
-def _store_deployement(path: str, config_file_name: str) -> NoReturn:
+def _store_deployment(path: str, config_file_name: str) -> NoReturn:
     """Store a new Quetz deployment.
 
     Parameters
@@ -225,21 +225,21 @@ def create(
     if os.path.exists(path):
         if abs_path in deployments:
             delete_ = typer.confirm(
-                f'Quetz deployement exists at {path}.\nOverwrite it?'
+                f'Quetz deployment exists at {path}.\nOverwrite it?'
             )
             if delete_:
                 delete(path, force=True)
                 create(path, config_file_name, create_conf, copy_conf, dev)
                 return
             else:
-                typer.echo('Use the start command to start a deployement.')
+                typer.echo('Use the start command to start a deployment.')
                 raise typer.Abort()
 
         # only authorize path with a config file to avoid deletion of unexpected files
         # when deleting Quetz instance
         if not all([f in [config_file_name] for f in os.listdir(path)]):
             typer.echo(
-                f'Quetz deployement not allowed at {path}.\n'
+                f'Quetz deployment not allowed at {path}.\n'
                 'The path should not contain more than the configuration file.'
             )
             raise typer.Abort()
@@ -287,7 +287,7 @@ def create(
     if dev:
         _fill_test_database(config.sqlalchemy_database_url)
 
-    _store_deployement(abs_path, config_file_name)
+    _store_deployment(abs_path, config_file_name)
 
 
 @app.command()
@@ -319,7 +319,7 @@ def start(
     try:
         config_file_name = deployments[abs_path]
     except KeyError:
-        typer.echo(f'No Quetz deployement found at {path}.')
+        typer.echo(f'No Quetz deployment found at {path}.')
         raise typer.Abort()
 
     config_file = os.path.join(abs_path, config_file_name)
@@ -398,10 +398,10 @@ def delete(
     try:
         _ = deployments[abs_path]
     except KeyError:
-        typer.echo(f'No Quetz deployement found at {path}.')
+        typer.echo(f'No Quetz deployment found at {path}.')
         raise typer.Abort()
 
-    delete = force or typer.confirm(f"Delete Quetz deployement at {path}?")
+    delete = force or typer.confirm(f"Delete Quetz deployment at {path}?")
     if not delete:
         raise typer.Abort()
 
