@@ -2,6 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import json
+
 from conda.exports import VersionOrder
 
 CHANNELDATA_OPTIONAL_FIELDS = (

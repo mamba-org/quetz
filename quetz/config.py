@@ -1,18 +1,17 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-from distutils.util import strtobool
 import os
-from typing import Any, List, NamedTuple, Type, Dict, NoReturn, Union
-from secrets import token_bytes
 from base64 import b64encode
+from distutils.util import strtobool
+from secrets import token_bytes
+from typing import Any, Dict, List, NamedTuple, NoReturn, Type, Union
 
 import appdirs
 import toml
 
 from quetz import pkgstores
 from quetz.errors import ConfigError
-
 
 _filename = "config.toml"
 _env_prefix = "QUETZ_"

@@ -8,7 +8,7 @@ import os.path as path
 import shutil
 import tempfile
 from contextlib import contextmanager
-from typing import NoReturn, Union, BinaryIO, IO
+from typing import IO, BinaryIO, NoReturn, Union
 
 import fsspec
 from fastapi import File

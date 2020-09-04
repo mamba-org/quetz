@@ -1,23 +1,27 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-from sqlalchemy.orm import Session, joinedload, aliased, Query
+import json
+import uuid
+
+from sqlalchemy.orm import Query, Session, aliased, joinedload
 from sqlalchemy import or_
+
+from quetz import channel_data, rest_models
+
 from .db_models import (
-    Profile,
-    User,
+    ApiKey,
     Channel,
     ChannelMember,
     Package,
     PackageMember,
-    ApiKey,
     PackageVersion,
+    Profile,
+    User,
 )
 
 from typing import Optional
 from quetz import rest_models, channel_data
-import uuid
-import json
 
 
 def get_paginated_result(query: Query, skip: int, limit: int):

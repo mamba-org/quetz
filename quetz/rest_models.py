@@ -2,10 +2,12 @@
 # Distributed under the terms of the Modified BSD License.
 
 from __future__ import annotations
+
+from datetime import datetime
+from typing import Generic, List, Optional, TypeVar
+
 from pydantic import BaseModel, Field
 from pydantic.generics import GenericModel
-from typing import List, Optional, TypeVar, Generic
-from datetime import datetime
 
 T = TypeVar('T')
 

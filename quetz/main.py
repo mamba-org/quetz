@@ -1,42 +1,45 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
+import json
+import os
+import secrets
+import sys
+import uuid
 from typing import List, Optional
+
 from fastapi import (
+    APIRouter,
+    BackgroundTasks,
     Depends,
     FastAPI,
-    HTTPException,
-    status,
-    Request,
     File,
-    UploadFile,
-    APIRouter,
     Form,
-    BackgroundTasks,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
 )
 from fastapi.responses import StreamingResponse
-
-from starlette.staticfiles import StaticFiles
-from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import RedirectResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-import uuid
-import secrets
-import os
-import sys
-import json
+from starlette.middleware.sessions import SessionMiddleware
+from starlette.responses import RedirectResponse
+from starlette.staticfiles import StaticFiles
 
-from quetz import auth_github
-from quetz import auth_google
+from quetz import (
+    auth_github,
+    auth_google,
+    authorization,
+    db_models,
+    indexing,
+    rest_models,
+)
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.database import get_session as get_db_session
-from quetz import rest_models
-from quetz import db_models
-from quetz import authorization
+
 from .condainfo import CondaInfo
-from quetz import indexing
 
 app = FastAPI()
 

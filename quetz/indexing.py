@@ -5,14 +5,12 @@ import bz2
 import hashlib
 import json
 import numbers
-
 from datetime import datetime, timezone
+
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from quetz import channel_data
-from quetz import repo_data
+from quetz import channel_data, repo_data
 from quetz.condainfo import MAX_CONDA_TIMESTAMP
-
 
 _iec_prefixes = (
     # IEEE 1541 - IEEE Standard for Prefixes for Binary Multiples

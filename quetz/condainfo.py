@@ -3,11 +3,12 @@
 
 import fnmatch
 import hashlib
-from io import BytesIO
 import json
 import tarfile
 import time
+from io import BytesIO
 from zipfile import ZipFile
+
 import zstandard
 
 from quetz import db_models
