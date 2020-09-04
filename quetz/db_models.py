@@ -65,6 +65,8 @@ class Channel(Base):
 
     packages = relationship('Package', back_populates='channel')
 
+    members = relationship('ChannelMember')
+
     def __repr__(self):
         return (
             f"<Channel name={self.name}, "
@@ -85,6 +87,11 @@ class ChannelMember(Base):
     channel = relationship('Channel')
     user = relationship('User')
 
+    def __repr__(self):
+        return (
+            f'ChannelMember<{self.user.username} -> {self.channel_name} ({self.role})>'
+        )
+
 
 class Package(Base):
     __tablename__ = 'packages'
@@ -103,9 +110,8 @@ class Package(Base):
 
     def __repr__(self):
         return (
-            f"<Package name={self.name}, "
-            "summary={self.summary}, "
-            "channel={self.channel}>"
+            f"<Package name={self.name}, summary={self.summary},"
+            + f" channel={self.channel_name}>"
         )
 
 

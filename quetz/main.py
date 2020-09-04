@@ -448,6 +448,19 @@ def get_package_versions(
     return version_list
 
 
+@api_router.get(
+    '/search/{query}', response_model=List[rest_models.PackageSearch], tags=['search']
+)
+def search(
+    query: str,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    user_id = auth.get_user()
+    print(user_id)
+    return dao.search_packages(query, user_id)
+
+
 @api_router.get('/api-keys', response_model=List[rest_models.ApiKey], tags=['API keys'])
 def get_api_keys(
     dao: Dao = Depends(get_dao), auth: authorization.Rules = Depends(get_rules)

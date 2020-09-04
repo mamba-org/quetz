@@ -74,6 +74,16 @@ class Package(BaseModel):
         orm_mode = True
 
 
+class PackageSearch(BaseModel):
+    name: str = Field(None, title='The name of package', max_length=50)
+    summary: str = Field(None, title='The summary of the package')
+    description: str = Field(None, title='The description of the package')
+    channel_name: str = Field(None, title='The channel this package belongs to')
+
+    class Config:
+        orm_mode = True
+
+
 class PaginatedResponse(GenericModel, Generic[T]):
     pagination: Pagination = Field(None, title="Pagination object")
     result: List[T] = Field([], title="Result objects")
