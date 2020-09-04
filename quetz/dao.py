@@ -3,9 +3,10 @@
 
 import json
 import uuid
+from typing import Optional
 
-from sqlalchemy.orm import Query, Session, aliased, joinedload
 from sqlalchemy import or_
+from sqlalchemy.orm import Query, Session, aliased, joinedload
 
 from quetz import channel_data, rest_models
 
@@ -19,9 +20,6 @@ from .db_models import (
     Profile,
     User,
 )
-
-from typing import Optional
-from quetz import rest_models, channel_data
 
 
 def get_paginated_result(query: Query, skip: int, limit: int):
