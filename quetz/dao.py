@@ -3,7 +3,9 @@
 
 import json
 import uuid
+from typing import Optional
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Query, Session, aliased, joinedload
 
 from quetz import channel_data, rest_models
@@ -95,6 +97,22 @@ class Dao:
             return query.all()
 
         return get_paginated_result(query, skip, limit)
+
+    def search_packages(self, q: str, user_id: Optional[bytes]):
+        query = (
+            self.db.query(Package).join(Channel).filter(Package.name.ilike(f'%{q}%'))
+        )
+        if user_id:
+            query = query.filter(
+                or_(
+                    Channel.private == False,  # noqa
+                    Channel.members.any(ChannelMember.user_id == user_id),
+                )
+            )
+        else:
+            query = query.filter(Channel.private == False)  # noqa
+
+        return query.all()
 
     def get_channel(self, channel_name: str):
         return self.db.query(Channel).filter(Channel.name == channel_name).one_or_none()

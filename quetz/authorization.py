@@ -2,6 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import uuid
+from typing import Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -21,7 +22,7 @@ class Rules:
         self.session = session
         self.db = db
 
-    def assert_user(self) -> bytes:
+    def get_user(self) -> Optional[bytes]:
         user_id = None
 
         if self.API_key:
@@ -34,6 +35,11 @@ class Rules:
             user_id = self.session.get('user_id')
             if user_id:
                 user_id = uuid.UUID(user_id).bytes
+
+        return user_id
+
+    def assert_user(self) -> bytes:
+        user_id = self.get_user()
 
         if not user_id:
             raise HTTPException(
