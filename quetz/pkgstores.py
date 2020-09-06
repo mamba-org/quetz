@@ -118,7 +118,7 @@ class S3Store(PackageStore):
 
     def create_channel(self, name):
         """Create the bucket if one doesn't already exist
-        
+
         Parameters
         ----------
         name : str
