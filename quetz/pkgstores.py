@@ -119,6 +119,13 @@ class S3Store(PackageStore):
         return f"{self.bucket_prefix}{name}{self.bucket_suffix}"
 
     def create_channel(self, name):
+        """Create the bucket if one doesn't already exist
+        
+        Parameters
+        ----------
+        name : str
+            The name of the bucket to create on s3
+        """
         with self._get_fs() as fs:
             try:
                 fs.mkdir(self._bucket_map(name))
