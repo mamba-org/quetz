@@ -97,8 +97,12 @@ class S3Store(PackageStore):
         if url:
             client_kwargs['endpoint_url'] = url
 
+        # When using IAM, key and secret will be empty, so need to pass None
+        # to the s3fs constructor
+        key = config['key'] if config['key'] != '' else None
+        secret = config['secret'] if config['secret'] != '' else None
         self.fs = s3fs.S3FileSystem(
-            key=config['key'], secret=config['secret'], client_kwargs=client_kwargs
+            key=key, secret=secret, client_kwargs=client_kwargs
         )
 
         self.bucket_prefix = config['bucket_prefix']
