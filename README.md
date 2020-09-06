@@ -70,7 +70,7 @@ Download `xtensor` as test package:
 ./download-test-package.sh
 ```
 
-Run test upload using quetz-client:
+Run test upload using quetz-client. (For testing purposes, an API key is created for the test user "alice" at server launch and is printed to the terminal, so use that for this example):
 
 ```
 export QUETZ_API_KEY=E_KaBFstCKI9hTdPM7DQq56GglRHf2HW7tQtq6si370
@@ -182,8 +182,6 @@ Then, using the swagger docs at `<deployment url>:<port>/docs`, POST to `/api/ch
 This will create a new channel called `my-channel` and your user will be the Owner of that channel.
 
 ### Generate an API key
-
-Note: For testing purposes, an API key is created for the test user "alice" at server launch and is printed to the terminal.
 
 API keys are scoped per channel, per user and optionally per package.
 In order to generate an API key the following must be true:
