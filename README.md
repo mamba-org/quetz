@@ -183,6 +183,8 @@ This will create a new channel called `my-channel` and your user will be the Own
 
 ### Generate an API key
 
+Note: For testing purposes, an API key is created for the test user "alice" at server launch and is printed to the terminal.
+
 API keys are scoped per channel, per user and optionally per package.
 In order to generate an API key the following must be true:
 
