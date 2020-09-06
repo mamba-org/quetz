@@ -125,9 +125,19 @@ Then add your access and secret keys to the `s3` section with your
 access_key = "AKIAIOSFODNN7EXAMPLE"
 secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 url = "https://..."
+bucket_prefix="..."
+bucket_suffix="..."
 ```
 
 Be sure to set the url field if not using AWS.
+
+Channels are created with the following semantics:
+```
+{bucket_prefix}{channel_name}{bucket_suffix}
+```
+The s3 backend is currently designed for one bucket per channel. It may be possible to put all channels in one bucket, but that will require some code tweaks
+
+If you're using IAM roles, dont set `access_key` and `secret_key` or set them to empty strings `""`.
 
 ## Google OAuth 2.0 OpenID Connect
 
