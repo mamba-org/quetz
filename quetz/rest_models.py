@@ -62,6 +62,7 @@ class Channel(BaseModel):
         None, title='The description of the channel', max_length=300
     )
     private: bool
+    mirror: bool = False
 
     class Config:
         orm_mode = True

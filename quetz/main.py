@@ -623,6 +623,11 @@ def invalid_api():
 
 @app.get("/channels/{channel_name}/{path:path}")
 def serve_path(path, channel: db_models.Channel = Depends(get_channel_or_fail)):
+
+    if channel.mirror:
+        print("mirror channel")
+        return
+
     if path == "" or path.endswith("/"):
         path += "index.html"
     try:
