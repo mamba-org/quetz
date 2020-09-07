@@ -51,7 +51,7 @@ Install `Quetz`:
 > Use the editable mode `-e` if you are developer and want to take advantage of the `reload` option of `Quetz`
 
 ```
-pip install -e quetz 
+pip install -e quetz
 ```
 
 Use the CLI to create a `Quetz` instance:
@@ -70,7 +70,7 @@ Download `xtensor` as test package:
 ./download-test-package.sh
 ```
 
-Run test upload using quetz-client:
+Run test upload using quetz-client. (For testing purposes, an API key is created for the test user "alice" at server launch and is printed to the terminal, so use that for this example):
 
 ```
 export QUETZ_API_KEY=E_KaBFstCKI9hTdPM7DQq56GglRHf2HW7tQtq6si370
@@ -125,9 +125,19 @@ Then add your access and secret keys to the `s3` section with your
 access_key = "AKIAIOSFODNN7EXAMPLE"
 secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 url = "https://..."
+bucket_prefix="..."
+bucket_suffix="..."
 ```
 
 Be sure to set the url field if not using AWS.
+
+Channels are created with the following semantics:
+```
+{bucket_prefix}{channel_name}{bucket_suffix}
+```
+The s3 backend is currently designed for one bucket per channel. It may be possible to put all channels in one bucket, but that will require some code tweaks
+
+If you're using IAM roles, dont set `access_key` and `secret_key` or set them to empty strings `""`.
 
 ## Google OAuth 2.0 OpenID Connect
 
@@ -162,3 +172,44 @@ This will build the javascript files and place them in `/quetz_frontend/dist/` f
 We use a shared copyright model that enables all contributors to maintain the copyright on their contributions.
 
 This software is licensed under the BSD-3-Clause license. See the [LICENSE](LICENSE) file for details.
+
+## Using quetz
+
+### Create a channel
+
+First, make sure you're logged in to the web app.
+
+Then, using the swagger docs at `<deployment url>:<port>/docs`, POST to `/api/channels` with the name and description of your new channel:
+
+```json
+{
+  "name": "my-channel",
+  "description": "Description for my-channel",
+  "private": false
+}
+```
+
+This will create a new channel called `my-channel` and your user will be the Owner of that channel.
+
+### Generate an API key
+
+API keys are scoped per channel, per user and optionally per package.
+In order to generate an API key the following must be true:
+
+1. First, make sure you're logged in to the web app.
+2. The user must be part of the target channel (you might need to create a channel first, see the previous section on how to create a channel via the swagger docs)
+3. Go to the swagger docs at `<deployment url>:<port>/docs` and POST to `/api/api-keys`:
+
+```json
+{
+  "description": "my-test-token",
+  "roles": [
+    {
+      "role": "owner",
+      "channel": "my-channel"
+    }
+  ]
+}
+```
+4. Then, GET on `/api/api-keys` to retrieve your token
+5. Finally, set this value to QUETZ_API_KEY so you can use quetz-client to interact with the server.
