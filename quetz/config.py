@@ -62,8 +62,8 @@ class Config:
         ConfigSection(
             "s3",
             [
-                ConfigEntry("access_key", str),
-                ConfigEntry("secret_key", str),
+                ConfigEntry("access_key", str, default=""),
+                ConfigEntry("secret_key", str, default=""),
                 ConfigEntry("url", str, default=""),
                 ConfigEntry("bucket_prefix", str, default=""),
                 ConfigEntry("bucket_suffix", str, default=""),

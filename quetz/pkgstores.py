@@ -97,9 +97,11 @@ class S3Store(PackageStore):
         if url:
             client_kwargs['endpoint_url'] = url
 
-        self.fs = s3fs.S3FileSystem(
-            key=config['key'], secret=config['secret'], client_kwargs=client_kwargs
-        )
+        # When using IAM, key and secret will be empty, so need to pass None
+        # to the s3fs constructor
+        key = config['key'] if config['key'] != '' else None
+        secret = config['secret'] if config['secret'] != '' else None
+        self.fs = s3fs.S3FileSystem(key=key, secret=secret, client_kwargs=client_kwargs)
 
         self.bucket_prefix = config['bucket_prefix']
         self.bucket_suffix = config['bucket_suffix']
@@ -115,6 +117,13 @@ class S3Store(PackageStore):
         return f"{self.bucket_prefix}{name}{self.bucket_suffix}"
 
     def create_channel(self, name):
+        """Create the bucket if one doesn't already exist
+
+        Parameters
+        ----------
+        name : str
+            The name of the bucket to create on s3
+        """
         with self._get_fs() as fs:
             try:
                 fs.mkdir(self._bucket_map(name))
