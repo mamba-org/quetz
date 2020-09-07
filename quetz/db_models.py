@@ -33,6 +33,13 @@ class User(Base):
     identities = relationship('Identity', back_populates='user')
     profile = relationship('Profile', uselist=False, back_populates='user')
 
+    @classmethod
+    def find(cls, db, name):
+        """Find a user by name.
+        Returns None if not found.
+        """
+        return db.query(cls).filter(cls.username == name).first()
+
 
 class Identity(Base):
     __tablename__ = 'identities'

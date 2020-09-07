@@ -12,9 +12,10 @@ from typing import Dict, NoReturn
 
 import typer
 import uvicorn
+from sqlalchemy.orm.session import Session
 
 from quetz.config import Config, _env_config_file, _env_prefix, _user_dir, create_config
-from quetz.database import get_session, init_db
+from quetz.database import get_session
 from quetz.db_models import (
     ApiKey,
     Channel,
@@ -40,10 +41,9 @@ class LogLevel(str, Enum):
     trace = "trace"
 
 
-def _fill_test_database(database_url: str) -> NoReturn:
+def _fill_test_database(db: Session) -> NoReturn:
     """Create dummy users and channels to allow further testing in dev mode."""
 
-    db = get_session(database_url)
     testUsers = []
     try:
         for index, username in enumerate(['alice', 'bob', 'carol', 'dave']):
@@ -283,10 +283,10 @@ def create(
 
     os.chdir(path)
     Path('channels').mkdir()
-    init_db(config.sqlalchemy_database_url)
+    db = get_session(config.sqlalchemy_database_url)
 
     if dev:
-        _fill_test_database(config.sqlalchemy_database_url)
+        _fill_test_database(db)
 
     _store_deployment(abs_path, config_file_name)
 
