@@ -5,14 +5,14 @@
 <table>
 <thead align="center" cellspacing="10">
   <tr>
-    <th colspan="3" align="center" border="">part of snakepit</th>
+    <th colspan="3" align="center" border="">part of mamba-org</th>
   </tr>
 </thead>
 <tbody>
   <tr background="#FFF">
-    <td align="center">Package Manager <a href="https://github.com/thesnakepit/mamba">mamba</a></td>
-    <td align="center">Package Server <a href="https://github.com/thesnakepit/quetz">quetz</a></td>
-    <td align="center">Package Builder <a href="https://github.com/thesnakepit/boa">boa</a></td>
+    <td align="center">Package Manager <a href="https://github.com/mamba-org/mamba">mamba</a></td>
+    <td align="center">Package Server <a href="https://github.com/mamba-org/quetz">quetz</a></td>
+    <td align="center">Package Builder <a href="https://github.com/mamba-org/boa">boa</a></td>
   </tr>
 </tbody>
 </table>
@@ -28,7 +28,7 @@ Quetz also comes with the `quetz-client` that can be used to upload packages to 
 
 ## Usage
 
-You should have [mamba](https://github.com/thesnakepit/mamba) or conda installed.
+You should have [mamba](https://github.com/mamba-org/mamba) or conda installed.
 
 Then create an environment:
 

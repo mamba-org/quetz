@@ -14,7 +14,7 @@ setuptools.setup(
     author="The Quetz Development Team",
     description="A client for the Quetz package server",
     long_description="A client for the Quetz package server",
-    url="https://github.com/thesnakepit/quetz",
+    url="https://github.com/mamba-org/quetz",
     packages=setuptools.find_packages(),
     python_requires='>=3.6',
     entry_points={
