@@ -624,7 +624,14 @@ def invalid_api():
 @app.get("/channels/{channel_name}/{path:path}")
 def serve_path(path, channel: db_models.Channel = Depends(get_channel_or_fail)):
 
+    SERVER_URL = os.environ.get("QUETZ_SERVER_URL", " https://conda.anaconda.org")
     if channel.mirror:
+        if path.endswith("repodata.json") or path.endswith("current_repodata.json"):
+            with open(os.path.join(SERVER_URL, 'channels', channel.name, path), 'r') as fid:
+                return json.load(fid)
+
+
+
         print("mirror channel")
         return
 
