@@ -4,6 +4,7 @@
 import json
 import os
 import secrets
+import requests
 import sys
 import uuid
 from typing import List, Optional
@@ -20,7 +21,7 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
@@ -621,19 +622,47 @@ def invalid_api():
     return None
 
 
+def download_remote_package(source_url, target_path, chunksize=10000):
+    """download remote file to target path"""
+    package_dir, _ = os.path.split(target_path)
+    os.makedirs(package_dir, exist_ok=True)
+    response = requests.get(source_url, stream=True)
+    with open(target_path, 'wb') as fid:
+        for chunk in response.iter_content(chunk_size=chunksize):
+            fid.write(chunk)
+
+def cached_requests(host, channel, path, exclude=["repodata.json", "current_repodata.json"]):
+    """try to get file from cache, download otherwise"""
+
+    _, filename = os.path.split(path)
+    cache = not filename in exclude 
+
+    remote_url = os.path.join(host, channel, path)
+    cache_dir = "cache"
+
+    if cache:
+        cache_path = os.path.join(cache_dir, channel, path)
+        if not os.path.isfile(cache_path):
+            print("downloading", path)
+            download_remote_package(remote_url, cache_path)
+        response = FileResponse(cache_path)
+
+    else:
+        r = requests.get(remote_url)
+        if r.headers.get('content-type') == 'application/json':
+            response = r.json()
+        else:
+            response = r.content
+
+    return response
+
+
 @app.get("/channels/{channel_name}/{path:path}")
 def serve_path(path, channel: db_models.Channel = Depends(get_channel_or_fail)):
 
     SERVER_URL = os.environ.get("QUETZ_SERVER_URL", " https://conda.anaconda.org")
     if channel.mirror:
-        if path.endswith("repodata.json") or path.endswith("current_repodata.json"):
-            with open(os.path.join(SERVER_URL, 'channels', channel.name, path), 'r') as fid:
-                return json.load(fid)
-
-
-
-        print("mirror channel")
-        return
+        return cached_requests(SERVER_URL, channel.name, path)
 
     if path == "" or path.endswith("/"):
         path += "index.html"
