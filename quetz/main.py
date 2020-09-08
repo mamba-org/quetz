@@ -637,11 +637,11 @@ def cached_requests(host, channel, path, exclude=["repodata.json", "current_repo
     _, filename = os.path.split(path)
     cache = not filename in exclude 
 
-    remote_url = os.path.join(host, channel, path)
-    cache_dir = "cache"
+    remote_url = os.path.join(host, path)
+    CACHE_DIR = "cache"
 
     if cache:
-        cache_path = os.path.join(cache_dir, channel, path)
+        cache_path = os.path.join(CACHE_DIR, channel, path)
         if not os.path.isfile(cache_path):
             print("downloading", path)
             download_remote_package(remote_url, cache_path)
@@ -660,9 +660,8 @@ def cached_requests(host, channel, path, exclude=["repodata.json", "current_repo
 @app.get("/channels/{channel_name}/{path:path}")
 def serve_path(path, channel: db_models.Channel = Depends(get_channel_or_fail)):
 
-    SERVER_URL = os.environ.get("QUETZ_SERVER_URL", " https://conda.anaconda.org")
-    if channel.mirror:
-        return cached_requests(SERVER_URL, channel.name, path)
+    if channel.mirror_channel_url:
+        return cached_requests(channel.mirror_channel_url, channel.name, path)
 
     if path == "" or path.endswith("/"):
         path += "index.html"
