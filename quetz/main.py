@@ -123,7 +123,7 @@ def get_package_or_fail(
 
 
 async def check_token_revocation(session):
-    valid = False
+    valid = True
     identity_provider = session.get('identity_provider')
     if identity_provider == 'github':
         valid = await auth_github.validate_token(session.get('token'))
