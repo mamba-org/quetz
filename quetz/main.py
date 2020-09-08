@@ -624,44 +624,54 @@ def invalid_api():
 
 def download_remote_package(source_url, target_path, chunksize=10000):
     """download remote file to target path"""
-    package_dir, _ = os.path.split(target_path)
-    os.makedirs(package_dir, exist_ok=True)
-    response = requests.get(source_url, stream=True)
-    with open(target_path, 'wb') as fid:
-        for chunk in response.iter_content(chunk_size=chunksize):
-            fid.write(chunk)
 
-def cached_requests(host, channel, path, exclude=["repodata.json", "current_repodata.json"]):
-    """try to get file from cache, download otherwise"""
 
-    _, filename = os.path.split(path)
-    cache = not filename in exclude 
+class RemoteRepository:
 
-    remote_url = os.path.join(host, path)
-    CACHE_DIR = "cache"
+    def __init__(self, channel: db_models.Channel = Depends(get_channel_or_fail)):
+        self.host = channel.mirror_channel_url
+        self.chunk_size = 10000
+        print("initialised repo")
 
-    if cache:
-        cache_path = os.path.join(CACHE_DIR, channel, path)
+    def open(self, path):
+        remote_url = os.path.join(self.host, path)
+        response = requests.get(remote_url, stream=True)
+        print("loading remote file")
+        for chunk in response.iter_content(chunk_size=self.chunk_size):
+            yield chunk
+
+
+class LocalCache:
+
+    def __init__(self, channel: db_models.Channel = Depends(get_channel_or_fail)):
+        self.cache_dir = "cache"
+        self.channel = channel.name
+        self.exclude = ["repodata.json", "current_repodata.json"]
+
+    def add_and_get(self, repository: RemoteRepository, path: str):
+        _, filename = os.path.split(path)
+        skip_cache = filename in self.exclude 
+
+        if skip_cache:
+            data_stream = repository.open(path)
+            return StreamingResponse(data_stream)
+
+        cache_path = os.path.join(self.cache_dir, self.channel, path)
         if not os.path.isfile(cache_path):
-            print("downloading", path)
-            download_remote_package(remote_url, cache_path)
-        response = FileResponse(cache_path)
-
-    else:
-        r = requests.get(remote_url)
-        if r.headers.get('content-type') == 'application/json':
-            response = r.json()
-        else:
-            response = r.content
-
-    return response
+            data_stream = repository.open(path)
+            package_dir, _ = os.path.split(cache_path)
+            os.makedirs(package_dir, exist_ok=True)
+            with open(cache_path, 'wb') as fid:
+                for chunk in data_stream: 
+                    fid.write(chunk)
+        return FileResponse(cache_path)
 
 
 @app.get("/channels/{channel_name}/{path:path}")
-def serve_path(path, channel: db_models.Channel = Depends(get_channel_or_fail)):
+def serve_path(path, channel: db_models.Channel = Depends(get_channel_or_fail), cache: LocalCache = Depends(LocalCache), repository: RemoteRepository = Depends(RemoteRepository)):
 
     if channel.mirror_channel_url:
-        return cached_requests(channel.mirror_channel_url, channel.name, path)
+        return cache.add_and_get(repository, path)
 
     if path == "" or path.endswith("/"):
         path += "index.html"
