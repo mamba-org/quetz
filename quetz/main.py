@@ -21,7 +21,7 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
@@ -621,47 +621,7 @@ app.include_router(
 def invalid_api():
     return None
 
-
-class RemoteRepository:
-
-    def __init__(self, channel: db_models.Channel = Depends(get_channel_or_fail)):
-        self.host = channel.mirror_channel_url
-        self.chunk_size = 10000
-        print("initialised repo")
-
-    def open(self, path):
-        remote_url = os.path.join(self.host, path)
-        response = requests.get(remote_url, stream=True)
-        print("loading remote file")
-        for chunk in response.iter_content(chunk_size=self.chunk_size):
-            yield chunk
-
-
-class LocalCache:
-
-    def __init__(self, channel: db_models.Channel = Depends(get_channel_or_fail)):
-        self.cache_dir = "cache"
-        self.channel = channel.name
-        self.exclude = ["repodata.json", "current_repodata.json"]
-
-    def add_and_get(self, repository: RemoteRepository, path: str):
-        _, filename = os.path.split(path)
-        skip_cache = filename in self.exclude 
-
-        if skip_cache:
-            data_stream = repository.open(path)
-            return StreamingResponse(data_stream)
-
-        cache_path = os.path.join(self.cache_dir, self.channel, path)
-        if not os.path.isfile(cache_path):
-            data_stream = repository.open(path)
-            package_dir, _ = os.path.split(cache_path)
-            os.makedirs(package_dir, exist_ok=True)
-            with open(cache_path, 'wb') as fid:
-                for chunk in data_stream: 
-                    fid.write(chunk)
-        return FileResponse(cache_path)
-
+from .mirror import RemoteRepository, LocalCache
 
 @app.get("/channels/{channel_name}/{path:path}")
 def serve_path(path, channel: db_models.Channel = Depends(get_channel_or_fail), cache: LocalCache = Depends(LocalCache), repository: RemoteRepository = Depends(RemoteRepository)):
