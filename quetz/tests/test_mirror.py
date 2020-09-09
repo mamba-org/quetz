@@ -50,6 +50,7 @@ def client(app):
     client = TestClient(app)
     return client
 
+
 @pytest.fixture
 def mirror_channel(db):
 
@@ -61,6 +62,7 @@ def mirror_channel(db):
 
     db.delete(channel)
     db.commit()
+
 
 @pytest.fixture
 def local_channel(db):
@@ -79,14 +81,19 @@ def test_set_mirror_url(db, client, user):
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 
-    response = client.post("/api/channels", 
-            json={"name": "test_create_channel",
-                  "private": False,
-                  "mirror_channel_url": "http://my_remote_host"})
+    response = client.post(
+        "/api/channels",
+        json={
+            "name": "test_create_channel",
+            "private": False,
+            "mirror_channel_url": "http://my_remote_host",
+        },
+    )
     assert response.status_code == 201
 
     channel = db.query(Channel).get("test_create_channel")
     assert channel.mirror_channel_url == "http://my_remote_host"
+
 
 def test_get_mirror_url(mirror_channel, local_channel, client):
     """test configuring mirror url"""
@@ -109,7 +116,6 @@ def user(db):
     yield db
     db.delete(user)
     db.commit()
-
 
 
 @pytest.fixture
