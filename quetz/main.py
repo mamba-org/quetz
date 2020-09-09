@@ -89,28 +89,32 @@ def get_rules(
 ):
     return authorization.Rules(request.headers.get('x-api-key'), session, db)
 
-def get_channel_or_fail(
-        channel_name: str, dao: Dao = Depends(get_dao), allow_mirror: bool = False
-) -> db_models.Channel:
-    channel = dao.get_channel(channel_name)
+class ChannelChecker:
+    def __init__(self, allow_mirror: bool):
+        self.allow_mirror = allow_mirror
 
-    if not channel:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Channel {channel_name} not found',
-        )
+    def __call__(
+            self,
+            channel_name: str, dao: Dao = Depends(get_dao)
+    ) -> db_models.Channel:
+        channel = dao.get_channel(channel_name)
 
-    if channel.mirror_channel_url and not allow_mirror:
-        raise HTTPException(
-            status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
-            detail=f'This method is not implemented for mirror channels',
-        )
+        if not channel:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f'Channel {channel_name} not found',
+            )
 
-    return channel
+        if channel.mirror_channel_url and not self.allow_mirror:
+            raise HTTPException(
+                status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+                detail=f'This method is not implemented for mirror channels',
+            )
+        return channel
 
-from functools import partial
 
-get_channel_allow_mirror = partial(get_channel_or_fail, allow_mirror=True)
+get_channel_or_fail = ChannelChecker(allow_mirror=False)
+get_channel_allow_mirror = ChannelChecker(allow_mirror=True)
 
 def get_package_or_fail(
     package_name: str,
