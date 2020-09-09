@@ -621,13 +621,13 @@ app.include_router(
 def invalid_api():
     return None
 
-from .mirror import RemoteRepository, LocalCache
+from .mirror import RemoteRepository, LocalCache, get_from_cache_or_download
 
 @app.get("/channels/{channel_name}/{path:path}")
 def serve_path(path, channel: db_models.Channel = Depends(get_channel_or_fail), cache: LocalCache = Depends(LocalCache), repository: RemoteRepository = Depends(RemoteRepository)):
 
     if channel.mirror_channel_url:
-        return cache.add_and_get(repository, path)
+        return get_from_cache_or_download(repository, cache, path)
 
     if path == "" or path.endswith("/"):
         path += "index.html"

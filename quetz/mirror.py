@@ -8,6 +8,8 @@ import requests
 
 
 class RemoteRepository:
+    """Ressource object for external package repositories."""
+
     def __init__(self, channel: db_models.Channel = Depends(get_channel_or_fail)):
         self.host = channel.mirror_channel_url
         self.chunk_size = 10000
@@ -19,26 +21,54 @@ class RemoteRepository:
             yield chunk
 
 
+def get_from_cache_or_download(
+    repository, cache, target, exclude=["repodata.json", "current_respodata.json"]
+):
+    """Serve from cache or download if missing."""
+
+    _, filename = os.path.split(target)
+    skip_cache = filename in exclude
+
+    if skip_cache:
+        data_stream = repository.open(target)
+        return StreamingResponse(data_stream)
+
+    if target not in cache:
+        # copy from repository to cache
+        data_stream = repository.open(target)
+        cache.dump(target, data_stream)
+
+    return FileResponse(cache[target])
+
+
 class LocalCache:
+    """Local storage for downloaded files."""
+
     def __init__(self, channel: db_models.Channel = Depends(get_channel_or_fail)):
         self.cache_dir = "cache"
         self.channel = channel.name
-        self.exclude = ["repodata.json", "current_repodata.json"]
 
-    def add_and_get(self, repository: RemoteRepository, path: str):
-        _, filename = os.path.split(path)
-        skip_cache = filename in self.exclude
+    def dump(self, path, stream):
+        cache_path = self._make_path(path)
+        package_dir, _ = os.path.split(cache_path)
+        os.makedirs(package_dir, exist_ok=True)
+        with open(cache_path, "wb") as fid:
+            for chunk in stream:
+                fid.write(chunk)
 
-        if skip_cache:
-            data_stream = repository.open(path)
-            return StreamingResponse(data_stream)
+    def __contains__(self, path):
+        cache_path = self._make_path(path)
+        return os.path.isfile(cache_path)
+
+    def _make_path(self, path):
+        cache_path = os.path.join(self.cache_dir, self.channel, path)
+        return cache_path
+
+    def __getitem__(self, path):
 
         cache_path = os.path.join(self.cache_dir, self.channel, path)
+
         if not os.path.isfile(cache_path):
-            data_stream = repository.open(path)
-            package_dir, _ = os.path.split(cache_path)
-            os.makedirs(package_dir, exist_ok=True)
-            with open(cache_path, "wb") as fid:
-                for chunk in data_stream:
-                    fid.write(chunk)
-        return FileResponse(cache_path)
+            raise KeyError
+
+        return cache_path
