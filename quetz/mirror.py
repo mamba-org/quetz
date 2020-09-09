@@ -1,7 +1,7 @@
 from quetz import db_models
 from fastapi import Depends
 from fastapi.responses import StreamingResponse, FileResponse
-from quetz.main import get_channel_or_fail
+from quetz.main import get_channel_allow_mirror
 
 import os
 import requests
@@ -10,7 +10,7 @@ import requests
 class RemoteRepository:
     """Ressource object for external package repositories."""
 
-    def __init__(self, channel: db_models.Channel = Depends(get_channel_or_fail)):
+    def __init__(self, channel: db_models.Channel = Depends(get_channel_allow_mirror)):
         self.host = channel.mirror_channel_url
         self.chunk_size = 10000
 
@@ -44,9 +44,9 @@ def get_from_cache_or_download(
 class LocalCache:
     """Local storage for downloaded files."""
 
-    def __init__(self, channel: db_models.Channel = Depends(get_channel_or_fail)):
+    def __init__(self, channel_name: str):
         self.cache_dir = "cache"
-        self.channel = channel.name
+        self.channel = channel_name
 
     def dump(self, path, stream):
         cache_path = self._make_path(path)

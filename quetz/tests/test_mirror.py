@@ -50,28 +50,55 @@ def client(app):
     client = TestClient(app)
     return client
 
+@pytest.fixture
+def mirror_channel(db):
 
-def test_mirror_url(db):
+    channel = Channel(name="test_mirror_channel", mirror_channel_url="http://host")
+    db.add(channel)
+    db.commit()
+
+    yield channel
+
+    db.delete(channel)
+    db.commit()
+
+@pytest.fixture
+def local_channel(db):
+
+    channel = Channel(name="test_local_channel")
+    db.add(channel)
+    db.commit()
+
+    yield channel
+
+    db.delete(channel)
+    db.commit()
+
+
+def test_set_mirror_url(db, client, user):
+    response = client.get("/api/dummylogin/bartosz")
+    assert response.status_code == 200
+
+    response = client.post("/api/channels", 
+            json={"name": "test_create_channel",
+                  "private": False,
+                  "mirror_channel_url": "http://my_remote_host"})
+    assert response.status_code == 201
+
+    channel = db.query(Channel).get("test_create_channel")
+    assert channel.mirror_channel_url == "http://my_remote_host"
+
+def test_get_mirror_url(mirror_channel, local_channel, client):
     """test configuring mirror url"""
 
-    channel = Channel(name="mirror_channel", mirror_channel_url="http://host")
-    db.add(channel)
-    db.commit()
+    response = client.get("/api/channels/{}".format(mirror_channel.name))
 
-    found = db.query(Channel).first()
+    assert response.status_code == 200
+    assert response.json()["mirror_channel_url"] == "http://host"
 
-    assert found.mirror_channel_url == "http://host"
-
-    db.delete(found)
-    db.commit()
-
-    channel = Channel(name="local_channel")
-    db.add(channel)
-    db.commit()
-
-    found = db.query(Channel).first()
-
-    assert not found.mirror_channel_url
+    response = client.get("/api/channels/{}".format(local_channel.name))
+    assert response.status_code == 200
+    assert not response.json()["mirror_channel_url"]
 
 
 @pytest.fixture
@@ -82,6 +109,7 @@ def user(db):
     yield db
     db.delete(user)
     db.commit()
+
 
 
 @pytest.fixture
@@ -169,3 +197,10 @@ def test_always_download_repodata(client, user, dummy_repo):
         ("http://host", "repodata.json"),
         ("http://host", "repodata.json"),
     ]
+
+
+def test_method_not_implemented_for_mirrors(client, mirror_channel):
+
+    response = client.post("/api/channels/{}/packages".format(mirror_channel.name))
+    assert response.status_code == 405
+    assert "not implemented" in response.json()["detail"]

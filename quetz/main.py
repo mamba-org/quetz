@@ -89,9 +89,8 @@ def get_rules(
 ):
     return authorization.Rules(request.headers.get('x-api-key'), session, db)
 
-
 def get_channel_or_fail(
-    channel_name: str, dao: Dao = Depends(get_dao)
+        channel_name: str, dao: Dao = Depends(get_dao), allow_mirror: bool = False
 ) -> db_models.Channel:
     channel = dao.get_channel(channel_name)
 
@@ -101,8 +100,17 @@ def get_channel_or_fail(
             detail=f'Channel {channel_name} not found',
         )
 
+    if channel.mirror_channel_url and not allow_mirror:
+        raise HTTPException(
+            status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+            detail=f'This method is not implemented for mirror channels',
+        )
+
     return channel
 
+from functools import partial
+
+get_channel_allow_mirror = partial(get_channel_or_fail, allow_mirror=True)
 
 def get_package_or_fail(
     package_name: str,
@@ -245,7 +253,7 @@ def get_paginated_channels(
 @api_router.get(
     '/channels/{channel_name}', response_model=rest_models.Channel, tags=['channels']
 )
-def get_channel(channel: db_models.Channel = Depends(get_channel_or_fail)):
+def get_channel(channel: db_models.Channel = Depends(get_channel_allow_mirror)):
     return channel
 
 
@@ -624,7 +632,7 @@ def invalid_api():
 from .mirror import RemoteRepository, LocalCache, get_from_cache_or_download
 
 @app.get("/channels/{channel_name}/{path:path}")
-def serve_path(path, channel: db_models.Channel = Depends(get_channel_or_fail), cache: LocalCache = Depends(LocalCache), repository: RemoteRepository = Depends(RemoteRepository)):
+def serve_path(path, channel: db_models.Channel = Depends(get_channel_allow_mirror), cache: LocalCache = Depends(LocalCache), repository: RemoteRepository = Depends(RemoteRepository)):
 
     if channel.mirror_channel_url:
         return get_from_cache_or_download(repository, cache, path)
