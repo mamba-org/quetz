@@ -622,10 +622,6 @@ def invalid_api():
     return None
 
 
-def download_remote_package(source_url, target_path, chunksize=10000):
-    """download remote file to target path"""
-
-
 class RemoteRepository:
 
     def __init__(self, channel: db_models.Channel = Depends(get_channel_or_fail)):
