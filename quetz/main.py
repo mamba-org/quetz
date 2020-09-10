@@ -41,7 +41,7 @@ from quetz.dao import Dao
 from quetz.database import get_session as get_db_session
 
 from .condainfo import CondaInfo
-from .mirror import LocalCache, RemoteFile, get_from_cache_or_download
+from .mirror import LocalCache, RemoteFile, RemoteRepository, get_from_cache_or_download
 
 app = FastAPI()
 
@@ -695,29 +695,19 @@ def invalid_api():
     return None
 
 
-class RemoteRepository:
-    """Ressource object for external package repositories."""
-
-    def __init__(self, channel: db_models.Channel = Depends(get_channel_allow_mirror)):
-        self.host = channel.mirror_channel_url
-        self.chunk_size = 10000
-
-    def open(self, path):
-        remote_url = os.path.join(self.host, path)
-        response = requests.get(remote_url, stream=True)
-        for chunk in response.iter_content(chunk_size=self.chunk_size):
-            yield chunk
-
+def get_session():
+    return requests.Session()
 
 @app.get("/channels/{channel_name}/{path:path}")
 def serve_path(
     path,
     channel: db_models.Channel = Depends(get_channel_allow_mirror),
     cache: LocalCache = Depends(LocalCache),
-    repository: RemoteRepository = Depends(RemoteRepository),
+    session = Depends(get_session)
 ):
 
     if channel.mirror_channel_url and channel.mirror_mode == "proxy":
+        repository = RemoteRepository(channel.mirror_channel_url, session)
         return get_from_cache_or_download(repository, cache, path)
 
     if path == "" or path.endswith("/"):

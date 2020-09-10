@@ -14,9 +14,18 @@ def get_from_cache_or_download(
     _, filename = os.path.split(target)
     skip_cache = filename in exclude
 
+    chunksize = 10000
+    def data_iter(f):
+        chunk = f.read(chunksize)
+        while chunk:
+            yield chunk
+            # Do stuff with byte.
+            chunk = f.read(chunksize)
+
     if skip_cache:
         data_stream = repository.open(target)
-        return StreamingResponse(data_stream)
+
+        return StreamingResponse(data_iter(data_stream))
 
     if target not in cache:
         # copy from repository to cache
@@ -25,11 +34,22 @@ def get_from_cache_or_download(
 
     return FileResponse(cache[target])
 
+class RemoteRepository:
+    """Ressource object for external package repositories."""
+
+    def __init__(self, host, session):
+        self.host = host
+        self.session = session
+
+    def open(self, path):
+        return RemoteFile(self.host, path, self.session).file
 
 class RemoteFile:
-    def __init__(self, host: str, path: str):
+    def __init__(self, host: str, path: str, session=None):
+        if session is None:
+            session = requests.Session()
         remote_url = os.path.join(host, path)
-        response = requests.get(remote_url, stream=True)
+        response = session.get(remote_url, stream=True)
         self.file = SpooledTemporaryFile()
         shutil.copyfileobj(response.raw, self.file)
         # rewind
@@ -50,8 +70,7 @@ class LocalCache:
         package_dir, _ = os.path.split(cache_path)
         os.makedirs(package_dir, exist_ok=True)
         with open(cache_path, "wb") as fid:
-            for chunk in stream:
-                fid.write(chunk)
+            shutil.copyfileobj(stream, fid)
 
     def __contains__(self, path):
         cache_path = self._make_path(path)

@@ -75,15 +75,22 @@ def user(db):
 @pytest.fixture
 def dummy_repo(app):
     from quetz.main import RemoteRepository
+    from quetz.main import get_session
+    from io import BytesIO
 
     files = []
+    
+    class DummyResponse:
+        def __init__(self):
+            self.raw = BytesIO(b"Hello world!")
+            self.headers = {"content-type": "application/json"}
 
-    class DummyRepo(RemoteRepository):
-        def open(self, path):
-            files.append((self.host, path))
-            yield b"Hello world!"
+    class DummySession:
+        def get(self, path, stream=False):
+            files.append(path)
+            return DummyResponse()
 
-    app.dependency_overrides[RemoteRepository] = DummyRepo
+    app.dependency_overrides[get_session] = DummySession
 
     return files
 
@@ -108,7 +115,7 @@ def test_download_remote_file(client, user, dummy_repo):
 
     assert response.status_code == 200
     assert response.content == b"Hello world!"
-    assert dummy_repo == [("http://host", "test_file.txt")]
+    assert dummy_repo == [("http://host/test_file.txt")]
 
     dummy_repo.pop()
 
@@ -127,7 +134,7 @@ def test_download_remote_file(client, user, dummy_repo):
 
     assert response.status_code == 200
     assert response.content == b"Hello world!"
-    assert dummy_repo == [("http://host", "test_file_2.txt")]
+    assert dummy_repo == [("http://host/test_file_2.txt")]
 
 
 def test_always_download_repodata(client, user, dummy_repo):
@@ -154,8 +161,8 @@ def test_always_download_repodata(client, user, dummy_repo):
     assert response.content == b"Hello world!"
 
     assert dummy_repo == [
-        ("http://host", "repodata.json"),
-        ("http://host", "repodata.json"),
+        ("http://host/repodata.json"),
+        ("http://host/repodata.json"),
     ]
 
 
