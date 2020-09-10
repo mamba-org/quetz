@@ -41,7 +41,7 @@ from quetz.dao import Dao
 from quetz.database import get_session as get_db_session
 
 from .condainfo import CondaInfo
-from .mirror import LocalCache, RemoteFile, RemoteRepository, get_from_cache_or_download
+from .mirror import LocalCache, RemoteRepository, get_from_cache_or_download
 
 app = FastAPI()
 
@@ -81,6 +81,7 @@ def get_dao(db: Session = Depends(get_db)):
 
 def get_session(request: Request):
     return request.session
+
 
 def get_remote_session():
     return requests.Session()
@@ -281,7 +282,7 @@ def post_channel(
     background_tasks: BackgroundTasks,
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
-    session = Depends(get_remote_session),
+    session=Depends(get_remote_session),
 ):
 
     user_id = auth.assert_user()
@@ -705,7 +706,7 @@ def serve_path(
     path,
     channel: db_models.Channel = Depends(get_channel_allow_mirror),
     cache: LocalCache = Depends(LocalCache),
-    session = Depends(get_remote_session)
+    session=Depends(get_remote_session),
 ):
 
     if channel.mirror_channel_url and channel.mirror_mode == "proxy":

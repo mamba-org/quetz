@@ -1,6 +1,8 @@
+import os
+import tarfile
+import tempfile
 import uuid
 
-import tarfile
 import pytest
 
 from quetz.db_models import Channel, User
@@ -77,13 +79,15 @@ def user(db):
 def repo_content():
     return b"Hello world!"
 
+
 @pytest.fixture
 def dummy_repo(app, repo_content):
-    from quetz.main import get_remote_session
     from io import BytesIO
 
+    from quetz.main import get_remote_session
+
     files = []
-    
+
     class DummyResponse:
         def __init__(self):
             if isinstance(repo_content, list):
@@ -200,8 +204,19 @@ def test_mirror_initial_sync(client, dummy_repo, user):
 
     assert dummy_repo == ["http://mirror3_host/linux-64/repodata.json"]
 
+
 empty_archive = b""
-@pytest.mark.parametrize('repo_content', [[b'{"packages": {"my_package-0.1.tar.bz": {"subdir":"linux-64"}}}', empty_archive]])
+
+
+@pytest.mark.parametrize(
+    'repo_content',
+    [
+        [
+            b'{"packages": {"my_package-0.1.tar.bz": {"subdir":"linux-64"}}}',
+            empty_archive,
+        ]
+    ],
+)
 def test_wrong_package_format(client, dummy_repo, user):
 
     response = client.get("/api/dummylogin/bartosz")
@@ -221,4 +236,4 @@ def test_wrong_package_format(client, dummy_repo, user):
     assert dummy_repo == [
         "http://mirror3_host/linux-64/repodata.json",
         "http://mirror3_host/linux-64/my_package-0.1.tar.bz",
-        ]
+    ]
