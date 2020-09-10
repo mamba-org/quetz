@@ -237,10 +237,15 @@ def get_user(username: str, dao: Dao = Depends(get_dao)):
 @api_router.get(
     '/channels', response_model=List[rest_models.Channel], tags=['channels']
 )
-def get_channels(dao: Dao = Depends(get_dao), q: str = None):
+def get_channels(
+    dao: Dao = Depends(get_dao),
+    q: str = None,
+    auth: authorization.Rules = Depends(get_rules),
+):
     """List all channels"""
 
-    return dao.get_channels(0, -1, q)
+    user_id = auth.get_user()
+    return dao.get_channels(0, -1, q, user_id)
 
 
 @api_router.get(
@@ -249,11 +254,15 @@ def get_channels(dao: Dao = Depends(get_dao), q: str = None):
     tags=['channels'],
 )
 def get_paginated_channels(
-    dao: Dao = Depends(get_dao), skip: int = 0, limit: int = 10, q: str = None
+    dao: Dao = Depends(get_dao),
+    skip: int = 0,
+    limit: int = 10,
+    q: str = None,
+    auth: authorization.Rules = Depends(get_rules),
 ):
     """List all channels, as a paginated response"""
-
-    return dao.get_channels(skip, limit, q)
+    user_id = auth.get_user()
+    return dao.get_channels(skip, limit, q, user_id)
 
 
 @api_router.get(
