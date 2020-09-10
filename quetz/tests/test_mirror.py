@@ -1,6 +1,4 @@
-import os
 import tarfile
-import tempfile
 import uuid
 
 import pytest
