@@ -78,7 +78,7 @@ def combine(old_data, new_data):
 def export(dao, channel_name):
     channeldata = {"channeldata_version": 1, "packages": {}, "subdirs": {}}
     packages = channeldata["packages"]
-    subdirs = set()
+    subdirs = set(['noarch'])
 
     for name, info in dao.get_channel_datas(channel_name):
         if info is not None:

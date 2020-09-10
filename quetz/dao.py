@@ -324,6 +324,9 @@ class Dao:
         )
 
     def is_active_platform(self, channel_name: str, platform: str):
+        if platform == 'noarch':
+            return True
+
         return (
             self.db.query(PackageVersion)
             .filter(PackageVersion.channel_name == channel_name)
