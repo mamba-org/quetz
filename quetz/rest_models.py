@@ -63,6 +63,7 @@ class Channel(BaseModel):
     )
     private: bool
     mirror_channel_url: Optional[str] = None
+    mirror_mode: str = "proxy"
 
     class Config:
         orm_mode = True

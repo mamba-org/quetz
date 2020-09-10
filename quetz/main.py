@@ -43,6 +43,7 @@ from quetz.database import get_session as get_db_session
 from .condainfo import CondaInfo
 from .mirror import LocalCache, get_from_cache_or_download
 
+
 app = FastAPI()
 
 config = Config()
@@ -116,7 +117,6 @@ class ChannelChecker:
 
 get_channel_or_fail = ChannelChecker(allow_mirror=False)
 get_channel_allow_mirror = ChannelChecker(allow_mirror=True)
-
 
 def get_package_or_fail(
     package_name: str,
@@ -271,10 +271,12 @@ def get_paginated_channels(
 def get_channel(channel: db_models.Channel = Depends(get_channel_allow_mirror)):
     return channel
 
+from .mirror import RemoteFile
 
 @api_router.post('/channels', status_code=201, tags=['channels'])
 def post_channel(
     new_channel: rest_models.Channel,
+    background_tasks: BackgroundTasks,
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
@@ -291,6 +293,18 @@ def post_channel(
 
     dao.create_channel(new_channel, user_id, authorization.OWNER)
 
+    if new_channel.mirror_channel_url and new_channel.mirror_mode == 'mirror':
+        arch = "linux-64"
+        repo_file = RemoteFile(new_channel.mirror_channel_url, os.path.join(arch, "repodata.json"))
+        repodata = json.load(repo_file.file)
+        packages = repodata["packages"]
+        files = []
+        for path in packages:
+            remote_package = RemoteFile(new_channel.mirror_channel_url, os.path.join("linux-64", path))
+            files.append(remote_package)
+            
+        force = False
+        handle_package_files(new_channel.name, files, dao, auth, force, background_tasks)
 
 @api_router.get(
     '/channels/{channel_name}/packages',
@@ -644,7 +658,6 @@ app.include_router(
 def invalid_api():
     return None
 
-
 class RemoteRepository:
     """Ressource object for external package repositories."""
 
@@ -667,7 +680,7 @@ def serve_path(
     repository: RemoteRepository = Depends(RemoteRepository),
 ):
 
-    if channel.mirror_channel_url:
+    if channel.mirror_channel_url and channel.mirror_mode == "proxy":
         return get_from_cache_or_download(repository, cache, path)
 
     if path == "" or path.endswith("/"):

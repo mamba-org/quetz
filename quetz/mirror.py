@@ -23,6 +23,22 @@ def get_from_cache_or_download(
     return FileResponse(cache[target])
 
 
+from tempfile import SpooledTemporaryFile
+import shutil
+
+class RemoteFile:
+
+    def __init__(self, host: str, path: str):
+        remote_url = os.path.join(host, path)
+        response = requests.get(remote_url, stream=True)
+        self.file = SpooledTemporaryFile()
+        shutil.copyfileobj(response.raw, self.file)
+        # rewind
+        self.file.seek(0)
+        _, self.filename = os.path.split(remote_url)
+        self.content_type = response.headers.get("content-type")
+
+
 class LocalCache:
     """Local storage for downloaded files."""
 
