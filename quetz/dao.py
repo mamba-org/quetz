@@ -82,7 +82,8 @@ class Dao:
         channel = Channel(
             name=data.name,
             description=data.description,
-            mirror_channel_url=data.mirror_channel_url)
+            mirror_channel_url=data.mirror_channel_url,
+        )
 
         member = ChannelMember(channel=channel, user_id=user_id, role=role)
 

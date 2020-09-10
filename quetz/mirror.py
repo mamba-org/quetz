@@ -1,24 +1,6 @@
-from quetz import db_models
-from fastapi import Depends
-from fastapi.responses import StreamingResponse, FileResponse
-from quetz.main import get_channel_allow_mirror
-
 import os
-import requests
 
-
-class RemoteRepository:
-    """Ressource object for external package repositories."""
-
-    def __init__(self, channel: db_models.Channel = Depends(get_channel_allow_mirror)):
-        self.host = channel.mirror_channel_url
-        self.chunk_size = 10000
-
-    def open(self, path):
-        remote_url = os.path.join(self.host, path)
-        response = requests.get(remote_url, stream=True)
-        for chunk in response.iter_content(chunk_size=self.chunk_size):
-            yield chunk
+from fastapi.responses import FileResponse, StreamingResponse
 
 
 def get_from_cache_or_download(

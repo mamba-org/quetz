@@ -4,11 +4,11 @@
 import json
 import os
 import secrets
-import requests
 import sys
 import uuid
 from typing import List, Optional
 
+import requests
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -41,6 +41,7 @@ from quetz.dao import Dao
 from quetz.database import get_session as get_db_session
 
 from .condainfo import CondaInfo
+from .mirror import LocalCache, get_from_cache_or_download
 
 app = FastAPI()
 
@@ -89,13 +90,13 @@ def get_rules(
 ):
     return authorization.Rules(request.headers.get('x-api-key'), session, db)
 
+
 class ChannelChecker:
     def __init__(self, allow_mirror: bool):
         self.allow_mirror = allow_mirror
 
     def __call__(
-            self,
-            channel_name: str, dao: Dao = Depends(get_dao)
+        self, channel_name: str, dao: Dao = Depends(get_dao)
     ) -> db_models.Channel:
         channel = dao.get_channel(channel_name)
 
@@ -108,13 +109,14 @@ class ChannelChecker:
         if channel.mirror_channel_url and not self.allow_mirror:
             raise HTTPException(
                 status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
-                detail=f'This method is not implemented for mirror channels',
+                detail='This method is not implemented for mirror channels',
             )
         return channel
 
 
 get_channel_or_fail = ChannelChecker(allow_mirror=False)
 get_channel_allow_mirror = ChannelChecker(allow_mirror=True)
+
 
 def get_package_or_fail(
     package_name: str,
@@ -633,10 +635,28 @@ app.include_router(
 def invalid_api():
     return None
 
-from .mirror import RemoteRepository, LocalCache, get_from_cache_or_download
+
+class RemoteRepository:
+    """Ressource object for external package repositories."""
+
+    def __init__(self, channel: db_models.Channel = Depends(get_channel_allow_mirror)):
+        self.host = channel.mirror_channel_url
+        self.chunk_size = 10000
+
+    def open(self, path):
+        remote_url = os.path.join(self.host, path)
+        response = requests.get(remote_url, stream=True)
+        for chunk in response.iter_content(chunk_size=self.chunk_size):
+            yield chunk
+
 
 @app.get("/channels/{channel_name}/{path:path}")
-def serve_path(path, channel: db_models.Channel = Depends(get_channel_allow_mirror), cache: LocalCache = Depends(LocalCache), repository: RemoteRepository = Depends(RemoteRepository)):
+def serve_path(
+    path,
+    channel: db_models.Channel = Depends(get_channel_allow_mirror),
+    cache: LocalCache = Depends(LocalCache),
+    repository: RemoteRepository = Depends(RemoteRepository),
+):
 
     if channel.mirror_channel_url:
         return get_from_cache_or_download(repository, cache, path)

@@ -1,12 +1,11 @@
-from quetz.db_models import Channel, User
-import uuid
-
-from fastapi.testclient import TestClient
-
-
 import os
 import tempfile
+import uuid
+
 import pytest
+from fastapi.testclient import TestClient
+
+from quetz.db_models import Channel, User
 
 
 @pytest.fixture
