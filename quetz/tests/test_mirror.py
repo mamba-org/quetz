@@ -73,16 +73,19 @@ def user(db):
 
 
 @pytest.fixture
-def dummy_repo(app):
-    from quetz.main import RemoteRepository
-    from quetz.main import get_session
+def repo_content():
+    return b"Hello world!"
+
+@pytest.fixture
+def dummy_repo(app, repo_content):
+    from quetz.main import get_remote_session
     from io import BytesIO
 
     files = []
     
     class DummyResponse:
         def __init__(self):
-            self.raw = BytesIO(b"Hello world!")
+            self.raw = BytesIO(repo_content)
             self.headers = {"content-type": "application/json"}
 
     class DummySession:
@@ -90,7 +93,7 @@ def dummy_repo(app):
             files.append(path)
             return DummyResponse()
 
-    app.dependency_overrides[get_session] = DummySession
+    app.dependency_overrides[get_remote_session] = DummySession
 
     return files
 
@@ -171,3 +174,23 @@ def test_method_not_implemented_for_mirrors(client, mirror_channel):
     response = client.post("/api/channels/{}/packages".format(mirror_channel.name))
     assert response.status_code == 405
     assert "not implemented" in response.json()["detail"]
+
+
+@pytest.mark.parametrize('repo_content', [b'{"packages": {}}', b'{}'])
+def test_mirror_initial_sync(client, dummy_repo, user):
+
+    response = client.get("/api/dummylogin/bartosz")
+    assert response.status_code == 200
+
+    response = client.post(
+        "/api/channels",
+        json={
+            "name": "mirror_channel_" + str(uuid.uuid4())[:10],
+            "private": False,
+            "mirror_channel_url": "http://mirror3_host",
+            "mirror_mode": "mirror",
+        },
+    )
+    assert response.status_code == 201
+
+    assert dummy_repo == ["http://mirror3_host/linux-64/repodata.json"]

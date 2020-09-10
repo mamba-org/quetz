@@ -23,13 +23,15 @@ def get_from_cache_or_download(
             chunk = f.read(chunksize)
 
     if skip_cache:
-        data_stream = repository.open(target)
+        remote_file = repository.open(target)
+        data_stream = remote_file.file
 
         return StreamingResponse(data_iter(data_stream))
 
     if target not in cache:
         # copy from repository to cache
-        data_stream = repository.open(target)
+        remote_file = repository.open(target)
+        data_stream = remote_file.file 
         cache.dump(target, data_stream)
 
     return FileResponse(cache[target])
@@ -42,7 +44,7 @@ class RemoteRepository:
         self.session = session
 
     def open(self, path):
-        return RemoteFile(self.host, path, self.session).file
+        return RemoteFile(self.host, path, self.session)
 
 class RemoteFile:
     def __init__(self, host: str, path: str, session=None):

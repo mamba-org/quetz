@@ -82,6 +82,9 @@ def get_dao(db: Session = Depends(get_db)):
 def get_session(request: Request):
     return request.session
 
+def get_remote_session():
+    return requests.Session()
+
 
 def get_rules(
     request: Request,
@@ -278,6 +281,7 @@ def post_channel(
     background_tasks: BackgroundTasks,
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
+    session = Depends(get_remote_session),
 ):
 
     user_id = auth.assert_user()
@@ -294,10 +298,11 @@ def post_channel(
 
     arch = "linux-64"
     if new_channel.mirror_channel_url and new_channel.mirror_mode == 'mirror':
+        remote_repo = RemoteRepository(new_channel.mirror_channel_url, session)
         background_tasks.add_task(
             initial_sync_mirror,
             new_channel.name,
-            new_channel.mirror_channel_url,
+            remote_repo,
             arch,
             dao,
             auth,
@@ -307,7 +312,7 @@ def post_channel(
 
 def initial_sync_mirror(
     channel_name: str,
-    mirror_host: str,
+    remote_repository: RemoteRepository,
     arch: str,
     dao: Dao,
     auth: authorization.Rules,
@@ -315,12 +320,12 @@ def initial_sync_mirror(
 ):
 
     force = False
-    repo_file = RemoteFile(mirror_host, os.path.join(arch, "repodata.json"))
+    repo_file = remote_repository.open(os.path.join(arch, "repodata.json"))
     repodata = json.load(repo_file.file)
-    packages = repodata["packages"]
+    packages = repodata.get("packages", {})
     for package_name, metadata in packages.items():
         path = os.path.join(metadata["subdir"], package_name)
-        remote_package = RemoteFile(mirror_host, path)
+        remote_package = remote_repository.open(path)
         files = [remote_package]
         handle_package_files(
             channel_name,
@@ -695,15 +700,12 @@ def invalid_api():
     return None
 
 
-def get_session():
-    return requests.Session()
-
 @app.get("/channels/{channel_name}/{path:path}")
 def serve_path(
     path,
     channel: db_models.Channel = Depends(get_channel_allow_mirror),
     cache: LocalCache = Depends(LocalCache),
-    session = Depends(get_session)
+    session = Depends(get_remote_session)
 ):
 
     if channel.mirror_channel_url and channel.mirror_mode == "proxy":
