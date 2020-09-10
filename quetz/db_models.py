@@ -70,6 +70,7 @@ class Channel(Base):
     name = Column(String, primary_key=True, index=True)
     description = Column(String)
     private = Column(Boolean, default=False)
+    mirror_channel_url = Column(String)
 
     packages = relationship('Package', back_populates='channel')
 

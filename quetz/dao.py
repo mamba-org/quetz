@@ -79,7 +79,11 @@ class Dao:
         return get_paginated_result(query, skip, limit)
 
     def create_channel(self, data: rest_models.Channel, user_id: bytes, role: str):
-        channel = Channel(name=data.name, description=data.description)
+        channel = Channel(
+            name=data.name,
+            description=data.description,
+            mirror_channel_url=data.mirror_channel_url,
+        )
 
         member = ChannelMember(channel=channel, user_id=user_id, role=role)
 
