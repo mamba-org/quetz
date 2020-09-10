@@ -67,8 +67,20 @@ class Dao:
             .one_or_none()
         )
 
-    def get_channels(self, skip: int, limit: int, q: str):
+    def get_channels(
+        self, skip: int, limit: int, q: Optional[str], user_id: Optional[bytes]
+    ):
         query = self.db.query(Channel)
+
+        if user_id:
+            query = query.filter(
+                or_(
+                    Channel.private == False,  # noqa
+                    Channel.members.any(ChannelMember.user_id == user_id),
+                )
+            )
+        else:
+            query = query.filter(Channel.private == False)  # noqa
 
         if q:
             query = query.filter(Channel.name.ilike(f'%{q}%'))

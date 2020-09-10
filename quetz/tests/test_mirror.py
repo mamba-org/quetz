@@ -1,53 +1,8 @@
-import os
-import tempfile
 import uuid
 
 import pytest
-from fastapi.testclient import TestClient
 
 from quetz.db_models import Channel, User
-
-
-@pytest.fixture
-def config():
-
-    config_str = r"""
-[github]
-# Register the app here: https://github.com/settings/applications/new
-client_id = "aaa"
-client_secret = ""
-
-[sqlalchemy]
-database_url = "sqlite:///:memory:"
-
-[session]
-secret = "eWrkA6xpa7LTSSYUwZEEVoOU62501Ucf9lmLcgzTj1I="
-https_only = false
-"""
-
-    path = tempfile.mkdtemp()
-    config_path = os.path.join(path, "config.toml")
-    with open(config_path, "w") as fid:
-        fid.write(config_str)
-    old_dir = os.curdir
-    os.chdir(path)
-    os.environ["QUETZ_CONFIG_FILE"] = config_path
-    yield config_path
-    os.chdir(old_dir)
-
-
-@pytest.fixture
-def app(config, db):
-    from quetz.main import app, get_db
-
-    app.dependency_overrides[get_db] = lambda: db
-    return app
-
-
-@pytest.fixture
-def client(app):
-    client = TestClient(app)
-    return client
 
 
 @pytest.fixture
