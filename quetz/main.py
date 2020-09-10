@@ -293,18 +293,23 @@ def post_channel(
 
     dao.create_channel(new_channel, user_id, authorization.OWNER)
 
+    arch = "linux-64"
     if new_channel.mirror_channel_url and new_channel.mirror_mode == 'mirror':
-        arch = "linux-64"
-        repo_file = RemoteFile(new_channel.mirror_channel_url, os.path.join(arch, "repodata.json"))
-        repodata = json.load(repo_file.file)
-        packages = repodata["packages"]
-        files = []
-        for path in packages:
-            remote_package = RemoteFile(new_channel.mirror_channel_url, os.path.join("linux-64", path))
-            files.append(remote_package)
-            
-        force = False
-        handle_package_files(new_channel.name, files, dao, auth, force, background_tasks)
+        background_tasks.add_task(
+            initial_sync_mirror, new_channel.name, new_channel.mirror_channel_url, arch, dao, auth, background_tasks)
+
+def initial_sync_mirror(channel_name: str, mirror_host: str, arch: str, dao: Dao, auth: authorization.Rules, background_tasks: BackgroundTasks):
+
+    force = False
+    repo_file = RemoteFile(mirror_host, os.path.join(arch, "repodata.json"))
+    repodata = json.load(repo_file.file)
+    packages = repodata["packages"]
+    for package_name, metadata in packages.items():
+        path = os.path.join(metadata["subdir"], package_name)
+        remote_package = RemoteFile(mirror_host, path)
+        files = [remote_package]
+        handle_package_files(channel_name, files, dao, auth, force, background_tasks, update_indexes=False)
+    indexing.update_indexes(dao, pkgstore, channel_name)
 
 @api_router.get(
     '/channels/{channel_name}/packages',
@@ -582,7 +587,7 @@ def post_file_to_channel(
 
 
 def handle_package_files(
-    channel_name, files, dao, auth, force, background_tasks, package=None
+    channel_name, files, dao, auth, force, background_tasks, package=None, update_indexes=True
 ):
 
     for file in files:
@@ -645,7 +650,8 @@ def handle_package_files(
         pkgstore.add_package(file.file, channel_name, dest)
 
     # Background task to update indexes
-    background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel_name)
+    if update_indexes:
+        background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel_name)
 
 
 app.include_router(
