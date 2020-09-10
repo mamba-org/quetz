@@ -41,8 +41,7 @@ from quetz.dao import Dao
 from quetz.database import get_session as get_db_session
 
 from .condainfo import CondaInfo
-from .mirror import LocalCache, get_from_cache_or_download
-
+from .mirror import LocalCache, RemoteFile, get_from_cache_or_download
 
 app = FastAPI()
 
@@ -117,6 +116,7 @@ class ChannelChecker:
 
 get_channel_or_fail = ChannelChecker(allow_mirror=False)
 get_channel_allow_mirror = ChannelChecker(allow_mirror=True)
+
 
 def get_package_or_fail(
     package_name: str,
@@ -271,7 +271,6 @@ def get_paginated_channels(
 def get_channel(channel: db_models.Channel = Depends(get_channel_allow_mirror)):
     return channel
 
-from .mirror import RemoteFile
 
 @api_router.post('/channels', status_code=201, tags=['channels'])
 def post_channel(
@@ -296,9 +295,24 @@ def post_channel(
     arch = "linux-64"
     if new_channel.mirror_channel_url and new_channel.mirror_mode == 'mirror':
         background_tasks.add_task(
-            initial_sync_mirror, new_channel.name, new_channel.mirror_channel_url, arch, dao, auth, background_tasks)
+            initial_sync_mirror,
+            new_channel.name,
+            new_channel.mirror_channel_url,
+            arch,
+            dao,
+            auth,
+            background_tasks,
+        )
 
-def initial_sync_mirror(channel_name: str, mirror_host: str, arch: str, dao: Dao, auth: authorization.Rules, background_tasks: BackgroundTasks):
+
+def initial_sync_mirror(
+    channel_name: str,
+    mirror_host: str,
+    arch: str,
+    dao: Dao,
+    auth: authorization.Rules,
+    background_tasks: BackgroundTasks,
+):
 
     force = False
     repo_file = RemoteFile(mirror_host, os.path.join(arch, "repodata.json"))
@@ -308,8 +322,17 @@ def initial_sync_mirror(channel_name: str, mirror_host: str, arch: str, dao: Dao
         path = os.path.join(metadata["subdir"], package_name)
         remote_package = RemoteFile(mirror_host, path)
         files = [remote_package]
-        handle_package_files(channel_name, files, dao, auth, force, background_tasks, update_indexes=False)
+        handle_package_files(
+            channel_name,
+            files,
+            dao,
+            auth,
+            force,
+            background_tasks,
+            update_indexes=False,
+        )
     indexing.update_indexes(dao, pkgstore, channel_name)
+
 
 @api_router.get(
     '/channels/{channel_name}/packages',
@@ -587,7 +610,14 @@ def post_file_to_channel(
 
 
 def handle_package_files(
-    channel_name, files, dao, auth, force, background_tasks, package=None, update_indexes=True
+    channel_name,
+    files,
+    dao,
+    auth,
+    force,
+    background_tasks,
+    package=None,
+    update_indexes=True,
 ):
 
     for file in files:
@@ -663,6 +693,7 @@ app.include_router(
 @app.get("/api/.*", status_code=404, include_in_schema=False)
 def invalid_api():
     return None
+
 
 class RemoteRepository:
     """Ressource object for external package repositories."""

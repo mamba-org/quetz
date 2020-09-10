@@ -1,5 +1,8 @@
 import os
+import shutil
+from tempfile import SpooledTemporaryFile
 
+import requests
 from fastapi.responses import FileResponse, StreamingResponse
 
 
@@ -23,11 +26,7 @@ def get_from_cache_or_download(
     return FileResponse(cache[target])
 
 
-from tempfile import SpooledTemporaryFile
-import shutil
-
 class RemoteFile:
-
     def __init__(self, host: str, path: str):
         remote_url = os.path.join(host, path)
         response = requests.get(remote_url, stream=True)
