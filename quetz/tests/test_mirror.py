@@ -1,5 +1,6 @@
 import uuid
 
+import tarfile
 import pytest
 
 from quetz.db_models import Channel, User
@@ -85,7 +86,11 @@ def dummy_repo(app, repo_content):
     
     class DummyResponse:
         def __init__(self):
-            self.raw = BytesIO(repo_content)
+            if isinstance(repo_content, list):
+                content = repo_content.pop(0)
+            else:
+                content = repo_content
+            self.raw = BytesIO(content)
             self.headers = {"content-type": "application/json"}
 
     class DummySession:
@@ -194,3 +199,26 @@ def test_mirror_initial_sync(client, dummy_repo, user):
     assert response.status_code == 201
 
     assert dummy_repo == ["http://mirror3_host/linux-64/repodata.json"]
+
+empty_archive = b""
+@pytest.mark.parametrize('repo_content', [[b'{"packages": {"my_package-0.1.tar.bz": {"subdir":"linux-64"}}}', empty_archive]])
+def test_wrong_package_format(client, dummy_repo, user):
+
+    response = client.get("/api/dummylogin/bartosz")
+    assert response.status_code == 200
+
+    with pytest.raises(tarfile.ReadError):
+        response = client.post(
+            "/api/channels",
+            json={
+                "name": "mirror_channel_" + str(uuid.uuid4())[:10],
+                "private": False,
+                "mirror_channel_url": "http://mirror3_host",
+                "mirror_mode": "mirror",
+            },
+        )
+
+    assert dummy_repo == [
+        "http://mirror3_host/linux-64/repodata.json",
+        "http://mirror3_host/linux-64/my_package-0.1.tar.bz",
+        ]
