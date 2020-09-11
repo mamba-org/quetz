@@ -41,7 +41,12 @@ from quetz.dao import Dao
 from quetz.database import get_session as get_db_session
 
 from .condainfo import CondaInfo
-from .mirror import LocalCache, RemoteRepository, get_from_cache_or_download
+from .mirror import (
+    LocalCache,
+    RemoteRepository,
+    RemoteServerError,
+    get_from_cache_or_download,
+)
 
 app = FastAPI()
 
@@ -295,11 +300,17 @@ def post_channel(
             detail=f'Channel {new_channel.name} exists',
         )
 
-    dao.create_channel(new_channel, user_id, authorization.OWNER)
-
     if new_channel.mirror_channel_url and new_channel.mirror_mode == 'mirror':
+        host = new_channel.mirror_channel_url
         remote_repo = RemoteRepository(new_channel.mirror_channel_url, session)
-        channel_data = remote_repo.open("channeldata.json").json()
+        try:
+            channel_data = remote_repo.open("channeldata.json").json()
+        except RemoteServerError:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f'Remote channel {host} unavailable',
+            )
+
         subdirs = channel_data["subdirs"]
         for arch in subdirs:
             background_tasks.add_task(
@@ -311,6 +322,8 @@ def post_channel(
                 auth,
                 background_tasks,
             )
+
+    dao.create_channel(new_channel, user_id, authorization.OWNER)
 
 
 def initial_sync_mirror(

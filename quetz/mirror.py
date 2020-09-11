@@ -50,12 +50,21 @@ class RemoteRepository:
         return RemoteFile(self.host, path, self.session)
 
 
+class RemoteServerError(Exception):
+    pass
+
+
 class RemoteFile:
     def __init__(self, host: str, path: str, session=None):
         if session is None:
             session = requests.Session()
         remote_url = os.path.join(host, path)
-        response = session.get(remote_url, stream=True)
+        try:
+            response = session.get(remote_url, stream=True)
+        except requests.ConnectionError:
+            raise RemoteServerError
+        if response.status_code != 200:
+            raise RemoteServerError
         self.file = SpooledTemporaryFile()
         shutil.copyfileobj(response.raw, self.file)
         # rewind

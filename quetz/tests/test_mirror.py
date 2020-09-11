@@ -112,6 +112,7 @@ def dummy_repo(app, repo_content):
                 content = repo_content
             self.raw = BytesIO(content)
             self.headers = {"content-type": "application/json"}
+            self.status_code = 200
 
     class DummySession:
         def get(self, path, stream=False):
@@ -120,7 +121,9 @@ def dummy_repo(app, repo_content):
 
     app.dependency_overrides[get_remote_session] = DummySession
 
-    return files
+    yield files
+
+    app.dependency_overrides.pop(get_remote_session)
 
 
 def test_download_remote_file(client, user, dummy_repo):
@@ -289,3 +292,30 @@ def test_wrong_package_format(client, dummy_repo, user):
         "http://mirror3_host/linux-64/repodata.json",
         "http://mirror3_host/linux-64/my_package-0.1.tar.bz",
     ]
+
+
+def test_mirror_unavailable_url(client, user, db):
+
+    response = client.get("/api/dummylogin/bartosz")
+    assert response.status_code == 200
+
+    channel_name = "mirror_channel_" + str(uuid.uuid4())[:10]
+    host = "http://fantasy_host"
+
+    response = client.post(
+        "/api/channels",
+        json={
+            "name": channel_name,
+            "private": False,
+            "mirror_channel_url": host,
+            "mirror_mode": "mirror",
+        },
+    )
+
+    assert response.status_code == 503
+    assert "unavailable" in response.json()['detail']
+    assert host in response.json()['detail']
+
+    channel = db.query(Channel).filter_by(name=channel_name).first()
+
+    assert channel is None
