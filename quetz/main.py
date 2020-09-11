@@ -418,7 +418,9 @@ def get_package(package: db_models.Package = Depends(get_package_or_fail)):
 )
 def post_package(
     new_package: rest_models.Package,
-    channel: db_models.Channel = Depends(get_channel_or_fail),
+    channel: db_models.Channel = Depends(
+        ChannelChecker(allow_proxy=False, allow_mirror=False),
+    ),
     auth: authorization.Rules = Depends(get_rules),
     dao: Dao = Depends(get_dao),
 ):

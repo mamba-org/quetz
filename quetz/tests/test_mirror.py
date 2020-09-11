@@ -357,7 +357,33 @@ def mirror_package(mirror_channel, db):
     db.commit()
 
 
-def test_disabled_methods_for_mirror_channels(client, mirror_channel, mirror_package):
+def test_write_methods_for_local_channels(client, local_channel, user, db):
+
+    response = client.get("/api/dummylogin/bartosz")
+    assert response.status_code == 200
+
+    response = client.post(
+        "/api/channels/{}/packages".format(local_channel.name),
+        json={"name": "my_package"},
+    )
+    assert response.status_code == 201
+
+    pkg = db.query(Package).filter_by(name="my_package").first()
+
+    db.delete(pkg)
+    db.commit()
+
+
+def test_disabled_methods_for_mirror_channels(
+    client, mirror_channel, mirror_package, user
+):
+
+    response = client.get("/api/dummylogin/bartosz")
+    assert response.status_code == 200
+
+    response = client.post("/api/channels/{}/packages".format(mirror_channel.name))
+    assert response.status_code == 405
+    assert "not implemented" in response.json()["detail"]
 
     files = {'files': ('my_package-0.1.tar.bz', 'dfdf')}
     response = client.post(
