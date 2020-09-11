@@ -319,3 +319,25 @@ def test_mirror_unavailable_url(client, user, db):
     channel = db.query(Channel).filter_by(name=channel_name).first()
 
     assert channel is None
+
+
+def test_validate_mirror_url(client, user):
+
+    response = client.get("/api/dummylogin/bartosz")
+    assert response.status_code == 200
+
+    channel_name = "mirror_channel_" + str(uuid.uuid4())[:10]
+    host = "no-schema-host"
+
+    response = client.post(
+        "/api/channels",
+        json={
+            "name": channel_name,
+            "private": False,
+            "mirror_channel_url": host,
+            "mirror_mode": "mirror",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "schema (http/https) missing" in response.json()['detail'][0]['msg']

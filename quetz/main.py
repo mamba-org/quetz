@@ -114,7 +114,10 @@ class ChannelChecker:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f'Channel {channel_name} not found',
             )
-        is_proxy = channel.mirror_channel_url and channel.mirror_mode == 'proxy'
+
+        mirror_url = channel.mirror_channel_url
+
+        is_proxy = mirror_url and channel.mirror_mode == 'proxy'
         if is_proxy and not self.allow_proxy:
             raise HTTPException(
                 status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
@@ -302,6 +305,7 @@ def post_channel(
 
     if new_channel.mirror_channel_url and new_channel.mirror_mode == 'mirror':
         host = new_channel.mirror_channel_url
+
         remote_repo = RemoteRepository(new_channel.mirror_channel_url, session)
         try:
             channel_data = remote_repo.open("channeldata.json").json()
