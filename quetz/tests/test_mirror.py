@@ -4,7 +4,7 @@ import uuid
 
 import pytest
 
-from quetz.db_models import Channel, User
+from quetz.db_models import Channel, Package, User
 
 
 @pytest.fixture
@@ -204,7 +204,7 @@ def test_method_not_implemented_for_proxies(client, proxy_channel):
     assert "not implemented" in response.json()["detail"]
 
 
-def test_api_methods_for_mirror_channels(client, mirror_channel):
+def test_api_methods_for_proxy_channels(client, mirror_channel):
     """mirror-mode channels should have all standard API calls"""
 
     response = client.get("/api/channels/{}/packages".format(mirror_channel.name))
@@ -341,3 +341,34 @@ def test_validate_mirror_url(client, user):
 
     assert response.status_code == 422
     assert "schema (http/https) missing" in response.json()['detail'][0]['msg']
+
+
+@pytest.fixture
+def mirror_package(mirror_channel, db):
+    pkg = Package(
+        name="mirror_package", channel_name=mirror_channel.name, channel=mirror_channel
+    )
+    db.add(pkg)
+    db.commit()
+
+    yield pkg
+
+    db.delete(pkg)
+    db.commit()
+
+
+def test_disabled_methods_for_mirror_channels(client, mirror_channel, mirror_package):
+
+    files = {'files': ('my_package-0.1.tar.bz', 'dfdf')}
+    response = client.post(
+        "/api/channels/{}/files/".format(mirror_channel.name), files=files
+    )
+    assert response.status_code == 405
+    assert "not implemented" in response.json()["detail"]
+
+    response = client.post(
+        "/api/channels/{}/packages/mirror_package/files/".format(mirror_channel.name),
+        files=files,
+    )
+    assert response.status_code == 405
+    assert "not implemented" in response.json()["detail"]
