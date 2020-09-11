@@ -183,7 +183,13 @@ def test_method_not_implemented_for_mirrors(client, mirror_channel):
     assert "not implemented" in response.json()["detail"]
 
 
-@pytest.mark.parametrize('repo_content', [b'{"packages": {}}', b'{}'])
+@pytest.mark.parametrize(
+    "repo_content",
+    [
+        [b'{"subdirs": ["linux-64"]}', b'{"packages": {}}'],
+        [b'{"subdirs": ["linux-64"]}', b"{}"],
+    ],
+)
 def test_mirror_initial_sync(client, dummy_repo, user):
 
     response = client.get("/api/dummylogin/bartosz")
@@ -200,16 +206,20 @@ def test_mirror_initial_sync(client, dummy_repo, user):
     )
     assert response.status_code == 201
 
-    assert dummy_repo == ["http://mirror3_host/linux-64/repodata.json"]
+    assert dummy_repo == [
+        "http://mirror3_host/channeldata.json",
+        "http://mirror3_host/linux-64/repodata.json",
+    ]
 
 
 empty_archive = b""
 
 
 @pytest.mark.parametrize(
-    'repo_content',
+    "repo_content",
     [
         [
+            b'{"subdirs": ["linux-64"]}',
             b'{"packages": {"my_package-0.1.tar.bz": {"subdir":"linux-64"}}}',
             empty_archive,
         ]
@@ -232,6 +242,7 @@ def test_wrong_package_format(client, dummy_repo, user):
         )
 
     assert dummy_repo == [
+        "http://mirror3_host/channeldata.json",
         "http://mirror3_host/linux-64/repodata.json",
         "http://mirror3_host/linux-64/my_package-0.1.tar.bz",
     ]

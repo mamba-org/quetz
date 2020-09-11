@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 from tempfile import SpooledTemporaryFile
@@ -61,6 +62,9 @@ class RemoteFile:
         self.file.seek(0)
         _, self.filename = os.path.split(remote_url)
         self.content_type = response.headers.get("content-type")
+
+    def json(self):
+        return json.load(self.file)
 
 
 class LocalCache:

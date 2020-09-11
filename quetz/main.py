@@ -297,18 +297,20 @@ def post_channel(
 
     dao.create_channel(new_channel, user_id, authorization.OWNER)
 
-    arch = "linux-64"
     if new_channel.mirror_channel_url and new_channel.mirror_mode == 'mirror':
         remote_repo = RemoteRepository(new_channel.mirror_channel_url, session)
-        background_tasks.add_task(
-            initial_sync_mirror,
-            new_channel.name,
-            remote_repo,
-            arch,
-            dao,
-            auth,
-            background_tasks,
-        )
+        channel_data = remote_repo.open("channeldata.json").json()
+        subdirs = channel_data["subdirs"]
+        for arch in subdirs:
+            background_tasks.add_task(
+                initial_sync_mirror,
+                new_channel.name,
+                remote_repo,
+                arch,
+                dao,
+                auth,
+                background_tasks,
+            )
 
 
 def initial_sync_mirror(
@@ -321,6 +323,7 @@ def initial_sync_mirror(
 ):
 
     force = False
+
     repo_file = remote_repository.open(os.path.join(arch, "repodata.json"))
     repodata = json.load(repo_file.file)
     packages = repodata.get("packages", {})
