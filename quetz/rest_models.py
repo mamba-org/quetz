@@ -6,7 +6,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Generic, List, Optional, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from pydantic.generics import GenericModel
 
 T = TypeVar('T')
@@ -63,6 +63,17 @@ class Channel(BaseModel):
     )
     private: bool
     mirror_channel_url: Optional[str] = None
+    mirror_mode: str = "proxy"
+
+    @validator("mirror_channel_url")
+    def check_mirror_url_schema(cls, mirror_url):
+        if mirror_url and not (
+            mirror_url.startswith("https://") or mirror_url.startswith("http://")
+        ):
+            raise ValueError(
+                f"schema (http/https) missing (did you mean 'http://{mirror_url}'?)"
+            )
+        return mirror_url
 
     class Config:
         orm_mode = True
