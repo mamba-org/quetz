@@ -96,8 +96,8 @@ def get_rules(
 
 
 class ChannelChecker:
-    def __init__(self, allow_mirror: bool):
-        self.allow_mirror = allow_mirror
+    def __init__(self, allow_proxy: bool):
+        self.allow_proxy = allow_proxy
 
     def __call__(
         self, channel_name: str, dao: Dao = Depends(get_dao)
@@ -109,8 +109,8 @@ class ChannelChecker:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f'Channel {channel_name} not found',
             )
-
-        if channel.mirror_channel_url and not self.allow_mirror:
+        is_proxy = channel.mirror_channel_url and channel.mirror_mode == 'proxy'
+        if is_proxy and not self.allow_proxy:
             raise HTTPException(
                 status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
                 detail='This method is not implemented for mirror channels',
@@ -118,8 +118,8 @@ class ChannelChecker:
         return channel
 
 
-get_channel_or_fail = ChannelChecker(allow_mirror=False)
-get_channel_allow_mirror = ChannelChecker(allow_mirror=True)
+get_channel_or_fail = ChannelChecker(allow_proxy=False)
+get_channel_allow_mirror = ChannelChecker(allow_proxy=True)
 
 
 def get_package_or_fail(

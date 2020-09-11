@@ -1,3 +1,4 @@
+import os
 import tarfile
 import uuid
 
@@ -7,9 +8,26 @@ from quetz.db_models import Channel, User
 
 
 @pytest.fixture
+def proxy_channel(db):
+
+    channel = Channel(name="test_proxy_channel", mirror_channel_url="http://host")
+    db.add(channel)
+    db.commit()
+
+    yield channel
+
+    db.delete(channel)
+    db.commit()
+
+
+@pytest.fixture
 def mirror_channel(db):
 
-    channel = Channel(name="test_mirror_channel", mirror_channel_url="http://host")
+    channel = Channel(
+        name="test_mirror_channel",
+        mirror_channel_url="http://host",
+        mirror_mode="mirror",
+    )
     db.add(channel)
     db.commit()
 
@@ -50,10 +68,10 @@ def test_set_mirror_url(db, client, user):
     assert channel.mirror_channel_url == "http://my_remote_host"
 
 
-def test_get_mirror_url(mirror_channel, local_channel, client):
+def test_get_mirror_url(proxy_channel, local_channel, client):
     """test configuring mirror url"""
 
-    response = client.get("/api/channels/{}".format(mirror_channel.name))
+    response = client.get("/api/channels/{}".format(proxy_channel.name))
 
     assert response.status_code == 200
     assert response.json()["mirror_channel_url"] == "http://host"
@@ -113,7 +131,7 @@ def test_download_remote_file(client, user, dummy_repo):
     response = client.post(
         "/api/channels",
         json={
-            "name": "mirror_channel",
+            "name": "proxy_channel",
             "private": False,
             "mirror_channel_url": "http://host",
         },
@@ -121,7 +139,7 @@ def test_download_remote_file(client, user, dummy_repo):
     assert response.status_code == 201
 
     # download from remote server
-    response = client.get("/channels/mirror_channel/test_file.txt")
+    response = client.get("/channels/proxy_channel/test_file.txt")
 
     assert response.status_code == 200
     assert response.content == b"Hello world!"
@@ -132,7 +150,7 @@ def test_download_remote_file(client, user, dummy_repo):
     assert dummy_repo == []
 
     # serve from cache
-    response = client.get("/channels/mirror_channel/test_file.txt")
+    response = client.get("/channels/proxy_channel/test_file.txt")
 
     assert response.status_code == 200
     assert response.content == b"Hello world!"
@@ -140,7 +158,7 @@ def test_download_remote_file(client, user, dummy_repo):
     assert dummy_repo == []
 
     # new file - download from remote
-    response = client.get("/channels/mirror_channel/test_file_2.txt")
+    response = client.get("/channels/proxy_channel/test_file_2.txt")
 
     assert response.status_code == 200
     assert response.content == b"Hello world!"
@@ -155,18 +173,18 @@ def test_always_download_repodata(client, user, dummy_repo):
     response = client.post(
         "/api/channels",
         json={
-            "name": "mirror_channel_2",
+            "name": "proxy_channel_2",
             "private": False,
             "mirror_channel_url": "http://host",
         },
     )
     assert response.status_code == 201
 
-    response = client.get("/channels/mirror_channel_2/repodata.json")
+    response = client.get("/channels/proxy_channel_2/repodata.json")
     assert response.status_code == 200
     assert response.content == b"Hello world!"
 
-    response = client.get("/channels/mirror_channel_2/repodata.json")
+    response = client.get("/channels/proxy_channel_2/repodata.json")
     assert response.status_code == 200
     assert response.content == b"Hello world!"
 
@@ -176,40 +194,65 @@ def test_always_download_repodata(client, user, dummy_repo):
     ]
 
 
-def test_method_not_implemented_for_mirrors(client, mirror_channel):
+def test_method_not_implemented_for_proxies(client, proxy_channel):
 
-    response = client.post("/api/channels/{}/packages".format(mirror_channel.name))
+    response = client.post("/api/channels/{}/packages".format(proxy_channel.name))
     assert response.status_code == 405
     assert "not implemented" in response.json()["detail"]
 
 
+def test_api_methods_for_mirror_channels(client, mirror_channel):
+    """mirror-mode channels should have all standard API calls"""
+
+    response = client.get("/api/channels/{}/packages".format(mirror_channel.name))
+    assert response.status_code == 200
+    assert not response.json()
+
+
 @pytest.mark.parametrize(
-    "repo_content",
+    "repo_content,expected_paths",
     [
-        [b'{"subdirs": ["linux-64"]}', b'{"packages": {}}'],
-        [b'{"subdirs": ["linux-64"]}', b"{}"],
+        # linux-64 subdir without packages
+        (
+            [b'{"subdirs": ["linux-64"]}', b'{"packages": {}}'],
+            ["channeldata.json", "linux-64/repodata.json"],
+        ),
+        # empty repodata
+        (
+            [b'{"subdirs": ["linux-64"]}', b"{}"],
+            ["channeldata.json", "linux-64/repodata.json"],
+        ),
+        # no subodirs
+        ([b'{"subdirs": []}'], ["channeldata.json"]),
+        # two arbitrary subdirs
+        (
+            [b'{"subdirs": ["some-arch-1", "some-arch-2"]}', b"{}", b"{}"],
+            [
+                "channeldata.json",
+                "some-arch-1/repodata.json",
+                "some-arch-2/repodata.json",
+            ],
+        ),
     ],
 )
-def test_mirror_initial_sync(client, dummy_repo, user):
+def test_mirror_initial_sync(client, dummy_repo, user, expected_paths):
 
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 
+    host = "http://mirror3_host"
     response = client.post(
         "/api/channels",
         json={
             "name": "mirror_channel_" + str(uuid.uuid4())[:10],
             "private": False,
-            "mirror_channel_url": "http://mirror3_host",
+            "mirror_channel_url": host,
             "mirror_mode": "mirror",
         },
     )
     assert response.status_code == 201
 
-    assert dummy_repo == [
-        "http://mirror3_host/channeldata.json",
-        "http://mirror3_host/linux-64/repodata.json",
-    ]
+    assert dummy_repo == [os.path.join(host, p) for p in expected_paths]
 
 
 empty_archive = b""
