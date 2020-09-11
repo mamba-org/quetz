@@ -127,7 +127,7 @@ class ChannelChecker:
 
 
 get_channel_or_fail = ChannelChecker(allow_proxy=False)
-get_channel_allow_mirror = ChannelChecker(allow_proxy=True)
+get_channel_allow_proxy = ChannelChecker(allow_proxy=True)
 
 
 def get_package_or_fail(
@@ -280,7 +280,7 @@ def get_paginated_channels(
 @api_router.get(
     '/channels/{channel_name}', response_model=rest_models.Channel, tags=['channels']
 )
-def get_channel(channel: db_models.Channel = Depends(get_channel_allow_mirror)):
+def get_channel(channel: db_models.Channel = Depends(get_channel_allow_proxy)):
     return channel
 
 
@@ -724,7 +724,7 @@ def invalid_api():
 @app.get("/channels/{channel_name}/{path:path}")
 def serve_path(
     path,
-    channel: db_models.Channel = Depends(get_channel_allow_mirror),
+    channel: db_models.Channel = Depends(get_channel_allow_proxy),
     cache: LocalCache = Depends(LocalCache),
     session=Depends(get_remote_session),
 ):
