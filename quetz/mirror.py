@@ -66,6 +66,7 @@ class RemoteFile:
         if response.status_code != 200:
             raise RemoteServerError
         self.file = SpooledTemporaryFile()
+        response.raw.decode_content = True  # for gzipped response content
         shutil.copyfileobj(response.raw, self.file)
         # rewind
         self.file.seek(0)
