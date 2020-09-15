@@ -3,6 +3,7 @@
 
 import json
 import os
+import re
 import secrets
 import sys
 import uuid
@@ -24,6 +25,7 @@ from fastapi import (
 from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse
 from starlette.staticfiles import StaticFiles
@@ -58,6 +60,32 @@ app.add_middleware(
     secret_key=config.session_secret,
     https_only=config.session_https_only,
 )
+
+
+class CondaTokenMiddleware(BaseHTTPMiddleware):
+    """Removes /t/<QUETZ_API_KEY> prefix, adds QUETZ_APY_KEY to the headers and passes
+    on the rest of the path to be routed."""
+
+    def __init__(self, app):
+        super().__init__(app)
+        self.token_pattern = re.compile('^/t/([^/]+?)/')
+
+    async def dispatch(self, request, call_next):
+        path = request.scope['path']
+        match = self.token_pattern.search(path)
+        if match:
+            prefix_length = len(match.group(0)) - 1
+            new_path = path[prefix_length:]
+            api_key = match.group(1)
+            request.scope['path'] = new_path
+            request.scope['headers'].append((b'x-api-key', api_key.encode()))
+
+        response = await call_next(request)
+
+        return response
+
+
+app.add_middleware(CondaTokenMiddleware)
 
 api_router = APIRouter()
 
@@ -738,10 +766,12 @@ def invalid_api():
 @app.get("/channels/{channel_name}/{path:path}")
 def serve_path(
     path,
+    auth: authorization.Rules = Depends(get_rules),
     channel: db_models.Channel = Depends(get_channel_allow_proxy),
     cache: LocalCache = Depends(LocalCache),
     session=Depends(get_remote_session),
 ):
+    auth.assert_channel_read(channel)
 
     if channel.mirror_channel_url and channel.mirror_mode == "proxy":
         repository = RemoteRepository(channel.mirror_channel_url, session)
