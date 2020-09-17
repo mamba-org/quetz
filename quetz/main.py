@@ -45,6 +45,7 @@ from quetz.database import get_session as get_db_session
 from .condainfo import CondaInfo
 from .mirror import (
     LocalCache,
+    RemoteFileNotFound,
     RemoteRepository,
     RemoteServerError,
     get_from_cache_or_download,
@@ -349,13 +350,18 @@ def post_channel(
         remote_repo = RemoteRepository(new_channel.mirror_channel_url, session)
         try:
             channel_data = remote_repo.open("channeldata.json").json()
+            subdirs = channel_data.get("subdirs", [])
+        except (RemoteFileNotFound, json.JSONDecodeError):
+            subdirs = None
         except RemoteServerError:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=f"Remote channel {host} unavailable",
             )
+        # if no channel data use popular architectures
+        if subdirs is None:
+            subdirs = ["linux-64", "win-64", "win-32", "osx-64"]
 
-        subdirs = channel_data["subdirs"]
         for arch in subdirs:
             background_tasks.add_task(
                 initial_sync_mirror,
@@ -381,8 +387,16 @@ def initial_sync_mirror(
 
     force = False
 
-    repo_file = remote_repository.open(os.path.join(arch, "repodata.json"))
-    repodata = json.load(repo_file.file)
+    try:
+        repo_file = remote_repository.open(os.path.join(arch, "repodata.json"))
+        repodata = json.load(repo_file.file)
+    except RemoteServerError:
+        # LOG: can not get repodata.json for channel {channel_name}
+        return
+    except json.JSONDecodeError:
+        # LOG: repodata.json badly formatted for arch {arch} in channel {channel_name}
+        return
+
     packages = repodata.get("packages", {})
     for package_name, metadata in packages.items():
         path = os.path.join(metadata["subdir"], package_name)

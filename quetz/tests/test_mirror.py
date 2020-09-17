@@ -1,6 +1,7 @@
 import os
 import tarfile
 import uuid
+from io import BytesIO
 
 import pytest
 
@@ -97,13 +98,12 @@ def repo_content():
 
 
 @pytest.fixture
-def dummy_repo(app, repo_content):
-    from io import BytesIO
+def status_code():
+    return 200
 
-    from quetz.main import get_remote_session
 
-    files = []
-
+@pytest.fixture
+def dummy_response(repo_content, status_code):
     class DummyResponse:
         def __init__(self):
             if isinstance(repo_content, list):
@@ -112,12 +112,25 @@ def dummy_repo(app, repo_content):
                 content = repo_content
             self.raw = BytesIO(content)
             self.headers = {"content-type": "application/json"}
-            self.status_code = 200
+            if isinstance(status_code, list):
+                self.status_code = status_code.pop(0)
+            else:
+                self.status_code = status_code
+
+    return DummyResponse
+
+
+@pytest.fixture
+def dummy_repo(app, dummy_response):
+
+    from quetz.main import get_remote_session
+
+    files = []
 
     class DummySession:
         def get(self, path, stream=False):
             files.append(path)
-            return DummyResponse()
+            return dummy_response()
 
     app.dependency_overrides[get_remote_session] = DummySession
 
@@ -398,3 +411,39 @@ def test_disabled_methods_for_mirror_channels(
     )
     assert response.status_code == 405
     assert "not implemented" in response.json()["detail"]
+
+
+@pytest.mark.parametrize(
+    "repo_content,status_code,expected_archs",
+    [
+        # no channeldata
+        (b"", 404, ["linux-64", "osx-64", "win-32", "win-64"]),
+        # badly formatted channel data
+        (b"<html></html>", 200, ["linux-64", "osx-64", "win-32", "win-64"]),
+        # no archs in channeldata
+        (b"{}", 200, []),
+        # custom architecture
+        (b'{"subdirs":["wonder-arch"]}', 200, ["wonder-arch"]),
+    ],
+)
+def test_repo_without_channeldata(user, client, dummy_repo, expected_archs):
+
+    response = client.get("/api/dummylogin/bartosz")
+    assert response.status_code == 200
+
+    response = client.post(
+        "/api/channels",
+        json={
+            "name": "mirror_channel_" + str(uuid.uuid4())[:10],
+            "private": False,
+            "mirror_channel_url": "http://mirror3_host",
+            "mirror_mode": "mirror",
+        },
+    )
+
+    assert dummy_repo[0] == "http://mirror3_host/channeldata.json"
+    for arch in expected_archs:
+        assert "http://mirror3_host/{}/repodata.json".format(arch) in dummy_repo
+    assert len(dummy_repo) == len(expected_archs) + 1
+
+    assert response.status_code == 201

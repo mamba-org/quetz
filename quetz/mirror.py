@@ -54,6 +54,10 @@ class RemoteServerError(Exception):
     pass
 
 
+class RemoteFileNotFound(RemoteServerError):
+    pass
+
+
 class RemoteFile:
     def __init__(self, host: str, path: str, session=None):
         if session is None:
@@ -63,7 +67,9 @@ class RemoteFile:
             response = session.get(remote_url, stream=True)
         except requests.ConnectionError:
             raise RemoteServerError
-        if response.status_code != 200:
+        if response.status_code == 404:
+            raise RemoteFileNotFound
+        elif response.status_code != 200:
             raise RemoteServerError
         self.file = SpooledTemporaryFile()
         response.raw.decode_content = True  # for gzipped response content
