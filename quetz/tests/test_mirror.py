@@ -1,5 +1,4 @@
 import os
-import tarfile
 import uuid
 from io import BytesIO
 
@@ -289,22 +288,32 @@ def test_wrong_package_format(client, dummy_repo, user):
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 
-    with pytest.raises(tarfile.ReadError):
-        response = client.post(
-            "/api/channels",
-            json={
-                "name": "mirror_channel_" + str(uuid.uuid4())[:10],
-                "private": False,
-                "mirror_channel_url": "http://mirror3_host",
-                "mirror_mode": "mirror",
-            },
-        )
+    channel_name = "mirror_channel_" + str(uuid.uuid4())[:10]
+
+    response = client.post(
+        "/api/channels",
+        json={
+            "name": channel_name,
+            "private": False,
+            "mirror_channel_url": "http://mirror3_host",
+            "mirror_mode": "mirror",
+        },
+    )
+
+    assert response.status_code == 201
 
     assert dummy_repo == [
         "http://mirror3_host/channeldata.json",
         "http://mirror3_host/linux-64/repodata.json",
         "http://mirror3_host/linux-64/my_package-0.1.tar.bz",
     ]
+
+    # check if package was not added
+    response = client.get(f"/api/channels/{channel_name}/packages")
+
+    assert response.status_code == 200
+
+    assert not response.json()
 
 
 def test_mirror_unavailable_url(client, user, db):
