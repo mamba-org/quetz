@@ -473,7 +473,6 @@ def get_channel_members(
     channel: db_models.Channel = Depends(get_channel_or_fail),
     dao: Dao = Depends(get_dao),
 ):
-
     member_list = dao.get_channel_members(channel.name)
     for member in member_list:
         # force loading of profile before changing attributes to prevent sqlalchemy

@@ -4,8 +4,6 @@ import uuid
 
 from quetz.db_models import ApiKey, Channel, ChannelMember, User
 
-from .conftest import clear_all
-
 
 def test_private_channels(db, client):
 
@@ -40,8 +38,6 @@ def test_private_channels(db, client):
     assert len(response.json()) == 2
     response = client.get('/api/channels', headers={"X-Api-Key": keyb})
     assert len(response.json()) == 1
-
-    clear_all(db)
 
 
 def test_private_channels_download(db, client):
@@ -104,5 +100,4 @@ def test_private_channels_download(db, client):
     assert response.status_code == 200
     assert response.text == "file content 1"
 
-    clear_all(db)
     shutil.rmtree('channels')
