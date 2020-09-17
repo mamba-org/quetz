@@ -2,42 +2,298 @@ import os
 import shutil
 import uuid
 
-from quetz.db_models import ApiKey, Channel, ChannelMember, User
+from pytest import fixture
+
+from quetz.db_models import ApiKey, Channel, ChannelMember, Package, Profile, User
 
 
-def test_private_channels(db, client):
+class Data:
+    def __init__(self, db):
+        self.keya = "akey"
+        self.keyb = "bkey"
 
-    keya = "akey"
-    keyb = "bkey"
+        self.usera = User(id=uuid.uuid4().bytes, username='usera')
+        Profile(name='usera', user=self.usera, avatar_url='')
+        db.add(self.usera)
 
-    usera = User(id=uuid.uuid4().bytes, username='usera')
-    db.add(usera)
-    userb = User(id=uuid.uuid4().bytes, username='userb')
-    db.add(userb)
-    db.commit()
+        self.userb = User(id=uuid.uuid4().bytes, username='userb')
+        Profile(name='userb', user=self.userb, avatar_url='')
+        db.add(self.userb)
+        db.commit()
 
-    assert len(db.query(User).all()) == 2
+        assert len(db.query(User).all()) == 2
 
-    db.add(ApiKey(key=keya, user_id=usera.id, owner_id=usera.id))
-    db.add(ApiKey(key=keyb, user_id=userb.id, owner_id=userb.id))
-    db.commit()
+        db.add(ApiKey(key=self.keya, user_id=self.usera.id, owner_id=self.usera.id))
+        db.add(ApiKey(key=self.keyb, user_id=self.userb.id, owner_id=self.userb.id))
+        db.commit()
 
-    channel1 = Channel(name="testchannel", private=False)
-    channel2 = Channel(name="privatechannel", private=True)
+        self.channel1 = Channel(name="testchannel", private=False)
+        self.channel2 = Channel(name="privatechannel", private=True)
 
-    channel_member = ChannelMember(channel=channel2, user=usera, role='OWNER')
-    for el in [channel1, channel2, channel_member]:
-        db.add(el)
-    db.commit()
+        self.package1 = Package(name="Package1", channel=self.channel1)
+        self.package2 = Package(name="Package2", channel=self.channel2)
+
+        self.channel_member = ChannelMember(
+            channel=self.channel2, user=self.usera, role='member'
+        )
+        for el in [
+            self.channel1,
+            self.channel2,
+            self.channel_member,
+            self.package1,
+            self.package2,
+        ]:
+            db.add(el)
+        db.commit()
+
+
+@fixture
+def data(db):
+    return Data(db)
+
+
+def test_private_channels(data, client):
 
     response = client.get('/')
     assert len(response.text)
     response = client.get('/api/channels')
 
-    response = client.get('/api/channels', headers={"X-Api-Key": keya})
+    response = client.get('/api/channels', headers={"X-Api-Key": data.keya})
     assert len(response.json()) == 2
-    response = client.get('/api/channels', headers={"X-Api-Key": keyb})
+    assert {c['name'] for c in response.json()} == {
+        c.name for c in [data.channel1, data.channel2]
+    }
+
+    response = client.get('/api/channels', headers={"X-Api-Key": data.keyb})
     assert len(response.json()) == 1
+    assert response.json()[0]['name'] == data.channel1.name
+
+    response = client.get('/api/channels')
+    assert len(response.json()) == 1
+    assert response.json()[0]['name'] == data.channel1.name
+
+    # Channel #
+
+    # public access to public channel
+    response = client.get(f'/api/channels/{data.channel1.name}')
+    assert response.status_code == 200
+    assert ('name', data.channel1.name) in response.json().items()
+
+    # public access to private channel
+    response = client.get(f'/api/channels/{data.channel2.name}')
+    assert response.status_code == 401
+
+    # non-member credential access to private channel
+    response = client.get(
+        f'/api/channels/{data.channel2.name}', headers={"X-Api-Key": data.keyb}
+    )
+    assert response.status_code == 403
+
+    # member credential access to private channel
+    response = client.get(
+        f'/api/channels/{data.channel2.name}', headers={"X-Api-Key": data.keya}
+    )
+    assert response.status_code == 200
+    assert ('name', data.channel2.name) in response.json().items()
+
+    # Packages #
+
+    # public access to public channel
+    response = client.get(f'/api/channels/{data.channel1.name}/packages')
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert ('name', data.package1.name) in response.json()[0].items()
+
+    # public access to private channel
+    response = client.get(f'/api/channels/{data.channel2.name}/packages')
+    assert response.status_code == 401
+
+    # non-member credential access to private channel
+    response = client.get(
+        f'/api/channels/{data.channel2.name}/packages', headers={"X-Api-Key": data.keyb}
+    )
+    assert response.status_code == 403
+
+    # member credential access to private channel
+    response = client.get(
+        f'/api/channels/{data.channel2.name}/packages', headers={"X-Api-Key": data.keya}
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert ('name', data.package2.name) in response.json()[0].items()
+
+    # Channel Members #
+
+    # public access to public channel
+    response = client.get(f'/api/channels/{data.channel1.name}/members')
+    assert response.status_code == 200
+    assert len(response.json()) == 0
+
+    # public access to private channel
+    response = client.get(f'/api/channels/{data.channel2.name}/members')
+    assert response.status_code == 401
+
+    # non-member credential access to private channel
+    response = client.get(
+        f'/api/channels/{data.channel2.name}/members', headers={"X-Api-Key": data.keyb}
+    )
+    assert response.status_code == 403
+
+    # member credential access to private channel
+    response = client.get(
+        f'/api/channels/{data.channel2.name}/members', headers={"X-Api-Key": data.keya}
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert ('role', data.channel_member.role) in response.json()[0].items()
+    assert response.json()[0]['user']['id'] == str(uuid.UUID(bytes=data.usera.id))
+
+    # Package #
+
+    # public access to public channel
+    response = client.get(
+        f'/api/channels/{data.channel1.name}/packages/{data.package1.name}'
+    )
+    assert response.status_code == 200
+    assert ('name', data.package1.name) in response.json().items()
+
+    # public access to private channel
+    response = client.get(
+        f'/api/channels/{data.channel2.name}/packages/{data.package2.name}'
+    )
+    assert response.status_code == 401
+
+    # non-member credential access to private channel
+    response = client.get(
+        f'/api/channels/{data.channel2.name}/packages/{data.package2.name}',
+        headers={"X-Api-Key": data.keyb},
+    )
+    assert response.status_code == 403
+
+    # member credential access to private channel
+    response = client.get(
+        f'/api/channels/{data.channel2.name}/packages/{data.package2.name}',
+        headers={"X-Api-Key": data.keya},
+    )
+    assert response.status_code == 200
+    assert ('name', data.package2.name) in response.json().items()
+
+    # package Members #
+
+    # public access to public channel
+    response = client.get(
+        f'/api/channels/{data.channel1.name}/packages/{data.package1.name}/members'
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 0
+
+    # public access to private channel
+    response = client.get(
+        f'/api/channels/{data.channel2.name}/packages/{data.package2.name}/members'
+    )
+    assert response.status_code == 401
+
+    # non-member credential access to private channel
+    response = client.get(
+        f'/api/channels/{data.channel2.name}/packages/{data.package2.name}/members',
+        headers={"X-Api-Key": data.keyb},
+    )
+    assert response.status_code == 403
+
+    # member credential access to private channel
+    response = client.get(
+        f'/api/channels/{data.channel2.name}/packages/{data.package2.name}/members',
+        headers={"X-Api-Key": data.keya},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 0
+
+    # package Versions #
+
+    # public access to public channel
+    response = client.get(
+        f'/api/channels/{data.channel1.name}/packages/{data.package1.name}/versions'
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 0
+
+    # public access to private channel
+    response = client.get(
+        f'/api/channels/{data.channel2.name}/packages/{data.package2.name}/versions'
+    )
+    assert response.status_code == 401
+
+    # non-member credential access to private channel
+    response = client.get(
+        f'/api/channels/{data.channel2.name}/packages/{data.package2.name}/versions',
+        headers={"X-Api-Key": data.keyb},
+    )
+    assert response.status_code == 403
+
+    # member credential access to private channel
+    response = client.get(
+        f'/api/channels/{data.channel2.name}/packages/{data.package2.name}/versions',
+        headers={"X-Api-Key": data.keya},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 0
+
+    # Search #
+    response = client.get('/api/search/package')
+    assert response.status_code == 200
+    print(f'serach: {response.json()}')
+    assert len(response.json()) == 1
+    assert response.json()[0]['name'] == data.package1.name
+
+    response = client.get('/api/search/package', headers={"X-Api-Key": data.keyb})
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]['name'] == data.package1.name
+
+    response = client.get('/api/search/package', headers={"X-Api-Key": data.keya})
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+    assert {c['name'] for c in response.json()} == {
+        c.name for c in [data.package1, data.package2]
+    }
+
+
+def test_private_channels_create_package(data, client):
+    # public access to public channel
+    response = client.post(
+        f'/api/channels/{data.channel1.name}/packages', '{"name": "NewPackage1"}'
+    )
+    assert response.status_code == 401
+
+    # public access to private channel
+    response = client.post(
+        f'/api/channels/{data.channel2.name}/packages', '{"name": "NewPackage1"}'
+    )
+    assert response.status_code == 401
+
+    # user with credentials to public channel
+    response = client.post(
+        f'/api/channels/{data.channel1.name}/packages',
+        '{"name": "NewPackage2"}',
+        headers={"X-Api-Key": data.keyb},
+    )
+    assert response.status_code == 201
+
+    # user with credentials to private channel
+    response = client.post(
+        f'/api/channels/{data.channel2.name}/packages',
+        '{"name": "NewPackage2"}',
+        headers={"X-Api-Key": data.keyb},
+    )
+    assert response.status_code == 403
+
+    # member credential access to private channel
+    response = client.post(
+        f'/api/channels/{data.channel2.name}/packages',
+        '{"name": "NewPackage2"}',
+        headers={"X-Api-Key": data.keya},
+    )
+    assert response.status_code == 201
 
 
 def test_private_channels_download(db, client):
