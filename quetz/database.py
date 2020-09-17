@@ -1,17 +1,17 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
+from typing import Callable
 
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
 from sqlalchemy.pool import StaticPool
 
-Base = declarative_base()
+from quetz.db_models import Base
 
 
-def get_session(db_url, echo: bool = False, **kwargs) -> Session:
-
+def get_engine(db_url, echo: bool = False, **kwargs) -> Engine:
     kwargs['echo'] = echo
 
     if db_url.startswith('sqlite'):
@@ -24,5 +24,12 @@ def get_session(db_url, echo: bool = False, **kwargs) -> Session:
 
     engine = create_engine(db_url, **kwargs)
     Base.metadata.create_all(engine)
+    return engine
 
-    return sessionmaker(autocommit=False, autoflush=False, bind=engine)()
+
+def get_session_maker(engine) -> Callable[[], Session]:
+    return sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def get_session(db_url, echo: bool = False, **kwargs) -> Session:
+    return get_session_maker(get_engine(db_url, echo, **kwargs))()

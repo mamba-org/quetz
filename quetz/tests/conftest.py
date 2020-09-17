@@ -13,22 +13,22 @@ import tempfile
 
 from fastapi.testclient import TestClient
 from pytest import fixture
-from sqlalchemy import MetaData
 
-from quetz.database import get_session
-
-# global db session object
-_db = None
+from quetz.database import get_engine, get_session_maker
 
 
 @fixture
-def db():
-    """Get a db session"""
-    global _db
-    if _db is None:
-        _db = get_session('sqlite:///:memory:')
+def session_maker():
+    engine = get_engine('sqlite:///:memory:')
+    yield get_session_maker(engine)
+    engine.dispose()
 
-    return _db
+
+@fixture
+def db(session_maker):
+    session = session_maker()
+    yield session
+    session.close()
 
 
 @fixture
@@ -60,10 +60,10 @@ https_only = false
 
 
 @fixture
-def app(config, db):
+def app(config, session_maker):
     from quetz.main import app, get_db
 
-    app.dependency_overrides[get_db] = lambda: db
+    app.dependency_overrides[get_db] = lambda: session_maker()
     return app
 
 
@@ -71,11 +71,3 @@ def app(config, db):
 def client(app):
     client = TestClient(app)
     return client
-
-
-def clear_all(db):
-    engine = db.get_bind()
-    meta = MetaData(bind=engine, reflect=True)
-    for table in reversed(meta.sorted_tables):
-        db.execute(table.delete())
-    db.commit()

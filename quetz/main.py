@@ -134,7 +134,10 @@ class ChannelChecker:
         self.allow_mirror = allow_mirror
 
     def __call__(
-        self, channel_name: str, dao: Dao = Depends(get_dao)
+        self,
+        channel_name: str,
+        dao: Dao = Depends(get_dao),
+        auth: authorization.Rules = Depends(get_rules),
     ) -> db_models.Channel:
         channel = dao.get_channel(channel_name)
 
@@ -143,6 +146,8 @@ class ChannelChecker:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Channel {channel_name} not found",
             )
+
+        auth.assert_channel_read(channel)
 
         mirror_url = channel.mirror_channel_url
 
@@ -473,7 +478,6 @@ def get_channel_members(
     channel: db_models.Channel = Depends(get_channel_or_fail),
     dao: Dao = Depends(get_dao),
 ):
-
     member_list = dao.get_channel_members(channel.name)
     for member in member_list:
         # force loading of profile before changing attributes to prevent sqlalchemy
@@ -766,13 +770,10 @@ def invalid_api():
 @app.get("/channels/{channel_name}/{path:path}")
 def serve_path(
     path,
-    auth: authorization.Rules = Depends(get_rules),
     channel: db_models.Channel = Depends(get_channel_allow_proxy),
     cache: LocalCache = Depends(LocalCache),
     session=Depends(get_remote_session),
 ):
-    auth.assert_channel_read(channel)
-
     if channel.mirror_channel_url and channel.mirror_mode == "proxy":
         repository = RemoteRepository(channel.mirror_channel_url, session)
         return get_from_cache_or_download(repository, cache, path)
