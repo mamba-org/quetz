@@ -399,18 +399,22 @@ def initial_sync_mirror(
 
     packages = repodata.get("packages", {})
     for package_name, metadata in packages.items():
-        path = os.path.join(metadata["subdir"], package_name)
+        path = os.path.join(arch, package_name)
         remote_package = remote_repository.open(path)
         files = [remote_package]
-        handle_package_files(
-            channel_name,
-            files,
-            dao,
-            auth,
-            force,
-            background_tasks,
-            update_indexes=False,
-        )
+        try:
+            handle_package_files(
+                channel_name,
+                files,
+                dao,
+                auth,
+                force,
+                background_tasks,
+                update_indexes=False,
+            )
+        except Exception:
+            # LOG: could not process package {package_name} from channel {channel_name}
+            pass
     indexing.update_indexes(dao, pkgstore, channel_name)
 
 
