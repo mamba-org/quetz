@@ -213,3 +213,44 @@ In order to generate an API key the following must be true:
 ```
 4. Then, GET on `/api/api-keys` to retrieve your token
 5. Finally, set this value to QUETZ_API_KEY so you can use quetz-client to interact with the server.
+
+### Create a proxy channel
+
+A proxy channel "mirrors" another channel usually from a different server, so that the packages can be installed from the proxy as if they were installed from the proxied channel. The reason to use the proxy channel is that it can cache downloaded packages locally (limitting traffic to the server of origin) or that the quetz server can be located behind a corporate firewall. 
+
+
+To create the channel use the properties `mirror_channel_url=URL_TO_SOURCE_CHANNEL` and `mirror_mode='proxy'` in the POST method of /api/channels endpoint:
+
+```
+{
+  "name": "proxy-channel",
+  "private": false,
+  "mirror_channel_url": "https://conda.anaconda.org/btel",
+  "mirror_mode": "proxy"
+}
+```
+
+```
+curl -X POST "http://localhost:8000/api/channels" \
+    -H  "accept: application/json" \
+    -H  "Content-Type: application/json" \
+    -H  "X-API-Key: fe0fc856cdd44e93b6e43ec09e421663" \
+    -d '{"name":"proxy-channel",
+         "private":false,
+         "mirror_channel_url":"https://conda.anaconda.org/btel",
+         "mirror_mode":"proxy"}'
+```
+
+where the `X-API-Key` is the API key that was created for you the first time you started a new deployment.
+
+Then you can install packages from the channel the standard way using `conda` or `mamba`:
+
+```
+mamba install --strict-channel-priority -c http://localhost:8000/channels/proxy-channel nrnpython
+```
+
+### Create a mirroring channel
+
+A mirror channel is an exact copy of another channel possibly from a different (anaconda or quetz) server. The packages are downloaded from the server and added to the mirror channel. The mirror channel supports all standard API request except the request that would modify the packages.
+
+Creating a mirror channel is similar to creating the proxy channel described above except that you need to change the `mirror_mode` from `proxy` to `mirror` (and choose more suitable channel name obviously).
