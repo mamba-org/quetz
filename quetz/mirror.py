@@ -6,6 +6,26 @@ from tempfile import SpooledTemporaryFile
 import requests
 from fastapi.responses import FileResponse, StreamingResponse
 
+# copy common subdirs from conda:
+# https://github.com/conda/conda/blob/a78a2387f26a188991d771967fc33aa1fb5bb810/conda/base/constants.py#L63
+
+KNOWN_SUBDIRS = (
+    "noarch",
+    "linux-32",
+    "linux-64",
+    "linux-aarch64",
+    "linux-armv6l",
+    "linux-armv7l",
+    "linux-ppc64",
+    "linux-ppc64le",
+    "linux-s390x",
+    "osx-64",
+    "osx-arm64",
+    "win-32",
+    "win-64",
+    "zos-z",
+)
+
 
 def get_from_cache_or_download(
     repository, cache, target, exclude=["repodata.json", "current_respodata.json"]
@@ -54,6 +74,10 @@ class RemoteServerError(Exception):
     pass
 
 
+class RemoteFileNotFound(RemoteServerError):
+    pass
+
+
 class RemoteFile:
     def __init__(self, host: str, path: str, session=None):
         if session is None:
@@ -63,7 +87,9 @@ class RemoteFile:
             response = session.get(remote_url, stream=True)
         except requests.ConnectionError:
             raise RemoteServerError
-        if response.status_code != 200:
+        if response.status_code == 404:
+            raise RemoteFileNotFound
+        elif response.status_code != 200:
             raise RemoteServerError
         self.file = SpooledTemporaryFile()
         response.raw.decode_content = True  # for gzipped response content
