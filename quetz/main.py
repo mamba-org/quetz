@@ -589,10 +589,10 @@ def post_package_member(
 def get_package_versions(
     package: db_models.Package = Depends(get_package_or_fail),
     dao: Dao = Depends(get_dao),
-    time_created_ge: datetime.datetime = None,
+    time_created__ge: datetime.datetime = None,
 ):
 
-    version_profile_list = dao.get_package_versions(package, time_created_ge)
+    version_profile_list = dao.get_package_versions(package, time_created__ge)
     version_list = []
 
     for version, profile, api_key_profile in version_profile_list:

@@ -88,7 +88,7 @@ def test_package_version_list_by_date(
     response = client.get("/api/dummylogin/bartosz")
     response = client.get(
         f"/api/channels/{channel_name}/packages/{package_name}/versions"
-        "?time_created_ge=" + later.isoformat()
+        "?time_created__ge=" + later.isoformat()
     )
 
     assert response.status_code == 200
@@ -96,7 +96,7 @@ def test_package_version_list_by_date(
 
     response = client.get(
         f"/api/channels/{channel_name}/packages/{package_name}/versions"
-        "?time_created_ge=" + earlier.isoformat()
+        "?time_created__ge=" + earlier.isoformat()
     )
     assert response.status_code == 200
     assert len(response.json()) == 1
