@@ -82,8 +82,6 @@ def test_get_mirror_url(proxy_channel, local_channel, client):
     assert not response.json()["mirror_channel_url"]
 
 
-
-
 @pytest.fixture
 def repo_content():
     return b"Hello world!"

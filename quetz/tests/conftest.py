@@ -8,15 +8,15 @@ Fixtures for Quetz components
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-import uuid
 import os
 import tempfile
+import uuid
 
 from fastapi.testclient import TestClient
 from pytest import fixture
 
 from quetz.database import get_engine, get_session_maker
-from quetz.db_models import User, Profile
+from quetz.db_models import Profile, User
 
 
 @fixture
@@ -37,7 +37,7 @@ def db(session_maker):
 @fixture
 def user(db):
     user = User(id=uuid.uuid4().bytes, username="bartosz")
-    profile  = Profile(name="Bartosz", avatar_url="http:///avatar", user=user)
+    profile = Profile(name="Bartosz", avatar_url="http:///avatar", user=user)
     db.add(user)
     db.add(profile)
     db.commit()
@@ -45,6 +45,7 @@ def user(db):
     db.delete(profile)
     db.delete(user)
     db.commit()
+
 
 @fixture
 def config():
