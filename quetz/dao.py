@@ -105,6 +105,8 @@ class Dao:
         self.db.add(member)
         self.db.commit()
 
+        return channel, member
+
     def get_packages(self, channel_name: str, skip: int, limit: int, q: str):
         query = self.db.query(Package).filter(Package.channel_name == channel_name)
 
@@ -169,6 +171,8 @@ class Dao:
         self.db.add(package)
         self.db.add(member)
         self.db.commit()
+
+        return package, member
 
     def update_package_channeldata(self, channel_name, package_name, channeldata):
         package = self.get_package(channel_name, package_name)
@@ -312,6 +316,8 @@ class Dao:
         self.db.add(version)
         self.db.commit()
 
+        return version
+
     def get_package_versions(self, package, time_created_ge: datetime = None):
         ApiKeyProfile = aliased(Profile)
 
@@ -325,7 +331,7 @@ class Dao:
         )
 
         if time_created_ge:
-            query = query.filter(PackageVersion.time_created > time_created_ge)
+            query = query.filter(PackageVersion.time_created >= time_created_ge)
 
         return query.all()
 
