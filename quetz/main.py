@@ -44,6 +44,7 @@ from quetz.database import get_session as get_db_session
 
 from .condainfo import CondaInfo
 from .mirror import (
+    KNOWN_SUBDIRS,
     LocalCache,
     RemoteFileNotFound,
     RemoteRepository,
@@ -358,9 +359,9 @@ def post_channel(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=f"Remote channel {host} unavailable",
             )
-        # if no channel data use popular architectures
+        # if no channel data use known architectures
         if subdirs is None:
-            subdirs = ["linux-64", "win-64", "win-32", "osx-64"]
+            subdirs = KNOWN_SUBDIRS
 
         for arch in subdirs:
             background_tasks.add_task(

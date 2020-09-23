@@ -5,6 +5,7 @@ from io import BytesIO
 import pytest
 
 from quetz.db_models import Channel, Package, User
+from quetz.mirror import KNOWN_SUBDIRS
 
 
 @pytest.fixture
@@ -426,9 +427,9 @@ def test_disabled_methods_for_mirror_channels(
     "repo_content,status_code,expected_archs",
     [
         # no channeldata
-        (b"", 404, ["linux-64", "osx-64", "win-32", "win-64"]),
+        (b"", 404, KNOWN_SUBDIRS),
         # badly formatted channel data
-        (b"<html></html>", 200, ["linux-64", "osx-64", "win-32", "win-64"]),
+        (b"<html></html>", 200, KNOWN_SUBDIRS),
         # no archs in channeldata
         (b"{}", 200, []),
         # custom architecture
