@@ -1,3 +1,4 @@
+import datetime
 from unittest.mock import ANY
 
 import pytest
@@ -74,3 +75,28 @@ def test_get_package_list(package_version, package_name, channel_name, client):
             'time_created': ANY,
         }
     ]
+
+
+def test_package_version_list_by_date(
+    package_version, package_name, channel_name, client
+):
+
+    now = datetime.datetime.utcnow()
+    later = now + datetime.timedelta(minutes=1)
+    earlier = now - datetime.timedelta(minutes=1)
+
+    response = client.get("/api/dummylogin/bartosz")
+    response = client.get(
+        f"/api/channels/{channel_name}/packages/{package_name}/versions"
+        "?time_created_ge=" + later.isoformat()
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+    response = client.get(
+        f"/api/channels/{channel_name}/packages/{package_name}/versions"
+        "?time_created_ge=" + earlier.isoformat()
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 1
