@@ -4,7 +4,7 @@ from io import BytesIO
 
 import pytest
 
-from quetz.db_models import Channel, Package, User
+from quetz.db_models import Channel, Package
 from quetz.mirror import KNOWN_SUBDIRS
 
 
@@ -80,16 +80,6 @@ def test_get_mirror_url(proxy_channel, local_channel, client):
     response = client.get("/api/channels/{}".format(local_channel.name))
     assert response.status_code == 200
     assert not response.json()["mirror_channel_url"]
-
-
-@pytest.fixture
-def user(db):
-    user = User(id=uuid.uuid4().bytes, username="bartosz")
-    db.add(user)
-    db.commit()
-    yield db
-    db.delete(user)
-    db.commit()
 
 
 @pytest.fixture

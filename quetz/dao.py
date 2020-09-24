@@ -3,6 +3,7 @@
 
 import json
 import uuid
+from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import or_
@@ -104,6 +105,8 @@ class Dao:
         self.db.add(member)
         self.db.commit()
 
+        return channel, member
+
     def get_packages(self, channel_name: str, skip: int, limit: int, q: str):
         query = self.db.query(Package).filter(Package.channel_name == channel_name)
 
@@ -168,6 +171,8 @@ class Dao:
         self.db.add(package)
         self.db.add(member)
         self.db.commit()
+
+        return package, member
 
     def update_package_channeldata(self, channel_name, package_name, channeldata):
         package = self.get_package(channel_name, package_name)
@@ -311,18 +316,24 @@ class Dao:
         self.db.add(version)
         self.db.commit()
 
-    def get_package_versions(self, package):
+        return version
+
+    def get_package_versions(self, package, time_created_ge: datetime = None):
         ApiKeyProfile = aliased(Profile)
 
-        return (
+        query = (
             self.db.query(PackageVersion, Profile, ApiKeyProfile)
             .outerjoin(Profile, Profile.user_id == PackageVersion.uploader_id)
             .outerjoin(ApiKey, ApiKey.user_id == PackageVersion.uploader_id)
             .outerjoin(ApiKeyProfile, ApiKey.owner_id == ApiKeyProfile.user_id)
             .filter(PackageVersion.channel_name == package.channel_name)
             .filter(PackageVersion.package_name == package.name)
-            .all()
         )
+
+        if time_created_ge:
+            query = query.filter(PackageVersion.time_created >= time_created_ge)
+
+        return query.all()
 
     def is_active_platform(self, channel_name: str, platform: str):
         if platform == 'noarch':
