@@ -152,7 +152,7 @@ def initial_sync_mirror(
     skip_errors: bool = True,
 ):
 
-    force = False
+    force = True  # needed for updating packages
 
     try:
         repo_file = remote_repository.open(os.path.join(arch, "repodata.json"))
