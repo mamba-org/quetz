@@ -5,6 +5,7 @@ from io import BytesIO
 import pytest
 from fastapi.background import BackgroundTasks
 
+from quetz import rest_models
 from quetz.authorization import Rules
 from quetz.db_models import Channel, Package
 from quetz.mirror import KNOWN_SUBDIRS, RemoteRepository, initial_sync_mirror
@@ -27,15 +28,16 @@ def proxy_channel(db):
 
 
 @pytest.fixture
-def mirror_channel(db):
+def mirror_channel(dao, user, db):
 
-    channel = Channel(
+    channel_data = rest_models.Channel(
         name="test_mirror_channel",
+        private=False,
         mirror_channel_url="http://host",
         mirror_mode="mirror",
     )
-    db.add(channel)
-    db.commit()
+
+    channel = dao.create_channel(channel_data, user.id, "owner")
 
     yield channel
 
@@ -520,3 +522,30 @@ def test_repo_without_channeldata(user, client, dummy_repo, expected_archs):
     assert len(dummy_repo) == len(expected_archs) + 1
 
     assert response.status_code == 201
+
+
+def test_sync_mirror_channel(mirror_channel, user, client, dummy_repo):
+
+    response = client.put(f"/api/channels/{mirror_channel.name}")
+
+    assert response.status_code == 401
+
+    response = client.get("/api/dummylogin/bartosz")
+    assert response.status_code == 200
+
+    response = client.put(f"/api/channels/{mirror_channel.name}")
+    assert response.status_code == 200
+
+
+def test_can_not_sync_mirror_and_local_channels(
+    proxy_channel, local_channel, user, client
+):
+
+    response = client.get("/api/dummylogin/bartosz")
+    assert response.status_code == 200
+
+    response = client.put(f"/api/channels/{proxy_channel.name}")
+    assert response.status_code == 405
+
+    response = client.put(f"/api/channels/{local_channel.name}")
+    assert response.status_code == 405

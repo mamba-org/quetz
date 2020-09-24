@@ -4,6 +4,7 @@ import shutil
 from tempfile import SpooledTemporaryFile
 
 import requests
+from fastapi import HTTPException, status
 from fastapi.background import BackgroundTasks
 from fastapi.responses import FileResponse, StreamingResponse
 
@@ -198,3 +199,42 @@ def initial_sync_mirror(
     last_synchronisation = max(last_synchronization, last_timestamp)
     dao.update_channel(channel_name, {"timestamp_mirror_sync": last_synchronisation})
     indexing.update_indexes(dao, pkgstore, channel_name)
+
+
+def synchronize_packages(
+    new_channel,
+    dao,
+    pkgstore,
+    auth,
+    session,
+    background_tasks,
+):
+
+    host = new_channel.mirror_channel_url
+
+    remote_repo = RemoteRepository(new_channel.mirror_channel_url, session)
+    try:
+        channel_data = remote_repo.open("channeldata.json").json()
+        subdirs = channel_data.get("subdirs", [])
+    except (RemoteFileNotFound, json.JSONDecodeError):
+        subdirs = None
+    except RemoteServerError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Remote channel {host} unavailable",
+        )
+    # if no channel data use known architectures
+    if subdirs is None:
+        subdirs = KNOWN_SUBDIRS
+
+    for arch in subdirs:
+        background_tasks.add_task(
+            initial_sync_mirror,
+            new_channel.name,
+            remote_repo,
+            arch,
+            dao,
+            pkgstore,
+            auth,
+            background_tasks,
+        )

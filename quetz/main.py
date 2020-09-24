@@ -37,6 +37,7 @@ from quetz import (
     authorization,
     db_models,
     indexing,
+    mirror,
     rest_models,
 )
 from quetz.config import Config
@@ -44,15 +45,7 @@ from quetz.dao import Dao
 from quetz.database import get_session as get_db_session
 
 from .condainfo import CondaInfo
-from .mirror import (
-    KNOWN_SUBDIRS,
-    LocalCache,
-    RemoteFileNotFound,
-    RemoteRepository,
-    RemoteServerError,
-    get_from_cache_or_download,
-    initial_sync_mirror,
-)
+from .mirror import LocalCache, RemoteRepository, get_from_cache_or_download
 
 app = FastAPI()
 
@@ -133,9 +126,15 @@ def get_rules(
 
 
 class ChannelChecker:
-    def __init__(self, allow_proxy: bool = False, allow_mirror: bool = False):
+    def __init__(
+        self,
+        allow_proxy: bool = False,
+        allow_mirror: bool = False,
+        allow_local: bool = True,
+    ):
         self.allow_proxy = allow_proxy
         self.allow_mirror = allow_mirror
+        self.allow_local = allow_local
 
     def __call__(
         self,
@@ -157,6 +156,7 @@ class ChannelChecker:
 
         is_proxy = mirror_url and channel.mirror_mode == "proxy"
         is_mirror = mirror_url and channel.mirror_mode == "mirror"
+        is_local = not mirror_url
         if is_proxy and not self.allow_proxy:
             raise HTTPException(
                 status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
@@ -167,11 +167,17 @@ class ChannelChecker:
                 status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
                 detail="This method is not implemented for mirror channels",
             )
+        if is_local and not self.allow_local:
+            raise HTTPException(
+                status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+                detail="This method is not implemented for local channels",
+            )
         return channel
 
 
 get_channel_or_fail = ChannelChecker(allow_proxy=False, allow_mirror=True)
 get_channel_allow_proxy = ChannelChecker(allow_proxy=True)
+get_channel_mirror_only = ChannelChecker(allow_mirror=True, allow_local=False)
 
 
 def get_package_or_fail(
@@ -328,6 +334,19 @@ def get_channel(channel: db_models.Channel = Depends(get_channel_allow_proxy)):
     return channel
 
 
+@api_router.put("/channels/{channel_name}", tags=["channels"])
+def synchronize_mirror_channel(
+    background_tasks: BackgroundTasks,
+    channel: db_models.Channel = Depends(get_channel_mirror_only),
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+    session=Depends(get_remote_session),
+):
+    auth.assert_synchronize_mirror(channel.name)
+
+    mirror.synchronize_packages(channel, dao, pkgstore, auth, session, background_tasks)
+
+
 @api_router.post("/channels", status_code=201, tags=["channels"])
 def post_channel(
     new_channel: rest_models.Channel,
@@ -348,34 +367,9 @@ def post_channel(
         )
 
     if new_channel.mirror_channel_url and new_channel.mirror_mode == "mirror":
-        host = new_channel.mirror_channel_url
-
-        remote_repo = RemoteRepository(new_channel.mirror_channel_url, session)
-        try:
-            channel_data = remote_repo.open("channeldata.json").json()
-            subdirs = channel_data.get("subdirs", [])
-        except (RemoteFileNotFound, json.JSONDecodeError):
-            subdirs = None
-        except RemoteServerError:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"Remote channel {host} unavailable",
-            )
-        # if no channel data use known architectures
-        if subdirs is None:
-            subdirs = KNOWN_SUBDIRS
-
-        for arch in subdirs:
-            background_tasks.add_task(
-                initial_sync_mirror,
-                new_channel.name,
-                remote_repo,
-                arch,
-                dao,
-                pkgstore,
-                auth,
-                background_tasks,
-            )
+        mirror.synchronize_packages(
+            new_channel, dao, pkgstore, auth, session, background_tasks
+        )
 
     dao.create_channel(new_channel, user_id, authorization.OWNER)
 
