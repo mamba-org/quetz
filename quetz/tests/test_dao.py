@@ -26,16 +26,12 @@ def package(dao, channel_name, package_name, user, db):
     channel_data = Channel(name=channel_name, private=False)
     package_data = Package(name=package_name)
 
-    channel, channel_member = dao.create_channel(channel_data, user.id, "owner")
-    package, package_member = dao.create_package(
-        channel_name, package_data, user.id, "owner"
-    )
+    channel = dao.create_channel(channel_data, user.id, "owner")
+    package = dao.create_package(channel_name, package_data, user.id, "owner")
 
     yield package
 
-    db.delete(channel_member)
     db.delete(package)
-    db.delete(package_member)
     db.delete(channel)
     db.commit()
 

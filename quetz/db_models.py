@@ -18,7 +18,7 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import backref, relationship
 
 Base = declarative_base()
 
@@ -76,7 +76,7 @@ class Channel(Base):
 
     packages = relationship('Package', back_populates='channel')
 
-    members = relationship('ChannelMember')
+    members = relationship('ChannelMember', cascade="all,delete")
 
     def __repr__(self):
         return (
@@ -138,9 +138,9 @@ class PackageMember(Base):
     user_id = Column(UUID, ForeignKey('users.id'), primary_key=True, index=True)
     role = Column(String)
 
-    package = relationship('Package')
+    package = relationship('Package', backref=backref("members", cascade="all,delete"))
     channel = relationship('Channel')
-    user = relationship('User')
+    user = relationship('User', backref=backref("packages", cascade="all,delete"))
 
     def __repr__(self):
         return f'<PackageMember channel_name={self.channel_name}, package_name={self.package_name},\

@@ -106,7 +106,7 @@ class Dao:
         self.db.add(member)
         self.db.commit()
 
-        return channel, member
+        return channel
 
     def get_packages(self, channel_name: str, skip: int, limit: int, q: str):
         query = self.db.query(Package).filter(Package.channel_name == channel_name)
@@ -173,7 +173,7 @@ class Dao:
         self.db.add(member)
         self.db.commit()
 
-        return package, member
+        return package
 
     def update_package_channeldata(self, channel_name, package_name, channeldata):
         package = self.get_package(channel_name, package_name)
