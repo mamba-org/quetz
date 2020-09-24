@@ -184,6 +184,7 @@ class PackageVersion(Base):
     info = Column(String)
     uploader_id = Column(UUID, ForeignKey('users.id'))
     time_created = Column(DateTime(timezone=True), server_default=func.now())
+    time_modified = Column(DateTime(timezone=True), server_default=func.now())
 
     uploader = relationship('User')
 

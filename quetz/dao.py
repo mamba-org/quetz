@@ -336,6 +336,7 @@ class Dao:
                         "filename": filename,
                         "info": info,
                         "uploader_id": uploader_id,
+                        "time_modified": datetime.utcnow(),
                     },
                     synchronize_session=False,
                 )
@@ -381,7 +382,7 @@ class Dao:
                 PackageVersion.filename,
                 PackageVersion.info,
                 PackageVersion.package_format,
-                PackageVersion.time_created,
+                PackageVersion.time_modified,
             )
             .filter(PackageVersion.channel_name == channel_name)
             .filter(PackageVersion.platform.in_([subdir, "noarch"]))

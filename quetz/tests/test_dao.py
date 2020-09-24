@@ -69,6 +69,7 @@ def test_create_version(dao, package, channel_name, package_name, db, user):
     assert created_version.build_number == 0
     assert created_version.filename == "filename.tar.bz2"
     assert created_version.info == "{}"
+    assert created_version.time_created == created_version.time_modified
 
     # error for insert-only with existing row
     with pytest.raises(IntegrityError):
@@ -112,3 +113,4 @@ def test_create_version(dao, package, channel_name, package_name, db, user):
     assert created_version.build_number == 0
     assert created_version.filename == "filename-2.tar.bz2"
     assert created_version.info == '{"version": "x.y.z"}'
+    assert created_version.time_created != created_version.time_modified
