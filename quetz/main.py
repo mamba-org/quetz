@@ -757,14 +757,12 @@ def handle_package_files(
                 filename=file.filename,
                 info=json.dumps(condainfo.info),
                 uploader_id=user_id,
+                upsert=force,
             )
         except IntegrityError:
-            if force:
-                dao.rollback()
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT, detail="Duplicate"
-                )
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="Duplicate"
+            )
 
         pkgstore.create_channel(channel_name)
 

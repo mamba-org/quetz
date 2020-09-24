@@ -18,8 +18,11 @@ def export(dao, channel_name, subdir):
         packages = repodata["packages"]
         packages_conda = repodata["packages.conda"]
 
-        for filename, info, format in dao.get_package_infos(channel_name, subdir):
+        for filename, info, format, time_created in dao.get_package_infos(
+            channel_name, subdir
+        ):
             data = json.loads(info)
+            data['date_modified'] = time_created.isoformat()
             if format == db_models.PackageFormatEnum.conda:
                 packages_conda[filename] = data
             else:

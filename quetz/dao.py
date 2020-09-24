@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, aliased, joinedload
 
 from quetz import channel_data, rest_models
@@ -299,24 +300,50 @@ class Dao:
         filename,
         info,
         uploader_id,
+        upsert: bool = False,
     ):
-        version = PackageVersion(
-            id=uuid.uuid4().bytes,
-            channel_name=channel_name,
-            package_name=package_name,
-            package_format=package_format,
-            platform=platform,
-            version=version,
-            build_number=build_number,
-            build_string=build_string,
-            filename=filename,
-            info=info,
-            uploader_id=uploader_id,
-        )
-        self.db.add(version)
-        self.db.commit()
+        try:
+            package_version = PackageVersion(
+                id=uuid.uuid4().bytes,
+                channel_name=channel_name,
+                package_name=package_name,
+                package_format=package_format,
+                platform=platform,
+                version=version,
+                build_number=build_number,
+                build_string=build_string,
+                filename=filename,
+                info=info,
+                uploader_id=uploader_id,
+            )
+            self.db.add(package_version)
+            self.db.commit()
+        except IntegrityError as exc:
+            self.rollback()
+            if not upsert:
+                raise exc
+            (
+                self.db.query(PackageVersion)
+                .filter(PackageVersion.channel_name == channel_name)
+                .filter(PackageVersion.package_name == package_name)
+                .filter(PackageVersion.package_format == package_format)
+                .filter(PackageVersion.platform == platform)
+                .filter(PackageVersion.version == version)
+                .filter(PackageVersion.build_number == build_number)
+                .filter(PackageVersion.build_string == build_string)
+                .update(
+                    {
+                        "filename": filename,
+                        "info": info,
+                        "uploader_id": uploader_id,
+                    },
+                    synchronize_session=False,
+                )
+            )
 
-        return version
+            self.db.commit()
+
+        return package_version
 
     def get_package_versions(self, package, time_created_ge: datetime = None):
         ApiKeyProfile = aliased(Profile)
@@ -354,6 +381,7 @@ class Dao:
                 PackageVersion.filename,
                 PackageVersion.info,
                 PackageVersion.package_format,
+                PackageVersion.time_created,
             )
             .filter(PackageVersion.channel_name == channel_name)
             .filter(PackageVersion.platform.in_([subdir, "noarch"]))
