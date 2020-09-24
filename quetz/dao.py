@@ -108,6 +108,13 @@ class Dao:
 
         return channel
 
+    def update_channel(self, channel_name, data: dict):
+
+        self.db.query(Channel).filter(Channel.name == channel_name).update(
+            data, synchronize_session=False
+        )
+        self.db.commit()
+
     def get_packages(self, channel_name: str, skip: int, limit: int, q: str):
         query = self.db.query(Package).filter(Package.channel_name == channel_name)
 

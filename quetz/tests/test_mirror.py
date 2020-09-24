@@ -3,9 +3,14 @@ import uuid
 from io import BytesIO
 
 import pytest
+from fastapi.background import BackgroundTasks
 
+from quetz.authorization import Rules
 from quetz.db_models import Channel, Package
-from quetz.mirror import KNOWN_SUBDIRS
+from quetz.mirror import KNOWN_SUBDIRS, RemoteRepository, initial_sync_mirror
+
+with open("test-package-0.1-0.tar.bz2", "rb") as fid:
+    DUMMY_PACKAGE = fid.read()
 
 
 @pytest.fixture
@@ -80,6 +85,74 @@ def test_get_mirror_url(proxy_channel, local_channel, client):
     response = client.get("/api/channels/{}".format(local_channel.name))
     assert response.status_code == 200
     assert not response.json()["mirror_channel_url"]
+
+
+@pytest.mark.parametrize(
+    "repo_content,timestamp_mirror_sync,expected_timestamp,new_package",
+    [
+        (
+            [b'{"packages": {"my-package": {"time_modified": 100}}}', DUMMY_PACKAGE],
+            0,
+            100,
+            True,
+        ),
+        ([b'{"packages": {"my-package": {}}}', DUMMY_PACKAGE], 0, 0, True),
+        ([b'{"packages": {"my-package": {}}}', DUMMY_PACKAGE], 100, 100, True),
+        (
+            [b'{"packages": {"my-package": {"time_modified": 1000}}}', DUMMY_PACKAGE],
+            100,
+            1000,
+            True,
+        ),
+        (
+            [b'{"packages": {"my-package": {"time_modified": 100}}}', DUMMY_PACKAGE],
+            1000,
+            1000,
+            False,
+        ),
+    ],
+)
+def test_synchronisation_timestamp(
+    mirror_channel,
+    dao,
+    config,
+    dummy_response,
+    db,
+    user,
+    expected_timestamp,
+    timestamp_mirror_sync,
+    new_package,
+):
+
+    mirror_channel.timestamp_mirror_sync = timestamp_mirror_sync
+    pkgstore = config.get_package_store()
+    background_tasks = BackgroundTasks()
+    rules = Rules("", {"user_id": str(uuid.UUID(bytes=user.id))}, db)
+
+    class DummySession:
+        def get(self, path, stream=False):
+            return dummy_response()
+
+    dummy_repo = RemoteRepository("", DummySession())
+
+    initial_sync_mirror(
+        mirror_channel.name,
+        dummy_repo,
+        "linux-64",
+        dao,
+        pkgstore,
+        rules,
+        background_tasks,
+        skip_errors=False,
+    )
+
+    channel = db.query(Channel).get(mirror_channel.name)
+    assert channel.timestamp_mirror_sync == expected_timestamp
+
+    if new_package:
+        assert channel.packages[0].name == 'test-package'
+        db.delete(channel.packages[0])
+        db.commit()
 
 
 @pytest.fixture

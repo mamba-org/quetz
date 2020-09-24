@@ -73,6 +73,7 @@ class Channel(Base):
     private = Column(Boolean, default=False)
     mirror_channel_url = Column(String)
     mirror_mode = Column(String, default="proxy")
+    timestamp_mirror_sync = Column(Integer, default=0)
 
     packages = relationship('Package', back_populates='channel')
 

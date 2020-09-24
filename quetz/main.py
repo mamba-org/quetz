@@ -51,6 +51,7 @@ from .mirror import (
     RemoteRepository,
     RemoteServerError,
     get_from_cache_or_download,
+    initial_sync_mirror,
 )
 
 app = FastAPI()
@@ -371,53 +372,12 @@ def post_channel(
                 remote_repo,
                 arch,
                 dao,
+                pkgstore,
                 auth,
                 background_tasks,
             )
 
     dao.create_channel(new_channel, user_id, authorization.OWNER)
-
-
-def initial_sync_mirror(
-    channel_name: str,
-    remote_repository: RemoteRepository,
-    arch: str,
-    dao: Dao,
-    auth: authorization.Rules,
-    background_tasks: BackgroundTasks,
-):
-
-    force = False
-
-    try:
-        repo_file = remote_repository.open(os.path.join(arch, "repodata.json"))
-        repodata = json.load(repo_file.file)
-    except RemoteServerError:
-        # LOG: can not get repodata.json for channel {channel_name}
-        return
-    except json.JSONDecodeError:
-        # LOG: repodata.json badly formatted for arch {arch} in channel {channel_name}
-        return
-
-    packages = repodata.get("packages", {})
-    for package_name, metadata in packages.items():
-        path = os.path.join(arch, package_name)
-        remote_package = remote_repository.open(path)
-        files = [remote_package]
-        try:
-            handle_package_files(
-                channel_name,
-                files,
-                dao,
-                auth,
-                force,
-                background_tasks,
-                update_indexes=False,
-            )
-        except Exception:
-            # LOG: could not process package {package_name} from channel {channel_name}
-            pass
-    indexing.update_indexes(dao, pkgstore, channel_name)
 
 
 @api_router.get(

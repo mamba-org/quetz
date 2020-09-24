@@ -1,14 +1,8 @@
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from quetz.dao import Dao
-from quetz.db_models import PackageVersion
-from quetz.rest_models import Channel, Package
-
-
-@pytest.fixture
-def dao(db) -> Dao:
-    return Dao(db)
+from quetz import rest_models
+from quetz.db_models import Channel, PackageVersion
 
 
 @pytest.fixture
@@ -22,17 +16,25 @@ def channel_name():
 
 
 @pytest.fixture
-def package(dao, channel_name, package_name, user, db):
-    channel_data = Channel(name=channel_name, private=False)
-    package_data = Package(name=package_name)
+def channel(dao, db, user, channel_name):
 
+    channel_data = rest_models.Channel(name=channel_name, private=False)
     channel = dao.create_channel(channel_data, user.id, "owner")
-    package = dao.create_package(channel_name, package_data, user.id, "owner")
+    yield channel
+
+    db.delete(channel)
+    db.commit()
+
+
+@pytest.fixture
+def package(dao, channel, package_name, user, db):
+    package_data = rest_models.Package(name=package_name)
+
+    package = dao.create_package(channel.name, package_data, user.id, "owner")
 
     yield package
 
     db.delete(package)
-    db.delete(channel)
     db.commit()
 
 
@@ -114,3 +116,13 @@ def test_create_version(dao, package, channel_name, package_name, db, user):
     assert created_version.filename == "filename-2.tar.bz2"
     assert created_version.info == '{"version": "x.y.z"}'
     assert created_version.time_created != created_version.time_modified
+
+
+def test_update_channel(dao, channel, db):
+
+    assert not channel.private
+    dao.update_channel(channel.name, {"private": True})
+
+    channel = db.query(Channel).filter(Channel.name == channel.name).one()
+
+    assert channel.private
