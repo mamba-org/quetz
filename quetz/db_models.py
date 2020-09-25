@@ -18,7 +18,7 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import backref, relationship
 
 Base = declarative_base()
 
@@ -73,10 +73,11 @@ class Channel(Base):
     private = Column(Boolean, default=False)
     mirror_channel_url = Column(String)
     mirror_mode = Column(String, default="proxy")
+    timestamp_mirror_sync = Column(Integer, default=0)
 
     packages = relationship('Package', back_populates='channel')
 
-    members = relationship('ChannelMember')
+    members = relationship('ChannelMember', cascade="all,delete")
 
     def __repr__(self):
         return (
@@ -138,9 +139,9 @@ class PackageMember(Base):
     user_id = Column(UUID, ForeignKey('users.id'), primary_key=True, index=True)
     role = Column(String)
 
-    package = relationship('Package')
+    package = relationship('Package', backref=backref("members", cascade="all,delete"))
     channel = relationship('Channel')
-    user = relationship('User')
+    user = relationship('User', backref=backref("packages", cascade="all,delete"))
 
     def __repr__(self):
         return f'<PackageMember channel_name={self.channel_name}, package_name={self.package_name},\
@@ -184,6 +185,7 @@ class PackageVersion(Base):
     info = Column(String)
     uploader_id = Column(UUID, ForeignKey('users.id'))
     time_created = Column(DateTime(timezone=True), server_default=func.now())
+    time_modified = Column(DateTime(timezone=True), server_default=func.now())
 
     uploader = relationship('User')
 

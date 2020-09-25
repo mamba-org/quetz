@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, aliased, joinedload
 
 from quetz import channel_data, rest_models
@@ -105,7 +106,14 @@ class Dao:
         self.db.add(member)
         self.db.commit()
 
-        return channel, member
+        return channel
+
+    def update_channel(self, channel_name, data: dict):
+
+        self.db.query(Channel).filter(Channel.name == channel_name).update(
+            data, synchronize_session=False
+        )
+        self.db.commit()
 
     def get_packages(self, channel_name: str, skip: int, limit: int, q: str):
         query = self.db.query(Package).filter(Package.channel_name == channel_name)
@@ -172,7 +180,7 @@ class Dao:
         self.db.add(member)
         self.db.commit()
 
-        return package, member
+        return package
 
     def update_package_channeldata(self, channel_name, package_name, channeldata):
         package = self.get_package(channel_name, package_name)
@@ -299,24 +307,51 @@ class Dao:
         filename,
         info,
         uploader_id,
+        upsert: bool = False,
     ):
-        version = PackageVersion(
-            id=uuid.uuid4().bytes,
-            channel_name=channel_name,
-            package_name=package_name,
-            package_format=package_format,
-            platform=platform,
-            version=version,
-            build_number=build_number,
-            build_string=build_string,
-            filename=filename,
-            info=info,
-            uploader_id=uploader_id,
-        )
-        self.db.add(version)
-        self.db.commit()
+        try:
+            package_version = PackageVersion(
+                id=uuid.uuid4().bytes,
+                channel_name=channel_name,
+                package_name=package_name,
+                package_format=package_format,
+                platform=platform,
+                version=version,
+                build_number=build_number,
+                build_string=build_string,
+                filename=filename,
+                info=info,
+                uploader_id=uploader_id,
+            )
+            self.db.add(package_version)
+            self.db.commit()
+        except IntegrityError as exc:
+            self.rollback()
+            if not upsert:
+                raise exc
+            (
+                self.db.query(PackageVersion)
+                .filter(PackageVersion.channel_name == channel_name)
+                .filter(PackageVersion.package_name == package_name)
+                .filter(PackageVersion.package_format == package_format)
+                .filter(PackageVersion.platform == platform)
+                .filter(PackageVersion.version == version)
+                .filter(PackageVersion.build_number == build_number)
+                .filter(PackageVersion.build_string == build_string)
+                .update(
+                    {
+                        "filename": filename,
+                        "info": info,
+                        "uploader_id": uploader_id,
+                        "time_modified": datetime.utcnow(),
+                    },
+                    synchronize_session=False,
+                )
+            )
 
-        return version
+            self.db.commit()
+
+        return package_version
 
     def get_package_versions(self, package, time_created_ge: datetime = None):
         ApiKeyProfile = aliased(Profile)
@@ -354,6 +389,7 @@ class Dao:
                 PackageVersion.filename,
                 PackageVersion.info,
                 PackageVersion.package_format,
+                PackageVersion.time_modified,
             )
             .filter(PackageVersion.channel_name == channel_name)
             .filter(PackageVersion.platform.in_([subdir, "noarch"]))

@@ -1,11 +1,15 @@
 import os
 import uuid
 from io import BytesIO
+from pathlib import Path
 
 import pytest
+from fastapi.background import BackgroundTasks
 
+from quetz import rest_models
+from quetz.authorization import Rules
 from quetz.db_models import Channel, Package
-from quetz.mirror import KNOWN_SUBDIRS
+from quetz.mirror import KNOWN_SUBDIRS, RemoteRepository, initial_sync_mirror
 
 
 @pytest.fixture
@@ -22,15 +26,16 @@ def proxy_channel(db):
 
 
 @pytest.fixture
-def mirror_channel(db):
+def mirror_channel(dao, user, db):
 
-    channel = Channel(
+    channel_data = rest_models.Channel(
         name="test_mirror_channel",
+        private=False,
         mirror_channel_url="http://host",
         mirror_mode="mirror",
     )
-    db.add(channel)
-    db.commit()
+
+    channel = dao.create_channel(channel_data, user.id, "owner")
 
     yield channel
 
@@ -82,6 +87,79 @@ def test_get_mirror_url(proxy_channel, local_channel, client):
     assert not response.json()["mirror_channel_url"]
 
 
+DUMMY_PACKAGE = Path("./test-package-0.1-0.tar.bz2")
+
+
+@pytest.mark.parametrize(
+    "repo_content,timestamp_mirror_sync,expected_timestamp,new_package",
+    [
+        (
+            [b'{"packages": {"my-package": {"time_modified": 100}}}', DUMMY_PACKAGE],
+            0,
+            100,
+            True,
+        ),
+        ([b'{"packages": {"my-package": {}}}', DUMMY_PACKAGE], 0, 0, True),
+        ([b'{"packages": {"my-package": {}}}', DUMMY_PACKAGE], 100, 100, True),
+        (
+            [b'{"packages": {"my-package": {"time_modified": 1000}}}', DUMMY_PACKAGE],
+            100,
+            1000,
+            True,
+        ),
+        (
+            [b'{"packages": {"my-package": {"time_modified": 100}}}', DUMMY_PACKAGE],
+            1000,
+            1000,
+            False,
+        ),
+    ],
+)
+def test_synchronisation_timestamp(
+    mirror_channel,
+    dao,
+    config,
+    dummy_response,
+    db,
+    user,
+    expected_timestamp,
+    timestamp_mirror_sync,
+    new_package,
+):
+
+    mirror_channel.timestamp_mirror_sync = timestamp_mirror_sync
+    pkgstore = config.get_package_store()
+    background_tasks = BackgroundTasks()
+    rules = Rules("", {"user_id": str(uuid.UUID(bytes=user.id))}, db)
+
+    class DummySession:
+        def get(self, path, stream=False):
+            return dummy_response()
+
+    dummy_repo = RemoteRepository("", DummySession())
+
+    initial_sync_mirror(
+        mirror_channel.name,
+        dummy_repo,
+        "linux-64",
+        dao,
+        pkgstore,
+        rules,
+        background_tasks,
+        skip_errors=False,
+    )
+
+    channel = db.query(Channel).get(mirror_channel.name)
+    assert channel.timestamp_mirror_sync == expected_timestamp
+
+    if new_package:
+        assert channel.packages[0].name == 'test-package'
+        db.delete(channel.packages[0])
+        db.commit()
+    else:
+        assert not channel.packages
+
+
 @pytest.fixture
 def repo_content():
     return b"Hello world!"
@@ -100,6 +178,9 @@ def dummy_response(repo_content, status_code):
                 content = repo_content.pop(0)
             else:
                 content = repo_content
+            if isinstance(content, Path):
+                with open(content.absolute(), 'rb') as fid:
+                    content = fid.read()
             self.raw = BytesIO(content)
             self.headers = {"content-type": "application/json"}
             if isinstance(status_code, list):
@@ -447,3 +528,30 @@ def test_repo_without_channeldata(user, client, dummy_repo, expected_archs):
     assert len(dummy_repo) == len(expected_archs) + 1
 
     assert response.status_code == 201
+
+
+def test_sync_mirror_channel(mirror_channel, user, client, dummy_repo):
+
+    response = client.put(f"/api/channels/{mirror_channel.name}")
+
+    assert response.status_code == 401
+
+    response = client.get("/api/dummylogin/bartosz")
+    assert response.status_code == 200
+
+    response = client.put(f"/api/channels/{mirror_channel.name}")
+    assert response.status_code == 200
+
+
+def test_can_not_sync_mirror_and_local_channels(
+    proxy_channel, local_channel, user, client
+):
+
+    response = client.get("/api/dummylogin/bartosz")
+    assert response.status_code == 200
+
+    response = client.put(f"/api/channels/{proxy_channel.name}")
+    assert response.status_code == 405
+
+    response = client.put(f"/api/channels/{local_channel.name}")
+    assert response.status_code == 405

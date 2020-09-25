@@ -9,12 +9,15 @@ Fixtures for Quetz components
 # Distributed under the terms of the Modified BSD License.
 
 import os
+import shutil
 import tempfile
 import uuid
 
 from fastapi.testclient import TestClient
 from pytest import fixture
 
+from quetz.config import Config
+from quetz.dao import Dao
 from quetz.database import get_engine, get_session_maker
 from quetz.db_models import Profile, User
 
@@ -68,10 +71,15 @@ https_only = false
     config_path = os.path.join(path, "config.toml")
     with open(config_path, "w") as fid:
         fid.write(config_str)
-    old_dir = os.curdir
+    old_dir = os.path.abspath(os.curdir)
     os.chdir(path)
     os.environ["QUETZ_CONFIG_FILE"] = config_path
-    yield config_path
+    shutil.copyfile(
+        os.path.join(old_dir, "quetz", "tests", "data", "test-package-0.1-0.tar.bz2"),
+        os.path.join(path, "test-package-0.1-0.tar.bz2"),
+    )
+    config = Config()
+    yield config
     os.chdir(old_dir)
 
 
@@ -87,3 +95,8 @@ def app(config, session_maker):
 def client(app):
     client = TestClient(app)
     return client
+
+
+@fixture
+def dao(db) -> Dao:
+    return Dao(db)

@@ -4,7 +4,13 @@ import shutil
 from tempfile import SpooledTemporaryFile
 
 import requests
+from fastapi import HTTPException, status
+from fastapi.background import BackgroundTasks
 from fastapi.responses import FileResponse, StreamingResponse
+
+from quetz import authorization, indexing
+from quetz.dao import Dao
+from quetz.pkgstores import PackageStore
 
 # copy common subdirs from conda:
 # https://github.com/conda/conda/blob/a78a2387f26a188991d771967fc33aa1fb5bb810/conda/base/constants.py#L63
@@ -133,3 +139,102 @@ class LocalCache:
             raise KeyError
 
         return cache_path
+
+
+def initial_sync_mirror(
+    channel_name: str,
+    remote_repository: RemoteRepository,
+    arch: str,
+    dao: Dao,
+    pkgstore: PackageStore,
+    auth: authorization.Rules,
+    background_tasks: BackgroundTasks,
+    skip_errors: bool = True,
+):
+
+    force = True  # needed for updating packages
+
+    try:
+        repo_file = remote_repository.open(os.path.join(arch, "repodata.json"))
+        repodata = json.load(repo_file.file)
+    except RemoteServerError:
+        # LOG: can not get repodata.json for channel {channel_name}
+        return
+    except json.JSONDecodeError:
+        # LOG: repodata.json badly formatted for arch {arch} in channel {channel_name}
+        return
+
+    channel = dao.get_channel(channel_name)
+
+    from quetz.main import handle_package_files
+
+    packages = repodata.get("packages", {})
+    last_timestamp = 0
+    last_synchronization = channel.timestamp_mirror_sync
+    for package_name, metadata in packages.items():
+        path = os.path.join(arch, package_name)
+        time_modified = metadata.get("time_modified", 0)
+        last_timestamp = max(time_modified, last_timestamp)
+        # if there is no modification date (ex. anaconda server) or
+        # modification is older than the timestamp of last synchronisation
+        # skip uploading file
+        if time_modified and time_modified <= last_synchronization:
+            continue
+        remote_package = remote_repository.open(path)
+        files = [remote_package]
+        try:
+            handle_package_files(
+                channel_name,
+                files,
+                dao,
+                auth,
+                force,
+                background_tasks,
+                update_indexes=False,
+            )
+        except Exception as exc:
+            # LOG: could not process package {package_name} from channel {channel_name}
+            if not skip_errors:
+                raise exc
+    last_synchronisation = max(last_synchronization, last_timestamp)
+    dao.update_channel(channel_name, {"timestamp_mirror_sync": last_synchronisation})
+    indexing.update_indexes(dao, pkgstore, channel_name)
+
+
+def synchronize_packages(
+    new_channel,
+    dao,
+    pkgstore,
+    auth,
+    session,
+    background_tasks,
+):
+
+    host = new_channel.mirror_channel_url
+
+    remote_repo = RemoteRepository(new_channel.mirror_channel_url, session)
+    try:
+        channel_data = remote_repo.open("channeldata.json").json()
+        subdirs = channel_data.get("subdirs", [])
+    except (RemoteFileNotFound, json.JSONDecodeError):
+        subdirs = None
+    except RemoteServerError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Remote channel {host} unavailable",
+        )
+    # if no channel data use known architectures
+    if subdirs is None:
+        subdirs = KNOWN_SUBDIRS
+
+    for arch in subdirs:
+        background_tasks.add_task(
+            initial_sync_mirror,
+            new_channel.name,
+            remote_repo,
+            arch,
+            dao,
+            pkgstore,
+            auth,
+            background_tasks,
+        )
