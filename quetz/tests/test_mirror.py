@@ -1,6 +1,7 @@
 import os
 import uuid
 from io import BytesIO
+from pathlib import Path
 
 import pytest
 from fastapi.background import BackgroundTasks
@@ -9,9 +10,6 @@ from quetz import rest_models
 from quetz.authorization import Rules
 from quetz.db_models import Channel, Package
 from quetz.mirror import KNOWN_SUBDIRS, RemoteRepository, initial_sync_mirror
-
-with open("test-package-0.1-0.tar.bz2", "rb") as fid:
-    DUMMY_PACKAGE = fid.read()
 
 
 @pytest.fixture
@@ -87,6 +85,9 @@ def test_get_mirror_url(proxy_channel, local_channel, client):
     response = client.get("/api/channels/{}".format(local_channel.name))
     assert response.status_code == 200
     assert not response.json()["mirror_channel_url"]
+
+
+DUMMY_PACKAGE = Path("./test-package-0.1-0.tar.bz2")
 
 
 @pytest.mark.parametrize(
@@ -175,6 +176,9 @@ def dummy_response(repo_content, status_code):
                 content = repo_content.pop(0)
             else:
                 content = repo_content
+            if isinstance(content, Path):
+                with open(content.absolute(), 'rb') as fid:
+                    content = fid.read()
             self.raw = BytesIO(content)
             self.headers = {"content-type": "application/json"}
             if isinstance(status_code, list):

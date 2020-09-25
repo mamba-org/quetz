@@ -76,7 +76,7 @@ https_only = false
     os.environ["QUETZ_CONFIG_FILE"] = config_path
     shutil.copyfile(
         os.path.join(old_dir, "quetz", "tests", "data", "test-package-0.1-0.tar.bz2"),
-        os.path.join(path, "test-package-0.1.0.tar.bz2"),
+        os.path.join(path, "test-package-0.1-0.tar.bz2"),
     )
     config = Config()
     yield config
