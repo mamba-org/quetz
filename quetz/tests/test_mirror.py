@@ -156,6 +156,8 @@ def test_synchronisation_timestamp(
         assert channel.packages[0].name == 'test-package'
         db.delete(channel.packages[0])
         db.commit()
+    else:
+        assert not channel.packages
 
 
 @pytest.fixture
