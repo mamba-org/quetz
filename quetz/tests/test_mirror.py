@@ -57,6 +57,70 @@ def local_channel(db):
     db.commit()
 
 
+@pytest.fixture
+def repo_content():
+    return b"Hello world!"
+
+
+@pytest.fixture
+def status_code():
+    return 200
+
+
+@pytest.fixture
+def dummy_response(repo_content, status_code):
+    class DummyResponse:
+        def __init__(self):
+            if isinstance(repo_content, list):
+                content = repo_content.pop(0)
+            else:
+                content = repo_content
+            if isinstance(content, Path):
+                with open(content.absolute(), 'rb') as fid:
+                    content = fid.read()
+            self.raw = BytesIO(content)
+            self.headers = {"content-type": "application/json"}
+            if isinstance(status_code, list):
+                self.status_code = status_code.pop(0)
+            else:
+                self.status_code = status_code
+
+    return DummyResponse
+
+
+@pytest.fixture
+def dummy_repo(app, dummy_response):
+
+    from quetz.main import get_remote_session
+
+    files = []
+
+    class DummySession:
+        def get(self, path, stream=False):
+            files.append(path)
+            return dummy_response()
+
+    app.dependency_overrides[get_remote_session] = DummySession
+
+    yield files
+
+    app.dependency_overrides.pop(get_remote_session)
+
+
+@pytest.fixture
+def mirror_package(mirror_channel, db):
+    pkg = Package(
+        name="mirror_package", channel_name=mirror_channel.name, channel=mirror_channel
+    )
+    db.add(pkg)
+    db.commit()
+
+    yield pkg
+
+    db.delete(pkg)
+    db.commit()
+
+
 def test_set_mirror_url(db, client, user):
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -131,7 +195,6 @@ DUMMY_PACKAGE_SHA = "387798d05a4e1e7eb0f96ffaeba350a2e79b1410773c6c8824e2983dab3
             "linux-64",
             True,
         ),
-
     ],
 )
 def test_synchronisation_sha(
@@ -266,56 +329,6 @@ def test_synchronisation_timestamp(
         db.commit()
     else:
         assert not channel.packages
-
-
-@pytest.fixture
-def repo_content():
-    return b"Hello world!"
-
-
-@pytest.fixture
-def status_code():
-    return 200
-
-
-@pytest.fixture
-def dummy_response(repo_content, status_code):
-    class DummyResponse:
-        def __init__(self):
-            if isinstance(repo_content, list):
-                content = repo_content.pop(0)
-            else:
-                content = repo_content
-            if isinstance(content, Path):
-                with open(content.absolute(), 'rb') as fid:
-                    content = fid.read()
-            self.raw = BytesIO(content)
-            self.headers = {"content-type": "application/json"}
-            if isinstance(status_code, list):
-                self.status_code = status_code.pop(0)
-            else:
-                self.status_code = status_code
-
-    return DummyResponse
-
-
-@pytest.fixture
-def dummy_repo(app, dummy_response):
-
-    from quetz.main import get_remote_session
-
-    files = []
-
-    class DummySession:
-        def get(self, path, stream=False):
-            files.append(path)
-            return dummy_response()
-
-    app.dependency_overrides[get_remote_session] = DummySession
-
-    yield files
-
-    app.dependency_overrides.pop(get_remote_session)
 
 
 def test_download_remote_file(client, user, dummy_repo):
@@ -548,20 +561,6 @@ def test_validate_mirror_url(client, user):
     assert "schema (http/https) missing" in response.json()['detail'][0]['msg']
 
 
-@pytest.fixture
-def mirror_package(mirror_channel, db):
-    pkg = Package(
-        name="mirror_package", channel_name=mirror_channel.name, channel=mirror_channel
-    )
-    db.add(pkg)
-    db.commit()
-
-    yield pkg
-
-    db.delete(pkg)
-    db.commit()
-
-
 def test_write_methods_for_local_channels(client, local_channel, user, db):
 
     response = client.get("/api/dummylogin/bartosz")
@@ -654,7 +653,7 @@ def test_sync_mirror_channel(mirror_channel, user, client, dummy_repo):
     assert response.status_code == 200
 
 
-def test_can_not_sync_mirror_and_local_channels(
+def test_can_not_sync_proxy_and_local_channels(
     proxy_channel, local_channel, user, client
 ):
 
