@@ -235,11 +235,14 @@ def initial_sync_mirror(
     ) as _check_sha:
         for package_name, metadata in packages.items():
             path = os.path.join(arch, package_name)
-            if 'time_modified' in metadata:
-                should_update = _check_timestamp(metadata['time_modified'])
-            else:
+
+            # try to find out whether it's a new package version
+            if "time_modified" in metadata:
+                should_update = _check_timestamp(metadata["time_modified"])
+            elif "sha256" in metadata:
                 should_update = _check_sha(package_name, metadata)
-                # check_update_with_sha(package_name, metadata, pkgstore)
+            else:
+                should_update = True
 
             # if package is up-to-date skip uploading file
             if not should_update:

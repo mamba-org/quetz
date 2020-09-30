@@ -232,6 +232,15 @@ DUMMY_PACKAGE_V2 = Path("./test-package-0.2-0.tar.bz2")
             "noarch",
             1,
         ),
+        # nor sha neither time_modified, force update
+        (
+            [
+                b'{"packages": {"test-package-0.2-0.tar.bz2": {}}}',
+                DUMMY_PACKAGE_V2,
+            ],
+            "noarch",
+            1,
+        ),
     ],
 )
 def test_synchronisation_sha(
