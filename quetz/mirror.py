@@ -185,6 +185,7 @@ def _check_with_sha(pkgstore: PackageStore, channel_name: str, arch: str):
                 )
             except FileNotFoundError:
                 # no packages for this platform locally, need to add package version
+                local_repodata = True
                 return True
             local_repodata = json.load(fid)
             fid.close()

@@ -153,29 +153,29 @@ def test_get_mirror_url(proxy_channel, local_channel, client):
 
 
 DUMMY_PACKAGE = Path("./test-package-0.1-0.tar.bz2")
-DUMMY_PACKAGE_SHA = "387798d05a4e1e7eb0f96ffaeba350a2e79b1410773c6c8824e2983dab355783"
+DUMMY_PACKAGE_V2 = Path("./test-package-0.2-0.tar.bz2")
 
 
 @pytest.mark.parametrize(
-    "repo_content,arch,new_package",
+    "repo_content,arch,n_new_packages",
     [
-        # no time_modfied
+        # different version (new SHA256)
         (
             [
                 b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA"}}}',
                 DUMMY_PACKAGE,
             ],
             "noarch",
-            True,
+            1,
         ),
         # no updates
         (
             [
-                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA-2"}}}',
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA"}}}',
                 DUMMY_PACKAGE,
             ],
             "noarch",
-            False,
+            0,
         ),
         # package in a different subdir (different SHA)
         (
@@ -184,16 +184,53 @@ DUMMY_PACKAGE_SHA = "387798d05a4e1e7eb0f96ffaeba350a2e79b1410773c6c8824e2983dab3
                 DUMMY_PACKAGE,
             ],
             "linux-64",
-            True,
+            1,
         ),
         # package in a different subdir (same SHA)
         (
             [
-                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA-2"}}}',
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA"}}}',
                 DUMMY_PACKAGE,
             ],
             "linux-64",
-            True,
+            1,
+        ),
+        # new package name
+        (
+            [
+                b'{"packages": {"other-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA"}}}',
+                DUMMY_PACKAGE,
+            ],
+            "linux-64",
+            1,
+        ),
+        # new version number
+        (
+            [
+                b'{"packages": {"test-package-0.2-0.tar.bz2": {"sha256": "SHA-V2"}}}',
+                DUMMY_PACKAGE_V2,
+            ],
+            "noarch",
+            1,
+        ),
+        # two new versions
+        (
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA"}, "other-package-0.2-0.tar.bz2": {"sha256": "OLD-SHA"}}}',  # noqa
+                DUMMY_PACKAGE,
+                DUMMY_PACKAGE_V2,
+            ],
+            "noarch",
+            2,
+        ),
+        # only one of the two is new
+        (
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA"}, "other-package-0.2-0.tar.bz2": {"sha256": "SHA-V2"}}}',  # noqa
+                DUMMY_PACKAGE_V2,
+            ],
+            "noarch",
+            1,
         ),
     ],
 )
@@ -204,7 +241,7 @@ def test_synchronisation_sha(
     dummy_response,
     db,
     user,
-    new_package,
+    n_new_packages,
     arch,
 ):
     pkgstore = config.get_package_store()
@@ -217,7 +254,7 @@ def test_synchronisation_sha(
 
     # create package version that will added to local repodata
     package_format = 'tarbz2'
-    package_info = '{"size": 5000, "sha256": "SHA-2"}'
+    package_info = '{"size": 5000, "sha256": "OLD-SHA"}'
     dao.create_version(
         mirror_channel.name,
         "test-package",
@@ -250,14 +287,10 @@ def test_synchronisation_sha(
     versions = (
         db.query(PackageVersion)
         .filter(PackageVersion.channel_name == mirror_channel.name)
-        .filter(PackageVersion.package_name == "test-package")
         .all()
     )
 
-    if new_package:
-        assert len(versions) == 2
-    else:
-        assert len(versions) == 1
+    assert len(versions) == n_new_packages + 1
 
 
 @pytest.mark.parametrize(
