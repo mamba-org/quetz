@@ -175,8 +175,7 @@ def initial_sync_mirror(
         path = os.path.join(arch, package_name)
         time_modified = metadata.get("time_modified", 0)
         last_timestamp = max(time_modified, last_timestamp)
-        # if there is no modification date (ex. anaconda server) or
-        # modification is older than the timestamp of last synchronisation
+        # if modification is older than the timestamp of last synchronisation
         # skip uploading file
         if time_modified and time_modified <= last_synchronization:
             continue
