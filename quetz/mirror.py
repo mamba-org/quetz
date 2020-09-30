@@ -1,3 +1,4 @@
+import contextlib
 import json
 import os
 import shutil
@@ -141,6 +142,22 @@ class LocalCache:
         return cache_path
 
 
+@contextlib.contextmanager
+def _check_update_with_timestamp(channel, dao: Dao):
+    last_synchronization = channel.timestamp_mirror_sync
+    last_timestamp = 0
+
+    def _func(time_modified):
+        nonlocal last_timestamp
+        should_update = time_modified > last_synchronization
+        last_timestamp = max(time_modified, last_timestamp)
+        return should_update
+
+    yield _func
+    last_synchronisation = max(last_synchronization, last_timestamp)
+    dao.update_channel(channel.name, {"timestamp_mirror_sync": last_synchronisation})
+
+
 def initial_sync_mirror(
     channel_name: str,
     remote_repository: RemoteRepository,
@@ -169,34 +186,36 @@ def initial_sync_mirror(
     from quetz.main import handle_package_files
 
     packages = repodata.get("packages", {})
-    last_timestamp = 0
-    last_synchronization = channel.timestamp_mirror_sync
-    for package_name, metadata in packages.items():
-        path = os.path.join(arch, package_name)
-        time_modified = metadata.get("time_modified", 0)
-        last_timestamp = max(time_modified, last_timestamp)
-        # if modification is older than the timestamp of last synchronisation
-        # skip uploading file
-        if time_modified and time_modified <= last_synchronization:
-            continue
-        remote_package = remote_repository.open(path)
-        files = [remote_package]
-        try:
-            handle_package_files(
-                channel_name,
-                files,
-                dao,
-                auth,
-                force,
-                background_tasks,
-                update_indexes=False,
-            )
-        except Exception as exc:
-            # LOG: could not process package {package_name} from channel {channel_name}
-            if not skip_errors:
-                raise exc
-    last_synchronisation = max(last_synchronization, last_timestamp)
-    dao.update_channel(channel_name, {"timestamp_mirror_sync": last_synchronisation})
+    with _check_update_with_timestamp(channel, dao) as _check_timestamp:
+        for package_name, metadata in packages.items():
+            path = os.path.join(arch, package_name)
+            if 'time_modified' in metadata:
+                should_update = _check_timestamp(metadata['time_modified'])
+            else:
+                should_update = True
+                # check_update_with_sha(package_name, metadata, pkgstore)
+
+            # if package is up-to-date skip uploading file
+            if not should_update:
+                continue
+
+            remote_package = remote_repository.open(path)
+            files = [remote_package]
+            try:
+                handle_package_files(
+                    channel_name,
+                    files,
+                    dao,
+                    auth,
+                    force,
+                    background_tasks,
+                    update_indexes=False,
+                )
+            except Exception as exc:
+                # LOG: could not process package {package_name}
+                # from channel {channel_name}
+                if not skip_errors:
+                    raise exc
     indexing.update_indexes(dao, pkgstore, channel_name)
 
 

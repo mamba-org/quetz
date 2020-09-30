@@ -101,8 +101,18 @@ DUMMY_PACKAGE = Path("./test-package-0.1-0.tar.bz2")
             True,
         ),
         # not time_modfiied, force update and reset timestamp
-        ([b'{"packages": {"my-package": {"sha256": "SHA"}}}', DUMMY_PACKAGE], 0, 0, True),
-        ([b'{"packages": {"my-package": {"sha256": "SHA"}}}', DUMMY_PACKAGE], 100, 100, True),
+        (
+            [b'{"packages": {"my-package": {"sha256": "SHA"}}}', DUMMY_PACKAGE],
+            0,
+            0,
+            True,
+        ),
+        (
+            [b'{"packages": {"my-package": {"sha256": "SHA"}}}', DUMMY_PACKAGE],
+            100,
+            100,
+            True,
+        ),
         # package modified with later timestamp
         (
             [b'{"packages": {"my-package": {"time_modified": 1000}}}', DUMMY_PACKAGE],
