@@ -179,9 +179,13 @@ def _check_with_sha(pkgstore: PackageStore, channel_name: str, arch: str):
         # outer scope
         nonlocal local_repodata
         if not local_repodata:
-            local_repodata = json.load(
-                pkgstore.serve_path(channel_name, os.path.join(arch, 'repodata.json'))
-            )
+            try:
+                fid = pkgstore.serve_path(channel_name, os.path.join(arch, 'repodata.json'))
+            except FileNotFoundError:
+                # no packages for this platform locally, need to add package version
+                return True
+            local_repodata = json.load(fid)
+            fid.close()
             for local_package, local_metadata in local_repodata.get(
                 "packages", []
             ).items():

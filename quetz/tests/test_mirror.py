@@ -93,7 +93,7 @@ DUMMY_PACKAGE_SHA = "387798d05a4e1e7eb0f96ffaeba350a2e79b1410773c6c8824e2983dab3
 
 
 @pytest.mark.parametrize(
-    "repo_content,new_package",
+    "repo_content,arch,new_package",
     [
         # no time_modfied
         (
@@ -101,13 +101,7 @@ DUMMY_PACKAGE_SHA = "387798d05a4e1e7eb0f96ffaeba350a2e79b1410773c6c8824e2983dab3
                 b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA"}}}',
                 DUMMY_PACKAGE,
             ],
-            True,
-        ),
-        (
-            [
-                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA"}}}',
-                DUMMY_PACKAGE,
-            ],
+            "noarch",
             True,
         ),
         # no updates
@@ -116,8 +110,28 @@ DUMMY_PACKAGE_SHA = "387798d05a4e1e7eb0f96ffaeba350a2e79b1410773c6c8824e2983dab3
                 b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA-2"}}}',
                 DUMMY_PACKAGE,
             ],
+            "noarch",
             False,
         ),
+        # package in a different subdir (different SHA)
+        (
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA"}}}',
+                DUMMY_PACKAGE,
+            ],
+            "linux-64",
+            True,
+        ),
+        # package in a different subdir (same SHA)
+        (
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA-2"}}}',
+                DUMMY_PACKAGE,
+            ],
+            "linux-64",
+            True,
+        ),
+
     ],
 )
 def test_synchronisation_sha(
@@ -128,6 +142,7 @@ def test_synchronisation_sha(
     db,
     user,
     new_package,
+    arch,
 ):
     pkgstore = config.get_package_store()
     background_tasks = BackgroundTasks()
@@ -161,7 +176,7 @@ def test_synchronisation_sha(
     initial_sync_mirror(
         mirror_channel.name,
         dummy_repo,
-        "noarch",
+        arch,
         dao,
         pkgstore,
         rules,
