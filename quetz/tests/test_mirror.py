@@ -8,7 +8,8 @@ from fastapi.background import BackgroundTasks
 
 from quetz import rest_models
 from quetz.authorization import Rules
-from quetz.db_models import Channel, Package
+from quetz.db_models import Channel, Package, PackageVersion
+from quetz.indexing import update_indexes
 from quetz.mirror import KNOWN_SUBDIRS, RemoteRepository, initial_sync_mirror
 
 
@@ -88,6 +89,97 @@ def test_get_mirror_url(proxy_channel, local_channel, client):
 
 
 DUMMY_PACKAGE = Path("./test-package-0.1-0.tar.bz2")
+DUMMY_PACKAGE_SHA = "387798d05a4e1e7eb0f96ffaeba350a2e79b1410773c6c8824e2983dab355783"
+
+
+@pytest.mark.parametrize(
+    "repo_content,new_package",
+    [
+        # no time_modfied
+        (
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA"}}}',
+                DUMMY_PACKAGE,
+            ],
+            True,
+        ),
+        (
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA"}}}',
+                DUMMY_PACKAGE,
+            ],
+            True,
+        ),
+        # no updates
+        (
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA-2"}}}',
+                DUMMY_PACKAGE,
+            ],
+            False,
+        ),
+    ],
+)
+def test_synchronisation_sha(
+    mirror_channel,
+    dao,
+    config,
+    dummy_response,
+    db,
+    user,
+    new_package,
+):
+    pkgstore = config.get_package_store()
+    background_tasks = BackgroundTasks()
+    rules = Rules("", {"user_id": str(uuid.UUID(bytes=user.id))}, db)
+
+    class DummySession:
+        def get(self, path, stream=False):
+            return dummy_response()
+
+    # create package version that will added to local repodata
+    package_format = 'tarbz2'
+    package_info = '{"size": 5000, "sha256": "SHA-2"}'
+    dao.create_version(
+        mirror_channel.name,
+        "test-package",
+        package_format,
+        "noarch",
+        "0.1",
+        "0",
+        "",
+        "test-package-0.1-0.tar.bz2",
+        package_info,
+        user.id,
+    )
+
+    # generate local repodata.json
+    update_indexes(dao, pkgstore, mirror_channel.name)
+
+    dummy_repo = RemoteRepository("", DummySession())
+
+    initial_sync_mirror(
+        mirror_channel.name,
+        dummy_repo,
+        "noarch",
+        dao,
+        pkgstore,
+        rules,
+        background_tasks,
+        skip_errors=False,
+    )
+
+    versions = (
+        db.query(PackageVersion)
+        .filter(PackageVersion.channel_name == mirror_channel.name)
+        .filter(PackageVersion.package_name == "test-package")
+        .all()
+    )
+
+    if new_package:
+        assert len(versions) == 2
+    else:
+        assert len(versions) == 1
 
 
 @pytest.mark.parametrize(
@@ -97,19 +189,6 @@ DUMMY_PACKAGE = Path("./test-package-0.1-0.tar.bz2")
         (
             [b'{"packages": {"my-package": {"time_modified": 100}}}', DUMMY_PACKAGE],
             0,
-            100,
-            True,
-        ),
-        # not time_modfiied, force update and reset timestamp
-        (
-            [b'{"packages": {"my-package": {"sha256": "SHA"}}}', DUMMY_PACKAGE],
-            0,
-            0,
-            True,
-        ),
-        (
-            [b'{"packages": {"my-package": {"sha256": "SHA"}}}', DUMMY_PACKAGE],
-            100,
             100,
             True,
         ),
@@ -364,7 +443,10 @@ empty_archive = b""
     [
         [
             b'{"subdirs": ["linux-64"]}',
-            b'{"packages": {"my_package-0.1.tar.bz": {"subdir":"linux-64"}}}',
+            (
+                b'{"packages": {"my_package-0.1.tar.bz": '
+                b'{"subdir":"linux-64", "time_modified": 10}}}'
+            ),
             empty_archive,
         ]
     ],

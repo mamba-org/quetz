@@ -143,19 +143,56 @@ class LocalCache:
 
 
 @contextlib.contextmanager
-def _check_update_with_timestamp(channel, dao: Dao):
+def _check_with_timestamp(channel, dao: Dao):
+    """context manager for comparing the package timestamp
+    last synchroninsation timestamp saved in quetz database."""
+
     last_synchronization = channel.timestamp_mirror_sync
     last_timestamp = 0
 
     def _func(time_modified):
+        # use nonlocal to be able to modified last_timestamp in the
+        # outer scope
         nonlocal last_timestamp
         should_update = time_modified > last_synchronization
         last_timestamp = max(time_modified, last_timestamp)
         return should_update
 
     yield _func
+
+    # after we are done, we need to update the last_synchronisation
+    # in the db
     last_synchronisation = max(last_synchronization, last_timestamp)
     dao.update_channel(channel.name, {"timestamp_mirror_sync": last_synchronisation})
+
+
+@contextlib.contextmanager
+def _check_with_sha(pkgstore: PackageStore, channel_name: str, arch: str):
+    """context manager to compare sha hashes"""
+
+    # lazily load repodata on first request
+    local_repodata = None
+    package_fingerprints = []
+
+    def _func(package_name, metadata):
+        # use nonlocal to be able to modified last_timestamp in the
+        # outer scope
+        nonlocal local_repodata
+        if not local_repodata:
+            local_repodata = json.load(
+                pkgstore.serve_path(channel_name, os.path.join(arch, 'repodata.json'))
+            )
+            for local_package, local_metadata in local_repodata.get(
+                "packages", []
+            ).items():
+                package_fingerprints.append((local_package, local_metadata['sha256']))
+
+        fingerprint = (package_name, metadata["sha256"])
+        should_update = fingerprint not in package_fingerprints
+
+        return should_update
+
+    yield _func
 
 
 def initial_sync_mirror(
@@ -186,13 +223,15 @@ def initial_sync_mirror(
     from quetz.main import handle_package_files
 
     packages = repodata.get("packages", {})
-    with _check_update_with_timestamp(channel, dao) as _check_timestamp:
+    with _check_with_timestamp(channel, dao) as _check_timestamp, _check_with_sha(
+        pkgstore, channel_name, arch
+    ) as _check_sha:
         for package_name, metadata in packages.items():
             path = os.path.join(arch, package_name)
             if 'time_modified' in metadata:
                 should_update = _check_timestamp(metadata['time_modified'])
             else:
-                should_update = True
+                should_update = _check_sha(package_name, metadata)
                 # check_update_with_sha(package_name, metadata, pkgstore)
 
             # if package is up-to-date skip uploading file
