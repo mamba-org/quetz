@@ -176,7 +176,7 @@ class ChannelChecker:
 
 
 get_channel_or_fail = ChannelChecker(allow_proxy=False, allow_mirror=True)
-get_channel_allow_proxy = ChannelChecker(allow_proxy=True)
+get_channel_allow_proxy = ChannelChecker(allow_proxy=True, allow_mirror=True)
 get_channel_mirror_only = ChannelChecker(allow_mirror=True, allow_local=False)
 
 
