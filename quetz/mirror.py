@@ -150,10 +150,11 @@ def _check_with_timestamp(channel, dao: Dao):
     last_synchronization = channel.timestamp_mirror_sync
     last_timestamp = 0
 
-    def _func(time_modified):
+    def _func(package_name, metadata):
         # use nonlocal to be able to modified last_timestamp in the
         # outer scope
         nonlocal last_timestamp
+        time_modified = metadata["time_modified"]
         should_update = time_modified > last_synchronization
         last_timestamp = max(time_modified, last_timestamp)
         return should_update
@@ -238,10 +239,11 @@ def initial_sync_mirror(
 
             # try to find out whether it's a new package version
             if "time_modified" in metadata:
-                should_update = _check_timestamp(metadata["time_modified"])
+                should_update = _check_timestamp(package_name, metadata)
             elif "sha256" in metadata:
                 should_update = _check_sha(package_name, metadata)
             else:
+                # neither sha nor time_modified, force update
                 should_update = True
 
             # if package is up-to-date skip uploading file
