@@ -225,7 +225,7 @@ DUMMY_PACKAGE_V2 = Path("./test-package-0.2-0.tar.bz2")
         # two new versions
         pytest.param(
             [
-                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA"}, "other-package-0.2-0.tar.bz2": {"sha256": "OLD-SHA"}}}',  # noqa
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "NEW-SHA"}, "other-package-0.2-0.tar.bz2": {"sha256": "OLD-SHA"}}}',  # noqa
                 DUMMY_PACKAGE,
                 DUMMY_PACKAGE_V2,
             ],
@@ -263,7 +263,27 @@ DUMMY_PACKAGE_V2 = Path("./test-package-0.2-0.tar.bz2")
             0,
             id="old-md5-sum",
         ),
-        # nor sha neither time_modified, force update
+        # check with sha256 first (new sha)
+        pytest.param(
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA", "md5": "NEW-MD5"}}}',  # noqa
+                DUMMY_PACKAGE,
+            ],
+            "noarch",
+            0,
+            id="old-sha-new-md5",
+        ),
+        # check with sha256 first (old sha)
+        pytest.param(
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "NEW-SHA", "md5": "OLD-MD5"}}}',  # noqa
+                DUMMY_PACKAGE,
+            ],
+            "noarch",
+            1,
+            id="new-sha-old-md5",
+        ),
+        # neither checksums, force update
         pytest.param(
             [
                 b'{"packages": {"test-package-0.2-0.tar.bz2": {}}}',

@@ -143,7 +143,7 @@ class LocalCache:
 
 
 @contextlib.contextmanager
-def _check_with_timestamp(channel, dao: Dao):
+def _check_timestamp(channel, dao: Dao):
     """context manager for comparing the package timestamp
     last synchroninsation timestamp saved in quetz database."""
 
@@ -240,27 +240,37 @@ def initial_sync_mirror(
     from quetz.main import handle_package_files
 
     packages = repodata.get("packages", {})
-    with _check_with_timestamp(channel, dao) as _check_timestamp, _check_checksum(
-        pkgstore, channel_name, arch, keyname="sha256"
-    ) as _check_sha, _check_checksum(pkgstore, channel_name, arch, "md5") as _check_md5:
+
+    version_methods = [
+        _check_timestamp(channel, dao),
+        _check_checksum(pkgstore, channel_name, arch, "sha256"),
+        _check_checksum(pkgstore, channel_name, arch, "md5"),
+    ]
+
+    with contextlib.ExitStack() as version_stack:
+
+        version_checks = [
+            version_stack.enter_context(method) for method in version_methods
+        ]
+
         for package_name, metadata in packages.items():
             path = os.path.join(arch, package_name)
 
             # try to find out whether it's a new package version
-            checker_funcs = [_check_timestamp, _check_sha, _check_md5]
 
             is_uptodate = None
-            for _check in checker_funcs:
+            for _check in version_checks:
                 is_uptodate = _check(package_name, metadata)
                 if is_uptodate is not None:
                     break
 
             # if package is up-to-date skip uploading file
             if is_uptodate:
-                print(f"package {package_name} from {arch} up-to-date. Not updating")
+                # LOG: f"package {package_name} from {arch} up-to-date. Not updating")
                 continue
             else:
-                print(f"updating package {package_name} form {arch}")
+                # LOG: f"updating package {package_name} form {arch}")
+                pass
 
             remote_package = remote_repository.open(path)
             files = [remote_package]
