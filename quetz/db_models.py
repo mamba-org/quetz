@@ -4,7 +4,6 @@
 import enum
 
 from sqlalchemy import (
-    BLOB,
     Boolean,
     Column,
     DateTime,
@@ -12,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -19,10 +19,11 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
+from sqlalchemy.schema import ForeignKeyConstraint
 
 Base = declarative_base()
 
-UUID = BLOB(length=16)
+UUID = LargeBinary(length=16)
 
 
 class User(Base):
@@ -129,13 +130,15 @@ class Package(Base):
 
 class PackageMember(Base):
     __tablename__ = 'package_members'
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["channel_name", "package_name"], ["packages.channel_name", "packages.name"]
+        ),
+        ForeignKeyConstraint(["channel_name"], ["channels.name"]),
+    )
 
-    channel_name = Column(
-        String, ForeignKey('channels.name'), primary_key=True, index=True
-    )
-    package_name = Column(
-        String, ForeignKey('packages.name'), primary_key=True, index=True
-    )
+    channel_name = Column(String, primary_key=True, index=True)
+    package_name = Column(String, primary_key=True, index=True)
     user_id = Column(UUID, ForeignKey('users.id'), primary_key=True, index=True)
     role = Column(String)
 
@@ -171,10 +174,16 @@ class PackageFormatEnum(enum.Enum):
 
 class PackageVersion(Base):
     __tablename__ = 'package_versions'
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["channel_name", "package_name"], ["packages.channel_name", "packages.name"]
+        ),
+        ForeignKeyConstraint(["channel_name"], ["channels.name"]),
+    )
 
     id = Column(UUID, primary_key=True)
-    channel_name = Column(String, ForeignKey('channels.name'))
-    package_name = Column(String, ForeignKey('packages.name'))
+    channel_name = Column(String)
+    package_name = Column(String)
     package_format = Column(Enum(PackageFormatEnum))
     platform = Column(String)
     version = Column(String)
