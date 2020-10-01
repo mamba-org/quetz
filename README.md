@@ -292,7 +292,7 @@ curl http://localhost:8000/api/channels/mirror-channel/packages
 If packages are added or modified on the primary server from which they were pulled initially, they won't be updated automatically in the mirror channel. However, you can trigger such synchronisation manually using the PUT `/api/channels/{channel_name}` endpoint:
 
 ```bash
-curl -X PUT localhost:8000/api/channels/mirror-channel-anaconda \
+curl -X PUT localhost:8000/api/channels/mirror-channel \
    -H "X-API-Key: ${QUETZ_API_KEY}"
 ```
 
