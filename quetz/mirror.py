@@ -151,13 +151,17 @@ def _check_with_timestamp(channel, dao: Dao):
     last_timestamp = 0
 
     def _func(package_name, metadata):
+
+        if "time_modified" not in metadata:
+            return None
+
         # use nonlocal to be able to modified last_timestamp in the
         # outer scope
         nonlocal last_timestamp
         time_modified = metadata["time_modified"]
-        should_update = time_modified > last_synchronization
+        is_uptodate = time_modified <= last_synchronization
         last_timestamp = max(time_modified, last_timestamp)
-        return should_update
+        return is_uptodate
 
     yield _func
 
@@ -168,7 +172,9 @@ def _check_with_timestamp(channel, dao: Dao):
 
 
 @contextlib.contextmanager
-def _check_with_sha(pkgstore: PackageStore, channel_name: str, arch: str):
+def _check_checksum(
+    pkgstore: PackageStore, channel_name: str, arch: str, keyname="sha256"
+):
     """context manager to compare sha hashes"""
 
     # lazily load repodata on first request
@@ -178,6 +184,9 @@ def _check_with_sha(pkgstore: PackageStore, channel_name: str, arch: str):
     def _func(package_name, metadata):
         # use nonlocal to be able to modified last_timestamp in the
         # outer scope
+        if keyname not in metadata:
+            return None
+
         nonlocal local_repodata
         if not local_repodata:
             try:
@@ -187,18 +196,18 @@ def _check_with_sha(pkgstore: PackageStore, channel_name: str, arch: str):
             except FileNotFoundError:
                 # no packages for this platform locally, need to add package version
                 local_repodata = True
-                return True
+                return False
             local_repodata = json.load(fid)
             fid.close()
             for local_package, local_metadata in local_repodata.get(
                 "packages", []
             ).items():
-                package_fingerprints.append((local_package, local_metadata['sha256']))
+                package_fingerprints.append((local_package, local_metadata[keyname]))
 
-        fingerprint = (package_name, metadata["sha256"])
-        should_update = fingerprint not in package_fingerprints
+        fingerprint = (package_name, metadata[keyname])
+        is_uptodate = fingerprint in package_fingerprints
 
-        return should_update
+        return is_uptodate
 
     yield _func
 
@@ -231,24 +240,27 @@ def initial_sync_mirror(
     from quetz.main import handle_package_files
 
     packages = repodata.get("packages", {})
-    with _check_with_timestamp(channel, dao) as _check_timestamp, _check_with_sha(
-        pkgstore, channel_name, arch
-    ) as _check_sha:
+    with _check_with_timestamp(channel, dao) as _check_timestamp, _check_checksum(
+        pkgstore, channel_name, arch, keyname="sha256"
+    ) as _check_sha, _check_checksum(pkgstore, channel_name, arch, "md5") as _check_md5:
         for package_name, metadata in packages.items():
             path = os.path.join(arch, package_name)
 
             # try to find out whether it's a new package version
-            if "time_modified" in metadata:
-                should_update = _check_timestamp(package_name, metadata)
-            elif "sha256" in metadata:
-                should_update = _check_sha(package_name, metadata)
-            else:
-                # neither sha nor time_modified, force update
-                should_update = True
+            checker_funcs = [_check_timestamp, _check_sha, _check_md5]
+
+            is_uptodate = None
+            for _check in checker_funcs:
+                is_uptodate = _check(package_name, metadata)
+                if is_uptodate is not None:
+                    break
 
             # if package is up-to-date skip uploading file
-            if not should_update:
+            if is_uptodate:
+                print(f"package {package_name} from {arch} up-to-date. Not updating")
                 continue
+            else:
+                print(f"updating package {package_name} form {arch}")
 
             remote_package = remote_repository.open(path)
             files = [remote_package]
@@ -264,7 +276,8 @@ def initial_sync_mirror(
                 )
             except Exception as exc:
                 # LOG: could not process package {package_name}
-                # from channel {channel_name}
+                # from channel {channel_name} due to error
+                # {exc}
                 if not skip_errors:
                     raise exc
     indexing.update_indexes(dao, pkgstore, channel_name)

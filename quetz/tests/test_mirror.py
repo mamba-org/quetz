@@ -69,6 +69,9 @@ def status_code():
 
 @pytest.fixture
 def dummy_response(repo_content, status_code):
+    if isinstance(repo_content, list):
+        repo_content = repo_content.copy()
+
     class DummyResponse:
         def __init__(self):
             if isinstance(repo_content, list):
@@ -160,61 +163,67 @@ DUMMY_PACKAGE_V2 = Path("./test-package-0.2-0.tar.bz2")
     "repo_content,arch,n_new_packages",
     [
         # different version (new SHA256)
-        (
+        pytest.param(
             [
                 b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA"}}}',
                 DUMMY_PACKAGE,
             ],
             "noarch",
             1,
+            id="new-sha-sum",
         ),
         # no updates
-        (
+        pytest.param(
             [
                 b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA"}}}',
                 DUMMY_PACKAGE,
             ],
             "noarch",
             0,
+            id="same-sha-sum",
         ),
         # package in a different subdir (different SHA)
-        (
+        pytest.param(
             [
                 b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA"}}}',
                 DUMMY_PACKAGE,
             ],
             "linux-64",
             1,
+            id="new-subdir-and-new-sha",
         ),
         # package in a different subdir (same SHA)
-        (
+        pytest.param(
             [
                 b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA"}}}',
                 DUMMY_PACKAGE,
             ],
             "linux-64",
             1,
+            id="new-subdir-old-sha",
         ),
         # new package name
-        (
+        pytest.param(
             [
                 b'{"packages": {"other-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA"}}}',
                 DUMMY_PACKAGE,
             ],
             "linux-64",
             1,
+            id="new-package-name",
         ),
         # new version number
-        (
+        pytest.param(
             [
                 b'{"packages": {"test-package-0.2-0.tar.bz2": {"sha256": "SHA-V2"}}}',
                 DUMMY_PACKAGE_V2,
             ],
             "noarch",
             1,
+            id="new-version-number",
         ),
         # two new versions
-        (
+        pytest.param(
             [
                 b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA"}, "other-package-0.2-0.tar.bz2": {"sha256": "OLD-SHA"}}}',  # noqa
                 DUMMY_PACKAGE,
@@ -222,28 +231,52 @@ DUMMY_PACKAGE_V2 = Path("./test-package-0.2-0.tar.bz2")
             ],
             "noarch",
             2,
+            id="two-new-package-versions",
         ),
         # only one of the two is new
-        (
+        pytest.param(
             [
                 b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA"}, "other-package-0.2-0.tar.bz2": {"sha256": "SHA-V2"}}}',  # noqa
                 DUMMY_PACKAGE_V2,
             ],
             "noarch",
             1,
+            id="two-packages-one-new",
+        ),
+        # only md5 checksum (new checksum)
+        pytest.param(
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"md5": "NEW-MD5"}}}',
+                DUMMY_PACKAGE,
+            ],
+            "noarch",
+            1,
+            id="new-md5-sum",
+        ),
+        # only md5 checksum (old checksum)
+        pytest.param(
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"md5": "OLD-MD5"}}}',
+                DUMMY_PACKAGE,
+            ],
+            "noarch",
+            0,
+            id="old-md5-sum",
         ),
         # nor sha neither time_modified, force update
-        (
+        pytest.param(
             [
                 b'{"packages": {"test-package-0.2-0.tar.bz2": {}}}',
                 DUMMY_PACKAGE_V2,
             ],
             "noarch",
             1,
+            id="no-checksums-force-update",
         ),
     ],
 )
 def test_synchronisation_sha(
+    repo_content,
     mirror_channel,
     dao,
     config,
@@ -263,7 +296,7 @@ def test_synchronisation_sha(
 
     # create package version that will added to local repodata
     package_format = 'tarbz2'
-    package_info = '{"size": 5000, "sha256": "OLD-SHA"}'
+    package_info = '{"size": 5000, "sha256": "OLD-SHA", "md5": "OLD-MD5"}'
     dao.create_version(
         mirror_channel.name,
         "test-package",
