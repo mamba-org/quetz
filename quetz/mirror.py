@@ -1,3 +1,4 @@
+import contextlib
 import json
 import os
 import shutil
@@ -141,6 +142,76 @@ class LocalCache:
         return cache_path
 
 
+@contextlib.contextmanager
+def _check_timestamp(channel, dao: Dao):
+    """context manager for comparing the package timestamp
+    last synchroninsation timestamp saved in quetz database."""
+
+    last_synchronization = channel.timestamp_mirror_sync
+    last_timestamp = 0
+
+    def _func(package_name, metadata):
+
+        if "time_modified" not in metadata:
+            return None
+
+        # use nonlocal to be able to modified last_timestamp in the
+        # outer scope
+        nonlocal last_timestamp
+        time_modified = metadata["time_modified"]
+        is_uptodate = time_modified <= last_synchronization
+        last_timestamp = max(time_modified, last_timestamp)
+        return is_uptodate
+
+    yield _func
+
+    # after we are done, we need to update the last_synchronisation
+    # in the db
+    last_synchronisation = max(last_synchronization, last_timestamp)
+    dao.update_channel(channel.name, {"timestamp_mirror_sync": last_synchronisation})
+
+
+@contextlib.contextmanager
+def _check_checksum(
+    pkgstore: PackageStore, channel_name: str, arch: str, keyname="sha256"
+):
+    """context manager to compare sha or md5 hashes"""
+
+    # lazily load repodata on first request
+    local_repodata = None
+    package_fingerprints = []
+
+    def _func(package_name, metadata):
+        # use nonlocal to be able to modified last_timestamp in the
+        # outer scope
+        if keyname not in metadata:
+            return None
+
+        nonlocal local_repodata
+        if not local_repodata:
+            try:
+                fid = pkgstore.serve_path(
+                    channel_name, os.path.join(arch, 'repodata.json')
+                )
+            except FileNotFoundError:
+                # no packages for this platform locally, need to add package version
+                local_repodata = True
+                return False
+            local_repodata = json.load(fid)
+            fid.close()
+            for local_package, local_metadata in local_repodata.get(
+                "packages", []
+            ).items():
+                package_fingerprints.append((local_package, local_metadata[keyname]))
+
+        fingerprint = (package_name, metadata[keyname])
+        is_uptodate = fingerprint in package_fingerprints
+
+        return is_uptodate
+
+    yield _func
+
+
 def initial_sync_mirror(
     channel_name: str,
     remote_repository: RemoteRepository,
@@ -169,35 +240,59 @@ def initial_sync_mirror(
     from quetz.main import handle_package_files
 
     packages = repodata.get("packages", {})
-    last_timestamp = 0
-    last_synchronization = channel.timestamp_mirror_sync
-    for package_name, metadata in packages.items():
-        path = os.path.join(arch, package_name)
-        time_modified = metadata.get("time_modified", 0)
-        last_timestamp = max(time_modified, last_timestamp)
-        # if there is no modification date (ex. anaconda server) or
-        # modification is older than the timestamp of last synchronisation
-        # skip uploading file
-        if time_modified and time_modified <= last_synchronization:
-            continue
-        remote_package = remote_repository.open(path)
-        files = [remote_package]
-        try:
-            handle_package_files(
-                channel_name,
-                files,
-                dao,
-                auth,
-                force,
-                background_tasks,
-                update_indexes=False,
-            )
-        except Exception as exc:
-            # LOG: could not process package {package_name} from channel {channel_name}
-            if not skip_errors:
-                raise exc
-    last_synchronisation = max(last_synchronization, last_timestamp)
-    dao.update_channel(channel_name, {"timestamp_mirror_sync": last_synchronisation})
+
+    version_methods = [
+        _check_timestamp(channel, dao),
+        _check_checksum(pkgstore, channel_name, arch, "sha256"),
+        _check_checksum(pkgstore, channel_name, arch, "md5"),
+    ]
+
+    # version_methods are context managers (for example, to update the db
+    # after all packages have been checked), so we need to enter the context
+    # for each
+    with contextlib.ExitStack() as version_stack:
+
+        version_checks = [
+            version_stack.enter_context(method) for method in version_methods
+        ]
+
+        for package_name, metadata in packages.items():
+            path = os.path.join(arch, package_name)
+
+            # try to find out whether it's a new package version
+
+            is_uptodate = None
+            for _check in version_checks:
+                is_uptodate = _check(package_name, metadata)
+                if is_uptodate is not None:
+                    break
+
+            # if package is up-to-date skip uploading file
+            if is_uptodate:
+                # LOG: f"package {package_name} from {arch} up-to-date. Not updating")
+                continue
+            else:
+                # LOG: f"updating package {package_name} form {arch}")
+                pass
+
+            remote_package = remote_repository.open(path)
+            files = [remote_package]
+            try:
+                handle_package_files(
+                    channel_name,
+                    files,
+                    dao,
+                    auth,
+                    force,
+                    background_tasks,
+                    update_indexes=False,
+                )
+            except Exception as exc:
+                # LOG: could not process package {package_name}
+                # from channel {channel_name} due to error
+                # {exc}
+                if not skip_errors:
+                    raise exc
     indexing.update_indexes(dao, pkgstore, channel_name)
 
 

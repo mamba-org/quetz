@@ -8,7 +8,8 @@ from fastapi.background import BackgroundTasks
 
 from quetz import rest_models
 from quetz.authorization import Rules
-from quetz.db_models import Channel, Package
+from quetz.db_models import Channel, Package, PackageVersion
+from quetz.indexing import update_indexes
 from quetz.mirror import KNOWN_SUBDIRS, RemoteRepository, initial_sync_mirror
 
 
@@ -56,6 +57,73 @@ def local_channel(db):
     db.commit()
 
 
+@pytest.fixture
+def repo_content():
+    return b"Hello world!"
+
+
+@pytest.fixture
+def status_code():
+    return 200
+
+
+@pytest.fixture
+def dummy_response(repo_content, status_code):
+    if isinstance(repo_content, list):
+        repo_content = repo_content.copy()
+
+    class DummyResponse:
+        def __init__(self):
+            if isinstance(repo_content, list):
+                content = repo_content.pop(0)
+            else:
+                content = repo_content
+            if isinstance(content, Path):
+                with open(content.absolute(), 'rb') as fid:
+                    content = fid.read()
+            self.raw = BytesIO(content)
+            self.headers = {"content-type": "application/json"}
+            if isinstance(status_code, list):
+                self.status_code = status_code.pop(0)
+            else:
+                self.status_code = status_code
+
+    return DummyResponse
+
+
+@pytest.fixture
+def dummy_repo(app, dummy_response):
+
+    from quetz.main import get_remote_session
+
+    files = []
+
+    class DummySession:
+        def get(self, path, stream=False):
+            files.append(path)
+            return dummy_response()
+
+    app.dependency_overrides[get_remote_session] = DummySession
+
+    yield files
+
+    app.dependency_overrides.pop(get_remote_session)
+
+
+@pytest.fixture
+def mirror_package(mirror_channel, db):
+    pkg = Package(
+        name="mirror_package", channel_name=mirror_channel.name, channel=mirror_channel
+    )
+    db.add(pkg)
+    db.commit()
+
+    yield pkg
+
+    db.delete(pkg)
+    db.commit()
+
+
 def test_set_mirror_url(db, client, user):
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -88,25 +156,223 @@ def test_get_mirror_url(proxy_channel, local_channel, client):
 
 
 DUMMY_PACKAGE = Path("./test-package-0.1-0.tar.bz2")
+DUMMY_PACKAGE_V2 = Path("./test-package-0.2-0.tar.bz2")
+
+
+@pytest.mark.parametrize(
+    "repo_content,arch,n_new_packages",
+    [
+        # different version (new SHA256)
+        pytest.param(
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA"}}}',
+                DUMMY_PACKAGE,
+            ],
+            "noarch",
+            1,
+            id="new-sha-sum",
+        ),
+        # no updates
+        pytest.param(
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA"}}}',
+                DUMMY_PACKAGE,
+            ],
+            "noarch",
+            0,
+            id="same-sha-sum",
+        ),
+        # package in a different subdir (different SHA)
+        pytest.param(
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA"}}}',
+                DUMMY_PACKAGE,
+            ],
+            "linux-64",
+            1,
+            id="new-subdir-and-new-sha",
+        ),
+        # package in a different subdir (same SHA)
+        pytest.param(
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA"}}}',
+                DUMMY_PACKAGE,
+            ],
+            "linux-64",
+            1,
+            id="new-subdir-old-sha",
+        ),
+        # new package name
+        pytest.param(
+            [
+                b'{"packages": {"other-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA"}}}',
+                DUMMY_PACKAGE,
+            ],
+            "linux-64",
+            1,
+            id="new-package-name",
+        ),
+        # new version number
+        pytest.param(
+            [
+                b'{"packages": {"test-package-0.2-0.tar.bz2": {"sha256": "SHA-V2"}}}',
+                DUMMY_PACKAGE_V2,
+            ],
+            "noarch",
+            1,
+            id="new-version-number",
+        ),
+        # two new versions
+        pytest.param(
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "NEW-SHA"}, "other-package-0.2-0.tar.bz2": {"sha256": "OLD-SHA"}}}',  # noqa
+                DUMMY_PACKAGE,
+                DUMMY_PACKAGE_V2,
+            ],
+            "noarch",
+            2,
+            id="two-new-package-versions",
+        ),
+        # only one of the two is new
+        pytest.param(
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA"}, "other-package-0.2-0.tar.bz2": {"sha256": "SHA-V2"}}}',  # noqa
+                DUMMY_PACKAGE_V2,
+            ],
+            "noarch",
+            1,
+            id="two-packages-one-new",
+        ),
+        # only md5 checksum (new checksum)
+        pytest.param(
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"md5": "NEW-MD5"}}}',
+                DUMMY_PACKAGE,
+            ],
+            "noarch",
+            1,
+            id="new-md5-sum",
+        ),
+        # only md5 checksum (old checksum)
+        pytest.param(
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"md5": "OLD-MD5"}}}',
+                DUMMY_PACKAGE,
+            ],
+            "noarch",
+            0,
+            id="old-md5-sum",
+        ),
+        # check with sha256 first (new sha)
+        pytest.param(
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA", "md5": "NEW-MD5"}}}',  # noqa
+                DUMMY_PACKAGE,
+            ],
+            "noarch",
+            0,
+            id="old-sha-new-md5",
+        ),
+        # check with sha256 first (old sha)
+        pytest.param(
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "NEW-SHA", "md5": "OLD-MD5"}}}',  # noqa
+                DUMMY_PACKAGE,
+            ],
+            "noarch",
+            1,
+            id="new-sha-old-md5",
+        ),
+        # no checksums, force update
+        pytest.param(
+            [
+                b'{"packages": {"test-package-0.2-0.tar.bz2": {}}}',
+                DUMMY_PACKAGE_V2,
+            ],
+            "noarch",
+            1,
+            id="no-checksums-force-update",
+        ),
+    ],
+)
+def test_synchronisation_sha(
+    repo_content,
+    mirror_channel,
+    dao,
+    config,
+    dummy_response,
+    db,
+    user,
+    n_new_packages,
+    arch,
+):
+    pkgstore = config.get_package_store()
+    background_tasks = BackgroundTasks()
+    rules = Rules("", {"user_id": str(uuid.UUID(bytes=user.id))}, db)
+
+    class DummySession:
+        def get(self, path, stream=False):
+            return dummy_response()
+
+    # create package version that will added to local repodata
+    package_format = 'tarbz2'
+    package_info = '{"size": 5000, "sha256": "OLD-SHA", "md5": "OLD-MD5"}'
+    dao.create_version(
+        mirror_channel.name,
+        "test-package",
+        package_format,
+        "noarch",
+        "0.1",
+        "0",
+        "",
+        "test-package-0.1-0.tar.bz2",
+        package_info,
+        user.id,
+    )
+
+    # generate local repodata.json
+    update_indexes(dao, pkgstore, mirror_channel.name)
+
+    dummy_repo = RemoteRepository("", DummySession())
+
+    initial_sync_mirror(
+        mirror_channel.name,
+        dummy_repo,
+        arch,
+        dao,
+        pkgstore,
+        rules,
+        background_tasks,
+        skip_errors=False,
+    )
+
+    versions = (
+        db.query(PackageVersion)
+        .filter(PackageVersion.channel_name == mirror_channel.name)
+        .all()
+    )
+
+    assert len(versions) == n_new_packages + 1
 
 
 @pytest.mark.parametrize(
     "repo_content,timestamp_mirror_sync,expected_timestamp,new_package",
     [
+        # package modified but no server timestamp set
         (
             [b'{"packages": {"my-package": {"time_modified": 100}}}', DUMMY_PACKAGE],
             0,
             100,
             True,
         ),
-        ([b'{"packages": {"my-package": {}}}', DUMMY_PACKAGE], 0, 0, True),
-        ([b'{"packages": {"my-package": {}}}', DUMMY_PACKAGE], 100, 100, True),
+        # package modified with later timestamp
         (
             [b'{"packages": {"my-package": {"time_modified": 1000}}}', DUMMY_PACKAGE],
             100,
             1000,
             True,
         ),
+        # package modified with earlier timestamp
         (
             [b'{"packages": {"my-package": {"time_modified": 100}}}', DUMMY_PACKAGE],
             1000,
@@ -158,56 +424,6 @@ def test_synchronisation_timestamp(
         db.commit()
     else:
         assert not channel.packages
-
-
-@pytest.fixture
-def repo_content():
-    return b"Hello world!"
-
-
-@pytest.fixture
-def status_code():
-    return 200
-
-
-@pytest.fixture
-def dummy_response(repo_content, status_code):
-    class DummyResponse:
-        def __init__(self):
-            if isinstance(repo_content, list):
-                content = repo_content.pop(0)
-            else:
-                content = repo_content
-            if isinstance(content, Path):
-                with open(content.absolute(), 'rb') as fid:
-                    content = fid.read()
-            self.raw = BytesIO(content)
-            self.headers = {"content-type": "application/json"}
-            if isinstance(status_code, list):
-                self.status_code = status_code.pop(0)
-            else:
-                self.status_code = status_code
-
-    return DummyResponse
-
-
-@pytest.fixture
-def dummy_repo(app, dummy_response):
-
-    from quetz.main import get_remote_session
-
-    files = []
-
-    class DummySession:
-        def get(self, path, stream=False):
-            files.append(path)
-            return dummy_response()
-
-    app.dependency_overrides[get_remote_session] = DummySession
-
-    yield files
-
-    app.dependency_overrides.pop(get_remote_session)
 
 
 def test_download_remote_file(client, user, dummy_repo):
@@ -288,12 +504,18 @@ def test_method_not_implemented_for_proxies(client, proxy_channel):
     assert "not implemented" in response.json()["detail"]
 
 
-def test_api_methods_for_proxy_channels(client, mirror_channel):
+def test_api_methods_for_mirror_channels(client, mirror_channel):
     """mirror-mode channels should have all standard API calls"""
 
     response = client.get("/api/channels/{}/packages".format(mirror_channel.name))
     assert response.status_code == 200
     assert not response.json()
+
+    response = client.get(
+        "/channels/{}/missing/path/file.json".format(mirror_channel.name),
+    )
+    assert response.status_code == 404
+    assert "file.json not found" in response.json()["detail"]
 
 
 @pytest.mark.parametrize(
@@ -350,7 +572,10 @@ empty_archive = b""
     [
         [
             b'{"subdirs": ["linux-64"]}',
-            b'{"packages": {"my_package-0.1.tar.bz": {"subdir":"linux-64"}}}',
+            (
+                b'{"packages": {"my_package-0.1.tar.bz": '
+                b'{"subdir":"linux-64", "time_modified": 10}}}'
+            ),
             empty_archive,
         ]
     ],
@@ -435,20 +660,6 @@ def test_validate_mirror_url(client, user):
 
     assert response.status_code == 422
     assert "schema (http/https) missing" in response.json()['detail'][0]['msg']
-
-
-@pytest.fixture
-def mirror_package(mirror_channel, db):
-    pkg = Package(
-        name="mirror_package", channel_name=mirror_channel.name, channel=mirror_channel
-    )
-    db.add(pkg)
-    db.commit()
-
-    yield pkg
-
-    db.delete(pkg)
-    db.commit()
 
 
 def test_write_methods_for_local_channels(client, local_channel, user, db):
@@ -543,7 +754,7 @@ def test_sync_mirror_channel(mirror_channel, user, client, dummy_repo):
     assert response.status_code == 200
 
 
-def test_can_not_sync_mirror_and_local_channels(
+def test_can_not_sync_proxy_and_local_channels(
     proxy_channel, local_channel, user, client
 ):
 

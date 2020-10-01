@@ -75,7 +75,7 @@ class Channel(Base):
     mirror_mode = Column(String, default="proxy")
     timestamp_mirror_sync = Column(Integer, default=0)
 
-    packages = relationship('Package', back_populates='channel')
+    packages = relationship('Package', back_populates='channel', cascade="all,delete")
 
     members = relationship('ChannelMember', cascade="all,delete")
 
