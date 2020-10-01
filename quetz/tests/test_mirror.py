@@ -283,7 +283,7 @@ DUMMY_PACKAGE_V2 = Path("./test-package-0.2-0.tar.bz2")
             1,
             id="new-sha-old-md5",
         ),
-        # neither checksums, force update
+        # no checksums, force update
         pytest.param(
             [
                 b'{"packages": {"test-package-0.2-0.tar.bz2": {}}}',
@@ -504,12 +504,18 @@ def test_method_not_implemented_for_proxies(client, proxy_channel):
     assert "not implemented" in response.json()["detail"]
 
 
-def test_api_methods_for_proxy_channels(client, mirror_channel):
+def test_api_methods_for_mirror_channels(client, mirror_channel):
     """mirror-mode channels should have all standard API calls"""
 
     response = client.get("/api/channels/{}/packages".format(mirror_channel.name))
     assert response.status_code == 200
     assert not response.json()
+
+    response = client.get(
+        "/channels/{}/missing/path/file.json".format(mirror_channel.name),
+    )
+    assert response.status_code == 404
+    assert "file.json not found" in response.json()["detail"]
 
 
 @pytest.mark.parametrize(

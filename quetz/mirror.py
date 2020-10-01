@@ -175,7 +175,7 @@ def _check_timestamp(channel, dao: Dao):
 def _check_checksum(
     pkgstore: PackageStore, channel_name: str, arch: str, keyname="sha256"
 ):
-    """context manager to compare sha hashes"""
+    """context manager to compare sha or md5 hashes"""
 
     # lazily load repodata on first request
     local_repodata = None
@@ -247,6 +247,9 @@ def initial_sync_mirror(
         _check_checksum(pkgstore, channel_name, arch, "md5"),
     ]
 
+    # version_methods are context managers (for example, to update the db
+    # after all packages have been checked), so we need to enter the context
+    # for each
     with contextlib.ExitStack() as version_stack:
 
         version_checks = [
