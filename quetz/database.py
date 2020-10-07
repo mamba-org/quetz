@@ -28,7 +28,7 @@ def get_engine(db_url, echo: bool = False, **kwargs) -> Engine:
 
 
 def get_session_maker(engine) -> Callable[[], Session]:
-    return sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    return sessionmaker(autocommit=False, autoflush=True, bind=engine)
 
 
 def get_session(db_url, echo: bool = False, **kwargs) -> Session:

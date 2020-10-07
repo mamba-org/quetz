@@ -140,6 +140,8 @@ def test_set_mirror_url(db, client, user):
 
     channel = db.query(Channel).get("test_create_channel")
     assert channel.mirror_channel_url == "http://my_remote_host"
+    db.delete(channel)
+    db.commit()
 
 
 def test_get_mirror_url(proxy_channel, local_channel, client):
@@ -153,6 +155,40 @@ def test_get_mirror_url(proxy_channel, local_channel, client):
     response = client.get("/api/channels/{}".format(local_channel.name))
     assert response.status_code == 200
     assert not response.json()["mirror_channel_url"]
+
+@pytest.fixture
+def package_version(user, mirror_channel, db, dao):
+    # create package version that will added to local repodata
+    package_format = 'tarbz2'
+    package_info = '{"size": 5000, "sha256": "OLD-SHA", "md5": "OLD-MD5", "subdirs":["noarch"]}'
+
+    new_package_data = rest_models.Package(name="test-package")
+    
+    package = dao.create_package(
+        mirror_channel.name,
+        new_package_data,
+        user_id=user.id,
+        role="owner",
+    )
+ 
+    version = dao.create_version(
+        mirror_channel.name,
+        "test-package",
+        package_format,
+        "noarch",
+        "0.1",
+        "0",
+        "",
+        "test-package-0.1-0.tar.bz2",
+        package_info,
+        user.id,
+    )
+    yield version
+
+    db.delete(package)
+    db.delete(version)
+    db.commit()
+
 
 
 DUMMY_PACKAGE = Path("./test-package-0.1-0.tar.bz2")
@@ -305,6 +341,7 @@ def test_synchronisation_sha(
     user,
     n_new_packages,
     arch,
+    package_version,
 ):
     pkgstore = config.get_package_store()
     background_tasks = BackgroundTasks()
@@ -313,22 +350,6 @@ def test_synchronisation_sha(
     class DummySession:
         def get(self, path, stream=False):
             return dummy_response()
-
-    # create package version that will added to local repodata
-    package_format = 'tarbz2'
-    package_info = '{"size": 5000, "sha256": "OLD-SHA", "md5": "OLD-MD5"}'
-    dao.create_version(
-        mirror_channel.name,
-        "test-package",
-        package_format,
-        "noarch",
-        "0.1",
-        "0",
-        "",
-        "test-package-0.1-0.tar.bz2",
-        package_info,
-        user.id,
-    )
 
     # generate local repodata.json
     update_indexes(dao, pkgstore, mirror_channel.name)

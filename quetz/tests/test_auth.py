@@ -19,13 +19,11 @@ class Data:
         self.userb = User(id=uuid.uuid4().bytes, username='userb')
         Profile(name='userb', user=self.userb, avatar_url='')
         db.add(self.userb)
-        db.commit()
 
         assert len(db.query(User).all()) == 2
 
         db.add(ApiKey(key=self.keya, user_id=self.usera.id, owner_id=self.usera.id))
         db.add(ApiKey(key=self.keyb, user_id=self.userb.id, owner_id=self.userb.id))
-        db.commit()
 
         self.channel1 = Channel(name="testchannel", private=False)
         self.channel2 = Channel(name="privatechannel", private=True)
@@ -47,9 +45,41 @@ class Data:
         db.commit()
 
 
+
+        self.db = db
+
+    def cleanup(self):
+        db = self.db
+        db.rollback()
+        db.delete(self.package1)
+        db.delete(self.package2)
+        db.delete(self.channel_member)
+        db.delete(self.channel1)
+        db.delete(self.channel2)
+        db.delete(self.usera)
+        db.delete(self.userb)
+        db.commit()
+
 @fixture
+def channel_dirs(data, config):
+    # need to use config to get the right workdir
+    os.makedirs('channels/testchannel/noarch', exist_ok=True)
+    os.makedirs('channels/privatechannel/noarch', exist_ok=True)
+
+    with open("channels/testchannel/noarch/current_repodata.json", "a") as f:
+        f.write("file content 0")
+    with open("channels/privatechannel/noarch/current_repodata.json", "a") as f:
+        f.write("file content 1")
+
+    yield
+
+    shutil.rmtree('channels')
+
+@fixture(scope="module")
 def data(db):
-    return Data(db)
+    data = Data(db)
+    yield data
+    data.cleanup()
 
 
 def test_private_channels(data, client):
@@ -296,64 +326,56 @@ def test_private_channels_create_package(data, client):
     assert response.status_code == 201
 
 
-def test_private_channels_download(db, client):
-    keya = "akey"
-    keyb = "bkey"
+def test_private_channels_download(db, client, data, channel_dirs):
+    #keya = "akey"
+    #keyb = "bkey"
 
-    usera = User(id=uuid.uuid4().bytes, username='usera')
-    db.add(usera)
-    userb = User(id=uuid.uuid4().bytes, username='userb')
-    db.add(userb)
-    db.commit()
+    #usera = User(id=uuid.uuid4().bytes, username='usera')
+    #db.add(usera)
+    #userb = User(id=uuid.uuid4().bytes, username='userb')
+    #db.add(userb)
+    #db.commit()
 
-    db.add(ApiKey(key=keya, user_id=usera.id, owner_id=usera.id))
-    db.add(ApiKey(key=keyb, user_id=userb.id, owner_id=userb.id))
-    db.commit()
+    #db.add(ApiKey(key=keya, user_id=usera.id, owner_id=usera.id))
+    #db.add(ApiKey(key=keyb, user_id=userb.id, owner_id=userb.id))
+    #db.commit()
 
-    channel0 = Channel(name="channel0", private=False)
-    channel1 = Channel(name="channel1", private=True)
+    #channel0 = Channel(name="channel0", private=False)
+    #channel1 = Channel(name="channel1", private=True)
 
-    channel_member0 = ChannelMember(channel=channel0, user=usera, role='member')
-    channel_member1 = ChannelMember(channel=channel1, user=userb, role='member')
-    for el in [channel0, channel1, channel_member0, channel_member1]:
-        db.add(el)
-    db.commit()
+    #channel_member0 = ChannelMember(channel=channel0, user=usera, role='member')
+    #channel_member1 = ChannelMember(channel=channel1, user=userb, role='member')
+    #for el in [channel0, channel1, channel_member0, channel_member1]:
+    #    db.add(el)
+    #db.commit()
 
-    os.makedirs('channels/channel0/noarch')
-    os.makedirs('channels/channel1/noarch')
-
-    with open("channels/channel0/noarch/current_repodata.json", "a") as f:
-        f.write("file content 0")
-    with open("channels/channel1/noarch/current_repodata.json", "a") as f:
-        f.write("file content 1")
 
     # succeed on public channel
-    response = client.get('/channels/channel0/noarch/current_repodata.json')
+    response = client.get('/channels/testchannel/noarch/current_repodata.json')
     assert response.status_code == 200
     assert response.text == "file content 0"
 
     # keep functioning when unnecessary token is provided
-    response = client.get('/t/[api-key]/channels/channel0/noarch/current_repodata.json')
+    response = client.get('/t/[api-key]/channels/testchannel/noarch/current_repodata.json')
     assert response.status_code == 200
     assert response.text == "file content 0"
 
     # fail on private channel without credentials
-    response = client.get('/channels/channel1/noarch/current_repodata.json')
+    response = client.get('/channels/privatechannel/noarch/current_repodata.json')
     assert response.status_code == 401
 
     # fail on private channel with invalid credentials
     response = client.get(
-        '/t/[invalid-api-key]/channels/channel1/noarch/current_repodata.json'
+        '/t/[invalid-api-key]/channels/privatechannel/noarch/current_repodata.json'
     )
     assert response.status_code == 401
 
     # fail on private channel with non member user
-    response = client.get(f'/t/{keya}/channels/channel1/noarch/current_repodata.json')
+    response = client.get(f'/t/{data.keyb}/channels/privatechannel/noarch/current_repodata.json')
     assert response.status_code == 403
 
     # succeed on private channel with member user
-    response = client.get(f'/t/{keyb}/channels/channel1/noarch/current_repodata.json')
+    response = client.get(f'/t/{data.keya}/channels/privatechannel/noarch/current_repodata.json')
     assert response.status_code == 200
     assert response.text == "file content 1"
 
-    shutil.rmtree('channels')

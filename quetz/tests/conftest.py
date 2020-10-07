@@ -22,14 +22,16 @@ from quetz.database import get_engine, get_session_maker
 from quetz.db_models import Profile, User
 
 
-@fixture
+@fixture(scope="session")
 def session_maker():
-    engine = get_engine('sqlite:///:memory:')
+    #engine = get_engine('sqlite:///:memory:')
+    engine = get_engine("postgresql://postgres:mysecretpassword@localhost/postgres")
+
     yield get_session_maker(engine)
     engine.dispose()
 
 
-@fixture
+@fixture(scope="session")
 def db(session_maker):
     session = session_maker()
     yield session
