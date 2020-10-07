@@ -46,18 +46,6 @@ class Data:
 
         self.db = db
 
-    def cleanup(self):
-        db = self.db
-        db.rollback()
-        db.delete(self.package1)
-        db.delete(self.package2)
-        db.delete(self.channel_member)
-        db.delete(self.channel1)
-        db.delete(self.channel2)
-        db.delete(self.usera)
-        db.delete(self.userb)
-        db.commit()
-
 
 @fixture
 def channel_dirs(data, config):
@@ -75,11 +63,10 @@ def channel_dirs(data, config):
     shutil.rmtree('channels')
 
 
-@fixture(scope="module")
+@fixture
 def data(db):
     data = Data(db)
     yield data
-    data.cleanup()
 
 
 def test_private_channels(data, client):
