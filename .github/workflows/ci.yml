@@ -15,6 +15,22 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
+        test_database: ["sqlite", "postgres"]
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: mysecretpassword
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432/tcp
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v2
       - name: install micromamba
@@ -34,12 +50,16 @@ jobs:
           export MAMBA_EXE=$(pwd)/micromamba
           . $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
           ./micromamba create -y -p ~/test_env 'python>=3.7' pip fastapi typer authlib \
-                       httpx=0.12.0 sqlalchemy sqlite python-multipart uvicorn zstandard \
+                       httpx=0.12.0 sqlalchemy sqlite psycopg2 python-multipart uvicorn zstandard \
                        appdirs toml fsspec pytest conda requests "h2<4.0.0" -c conda-forge
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
       - name: run tests
         shell: bash -l {0}
+        env:
+          TEST_DB_BACKEND: ${{ matrix.test_database }}
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }}
         run: |
           export MAMBA_ROOT_PREFIX=~/micromamba
           export MAMBA_EXE=$(pwd)/micromamba
@@ -48,4 +68,8 @@ jobs:
           pwd
           pip install -e .
           export QUETZ_IS_TEST=1
+          if [ "$TEST_DB_BACKEND" == "postgres" ]; then
+            export QUETZ_TEST_DATABASE="postgresql://postgres:mysecretpassword@${POSTGRES_HOST}:${POSTGRES_PORT}/postgres"
+            echo "Running with postgres"
+          fi
           pytest -v ./quetz/tests/

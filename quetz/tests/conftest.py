@@ -21,16 +21,19 @@ from quetz.dao import Dao
 from quetz.database import get_engine, get_session_maker
 from quetz.db_models import Profile, User
 
+
 @fixture(scope="session")
 def engine():
-    engine = get_engine("postgresql://postgres:mysecretpassword@localhost/postgres")
-    #engine = get_engine('sqlite:///:memory:')
+    db_url = os.environ.get("QUETZ_TEST_DATABASE", 'sqlite:///:memory:')
+    engine = get_engine(db_url)
     yield engine
     engine.dispose()
+
 
 @fixture(scope="session")
 def session_maker(engine):
     yield get_session_maker(engine)
+
 
 @fixture(scope="session")
 def db(session_maker):
@@ -94,12 +97,10 @@ def app(config, session_maker, engine):
 
     # run the application with a separate external DB transaction
     # so that we can easily rollback all db changes (even if commited)
-    # done by the test client 
-
+    # done by the test client
     # NOTE: that won't work with the changes done directly to the DB
     # (using db fixture, for example)
-
-    # see also: https://docs.sqlalchemy.org/en/13/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites
+    # see also: https://docs.sqlalchemy.org/en/13/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites # noqa
 
     connection = engine.connect()
     trans = connection.begin()
@@ -109,7 +110,6 @@ def app(config, session_maker, engine):
     app.dependency_overrides.pop(get_db)
     trans.rollback()
     connection.close()
-
 
 
 @fixture

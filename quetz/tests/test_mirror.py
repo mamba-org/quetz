@@ -143,6 +143,7 @@ def test_set_mirror_url(db, client, user):
     assert response.status_code == 200
     assert response.json()["mirror_channel_url"] == "http://my_remote_host"
 
+
 def test_get_mirror_url(proxy_channel, local_channel, client):
     """test configuring mirror url"""
 
@@ -155,21 +156,24 @@ def test_get_mirror_url(proxy_channel, local_channel, client):
     assert response.status_code == 200
     assert not response.json()["mirror_channel_url"]
 
+
 @pytest.fixture
 def package_version(user, mirror_channel, db, dao):
     # create package version that will added to local repodata
     package_format = 'tarbz2'
-    package_info = '{"size": 5000, "sha256": "OLD-SHA", "md5": "OLD-MD5", "subdirs":["noarch"]}'
+    package_info = (
+        '{"size": 5000, "sha256": "OLD-SHA", "md5": "OLD-MD5", "subdirs":["noarch"]}'
+    )
 
     new_package_data = rest_models.Package(name="test-package")
-    
+
     package = dao.create_package(
         mirror_channel.name,
         new_package_data,
         user_id=user.id,
         role="owner",
     )
- 
+
     version = dao.create_version(
         mirror_channel.name,
         "test-package",
@@ -187,7 +191,6 @@ def package_version(user, mirror_channel, db, dao):
     db.delete(package)
     db.delete(version)
     db.commit()
-
 
 
 DUMMY_PACKAGE = Path("./test-package-0.1-0.tar.bz2")
@@ -486,6 +489,7 @@ def test_download_remote_file(client, user, dummy_repo):
     assert response.status_code == 200
     assert response.content == b"Hello world!"
     assert dummy_repo == [("http://host/test_file_2.txt")]
+
 
 def test_always_download_repodata(client, user, dummy_repo):
     """Test downloading from cache."""

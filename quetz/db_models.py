@@ -33,7 +33,9 @@ class User(Base):
     username = Column(String, unique=True, index=True)
 
     identities = relationship('Identity', back_populates='user')
-    profile = relationship('Profile', uselist=False, back_populates='user', cascade="all,delete-orphan")
+    profile = relationship(
+        'Profile', uselist=False, back_populates='user', cascade="all,delete-orphan"
+    )
 
     @classmethod
     def find(cls, db, name):
@@ -97,8 +99,12 @@ class ChannelMember(Base):
     user_id = Column(UUID, ForeignKey('users.id'), primary_key=True, index=True)
     role = Column(String)
 
-    channel = relationship('Channel', backref=backref("channel_members", cascade="all,delete-orphan"))
-    user = relationship('User', backref=backref("channel_members", cascade="all,delete-orphan"))
+    channel = relationship(
+        'Channel', backref=backref("channel_members", cascade="all,delete-orphan")
+    )
+    user = relationship(
+        'User', backref=backref("channel_members", cascade="all,delete-orphan")
+    )
 
     def __repr__(self):
         return (
@@ -160,8 +166,16 @@ class ApiKey(Base):
     user_id = Column(UUID, ForeignKey('users.id'))
     owner_id = Column(UUID, ForeignKey('users.id'))
 
-    user = relationship('User', foreign_keys=[user_id], backref=backref("api_keys_user", cascade="all,delete-orphan"))
-    owner = relationship('User', foreign_keys=[owner_id], backref=backref("api_keys_owner", cascade="all,delete-orphan"))
+    user = relationship(
+        'User',
+        foreign_keys=[user_id],
+        backref=backref("api_keys_user", cascade="all,delete-orphan"),
+    )
+    owner = relationship(
+        'User',
+        foreign_keys=[owner_id],
+        backref=backref("api_keys_owner", cascade="all,delete-orphan"),
+    )
 
     def __repr__(self):
         return f'<ApiKey key={self.key}>'
@@ -195,7 +209,9 @@ class PackageVersion(Base):
     uploader_id = Column(UUID, ForeignKey('users.id'))
     time_created = Column(DateTime(timezone=True), server_default=func.now())
     time_modified = Column(DateTime(timezone=True), server_default=func.now())
-    package = relationship("Package", backref=backref("package_versions", cascade="all,delete-orphan"))
+    package = relationship(
+        "Package", backref=backref("package_versions", cascade="all,delete-orphan")
+    )
 
     uploader = relationship('User')
 
