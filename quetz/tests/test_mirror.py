@@ -138,11 +138,10 @@ def test_set_mirror_url(db, client, user):
     )
     assert response.status_code == 201
 
-    channel = db.query(Channel).get("test_create_channel")
-    assert channel.mirror_channel_url == "http://my_remote_host"
-    db.delete(channel)
-    db.commit()
+    response = client.get("/api/channels/test_create_channel")
 
+    assert response.status_code == 200
+    assert response.json()["mirror_channel_url"] == "http://my_remote_host"
 
 def test_get_mirror_url(proxy_channel, local_channel, client):
     """test configuring mirror url"""
@@ -488,7 +487,6 @@ def test_download_remote_file(client, user, dummy_repo):
     assert response.content == b"Hello world!"
     assert dummy_repo == [("http://host/test_file_2.txt")]
 
-
 def test_always_download_repodata(client, user, dummy_repo):
     """Test downloading from cache."""
     response = client.get("/api/dummylogin/bartosz")
@@ -693,11 +691,6 @@ def test_write_methods_for_local_channels(client, local_channel, user, db):
         json={"name": "my_package"},
     )
     assert response.status_code == 201
-
-    pkg = db.query(Package).filter_by(name="my_package").first()
-
-    db.delete(pkg)
-    db.commit()
 
 
 def test_disabled_methods_for_mirror_channels(

@@ -18,3 +18,6 @@ def test_user(db):
     assert found.username == user.username
     found = User.find(db, 'dave')
     assert found is None
+
+    db.delete(user)
+    db.commit()

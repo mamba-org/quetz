@@ -21,15 +21,16 @@ from quetz.dao import Dao
 from quetz.database import get_engine, get_session_maker
 from quetz.db_models import Profile, User
 
-
 @fixture(scope="session")
-def session_maker():
-    #engine = get_engine('sqlite:///:memory:')
+def engine():
     engine = get_engine("postgresql://postgres:mysecretpassword@localhost/postgres")
-
-    yield get_session_maker(engine)
+    #engine = get_engine('sqlite:///:memory:')
+    yield engine
     engine.dispose()
 
+@fixture(scope="session")
+def session_maker(engine):
+    yield get_session_maker(engine)
 
 @fixture(scope="session")
 def db(session_maker):
@@ -88,11 +89,27 @@ https_only = false
 
 
 @fixture
-def app(config, session_maker):
+def app(config, session_maker, engine):
     from quetz.main import app, get_db
 
-    app.dependency_overrides[get_db] = lambda: session_maker()
-    return app
+    # run the application with a separate external DB transaction
+    # so that we can easily rollback all db changes (even if commited)
+    # done by the test client 
+
+    # NOTE: that won't work with the changes done directly to the DB
+    # (using db fixture, for example)
+
+    # see also: https://docs.sqlalchemy.org/en/13/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites
+
+    connection = engine.connect()
+    trans = connection.begin()
+
+    app.dependency_overrides[get_db] = lambda: session_maker(bind=connection)
+    yield app
+    app.dependency_overrides.pop(get_db)
+    trans.rollback()
+    connection.close()
+
 
 
 @fixture
