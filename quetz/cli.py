@@ -46,7 +46,7 @@ def _fill_test_database(db: Session) -> NoReturn:
 
     testUsers = []
     try:
-        for index, username in enumerate(['alice', 'bob', 'carol', 'dave']):
+        for index, username in enumerate(['alice', 'bob', 'carol', 'dave', 'btel']):
             user = User(id=uuid.uuid4().bytes, username=username)
 
             identity = Identity(

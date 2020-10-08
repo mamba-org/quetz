@@ -10,6 +10,7 @@
 <a href="/auth/google/login" style="margin-right: 100px" id="google_login">login with google</a>
 <a href="/auth/github/revoke" style="margin-right: 100px" id="revoke">revoke github</a>
 <a href="/auth/google/revoke" style="margin-right: 100px" id="revoke">revoke google</a>
+<button type="submit" onclick="getApiKey()">Get API key</button>
 <a href="/auth/logout" id="logout">logout</a>
 <div id="status"></div>
 
@@ -18,6 +19,20 @@
     const status = document.getElementById('status');
 
     getProfile();
+
+    function getApiKey() {
+      fetch('/api/api-keys', {
+        method: 'POST',
+        body: JSON.stringify({"description": "default key", "roles":[]}),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+            .then(response => {console.log(response.status); return response.json()})
+      .then(data => {
+          status.innerHTML = `API key: <pre>${data.key}</pre>`;
+      });
+    }
 
     function getProfile() {
         fetch('/api/me')

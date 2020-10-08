@@ -1,6 +1,7 @@
 import os
 import shutil
 import uuid
+from unittest import mock
 
 from pytest import fixture
 
@@ -20,7 +21,11 @@ class Data:
         Profile(name='userb', user=self.userb, avatar_url='')
         db.add(self.userb)
 
-        assert len(db.query(User).all()) == 2
+        self.userc = User(id=uuid.uuid4().bytes, username='userc')
+        Profile(name='userc', user=self.userc, avatar_url='')
+        db.add(self.userc)
+
+        assert len(db.query(User).all()) == 3
 
         db.add(ApiKey(key=self.keya, user_id=self.usera.id, owner_id=self.usera.id))
         db.add(ApiKey(key=self.keyb, user_id=self.userb.id, owner_id=self.userb.id))
@@ -34,10 +39,14 @@ class Data:
         self.channel_member = ChannelMember(
             channel=self.channel2, user=self.usera, role='member'
         )
+        self.channel_member_userc = ChannelMember(
+            channel=self.channel2, user=self.userc, role='owner'
+        )
         for el in [
             self.channel1,
             self.channel2,
             self.channel_member,
+            self.channel_member_userc,
             self.package1,
             self.package2,
         ]:
@@ -161,7 +170,7 @@ def test_private_channels(data, client):
         f'/api/channels/{data.channel2.name}/members', headers={"X-Api-Key": data.keya}
     )
     assert response.status_code == 200
-    assert len(response.json()) == 1
+    assert len(response.json()) == 2
     assert ('role', data.channel_member.role) in response.json()[0].items()
     assert response.json()[0]['user']['id'] == str(uuid.UUID(bytes=data.usera.id))
 
@@ -349,3 +358,34 @@ def test_private_channels_download(db, client, data, channel_dirs):
     )
     assert response.status_code == 200
     assert response.text == "file content 1"
+
+
+def test_create_api_key(data, client):
+
+    response = client.get(f"/api/dummylogin/{data.userc.username}")
+    assert response.status_code == 200
+
+    response = client.post(
+        '/api/api-keys',
+        json={
+            "description": "test-key",
+            "roles": [{"channel": "privatechannel", "role": "member"}],
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json() == {
+        "description": "test-key",
+        "roles": [{"channel": "privatechannel", "role": "member", "package": None}],
+        "key": mock.ANY,
+    }
+
+    # get key without special privilages
+
+    response = client.post(
+        '/api/api-keys',
+        json={"description": "test-key", "roles": []},
+    )
+
+    assert response.status_code == 201
+    assert response.json() == {"description": "test-key", "roles": [], "key": mock.ANY}

@@ -9,7 +9,12 @@ from .db_models import Identity, Profile, User
 
 
 def create_user_with_github_identity(db: Session, github_profile) -> User:
-    user = User(id=uuid.uuid4().bytes, username=github_profile['login'])
+
+    # retrieve user if already exists
+    user = db.query(User).filter_by(username=github_profile['login']).first()
+
+    if not user:
+        user = User(id=uuid.uuid4().bytes, username=github_profile['login'])
 
     identity = Identity(
         provider='github',
@@ -53,7 +58,7 @@ def update_user_from_github_profile(db: Session, user, identity, profile) -> Use
 def get_user_by_github_identity(db: Session, profile) -> User:
     user, identity = db.query(User, Identity).join(Identity).filter(
         Identity.provider == 'github'
-    ).filter(Identity.identity_id == profile['id']).one_or_none() or (None, None)
+    ).filter(Identity.identity_id == str(profile['id'])).one_or_none() or (None, None)
 
     if user:
         if user_github_profile_changed(user, identity, profile):

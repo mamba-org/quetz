@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 from typing import Generic, List, Optional, TypeVar
 
@@ -25,7 +26,7 @@ class Profile(BaseProfile):
 
 
 class BaseUser(BaseModel):
-    id: str
+    id: uuid.UUID
     username: str
 
     class Config:

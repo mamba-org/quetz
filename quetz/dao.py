@@ -295,6 +295,8 @@ class Dao:
 
         self.db.commit()
 
+        return db_api_key
+
     def create_version(
         self,
         channel_name,
