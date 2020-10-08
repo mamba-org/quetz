@@ -84,7 +84,7 @@ def export(dao, channel_name):
         if info is not None:
             data = json.loads(info)
             packages[name] = data
-            subdirs = set(data["subdirs"]) | subdirs
+            subdirs = set(data.get("subdirs", [])) | subdirs
 
     channeldata["subdirs"] = list(subdirs)
 

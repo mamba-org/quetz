@@ -309,7 +309,19 @@ class Dao:
         uploader_id,
         upsert: bool = False,
     ):
-        try:
+
+        existing_versions = (
+            self.db.query(PackageVersion)
+            .filter(PackageVersion.channel_name == channel_name)
+            .filter(PackageVersion.package_name == package_name)
+            .filter(PackageVersion.package_format == package_format)
+            .filter(PackageVersion.platform == platform)
+            .filter(PackageVersion.version == version)
+            .filter(PackageVersion.build_number == build_number)
+            .filter(PackageVersion.build_string == build_string)
+        )
+        package_version = existing_versions.one_or_none()
+        if not package_version:
             package_version = PackageVersion(
                 id=uuid.uuid4().bytes,
                 channel_name=channel_name,
@@ -324,32 +336,20 @@ class Dao:
                 uploader_id=uploader_id,
             )
             self.db.add(package_version)
-            self.db.commit()
-        except IntegrityError as exc:
-            self.rollback()
-            if not upsert:
-                raise exc
-            (
-                self.db.query(PackageVersion)
-                .filter(PackageVersion.channel_name == channel_name)
-                .filter(PackageVersion.package_name == package_name)
-                .filter(PackageVersion.package_format == package_format)
-                .filter(PackageVersion.platform == platform)
-                .filter(PackageVersion.version == version)
-                .filter(PackageVersion.build_number == build_number)
-                .filter(PackageVersion.build_string == build_string)
-                .update(
-                    {
-                        "filename": filename,
-                        "info": info,
-                        "uploader_id": uploader_id,
-                        "time_modified": datetime.utcnow(),
-                    },
-                    synchronize_session=False,
-                )
+        elif upsert:
+            existing_versions.update(
+                {
+                    "filename": filename,
+                    "info": info,
+                    "uploader_id": uploader_id,
+                    "time_modified": datetime.utcnow(),
+                },
+                synchronize_session=False,
             )
+        else:
+            raise IntegrityError("duplicate package version", "", "")
 
-            self.db.commit()
+        self.db.commit()
 
         return package_version
 

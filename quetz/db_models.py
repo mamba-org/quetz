@@ -4,7 +4,6 @@
 import enum
 
 from sqlalchemy import (
-    BLOB,
     Boolean,
     Column,
     DateTime,
@@ -12,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -19,10 +19,11 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
+from sqlalchemy.schema import ForeignKeyConstraint
 
 Base = declarative_base()
 
-UUID = BLOB(length=16)
+UUID = LargeBinary(length=16)
 
 
 class User(Base):
@@ -32,7 +33,9 @@ class User(Base):
     username = Column(String, unique=True, index=True)
 
     identities = relationship('Identity', back_populates='user')
-    profile = relationship('Profile', uselist=False, back_populates='user')
+    profile = relationship(
+        'Profile', uselist=False, back_populates='user', cascade="all,delete-orphan"
+    )
 
     @classmethod
     def find(cls, db, name):
@@ -96,8 +99,12 @@ class ChannelMember(Base):
     user_id = Column(UUID, ForeignKey('users.id'), primary_key=True, index=True)
     role = Column(String)
 
-    channel = relationship('Channel')
-    user = relationship('User')
+    channel = relationship(
+        'Channel', backref=backref("channel_members", cascade="all,delete-orphan")
+    )
+    user = relationship(
+        'User', backref=backref("channel_members", cascade="all,delete-orphan")
+    )
 
     def __repr__(self):
         return (
@@ -129,17 +136,32 @@ class Package(Base):
 
 class PackageMember(Base):
     __tablename__ = 'package_members'
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["channel_name", "package_name"], ["packages.channel_name", "packages.name"]
+        ),
+        ForeignKeyConstraint(["channel_name"], ["channels.name"]),
+    )
 
-    channel_name = Column(
-        String, ForeignKey('channels.name'), primary_key=True, index=True
-    )
-    package_name = Column(
-        String, ForeignKey('packages.name'), primary_key=True, index=True
-    )
+    channel_name = Column(String, primary_key=True, index=True)
+    package_name = Column(String, primary_key=True, index=True)
     user_id = Column(UUID, ForeignKey('users.id'), primary_key=True, index=True)
     role = Column(String)
 
-    package = relationship('Package', backref=backref("members", cascade="all,delete"))
+    # primaryjoin condition is needed to avoid conflicts between channel and package
+    # relationships that share the same foreign key (channel_name): for package
+    # channel_name # is only required to lookup the package using the composite key
+    # (channel_name + package_name) whereas for channel relationship the channel_name
+    # is a writeable column
+
+    # see also : https://docs.sqlalchemy.org/en/13/orm/join_conditions.html#overlapping-foreign-keys # noqa
+
+    package = relationship(
+        'Package',
+        backref=backref("members", cascade="all,delete"),
+        primaryjoin="and_(Package.name == foreign(PackageMember.package_name),"
+        "Package.channel_name == Channel.name)",
+    )
     channel = relationship('Channel')
     user = relationship('User', backref=backref("packages", cascade="all,delete"))
 
@@ -157,8 +179,16 @@ class ApiKey(Base):
     user_id = Column(UUID, ForeignKey('users.id'))
     owner_id = Column(UUID, ForeignKey('users.id'))
 
-    user = relationship('User', foreign_keys=[user_id])
-    owner = relationship('User', foreign_keys=[owner_id])
+    user = relationship(
+        'User',
+        foreign_keys=[user_id],
+        backref=backref("api_keys_user", cascade="all,delete-orphan"),
+    )
+    owner = relationship(
+        'User',
+        foreign_keys=[owner_id],
+        backref=backref("api_keys_owner", cascade="all,delete-orphan"),
+    )
 
     def __repr__(self):
         return f'<ApiKey key={self.key}>'
@@ -171,10 +201,16 @@ class PackageFormatEnum(enum.Enum):
 
 class PackageVersion(Base):
     __tablename__ = 'package_versions'
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["channel_name", "package_name"], ["packages.channel_name", "packages.name"]
+        ),
+        ForeignKeyConstraint(["channel_name"], ["channels.name"]),
+    )
 
     id = Column(UUID, primary_key=True)
-    channel_name = Column(String, ForeignKey('channels.name'))
-    package_name = Column(String, ForeignKey('packages.name'))
+    channel_name = Column(String)
+    package_name = Column(String)
     package_format = Column(Enum(PackageFormatEnum))
     platform = Column(String)
     version = Column(String)
@@ -186,6 +222,9 @@ class PackageVersion(Base):
     uploader_id = Column(UUID, ForeignKey('users.id'))
     time_created = Column(DateTime(timezone=True), server_default=func.now())
     time_modified = Column(DateTime(timezone=True), server_default=func.now())
+    package = relationship(
+        "Package", backref=backref("package_versions", cascade="all,delete-orphan")
+    )
 
     uploader = relationship('User')
 
