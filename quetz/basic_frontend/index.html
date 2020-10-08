@@ -3,6 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <title>Quetz</title>
+    <style>
+    .modal {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        visibility: hidden;
+        transform: scale(1.1);
+        transition: visibility 0s linear 0.25s, opacity 0.25s 0s, transform 0.25s;
+    }
+    .modal-content {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        padding: 1rem 1.5rem;
+        width: 24rem;
+        border-radius: 0.5rem;
+    }
+    .close-button {
+        float: right;
+        width: 1.5rem;
+        line-height: 1.5rem;
+        text-align: center;
+        cursor: pointer;
+        border-radius: 0.25rem;
+        background-color: lightgray;
+    }
+    .close-button:hover {
+        background-color: darkgray;
+    }
+    .show-modal {
+        opacity: 1;
+        visibility: visible;
+        transform: scale(1.0);
+        transition: visibility 0s linear 0s, opacity 0.25s 0s, transform 0.25s;
+    }
+    </style>
 </head>
 <body>
 <h1>Quetz</h1>
@@ -10,7 +52,13 @@
 <a href="/auth/google/login" style="margin-right: 100px" id="google_login">login with google</a>
 <a href="/auth/github/revoke" style="margin-right: 100px" id="revoke">revoke github</a>
 <a href="/auth/google/revoke" style="margin-right: 100px" id="revoke">revoke google</a>
-<button type="submit" onclick="getApiKey()">Get API key</button>
+
+<div class="modal">
+  <div class="modal-content">
+    <span class="close-button">&times;</span>
+    <div id="modalmsg">Hello, I am a modal!</div>
+  </div>
+</div>
 <a href="/auth/logout" id="logout">logout</a>
 <div id="status"></div>
 
@@ -19,6 +67,25 @@
     const status = document.getElementById('status');
 
     getProfile();
+
+    var modal = document.querySelector(".modal");
+    var trigger = document.querySelector(".trigger");
+    var closeButton = document.querySelector(".close-button");
+    const modalmsg = document.getElementById('modalmsg');
+
+
+    function toggleModal() {
+        modal.classList.toggle("show-modal");
+    }
+
+    function windowOnClick(event) {
+        if (event.target === modal) {
+            toggleModal();
+        }
+    }
+
+    closeButton.addEventListener("click", toggleModal);
+    window.addEventListener("click", windowOnClick);
 
     function getApiKey() {
       fetch('/api/api-keys', {
@@ -30,7 +97,8 @@
       })
             .then(response => {console.log(response.status); return response.json()})
       .then(data => {
-          status.innerHTML = `API key: <pre>${data.key}</pre>`;
+          modalmsg.innerHTML = `API key: <pre>${data.key}</pre>`;
+          toggleModal();
       });
     }
 
@@ -49,7 +117,7 @@
             })
             .then(data => {
                 var name = data.name || data.user.username;
-                status.innerHTML = `<h2>Welcome ${name}</h2><img height="50px" src="${data.avatar_url}"/><br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                status.innerHTML = `<h2>Welcome ${name}</h2><img height="50px" src="${data.avatar_url}"/><br><pre>${JSON.stringify(data, null, 2)}</pre><br><button type="submit" onclick="getApiKey()">Get API key</button>`;
             });
     }
 
