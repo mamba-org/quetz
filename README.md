@@ -151,6 +151,38 @@ client_id = "EXAMPLEID420127570681-6rbcgdj683l3odc3nqearn2dr3pnaisq.apps.googleu
 client_secret = "EXAMPLESECRETmD-7UXVCMZV3C7b-kZ9yf70"
 ```
 
+## PostgreSQL
+
+By default, quetz will run with sqlite database, which works well for local tests and small local instances. However, if you plan to run quetz in production, we recommend to configure it with the PostgreSQL database. There are several options to install PostgreSQL server on your local machine or production server, one of them being the official PostgreSQL docker image. You can pull it from the docker hub and start the server with the commands:
+
+```
+docker pull postgres
+docker run --name some-postgres -p 5432:5432 -e POSTGRES_PASSWORD=mysecretpassword -d postgres
+```
+
+This will start the server with the user `postgres` and the password `mysecretpassword` that will be listening for connection on the port 5432 of localhost.
+
+You can then create a database in PostgreSQL for quetz tables:
+
+```
+sudo -u postgres psql -h localhost -c 'CREATE DATABASE quetz OWNER postgres;'
+```
+
+Then in your configuration file (such as `dev_config.toml`) replace the `[sqlalchemy]` section with:
+
+```
+[sqlalchemy]
+database_url = "postgresql://postgres:mysecretpassword@localhost:5432/quetz"
+```
+
+Finally, you can create and run a new quetz deployment based on this configuration (we assume that you saved it in file `config_postgres.yml`):
+
+```
+quetz run postgres_quetz --copy-conf config_postgres.toml 
+```
+
+Note that this recipe will create an ephemeral PostgreSQL database and it will delete all data after the `some-postgres` container is stopped and removed. To make the data persistent, please check the documentation of the `postgres` [image](https://hub.docker.com/_/postgres/)  or your container orchestration system (Kubernetes or similar).
+
 ## Frontend
 
 Quetz comes with a initial frontend implementation. It can be found in quetz_frontend.
