@@ -149,15 +149,18 @@ class PackageMember(Base):
     role = Column(String)
 
     # primaryjoin condition is needed to avoid conflicts between channel and package
-    # relationships
+    # relationships that share the same foreign key (channel_name): for package
+    # channel_name # is only required to lookup the package using the composite key
+    # (channel_name + package_name) whereas for channel relationship the channel_name
+    # is a writeable column
 
-    # see: https://docs.sqlalchemy.org/en/13/orm/join_conditions.html#overlapping-foreign-keys # noqa
+    # see also : https://docs.sqlalchemy.org/en/13/orm/join_conditions.html#overlapping-foreign-keys # noqa
+
     package = relationship(
         'Package',
         backref=backref("members", cascade="all,delete"),
         primaryjoin="and_(Package.name == foreign(PackageMember.package_name),"
         "Package.channel_name == Channel.name)",
-        # foreign_keys="PackageMember.package_name",
     )
     channel = relationship('Channel')
     user = relationship('User', backref=backref("packages", cascade="all,delete"))

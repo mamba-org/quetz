@@ -4,8 +4,7 @@ client_id = "37cdbb80c7733e2a1831"
 client_secret = "75e648e981545902ab7802de94e2f2707c8e0ff8"
 
 [sqlalchemy]
-database_url = "postgresql://postgres:mysecretpassword@localhost/postgres"
-#database_url = "sqlite:///./quetz.sqlite"
+database_url = "sqlite:///./quetz.sqlite"
 
 [session]
 # openssl rand -hex 32
