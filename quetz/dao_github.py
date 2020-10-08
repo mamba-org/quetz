@@ -10,11 +10,7 @@ from .db_models import Identity, Profile, User
 
 def create_user_with_github_identity(db: Session, github_profile) -> User:
 
-    # retrieve user if already exists
-    user = db.query(User).filter_by(username=github_profile['login']).first()
-
-    if not user:
-        user = User(id=uuid.uuid4().bytes, username=github_profile['login'])
+    user = User(id=uuid.uuid4().bytes, username=github_profile['login'])
 
     identity = Identity(
         provider='github',

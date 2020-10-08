@@ -272,8 +272,9 @@ class Dao:
         )
 
     def create_api_key(self, user_id, api_key: rest_models.BaseApiKey, key):
-        user = User(id=uuid.uuid4().bytes)
         owner = self.get_user(user_id)
+        # for now users can create key only for themselves
+        user = owner
         db_api_key = ApiKey(
             key=key, description=api_key.description, user=user, owner=owner
         )
@@ -281,18 +282,36 @@ class Dao:
         self.db.add(db_api_key)
         for role in api_key.roles:
             if role.package:
-                package_member = PackageMember(
-                    user=user,
-                    channel_name=role.channel,
-                    package_name=role.package,
-                    role=role.role,
+                package_member = (
+                    self.db.query(PackageMember)
+                    .filter_by(
+                        user=user, channel_name=role.channel, package_name=role.package
+                    )
+                    .one_or_none()
                 )
-                self.db.add(package_member)
+                if not package_member:
+                    package_member = PackageMember(
+                        user=user,
+                        channel_name=role.channel,
+                        package_name=role.package,
+                        role=role.role,
+                    )
+                    self.db.add(package_member)
+                else:
+                    package_member.role = role.role
             else:
-                channel_member = ChannelMember(
-                    user=user, channel_name=role.channel, role=role.role
+                channel_member = (
+                    self.db.query(ChannelMember)
+                    .filter_by(user=user, channel_name=role.channel)
+                    .one_or_none()
                 )
-                self.db.add(channel_member)
+                if not channel_member:
+                    channel_member = ChannelMember(
+                        user=user, channel_name=role.channel, role=role.role
+                    )
+                    self.db.add(channel_member)
+                else:
+                    channel_member.role = role.role
 
         self.db.commit()
 

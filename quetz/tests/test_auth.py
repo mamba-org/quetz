@@ -5,7 +5,15 @@ from unittest import mock
 
 from pytest import fixture
 
-from quetz.db_models import ApiKey, Channel, ChannelMember, Package, Profile, User
+from quetz.db_models import (
+    ApiKey,
+    Channel,
+    ChannelMember,
+    Package,
+    PackageMember,
+    Profile,
+    User,
+)
 
 
 class Data:
@@ -42,6 +50,11 @@ class Data:
         self.channel_member_userc = ChannelMember(
             channel=self.channel2, user=self.userc, role='owner'
         )
+
+        self.package_member = PackageMember(
+            channel=self.channel2, user=self.userc, package=self.package2, role="owner"
+        )
+
         for el in [
             self.channel1,
             self.channel2,
@@ -49,6 +62,7 @@ class Data:
             self.channel_member_userc,
             self.package1,
             self.package2,
+            self.package_member,
         ]:
             db.add(el)
         db.commit()
@@ -232,7 +246,7 @@ def test_private_channels(data, client):
         headers={"X-Api-Key": data.keya},
     )
     assert response.status_code == 200
-    assert len(response.json()) == 0
+    assert len(response.json()) == 1
 
     # package Versions #
 
@@ -380,7 +394,36 @@ def test_create_api_key(data, client):
         "key": mock.ANY,
     }
 
-    # get key without special privilages
+    # get key with package permissions
+
+    response = client.post(
+        '/api/api-keys',
+        json={
+            "description": "test-key",
+            "roles": [
+                {
+                    "channel": "privatechannel",
+                    "package": data.package2.name,
+                    "role": "member",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json() == {
+        "description": "test-key",
+        "roles": [
+            {
+                "role": "member",
+                "package": data.package2.name,
+                "channel": "privatechannel",
+            }
+        ],
+        "key": mock.ANY,
+    }
+
+    # get key without special privileges
 
     response = client.post(
         '/api/api-keys',
@@ -389,3 +432,32 @@ def test_create_api_key(data, client):
 
     assert response.status_code == 201
     assert response.json() == {"description": "test-key", "roles": [], "key": mock.ANY}
+
+
+def test_use_generated_api_key_to_authenticate(data, client):
+
+    response = client.get(f"/api/dummylogin/{data.userc.username}")
+    assert response.status_code == 200
+
+    response = client.post(
+        '/api/api-keys',
+        json={
+            "description": "test-key",
+            "roles": [],
+        },
+    )
+
+    assert response.status_code == 201
+
+    key = response.json()["key"]
+
+    response = client.get(
+        "/api/channels/privatechannel/members", headers={"X-API-Key": key}
+    )
+
+    assert response.status_code == 200
+
+    response = client.get(
+        "/api/channels/privatechannel/packages", headers={"X-API-Key": key}
+    )
+    assert response.status_code == 200

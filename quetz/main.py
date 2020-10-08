@@ -453,13 +453,6 @@ def get_channel_members(
     dao: Dao = Depends(get_dao),
 ):
     member_list = dao.get_channel_members(channel.name)
-    for member in member_list:
-        # force loading of profile before changing attributes to prevent sqlalchemy
-        # errors.
-        # TODO: don't abuse db models for this.
-
-        member.user.profile
-        # setattr(member.user, "id", str(uuid.UUID(bytes=member.user.id)))
 
     return member_list
 
