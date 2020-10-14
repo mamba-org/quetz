@@ -117,7 +117,6 @@ class CPRole(BaseModel):
 
 class BaseApiKey(BaseModel):
     description: str
-    roles: List[CPRole]
 
 
 class ApiKey(BaseApiKey):

@@ -383,55 +383,14 @@ def test_create_api_key(data, client):
         '/api/api-keys',
         json={
             "description": "test-key",
-            "roles": [{"channel": "privatechannel", "role": "member"}],
         },
     )
 
     assert response.status_code == 201
     assert response.json() == {
         "description": "test-key",
-        "roles": [{"channel": "privatechannel", "role": "member", "package": None}],
         "key": mock.ANY,
     }
-
-    # get key with package permissions
-
-    response = client.post(
-        '/api/api-keys',
-        json={
-            "description": "test-key",
-            "roles": [
-                {
-                    "channel": "privatechannel",
-                    "package": data.package2.name,
-                    "role": "member",
-                }
-            ],
-        },
-    )
-
-    assert response.status_code == 201
-    assert response.json() == {
-        "description": "test-key",
-        "roles": [
-            {
-                "role": "member",
-                "package": data.package2.name,
-                "channel": "privatechannel",
-            }
-        ],
-        "key": mock.ANY,
-    }
-
-    # get key without special privileges
-
-    response = client.post(
-        '/api/api-keys',
-        json={"description": "test-key", "roles": []},
-    )
-
-    assert response.status_code == 201
-    assert response.json() == {"description": "test-key", "roles": [], "key": mock.ANY}
 
 
 def test_use_generated_api_key_to_authenticate(data, client):
@@ -443,7 +402,6 @@ def test_use_generated_api_key_to_authenticate(data, client):
         '/api/api-keys',
         json={
             "description": "test-key",
-            "roles": [],
         },
     )
 
@@ -451,6 +409,15 @@ def test_use_generated_api_key_to_authenticate(data, client):
 
     key = response.json()["key"]
 
+    # remove session that we created when logging dummy user
+    client.cookies.clear()
+
+    # no api key - permission denied
+    response = client.get("/api/channels/privatechannel/members")
+
+    assert response.status_code == 401
+
+    # with the api key
     response = client.get(
         "/api/channels/privatechannel/members", headers={"X-API-Key": key}
     )

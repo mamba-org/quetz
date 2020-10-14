@@ -572,30 +572,14 @@ def get_api_keys(
     """Get API keys for current user"""
 
     user_id = auth.assert_user()
-    api_key_list = dao.get_package_api_keys(user_id)
-    api_channel_key_list = dao.get_channel_api_keys(user_id)
-
-    from itertools import groupby
+    api_key_list = dao.get_api_keys(user_id)
 
     return [
         rest_models.ApiKey(
             key=api_key.key,
             description=api_key.description,
-            roles=[
-                rest_models.CPRole(
-                    channel=member.channel_name,
-                    package=member.package_name
-                    if hasattr(member, "package_name")
-                    else None,
-                    role=member.role,
-                )
-                for member, api_key in member_key_list
-            ],
         )
-        for api_key, member_key_list in groupby(
-            [*api_key_list, *api_channel_key_list],
-            lambda member_api_key: member_api_key[1],
-        )
+        for api_key in api_key_list
     ]
 
 
@@ -608,16 +592,12 @@ def post_api_key(
     auth: authorization.Rules = Depends(get_rules),
 ):
 
-    auth.assert_create_api_key_roles(api_key.roles)
-
     user_id = auth.assert_user()
 
     key = secrets.token_urlsafe(32)
     dao.create_api_key(user_id, api_key, key)
 
-    return rest_models.ApiKey(
-        description=api_key.description, roles=api_key.roles, key=key
-    )
+    return rest_models.ApiKey(description=api_key.description, key=key)
 
 
 @api_router.post(
