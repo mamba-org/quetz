@@ -137,11 +137,14 @@ class Rules:
                     role.package,
                     required_package_role,
                 )
-            else:
+            elif role.channel:
                 required_channel_roles = (
                     [OWNER] if role.role == OWNER else [OWNER, MAINTAINER]
                 )
                 self.assert_channel_roles(role.channel, required_channel_roles)
+            else:
+                # create key without assigning special channel/package privilages
+                return True
 
     def assert_upload_file(self, channel_name, package_name):
         self.assert_channel_or_package_roles(

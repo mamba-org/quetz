@@ -52,7 +52,11 @@ class ConfigSection(NamedTuple):
 class Config:
     _config_map = (
         ConfigSection(
-            "github", [ConfigEntry("client_id", str), ConfigEntry("client_secret", str)]
+            "github",
+            [
+                ConfigEntry("client_id", str),
+                ConfigEntry("client_secret", str),
+            ],
         ),
         ConfigSection("sqlalchemy", [ConfigEntry("database_url", str)]),
         ConfigSection(

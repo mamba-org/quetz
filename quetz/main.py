@@ -453,13 +453,6 @@ def get_channel_members(
     dao: Dao = Depends(get_dao),
 ):
     member_list = dao.get_channel_members(channel.name)
-    for member in member_list:
-        # force loading of profile before changing attributes to prevent sqlalchemy
-        # errors.
-        # TODO: don't abuse db models for this.
-
-        member.user.profile
-        setattr(member.user, "id", str(uuid.UUID(bytes=member.user.id)))
 
     return member_list
 
@@ -606,7 +599,9 @@ def get_api_keys(
     ]
 
 
-@api_router.post("/api-keys", status_code=201, tags=["API keys"])
+@api_router.post(
+    "/api-keys", status_code=201, tags=["API keys"], response_model=rest_models.ApiKey
+)
 def post_api_key(
     api_key: rest_models.BaseApiKey,
     dao: Dao = Depends(get_dao),
@@ -619,6 +614,10 @@ def post_api_key(
 
     key = secrets.token_urlsafe(32)
     dao.create_api_key(user_id, api_key, key)
+
+    return rest_models.ApiKey(
+        description=api_key.description, roles=api_key.roles, key=key
+    )
 
 
 @api_router.post(
