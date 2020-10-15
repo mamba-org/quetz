@@ -94,8 +94,11 @@ class S3Store(PackageStore):
 
         client_kwargs = {}
         url = config.get('url')
+        region = config.get("region")
         if url:
             client_kwargs['endpoint_url'] = url
+        if region:
+            client_kwargs["region_name"] = region
 
         # When using IAM, key and secret will be empty, so need to pass None
         # to the s3fs constructor
@@ -126,7 +129,7 @@ class S3Store(PackageStore):
         """
         with self._get_fs() as fs:
             try:
-                fs.mkdir(self._bucket_map(name))
+                fs.mkdir(self._bucket_map(name), acl="private")
             except FileExistsError:
                 pass
 
@@ -134,7 +137,9 @@ class S3Store(PackageStore):
         with self._get_fs() as fs:
             bucket = self._bucket_map(channel)
             with fs.transaction:
-                with fs.open(path.join(bucket, destination), "wb") as pkg:
+                with fs.open(
+                    path.join(bucket, destination), "wb", acl="private"
+                ) as pkg:
                     shutil.copyfileobj(package, pkg)
 
     def add_file(
@@ -148,7 +153,7 @@ class S3Store(PackageStore):
         with self._get_fs() as fs:
             bucket = self._bucket_map(channel)
             with fs.transaction:
-                with fs.open(path.join(bucket, destination), mode) as f:
+                with fs.open(path.join(bucket, destination), mode, acl="private") as f:
                     f.write(data)
 
     def serve_path(self, channel, src):

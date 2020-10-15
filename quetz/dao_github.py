@@ -52,9 +52,15 @@ def update_user_from_github_profile(db: Session, user, identity, profile) -> Use
 
 
 def get_user_by_github_identity(db: Session, profile) -> User:
-    user, identity = db.query(User, Identity).join(Identity).filter(
-        Identity.provider == 'github'
-    ).filter(Identity.identity_id == str(profile['id'])).one_or_none() or (None, None)
+    try:
+        user, identity = db.query(User, Identity).join(Identity).filter(
+            Identity.provider == 'github'
+        ).filter(Identity.identity_id == str(profile['id'])).one_or_none() or (
+            None,
+            None,
+        )
+    except KeyError:
+        print(f"unexpected response format: {profile}")
 
     if user:
         if user_github_profile_changed(user, identity, profile):

@@ -69,6 +69,7 @@ class Config:
                 ConfigEntry("access_key", str, default=""),
                 ConfigEntry("secret_key", str, default=""),
                 ConfigEntry("url", str, default=""),
+                ConfigEntry("region", str, default=""),
                 ConfigEntry("bucket_prefix", str, default=""),
                 ConfigEntry("bucket_suffix", str, default=""),
             ],
@@ -196,6 +197,7 @@ class Config:
                     'key': self.s3_access_key,
                     'secret': self.s3_secret_key,
                     'url': self.s3_url,
+                    'region': self.s3_region,
                     'bucket_prefix': self.s3_bucket_prefix,
                     'bucket_suffix': self.s3_bucket_suffix,
                 }
