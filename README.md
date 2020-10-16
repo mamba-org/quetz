@@ -33,7 +33,7 @@ You should have [mamba](https://github.com/mamba-org/mamba) or conda installed.
 Then create an environment:
 
 ```
-mamba create -n quetz -c conda-forge 'python>=3.7' fastapi typer authlib httpx=0.12.0 sqlalchemy sqlite \
+mamba create -n quetz -c conda-forge 'python>=3.7' fastapi typer authlib=0.14.3 httpx=0.12.0 sqlalchemy sqlite \
 python-multipart uvicorn zstandard conda-build appdirs toml quetz-client fsspec "h2<4.0.0"
 
 conda activate quetz
@@ -125,11 +125,12 @@ Then add your access and secret keys to the `s3` section with your
 access_key = "AKIAIOSFODNN7EXAMPLE"
 secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 url = "https://..."
+region = ""
 bucket_prefix="..."
 bucket_suffix="..."
 ```
 
-Be sure to set the url field if not using AWS.
+Be sure to set the url and region field if not using AWS.
 
 Channels are created with the following semantics:
 ```
