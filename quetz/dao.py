@@ -197,6 +197,7 @@ class Dao:
         return (
             self.db.query(ChannelMember)
             .join(User)
+            .filter(User.username.isnot(None))
             .filter(ChannelMember.channel_name == channel_name)
             .all()
         )
@@ -273,8 +274,12 @@ class Dao:
 
     def create_api_key(self, user_id, api_key: rest_models.BaseApiKey, key):
         owner = self.get_user(user_id)
-        # for now users can create key only for themselves
-        user = User(id=uuid.uuid4().bytes)
+        # if no roles are passed, create an API key with the same permissions as user
+        if not api_key.roles:
+            user = owner
+        else:
+            user = User(id=uuid.uuid4().bytes)
+            self.db.add(user)
         db_api_key = ApiKey(
             key=key, description=api_key.description, user=user, owner=owner
         )

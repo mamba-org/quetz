@@ -423,7 +423,7 @@ def test_create_api_key(data, client):
         "key": mock.ANY,
     }
 
-    # get key without special privileges
+    # get a key with user privileges
 
     response = client.post(
         '/api/api-keys',
@@ -434,7 +434,7 @@ def test_create_api_key(data, client):
     assert response.json() == {"description": "test-key", "roles": [], "key": mock.ANY}
 
 
-def test_use_generated_api_key_to_authenticate(data, client):
+def test_use_wildcard_api_key_to_authenticate(data, client):
 
     response = client.get(f"/api/dummylogin/{data.userc.username}")
     assert response.status_code == 200
@@ -451,13 +451,71 @@ def test_use_generated_api_key_to_authenticate(data, client):
 
     key = response.json()["key"]
 
+    # per-channel key
+    response = client.post(
+        '/api/api-keys',
+        json={
+            "description": "test-key",
+            "roles": [{"channel": "privatechannel", "role": "member"}],
+        },
+    )
+
+    assert response.status_code == 201
+    channel_key = response.json()["key"]
+
+    # add a new channel
+
+    response = client.post(
+        "/api/channels", json={"name": "my-new-channel", "private": True}
+    )
+
+    assert response.status_code == 201
+
+    # clear session cookies
+    client.cookies.clear()
+
     response = client.get(
         "/api/channels/privatechannel/members", headers={"X-API-Key": key}
+    )
+
+    assert response.status_code == 200
+
+    response = client.get(
+        "/api/channels/privatechannel/packages", headers={"X-API-Key": key}
+    )
+    assert response.status_code == 200
+
+    response = client.get(
+        "/api/channels/my-new-channel/members", headers={"X-API-Key": key}
+    )
+
+    assert response.status_code == 200
+
+    response = client.get(
+        "/api/channels/my-new-channel/packages", headers={"X-API-Key": key}
+    )
+    assert response.status_code == 200
+
+    # using per-channel key
+
+    response = client.get(
+        "/api/channels/privatechannel/members", headers={"X-API-Key": channel_key}
+    )
+
+    assert response.status_code == 200
+
+    response = client.get(
+        "/api/channels/privatechannel/packages", headers={"X-API-Key": channel_key}
+    )
+    assert response.status_code == 200
+
+    response = client.get(
+        "/api/channels/my-new-channel/members", headers={"X-API-Key": channel_key}
     )
 
     assert response.status_code == 403
 
     response = client.get(
-        "/api/channels/privatechannel/packages", headers={"X-API-Key": key}
+        "/api/channels/my-new-channel/packages", headers={"X-API-Key": channel_key}
     )
     assert response.status_code == 403
