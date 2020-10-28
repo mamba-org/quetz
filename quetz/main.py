@@ -1,6 +1,5 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
-
 import datetime
 import json
 import os
@@ -10,6 +9,7 @@ import sys
 import uuid
 from typing import List, Optional
 
+import pluggy
 import requests
 from fastapi import (
     APIRouter,
@@ -36,6 +36,7 @@ from quetz import (
     auth_google,
     authorization,
     db_models,
+    hooks,
     indexing,
     mirror,
     rest_models,
@@ -82,13 +83,30 @@ class CondaTokenMiddleware(BaseHTTPMiddleware):
         return response
 
 
+def get_plugin_manager():
+    pm = pluggy.PluginManager("quetz")
+    pm.add_hookspecs(hooks)
+    pm.load_setuptools_entrypoints("quetz")
+    from quetz import lib
+
+    pm.register(lib)
+    return pm
+
+
+pm = get_plugin_manager()
+
 app.add_middleware(CondaTokenMiddleware)
 
 api_router = APIRouter()
 
+plugin_routers = pm.hook.register_router()
+
 pkgstore = config.get_package_store()
 
 app.include_router(auth_github.router)
+
+for router in plugin_routers:
+    app.include_router(router)
 
 if config.configured_section("google"):
     auth_google.register(config)
