@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+
 import quetz
 
 
@@ -12,6 +13,7 @@ def register_router():
 
     return router
 
-    
 
-
+@quetz.hookimpl
+def extract_package_metadata(filehandler):
+    return "quetz-sync", {"synchronized": True, "time_modified": 0}

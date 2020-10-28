@@ -87,9 +87,6 @@ def get_plugin_manager():
     pm = pluggy.PluginManager("quetz")
     pm.add_hookspecs(hooks)
     pm.load_setuptools_entrypoints("quetz")
-    from quetz import lib
-
-    pm.register(lib)
     return pm
 
 
@@ -687,6 +684,11 @@ def handle_package_files(
 
     for file in files:
         condainfo = CondaInfo(file.file, file.filename)
+
+        plugin_channeldata = pm.hook.extract_package_metadata(filehandler=file.file)
+
+        condainfo.channeldata['plugin_metadata'] = dict(plugin_channeldata)
+
         package_name = condainfo.info["name"]
         if force:
             auth.assert_overwrite_package_version(channel_name, package_name)
