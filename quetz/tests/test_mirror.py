@@ -4,7 +4,6 @@ from io import BytesIO
 from pathlib import Path
 
 import pytest
-from fastapi.background import BackgroundTasks
 
 from quetz import rest_models
 from quetz.authorization import Rules
@@ -346,7 +345,6 @@ def test_synchronisation_sha(
     package_version,
 ):
     pkgstore = config.get_package_store()
-    background_tasks = BackgroundTasks()
     rules = Rules("", {"user_id": str(uuid.UUID(bytes=user.id))}, db)
 
     class DummySession:
@@ -365,7 +363,6 @@ def test_synchronisation_sha(
         dao,
         pkgstore,
         rules,
-        background_tasks,
         skip_errors=False,
     )
 
@@ -418,7 +415,6 @@ def test_synchronisation_timestamp(
 
     mirror_channel.timestamp_mirror_sync = timestamp_mirror_sync
     pkgstore = config.get_package_store()
-    background_tasks = BackgroundTasks()
     rules = Rules("", {"user_id": str(uuid.UUID(bytes=user.id))}, db)
 
     class DummySession:
@@ -434,7 +430,6 @@ def test_synchronisation_timestamp(
         dao,
         pkgstore,
         rules,
-        background_tasks,
         skip_errors=False,
     )
 

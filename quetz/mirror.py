@@ -6,7 +6,6 @@ from tempfile import SpooledTemporaryFile
 
 import requests
 from fastapi import HTTPException, status
-from fastapi.background import BackgroundTasks
 from fastapi.responses import FileResponse, StreamingResponse
 
 from quetz import authorization, indexing
@@ -219,7 +218,6 @@ def initial_sync_mirror(
     dao: Dao,
     pkgstore: PackageStore,
     auth: authorization.Rules,
-    background_tasks: BackgroundTasks,
     skip_errors: bool = True,
 ):
 
@@ -284,8 +282,6 @@ def initial_sync_mirror(
                     dao,
                     auth,
                     force,
-                    background_tasks,
-                    update_indexes=False,
                 )
             except Exception as exc:
                 # LOG: could not process package {package_name}
@@ -331,5 +327,4 @@ def synchronize_packages(
             dao,
             pkgstore,
             auth,
-            background_tasks,
         )

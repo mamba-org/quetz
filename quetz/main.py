@@ -652,7 +652,10 @@ def post_file_to_channel(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
-    handle_package_files(channel.name, files, dao, auth, force, background_tasks)
+    handle_package_files(channel.name, files, dao, auth, force)
+
+    # Background task to update indexes
+    background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel.name)
 
 
 def handle_package_files(
@@ -661,9 +664,7 @@ def handle_package_files(
     dao,
     auth,
     force,
-    background_tasks,
     package=None,
-    update_indexes=True,
 ):
 
     for file in files:
@@ -722,10 +723,6 @@ def handle_package_files(
         dest = os.path.join(condainfo.info["subdir"], file.filename)
         file.file._file.seek(0)
         pkgstore.add_package(file.file, channel_name, dest)
-
-    # Background task to update indexes
-    if update_indexes:
-        background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel_name)
 
 
 app.include_router(
