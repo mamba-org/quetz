@@ -274,7 +274,7 @@ class Dao:
     def create_api_key(self, user_id, api_key: rest_models.BaseApiKey, key):
         owner = self.get_user(user_id)
         # for now users can create key only for themselves
-        user = owner
+        user = User(id=uuid.uuid4().bytes)
         db_api_key = ApiKey(
             key=key, description=api_key.description, user=user, owner=owner
         )

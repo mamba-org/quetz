@@ -455,9 +455,9 @@ def test_use_generated_api_key_to_authenticate(data, client):
         "/api/channels/privatechannel/members", headers={"X-API-Key": key}
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 403
 
     response = client.get(
         "/api/channels/privatechannel/packages", headers={"X-API-Key": key}
     )
-    assert response.status_code == 200
+    assert response.status_code == 403
