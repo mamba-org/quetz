@@ -10,7 +10,6 @@ import uuid
 from typing import List, Optional
 
 import pluggy
-import requests
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -19,13 +18,11 @@ from fastapi import (
     File,
     Form,
     HTTPException,
-    Request,
     UploadFile,
     status,
 )
 from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse
@@ -43,7 +40,7 @@ from quetz import (
 )
 from quetz.config import Config
 from quetz.dao import Dao
-from quetz.database import get_session as get_db_session
+from quetz.deps import get_dao, get_remote_session, get_rules, get_session
 
 from .condainfo import CondaInfo
 from .mirror import LocalCache, RemoteRepository, get_from_cache_or_download
@@ -108,36 +105,6 @@ for router in plugin_routers:
 if config.configured_section("google"):
     auth_google.register(config)
     app.include_router(auth_google.router)
-
-# Dependency injection
-
-
-def get_db():
-    db = get_db_session(config.sqlalchemy_database_url)
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-def get_dao(db: Session = Depends(get_db)):
-    return Dao(db)
-
-
-def get_session(request: Request):
-    return request.session
-
-
-def get_remote_session():
-    return requests.Session()
-
-
-def get_rules(
-    request: Request,
-    session: dict = Depends(get_session),
-    db: Session = Depends(get_db),
-):
-    return authorization.Rules(request.headers.get("x-api-key"), session, db)
 
 
 class ChannelChecker:
@@ -744,10 +711,6 @@ def handle_package_files(
         pkgstore.add_package(file.file, channel_name, dest)
 
         pm.hook.post_add_package_version(version=version, condainfo=condainfo)
-
-    # Background task to update indexes
-    if update_indexes:
-        background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel_name)
 
 
 app.include_router(
