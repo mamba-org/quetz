@@ -1,8 +1,8 @@
 from setuptools import setup
 
 setup(
-    name="quetz-sync",
+    name="quetz-runexports",
     install_requires="quetz",
-    entry_points={"quetz": ["quetz-sync = quetz-sync"]},
+    entry_points={"quetz": ["quetz-runexports = main"]},
     py_modules=["main"],
 )
