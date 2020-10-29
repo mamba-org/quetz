@@ -685,9 +685,8 @@ def handle_package_files(
     for file in files:
         condainfo = CondaInfo(file.file, file.filename)
 
-        plugin_channeldata = pm.hook.extract_package_metadata(filehandler=file.file)
-
-        condainfo.channeldata['plugin_metadata'] = dict(plugin_channeldata)
+        # plugin_channeldata = pm.hook.extract_package_metadata(condainfo=condainfo)
+        # condainfo.channeldata['plugin_metadata'] = dict(plugin_channeldata)
 
         package_name = condainfo.info["name"]
         if force:
@@ -720,7 +719,7 @@ def handle_package_files(
         user_id = auth.assert_user()
 
         try:
-            dao.create_version(
+            version = dao.create_version(
                 channel_name=channel_name,
                 package_name=package_name,
                 package_format=condainfo.package_format,
@@ -743,6 +742,12 @@ def handle_package_files(
         dest = os.path.join(condainfo.info["subdir"], file.filename)
         file.file._file.seek(0)
         pkgstore.add_package(file.file, channel_name, dest)
+
+        pm.hook.post_add_package_version(version=version, condainfo=condainfo)
+
+    # Background task to update indexes
+    if update_indexes:
+        background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel_name)
 
 
 app.include_router(

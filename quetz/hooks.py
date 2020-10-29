@@ -9,5 +9,5 @@ def register_router():
 
 
 @hookspec
-def extract_package_metadata(filehandler):
-    """extract metadata from conda package"""
+def post_add_package_version(version, condainfo):
+    """hook for post-processsing after adding a package version"""
