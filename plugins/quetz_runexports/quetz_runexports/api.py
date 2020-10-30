@@ -1,6 +1,6 @@
 import json
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm.session import Session
 
 from quetz.db_models import PackageVersion
@@ -25,5 +25,11 @@ def get_run_exports(
         .filter(PackageVersion.build_string == build_string)
         .first()
     )
+
+    if not package_version.runexports:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"run_exports for package {package_name}-{version_hash} not found",
+        )
     run_exports = json.loads(package_version.runexports.run_exports)
     return run_exports

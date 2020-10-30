@@ -11,3 +11,14 @@ def test_run_exports_endpoint(
     )
     assert response.status_code == 200
     assert response.json() == {"weak": ["somepackage > 3.0"]}
+
+
+def test_endpoint_without_metadata(
+    client, channel, package, package_version, db, session_maker
+):
+    version_id = f"{package_version.version}-{package_version.build_string}"
+
+    response = client.get(
+        f"/api/channels/{channel.name}/packages/{package.name}/versions/{version_id}/run_exports"  # noqa
+    )
+    assert response.status_code == 404
