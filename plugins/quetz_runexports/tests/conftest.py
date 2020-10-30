@@ -88,7 +88,6 @@ def package_version(user, channel, db, dao, package):
 def package_runexports(package_version, db):
 
     meta = db_models.PackageVersionMetadata(
-        id=uuid.uuid4().bytes,
         version_id=package_version.id,
         run_exports=json.dumps({"weak": ["somepackage > 3.0"]}),
     )

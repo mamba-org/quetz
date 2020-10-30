@@ -1,5 +1,4 @@
 import json
-import uuid
 from contextlib import contextmanager
 
 import quetz
@@ -21,8 +20,13 @@ def post_add_package_version(version, condainfo):
     run_exports = json.dumps(condainfo.run_exports)
 
     with get_db() as db:
-        metadata = db_models.PackageVersionMetadata(
-            id=uuid.uuid4().bytes, version_id=version.id, run_exports=run_exports
-        )
-        db.add(metadata)
+
+        if not version.runexports:
+            metadata = db_models.PackageVersionMetadata(
+                version_id=version.id, run_exports=run_exports
+            )
+            db.add(metadata)
+        else:
+            metadata = db.query(db_models.PackageVersionMetadata).get(version.id)
+            metadata.run_exports = run_exports
         db.commit()

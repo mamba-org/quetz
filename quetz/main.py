@@ -652,9 +652,6 @@ def handle_package_files(
     for file in files:
         condainfo = CondaInfo(file.file, file.filename)
 
-        # plugin_channeldata = pm.hook.extract_package_metadata(condainfo=condainfo)
-        # condainfo.channeldata['plugin_metadata'] = dict(plugin_channeldata)
-
         package_name = condainfo.info["name"]
         if force:
             auth.assert_overwrite_package_version(channel_name, package_name)
