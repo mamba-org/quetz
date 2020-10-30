@@ -2,11 +2,11 @@ import json
 import uuid
 
 from pytest import fixture
+from quetz_runexports import db_models
 
 from quetz import rest_models
 from quetz.dao import Dao
 from quetz.db_models import User
-from sample_plugin import db_models
 
 pytest_plugins = "quetz.testing.fixtures"
 

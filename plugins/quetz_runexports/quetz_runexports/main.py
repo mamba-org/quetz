@@ -2,11 +2,11 @@ import json
 import uuid
 from contextlib import contextmanager
 
-from api import router
-
 import quetz
 from quetz.deps import get_db
-from sample_plugin import db_models
+
+from . import db_models
+from .api import router
 
 get_db = contextmanager(get_db)
 
