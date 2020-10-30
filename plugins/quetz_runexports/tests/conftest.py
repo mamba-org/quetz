@@ -89,7 +89,7 @@ def package_runexports(package_version, db):
 
     meta = db_models.PackageVersionMetadata(
         version_id=package_version.id,
-        run_exports=json.dumps({"weak": ["somepackage > 3.0"]}),
+        data=json.dumps({"weak": ["somepackage > 3.0"]}),
     )
 
     db.add(meta)

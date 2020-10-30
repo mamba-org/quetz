@@ -12,4 +12,4 @@ class PackageVersionMetadata(Base):
         "PackageVersion",
         backref=backref("runexports", uselist=False, cascade="delete,all"),
     )
-    run_exports = Column(String)
+    data = Column(String)

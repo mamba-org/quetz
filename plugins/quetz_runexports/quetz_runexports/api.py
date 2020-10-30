@@ -31,5 +31,5 @@ def get_run_exports(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"run_exports for package {package_name}-{version_hash} not found",
         )
-    run_exports = json.loads(package_version.runexports.run_exports)
+    run_exports = json.loads(package_version.runexports.data)
     return run_exports

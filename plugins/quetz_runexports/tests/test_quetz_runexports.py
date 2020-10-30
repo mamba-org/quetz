@@ -53,7 +53,7 @@ def test_post_add_package_version(package_version, config, db, session_maker):
 
     meta = db.query(db_models.PackageVersionMetadata).first()
 
-    assert meta.run_exports == '{}'
+    assert meta.data == '{}'
 
     # modify runexport and re-save
     condainfo.run_exports = {"weak": ["somepackage < 0.3"]}
@@ -64,4 +64,4 @@ def test_post_add_package_version(package_version, config, db, session_maker):
 
     assert len(meta) == 1
 
-    assert meta[0].run_exports == '{"weak": ["somepackage < 0.3"]}'
+    assert meta[0].data == '{"weak": ["somepackage < 0.3"]}'
