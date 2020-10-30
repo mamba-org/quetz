@@ -1,6 +1,6 @@
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy.orm.session import Session
 
 from quetz.db_models import PackageVersion
@@ -13,7 +13,10 @@ router = APIRouter()
     "/api/channels/{channel_name}/packages/{package_name}/versions/{version_hash}/run_exports"  # noqa
 )
 def get_run_exports(
-    channel_name, package_name, version_hash, db: Session = Depends(get_db)
+    channel_name,
+    package_name,
+    version_hash: str = Path(None, regex=r"^[^\-\r\n]*-[^\-\r\n]*$"),
+    db: Session = Depends(get_db),
 ):
 
     version_id, build_string = version_hash.split("-")

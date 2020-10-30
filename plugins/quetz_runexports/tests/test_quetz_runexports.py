@@ -65,3 +65,30 @@ def test_post_add_package_version(package_version, config, db, session_maker):
     assert len(meta) == 1
 
     assert meta[0].data == '{"weak": ["somepackage < 0.3"]}'
+
+
+def test_validate_url_param(
+    client, channel, package, package_version, package_runexports, db, session_maker
+):
+    version_id = f"{package_version.version}"
+
+    response = client.get(
+        f"/api/channels/{channel.name}/packages/{package.name}/versions/{version_id}/run_exports"  # noqa
+    )
+    assert response.status_code == 422
+
+    version_id = f"{package_version.build_string}"
+
+    response = client.get(
+        f"/api/channels/{channel.name}/packages/{package.name}/versions/{version_id}/run_exports"  # noqa
+    )
+    assert response.status_code == 422
+
+    version_id = (
+        f"{package.name}-{package_version.build_string}-{package_version.build_string}"
+    )
+
+    response = client.get(
+        f"/api/channels/{channel.name}/packages/{package.name}/versions/{version_id}/run_exports"  # noqa
+    )
+    assert response.status_code == 422
