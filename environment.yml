@@ -19,3 +19,4 @@ dependencies:
   - h2<4.0.0
   - sphinx
   - sphinx-book-theme
+  - pluggy
