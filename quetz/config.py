@@ -8,9 +8,10 @@ from secrets import token_bytes
 from typing import Any, Dict, List, NamedTuple, NoReturn, Type, Union
 
 import appdirs
+import pluggy
 import toml
 
-from quetz import pkgstores
+from quetz import hooks, pkgstores
 from quetz.errors import ConfigError
 
 _filename = "config.toml"
@@ -253,3 +254,11 @@ def create_config(
         config = ''.join(f.readlines())
 
     return config.format(client_id, client_secret, database_url, secret, https)
+
+
+def get_plugin_manager() -> pluggy.PluginManager:
+    """Create an instance of plugin manager."""
+    pm = pluggy.PluginManager("quetz")
+    pm.add_hookspecs(hooks)
+    pm.load_setuptools_entrypoints("quetz")
+    return pm

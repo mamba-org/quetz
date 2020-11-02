@@ -27,3 +27,8 @@ def post_add_package_version(
         metadata extracted from the archive
 
     """
+
+
+@hookspec
+def post_package_indexing() -> None:
+    pass
