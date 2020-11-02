@@ -1,0 +1,21 @@
+name: quetz-rtd
+channels:
+  - conda-forge
+dependencies:
+  - fastapi
+  - typer
+  - authlib=0.14.3
+  - httpx=0.12.0
+  - sqlalchemy 
+  - sqlite
+  - python-multipart 
+  - uvicorn 
+  - zstandard
+  - conda-build
+  - appdirs
+  - toml
+  - quetz-client
+  - fsspec
+  - h2<4.0.0
+  - sphinx
+  - sphinx-book-theme
