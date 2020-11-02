@@ -20,7 +20,6 @@ def post_add_package_version(
 ) -> None:
     """hook for post-processsing after adding a package file.
 
-    Arguments:
     :param quetz.db_models.PackageVersion version:
         package version model that was added in to the database
 
