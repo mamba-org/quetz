@@ -19,6 +19,8 @@
 
 # Quetz
 
+[![Documentation Status](https://readthedocs.org/projects/quetz/badge/?version=latest)](https://quetz.readthedocs.io/en/latest/?badge=latest)
+
 The quetz project is an open source server for conda packages.
 It is built upon FastAPI with an API-first approach.
 A quetz server can have many users, channels and packages.
@@ -34,7 +36,7 @@ Then create an environment:
 
 ```
 mamba create -n quetz -c conda-forge 'python>=3.7' fastapi typer authlib=0.14.3 httpx=0.12.0 sqlalchemy sqlite \
-python-multipart uvicorn zstandard conda-build appdirs toml quetz-client fsspec "h2<4.0.0"
+python-multipart uvicorn zstandard conda-build appdirs toml quetz-client fsspec "h2<4.0.0" pluggy
 
 conda activate quetz
 ```
