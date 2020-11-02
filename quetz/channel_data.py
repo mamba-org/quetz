@@ -21,6 +21,7 @@ CHANNELDATA_OPTIONAL_FIELDS = (
     "source_url",
     "summary",
     "version",
+    "plugin_metadata",
 )
 CHANNELDATA_BINARY_FIELDS = (
     "activate.d",

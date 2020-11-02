@@ -1,6 +1,5 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
-
 import datetime
 import json
 import os
@@ -10,7 +9,7 @@ import sys
 import uuid
 from typing import List, Optional
 
-import requests
+import pluggy
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -19,13 +18,11 @@ from fastapi import (
     File,
     Form,
     HTTPException,
-    Request,
     UploadFile,
     status,
 )
 from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse
@@ -36,13 +33,14 @@ from quetz import (
     auth_google,
     authorization,
     db_models,
+    hooks,
     indexing,
     mirror,
     rest_models,
 )
 from quetz.config import Config
 from quetz.dao import Dao
-from quetz.database import get_session as get_db_session
+from quetz.deps import get_dao, get_remote_session, get_rules, get_session
 
 from .condainfo import CondaInfo
 from .mirror import LocalCache, RemoteRepository, get_from_cache_or_download
@@ -82,47 +80,31 @@ class CondaTokenMiddleware(BaseHTTPMiddleware):
         return response
 
 
+def get_plugin_manager():
+    pm = pluggy.PluginManager("quetz")
+    pm.add_hookspecs(hooks)
+    pm.load_setuptools_entrypoints("quetz")
+    return pm
+
+
+pm = get_plugin_manager()
+
 app.add_middleware(CondaTokenMiddleware)
 
 api_router = APIRouter()
+
+plugin_routers = pm.hook.register_router()
 
 pkgstore = config.get_package_store()
 
 app.include_router(auth_github.router)
 
+for router in plugin_routers:
+    app.include_router(router)
+
 if config.configured_section("google"):
     auth_google.register(config)
     app.include_router(auth_google.router)
-
-# Dependency injection
-
-
-def get_db():
-    db = get_db_session(config.sqlalchemy_database_url)
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-def get_dao(db: Session = Depends(get_db)):
-    return Dao(db)
-
-
-def get_session(request: Request):
-    return request.session
-
-
-def get_remote_session():
-    return requests.Session()
-
-
-def get_rules(
-    request: Request,
-    session: dict = Depends(get_session),
-    db: Session = Depends(get_db),
-):
-    return authorization.Rules(request.headers.get("x-api-key"), session, db)
 
 
 class ChannelChecker:
@@ -669,6 +651,7 @@ def handle_package_files(
 
     for file in files:
         condainfo = CondaInfo(file.file, file.filename)
+
         package_name = condainfo.info["name"]
         if force:
             auth.assert_overwrite_package_version(channel_name, package_name)
@@ -700,7 +683,7 @@ def handle_package_files(
         user_id = auth.assert_user()
 
         try:
-            dao.create_version(
+            version = dao.create_version(
                 channel_name=channel_name,
                 package_name=package_name,
                 package_format=condainfo.package_format,
@@ -723,6 +706,8 @@ def handle_package_files(
         dest = os.path.join(condainfo.info["subdir"], file.filename)
         file.file._file.seek(0)
         pkgstore.add_package(file.file, channel_name, dest)
+
+        pm.hook.post_add_package_version(version=version, condainfo=condainfo)
 
 
 app.include_router(
