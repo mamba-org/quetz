@@ -23,7 +23,7 @@ where `{version_id}` is the version number and the build hash with the minus sig
 
 ```
 # download zeromq package
-curl -OL https://anaconda.org/conda-forge/zeromq/4.2.5/download/linux-64/zeromq-4.3.3-he1b5a44_2.tar.bz2
+curl -OL https://anaconda.org/conda-forge/zeromq/4.3.3/download/linux-64/zeromq-4.3.3-he1b5a44_2.tar.bz2
 
 # export an api key
 export QUETZ_API_KEY=...
