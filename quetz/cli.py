@@ -320,10 +320,14 @@ def start(
     try:
         config_file_name = deployments[abs_path]
     except KeyError:
-        typer.echo(f'No Quetz deployment found at {path}.', err=True)
-        raise typer.Abort()
+        # we can also start the deployment if we find the config file
+        config_file_name = 'config.toml'
 
     config_file = os.path.join(abs_path, config_file_name)
+    if not os.path.exists(config_file):
+        typer.echo(f'Could not find config at {config_file}')
+        raise typer.Abort()
+
     os.environ[_env_prefix + _env_config_file] = config_file
     os.chdir(path)
 
