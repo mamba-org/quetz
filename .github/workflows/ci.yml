@@ -79,4 +79,5 @@ jobs:
           pip install ./plugins/quetz_runexports
           pytest -v ./plugins/quetz_runexports/tests
           
+          pip install ./plugins/quetz_repodata_patching
           pytest -v ./plugins/quetz_repodata_patching
