@@ -78,3 +78,5 @@ jobs:
           echo "testing plugins"
           pip install ./plugins/quetz_runexports
           pytest -v ./plugins/quetz_runexports/tests
+          
+          pytest -v ./plugins/quetz_repodata_patching
