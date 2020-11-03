@@ -30,5 +30,7 @@ def post_add_package_version(
 
 
 @hookspec
-def post_package_indexing() -> None:
+def post_package_indexing(
+    pkgstore: "quetz.pkgstores.PackageStore", channel_name: str, subdirs
+) -> None:
     pass

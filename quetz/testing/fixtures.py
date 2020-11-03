@@ -5,7 +5,9 @@ import tempfile
 from fastapi.testclient import TestClient
 from pytest import fixture
 
+import quetz
 from quetz.config import Config
+from quetz.dao import Dao
 from quetz.database import get_engine, get_session_maker
 
 
@@ -69,7 +71,7 @@ https_only = false
     old_dir = os.path.abspath(os.curdir)
     os.chdir(path)
     os.environ["QUETZ_CONFIG_FILE"] = config_path
-    data_dir = os.path.join(old_dir, "quetz", "tests", "data")
+    data_dir = os.path.join(os.path.dirname(quetz.__file__), "tests", "data")
     for filename in os.listdir(data_dir):
         full_path = os.path.join(data_dir, filename)
         dest = os.path.join(path, filename)
@@ -94,3 +96,8 @@ def app(config, session_maker):
 def client(app):
     client = TestClient(app)
     return client
+
+
+@fixture
+def dao(db) -> Dao:
+    return Dao(db)
