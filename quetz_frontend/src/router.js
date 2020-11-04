@@ -1,10 +1,13 @@
 import Vue from 'vue';
 import Router from 'vue-router';
+
 import Channels from './views/Channels.vue';
 import Users from './views/Users.vue';
-import Header from './components/Header';
+import ApiKeys from './views/ApiKeys';
 import Packages from './views/Packages';
 import Package from './views/Package';
+
+import Header from './components/Header';
 
 import CarbonComponentsVue from '@carbon/vue';
 Vue.use(CarbonComponentsVue);
@@ -29,6 +32,11 @@ export default new Router({
       component: Users
     },
     {
+      path: '/api-keys',
+      name: 'api-keys',
+      component: ApiKeys
+    },
+    {
       path: '/channel/:channel_id/packages',
       name: 'packages',
       component: Packages
@@ -48,5 +56,6 @@ export default new Router({
       // component: () =>
       //   import(/* webpackChunkName: "about" */ './views/About.vue')
     }
-  ]
+  ],
+  // mode: 'history'
 });

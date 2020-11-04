@@ -752,6 +752,13 @@ def serve_path(
             )
 
 
+# from starlette.responses import FileResponse, HTMLResponse
+# @app.get("/.*", include_in_schema=False)
+# def root():
+#     with open("../quetz_frontend/dist/index.html") as fi:
+#         index_content = fi.read()
+#     return HTMLResponse(index_content)
+
 if os.path.isfile("../quetz_frontend/dist/index.html"):
     print("dev frontend found")
     app.mount(

@@ -17,10 +17,12 @@
         <cv-button v-on:click="signinGithub">
           Sign In Via Github
         </cv-button>
+<!--
         <cv-button v-on:click="signinGoogle">
           Sign In Via Google
         </cv-button>
-      <cv-header-global-action aria-label="User avatar" aria-controls="user-panel">
+ -->
+        <cv-header-global-action aria-label="User avatar" aria-controls="user-panel">
         <!-- <img :src="avatar_url" v-if="avatar_url" /> -->
 
         <UserAvatar20 />
@@ -34,6 +36,9 @@
         </cv-side-nav-link>
         <cv-side-nav-link href="/#/users">
           Users
+        </cv-side-nav-link>
+        <cv-side-nav-link href="/#/api-keys">
+          Api Keys
         </cv-side-nav-link>
       </cv-side-nav-items>
     </cv-side-nav>
