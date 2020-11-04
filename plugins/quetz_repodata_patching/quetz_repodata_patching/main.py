@@ -88,7 +88,10 @@ def extract_from_conda(fs):
 
 
 def _load_instructions(tar, path):
-    patch_instructions = json.load(tar.extractfile(path))
+    try:
+        patch_instructions = json.load(tar.extractfile(path))
+    except KeyError:
+        return {}
     return patch_instructions
 
 
@@ -164,12 +167,16 @@ def post_package_indexing(
 
             subdir_path = f"{subdir}/{path}"
 
-            pkgstore.add_file(
-                content,
-                channel_name,
-                subdir_path,
-            )
+            if isinstance(content, str):
+                content = content.encode("utf-8")
+
+            compressed_content = bz2.compress(content)
+
+            pkgstore.add_file(content, channel_name, subdir_path)
+            pkgstore.add_file(compressed_content, channel_name, subdir_path + ".bz2")
+
             updated_files.append((path, content))
+            updated_files.append((path + ".bz2", compressed_content))
 
         with extract_(fs) as tar:
 
@@ -186,23 +193,15 @@ def post_package_indexing(
                     repodata_str = fs.read()
                     repodata = json.loads(repodata_str)
 
+                    _addfile(repodata_str, f"{fname}_from_packages.json")
+
+                    patch_repodata(repodata, patch_instructions)
+
                     if fname == 'repodata':
                         packages.update(repodata["packages"])
                         packages.update(repodata["packages.conda"])
 
-                    _addfile(repodata_str, f"{fname}_from_packages.json")
-
-                    compressed_repodata_str = bz2.compress(repodata_str)
-                    _addfile(compressed_repodata_str, f"{fname}_from_packages.json.bz2")
-
-                    patch_repodata(repodata, patch_instructions)
-
                     patched_repodata_str = json.dumps(repodata)
                     _addfile(patched_repodata_str, f"{fname}.json")
-
-                    compressed_patched_repodata_str = bz2.compress(
-                        patched_repodata_str.encode('utf-8')
-                    )
-                    _addfile(compressed_patched_repodata_str, f"{fname}.json.bz2")
 
                 update_index(pkgstore, updated_files, channel_name, subdir, packages)
