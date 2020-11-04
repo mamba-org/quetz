@@ -4,55 +4,43 @@
 import argparse
 import os
 import sys
-from urllib.parse import urlparse, urlunparse
+import webbrowser
+from urllib.parse import urljoin, urlparse, urlunparse
 
+import appdirs
 import requests
+import toml
 from conda_verify.verify import Verify
 
 import quetz_client
 
+config_dir = appdirs.user_config_dir("quetz_client")
+api_keys_location = os.path.join(config_dir, 'api_keys.toml')
 
-def main():
-    parser = argparse.ArgumentParser(
-        usage="%(prog)s url package", description="Uploads package to Quetz."
-    )
 
-    parser.add_argument(
-        "--dry-run",
-        action='store_true',
-        help="Print what would happen, without uploading the package(s)",
-    )
+def get_api_key(args):
+    parsed_server = urlparse(args.server)
 
-    parser.add_argument(
-        "--verify", action='store_true', help="Verify package(s) with conda-verify"
-    )
+    api_keys_frontend = urljoin(args.server, "/#/api-keys")
+    webbrowser.open_new_tab(api_keys_frontend)
+    print("Please paste the API key:")
+    api_key = input()
 
-    parser.add_argument(
-        "--verify-ignore",
-        type=str,
-        help="Ignore specific checks. Each check must be separated by a single comma",
-    )
+    if not os.path.exists(config_dir):
+        os.makedirs(config_dir)
 
-    parser.add_argument(
-        "--force",
-        action='store_true',
-        help=(
-            "Allow overwriting an exiting package version. "
-            "(Only allowed with channel owner role)"
-        ),
-    )
+    if os.path.exists(api_keys_location):
+        with open(api_keys_location) as fo:
+            keys = toml.load(api_keys_location)
+    else:
+        keys = {}
+    keys.update({parsed_server.netloc: api_key})
 
-    parser.add_argument(
-        "-v",
-        "--version",
-        action="version",
-        version=f"quetz-client version {quetz_client.__version__}",
-    )
+    with open(api_keys_location, 'w') as fo:
+        toml.dump(keys, fo)
 
-    parser.add_argument("channel_url")
-    parser.add_argument("packages", nargs='+', help="package(s) or build root")
-    args = parser.parse_args()
 
+def upload_packages(args):
     channel_url = args.channel_url
     parts = urlparse(channel_url)
     if parts.path[:4] != "/api":
@@ -106,3 +94,68 @@ def main():
                 f'  Message: {str(response.content.decode("utf-8"))}'
             )
             sys.exit(1)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    subparsers = parser.add_subparsers(
+        title='subcommands',
+        description='valid subcommands',
+        help='additional help',
+        dest='cmd',
+    )
+
+    upload_parser = subparsers.add_parser(
+        'upload',
+        usage="%(prog)s channel_url packages",
+        description="Uploads package to Quetz.",
+    )
+
+    upload_parser.add_argument(
+        "--dry-run",
+        action='store_true',
+        help="Print what would happen, without uploading the package(s)",
+    )
+
+    upload_parser.add_argument(
+        "--verify", action='store_true', help="Verify package(s) with conda-verify"
+    )
+
+    upload_parser.add_argument(
+        "--verify-ignore",
+        type=str,
+        help="Ignore specific checks. Each check must be separated by a single comma",
+    )
+
+    upload_parser.add_argument(
+        "--force",
+        action='store_true',
+        help=(
+            "Allow overwriting an exiting package version. "
+            "(Only allowed with channel owner role)"
+        ),
+    )
+
+    upload_parser.add_argument(
+        "-v",
+        "--version",
+        action="version",
+        version=f"quetz-client version {quetz_client.__version__}",
+    )
+
+    upload_parser.add_argument("channel_url")
+    upload_parser.add_argument("packages", nargs='+', help="package(s) or build root")
+
+    api_key_parser = subparsers.add_parser(
+        'apikey', usage="%(prog)s", description="Obtain an API key from quetz."
+    )
+
+    api_key_parser.add_argument("server", nargs='?', default="https://beta.mamba.pm")
+    args = parser.parse_args()
+
+    if args.cmd == 'apikey':
+        get_api_key(args)
+
+    elif args.cmd == 'upload':
+        return upload_packages(args)
