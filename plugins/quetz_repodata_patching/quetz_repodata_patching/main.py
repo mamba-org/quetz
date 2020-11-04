@@ -8,26 +8,43 @@ from quetz.db_models import PackageVersion
 from quetz.deps import get_db
 
 
+def update_dict(packages, instructions):
+    for pkg, info in instructions.items():
+        if pkg in packages:
+            packages[pkg].update(info)
+
+
 def patch_repodata(repodata, patches):
-    packages = repodata["packages"]
-    # patch packages
-    for pkg, info in patches["packages"].items():
-        packages[pkg].update(info)
+    for key in ("packages", "packages.conda"):
+        packages = repodata.get(key, {})
+        # patch packages
+        update_dict(packages, patches.get(key, {}))
 
-    # revoke packages
-    for revoked_pkg_name in patches.get("revoke", ()):
-        if revoked_pkg_name not in packages:
-            continue
-        package = packages[revoked_pkg_name]
-        package['revoked'] = True
-        package["depends"].append('package_has_been_revoked')
+        if key == "packages.conda":
+            # in the conda-build implementation
+            # the conda packages can be also patched
+            # with the .tar.bz2 instructions
 
-    # remove packages
-    repodata.setdefault("removed", [])
-    for removed_pkg_name in patches.get("remove", ()):
-        popped = packages.pop(removed_pkg_name, None)
-        if popped:
-            repodata["removed"].append(removed_pkg_name)
+            instructions = patches.get("packages", {})
+            new_patches = {
+                k.replace(".tar.bz2", ".conda"): v for k, v in instructions.items()
+            }
+            update_dict(packages, new_patches)
+
+        # revoke packages
+        for revoked_pkg_name in patches.get("revoke", ()):
+            if revoked_pkg_name not in packages:
+                continue
+            package = packages[revoked_pkg_name]
+            package['revoked'] = True
+            package["depends"].append('package_has_been_revoked')
+
+        # remove packages
+        repodata.setdefault("removed", [])
+        for removed_pkg_name in patches.get("remove", ()):
+            popped = packages.pop(removed_pkg_name, None)
+            if popped:
+                repodata["removed"].append(removed_pkg_name)
 
 
 @quetz.hookimpl

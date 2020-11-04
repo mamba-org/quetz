@@ -32,8 +32,16 @@ def package_name():
 
 
 @pytest.fixture
-def package_file_name(package_name):
-    return f"{package_name}-0.1-0.tar.bz2"
+def package_format():
+    return 'tarbz2'
+
+
+@pytest.fixture
+def package_file_name(package_name, package_format):
+    if package_format == 'tarbz2':
+        return f"{package_name}-0.1-0.tar.bz2"
+    elif package_format == "conda":
+        return f"{package_name}-0.1-0.conda"
 
 
 @pytest.fixture
@@ -46,12 +54,17 @@ def channel(dao: "quetz.dao.Dao", channel_name, user):
 
 @pytest.fixture
 def package_version(
-    dao: "quetz.dao.Dao", user, channel, package_name, db, package_file_name
+    dao: "quetz.dao.Dao",
+    user,
+    channel,
+    package_name,
+    db,
+    package_file_name,
+    package_format,
 ):
     package_data = Package(name=package_name)
 
     dao.create_package(channel.name, package_data, user.id, "owner")
-    package_format = 'tarbz2'
     package_info = (
         '{"run_exports": {"weak": ["otherpackage > 0.1"]}, "size": 100, "depends": []}'
     )
@@ -95,14 +108,32 @@ def remove_instructions():
 
 
 @pytest.fixture
-def patch_content(package_file_name, revoke_instructions, remove_instructions):
-    return {
-        "packages": {
-            package_file_name: {"run_exports": {"weak": ["otherpackage > 0.2"]}}
-        },
-        "revoke": revoke_instructions,
-        "remove": remove_instructions,
-    }
+def patched_package_name(package_file_name):
+    # by default the name of the package in patch_instructions is the same
+    # as the name of the dummy package
+    # but we will change it in the test to test if we can patch .conda files
+    # with .tar.bz2 instructions
+    return package_file_name
+
+
+@pytest.fixture
+def patch_content(patched_package_name, revoke_instructions, remove_instructions):
+
+    d = {}
+
+    package_file_name = patched_package_name
+
+    meta = {package_file_name: {"run_exports": {"weak": ["otherpackage > 0.2"]}}}
+
+    if package_file_name.endswith(".tar.bz2"):
+        d["packages"] = meta
+    elif package_file_name.endswith(".conda"):
+        d["packages.conda"] = meta
+
+    d["revoke"] = revoke_instructions
+    d["remove"] = remove_instructions
+
+    return d
 
 
 @pytest.fixture
@@ -148,8 +179,8 @@ def package_repodata_patches(
     package_data = Package(name=package_name)
 
     dao.create_package(channel.name, package_data, user.id, "owner")
-    package_format = 'tarbz2'
     package_info = '{"size": 100, "depends":[]}'
+    package_format = "tarbz2"
     version = dao.create_version(
         channel.name,
         package_name,
@@ -184,6 +215,17 @@ def pkgstore(config):
     "remove_instructions",
     [[], ["mytestpackage-0.1-0.tar.bz2"], ["nonexistentpackage-0.1-0.tar.bz2"]],
 )
+@pytest.mark.parametrize(
+    "package_format,patched_package_name",
+    [
+        ("conda", "mytestpackage-0.1-0.tar.bz2"),
+        ("conda", "mytestpackage-0.1-0.conda"),
+        ("tarbz2", "mytestpackage-0.1-0.tar.bz2"),
+        # this combination is no valid
+        # (can't update tar.bz2 package with .conda instructions)
+        # ("tarbz2","mytestpackage-0.1-0.conda"),
+    ],
+)
 def test_post_package_indexing(
     pkgstore,
     dao,
@@ -196,6 +238,8 @@ def test_post_package_indexing(
     compressed_repodata,
     revoke_instructions,
     remove_instructions,
+    package_format,
+    patched_package_name,
 ):
     def get_db():
         yield db
@@ -215,21 +259,25 @@ def test_post_package_indexing(
     with open_(repodata_path) as fid:
         data = json.load(fid)
 
+    key = "packages" if package_format == 'tarbz2' else "packages.conda"
+
+    packages = data[key]
+
     if package_file_name not in remove_instructions:
-        assert data['packages'][package_file_name]['run_exports'] == {
+        assert packages[package_file_name]['run_exports'] == {
             "weak": ["otherpackage > 0.2"]
         }
 
     for revoked_pkg_name in revoke_instructions:
         try:
-            revoked_pkg = data["packages"][revoked_pkg_name]
+            revoked_pkg = packages[revoked_pkg_name]
         except KeyError:
             continue
         assert revoked_pkg.get("revoked", False)
         assert 'package_has_been_revoked' in revoked_pkg["depends"]
 
     for removed_pkg_name in remove_instructions:
-        assert removed_pkg_name not in data["packages"]
+        assert removed_pkg_name not in packages
         if removed_pkg_name == package_file_name:
             assert removed_pkg_name in data.get("removed", ())
 
@@ -243,7 +291,7 @@ def test_post_package_indexing(
     assert os.path.isfile(orig_repodata_path)
     with open_(orig_repodata_path) as fid:
         data = json.load(fid)
-    package_data = data['packages'][package_file_name]
+    package_data = data[key][package_file_name]
     assert package_data['run_exports'] == {"weak": ["otherpackage > 0.1"]}
     assert not package_data.get("revoked", False)
     assert "package_has_been_revoked" not in package_data
