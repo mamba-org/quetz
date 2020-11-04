@@ -33,7 +33,7 @@ def package_name():
 
 @pytest.fixture
 def package_file_name(package_name):
-    return f"{package_name}-0.1-0.tar.bz"
+    return f"{package_name}-0.1-0.tar.bz2"
 
 
 @pytest.fixture
@@ -52,7 +52,9 @@ def package_version(
 
     dao.create_package(channel.name, package_data, user.id, "owner")
     package_format = 'tarbz2'
-    package_info = '{"run_exports": {"weak": ["otherpackage > 0.1"]}, "size": 100}'
+    package_info = (
+        '{"run_exports": {"weak": ["otherpackage > 0.1"]}, "size": 100, "depends": []}'
+    )
     version = dao.create_version(
         channel.name,
         package_name,
@@ -83,11 +85,23 @@ def repodata_file_name(repodata_name):
 
 
 @pytest.fixture
-def patch_content(package_file_name):
+def revoke_instructions():
+    return []
+
+
+@pytest.fixture
+def remove_instructions():
+    return []
+
+
+@pytest.fixture
+def patch_content(package_file_name, revoke_instructions, remove_instructions):
     return {
         "packages": {
             package_file_name: {"run_exports": {"weak": ["otherpackage > 0.2"]}}
-        }
+        },
+        "revoke": revoke_instructions,
+        "remove": remove_instructions,
     }
 
 
@@ -135,7 +149,7 @@ def package_repodata_patches(
 
     dao.create_package(channel.name, package_data, user.id, "owner")
     package_format = 'tarbz2'
-    package_info = '{"size": 100}'
+    package_info = '{"size": 100, "depends":[]}'
     version = dao.create_version(
         channel.name,
         package_name,
@@ -162,6 +176,10 @@ def pkgstore(config):
 
 @pytest.mark.parametrize("repodata_stem", ["repodata", "current_repodata"])
 @pytest.mark.parametrize("compressed_repodata", [False, True])
+@pytest.mark.parametrize(
+    "revoke_instructions",
+    [[], ["mytestpackage-0.1-0.tar.bz2"], ["nonexistentpackage-0.1-0.tar.bz2"]],
+)
 def test_post_package_indexing(
     pkgstore,
     dao,
@@ -172,6 +190,7 @@ def test_post_package_indexing(
     package_file_name,
     repodata_stem,
     compressed_repodata,
+    revoke_instructions,
 ):
     def get_db():
         yield db
@@ -190,9 +209,18 @@ def test_post_package_indexing(
 
     with open_(repodata_path) as fid:
         data = json.load(fid)
+
     assert data['packages'][package_file_name]['run_exports'] == {
         "weak": ["otherpackage > 0.2"]
     }
+
+    for revoked_pkg_name in revoke_instructions:
+        try:
+            revoked_pkg = data["packages"][revoked_pkg_name]
+        except KeyError:
+            continue
+        assert revoked_pkg.get("revoked", False)
+        assert 'package_has_been_revoked' in revoked_pkg["depends"]
 
     orig_repodata_path = os.path.join(
         pkgstore.channels_dir,
@@ -204,6 +232,7 @@ def test_post_package_indexing(
     assert os.path.isfile(orig_repodata_path)
     with open_(orig_repodata_path) as fid:
         data = json.load(fid)
-    assert data['packages'][package_file_name]['run_exports'] == {
-        "weak": ["otherpackage > 0.1"]
-    }
+    package_data = data['packages'][package_file_name]
+    assert package_data['run_exports'] == {"weak": ["otherpackage > 0.1"]}
+    assert not package_data.get("revoked", False)
+    assert "package_has_been_revoked" not in package_data

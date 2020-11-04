@@ -9,8 +9,18 @@ from quetz.deps import get_db
 
 
 def patch_repodata(repodata, patches):
+    packages = repodata["packages"]
+    # patch packages
     for pkg, info in patches["packages"].items():
-        repodata["packages"][pkg].update(info)
+        packages[pkg].update(info)
+
+    # revoke packages
+    for revoked_pkg_name in patches["revoke"]:
+        if revoked_pkg_name not in packages:
+            continue
+        package = packages[revoked_pkg_name]
+        package['revoked'] = True
+        package["depends"].append('package_has_been_revoked')
 
 
 @quetz.hookimpl
