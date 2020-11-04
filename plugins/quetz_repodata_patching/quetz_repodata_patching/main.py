@@ -1,3 +1,4 @@
+import bz2
 import json
 import tarfile
 from contextlib import contextmanager
@@ -50,9 +51,26 @@ def post_package_indexing(
                         channel_name,
                         f"{subdir}/{fname}_from_packages.json",
                     )
+                    compressed_repodata_str = bz2.compress(repodata_str)
+
+                    pkgstore.add_file(
+                        compressed_repodata_str,
+                        channel_name,
+                        f"{subdir}/{fname}_from_packages.json.bz2",
+                    )
 
                     patch_repodata(repodata, patch_instructions)
 
+                    patched_repodata_str = json.dumps(repodata)
+                    compressed_patched_repodata_str = bz2.compress(
+                        patched_repodata_str.encode('utf-8')
+                    )
+
                     pkgstore.add_file(
-                        json.dumps(repodata), channel_name, f"{subdir}/{fname}.json"
+                        patched_repodata_str, channel_name, f"{subdir}/{fname}.json"
+                    )
+                    pkgstore.add_file(
+                        compressed_patched_repodata_str,
+                        channel_name,
+                        f"{subdir}/{fname}.json.bz2",
                     )

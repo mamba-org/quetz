@@ -1,3 +1,4 @@
+import bz2
 import json
 import os
 import uuid
@@ -160,6 +161,7 @@ def pkgstore(config):
 
 
 @pytest.mark.parametrize("repodata_stem", ["repodata", "current_repodata"])
+@pytest.mark.parametrize("compressed_repodata", [False, True])
 def test_post_package_indexing(
     pkgstore,
     dao,
@@ -169,6 +171,7 @@ def test_post_package_indexing(
     db,
     package_file_name,
     repodata_stem,
+    compressed_repodata,
 ):
     def get_db():
         yield db
@@ -176,11 +179,16 @@ def test_post_package_indexing(
     with mock.patch("quetz_repodata_patching.main.get_db", get_db):
         indexing.update_indexes(dao, pkgstore, channel_name)
 
+    ext = "json.bz2" if compressed_repodata else "json"
+    open_ = bz2.open if compressed_repodata else open
+
     repodata_path = os.path.join(
-        pkgstore.channels_dir, channel_name, "noarch", f"{repodata_stem}.json"
+        pkgstore.channels_dir, channel_name, "noarch", f"{repodata_stem}.{ext}"
     )
+
     assert os.path.isfile(repodata_path)
-    with open(repodata_path) as fid:
+
+    with open_(repodata_path) as fid:
         data = json.load(fid)
     assert data['packages'][package_file_name]['run_exports'] == {
         "weak": ["otherpackage > 0.2"]
@@ -190,11 +198,11 @@ def test_post_package_indexing(
         pkgstore.channels_dir,
         channel_name,
         "noarch",
-        f"{repodata_stem}_from_packages.json",
+        f"{repodata_stem}_from_packages.{ext}",
     )
 
     assert os.path.isfile(orig_repodata_path)
-    with open(orig_repodata_path) as fid:
+    with open_(orig_repodata_path) as fid:
         data = json.load(fid)
     assert data['packages'][package_file_name]['run_exports'] == {
         "weak": ["otherpackage > 0.1"]
