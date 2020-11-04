@@ -15,12 +15,19 @@ def patch_repodata(repodata, patches):
         packages[pkg].update(info)
 
     # revoke packages
-    for revoked_pkg_name in patches["revoke"]:
+    for revoked_pkg_name in patches.get("revoke", ()):
         if revoked_pkg_name not in packages:
             continue
         package = packages[revoked_pkg_name]
         package['revoked'] = True
         package["depends"].append('package_has_been_revoked')
+
+    # remove packages
+    repodata.setdefault("removed", [])
+    for removed_pkg_name in patches.get("remove", ()):
+        popped = packages.pop(removed_pkg_name, None)
+        if popped:
+            repodata["removed"].append(removed_pkg_name)
 
 
 @quetz.hookimpl

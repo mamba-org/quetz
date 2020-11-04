@@ -180,6 +180,10 @@ def pkgstore(config):
     "revoke_instructions",
     [[], ["mytestpackage-0.1-0.tar.bz2"], ["nonexistentpackage-0.1-0.tar.bz2"]],
 )
+@pytest.mark.parametrize(
+    "remove_instructions",
+    [[], ["mytestpackage-0.1-0.tar.bz2"], ["nonexistentpackage-0.1-0.tar.bz2"]],
+)
 def test_post_package_indexing(
     pkgstore,
     dao,
@@ -191,6 +195,7 @@ def test_post_package_indexing(
     repodata_stem,
     compressed_repodata,
     revoke_instructions,
+    remove_instructions,
 ):
     def get_db():
         yield db
@@ -210,9 +215,10 @@ def test_post_package_indexing(
     with open_(repodata_path) as fid:
         data = json.load(fid)
 
-    assert data['packages'][package_file_name]['run_exports'] == {
-        "weak": ["otherpackage > 0.2"]
-    }
+    if package_file_name not in remove_instructions:
+        assert data['packages'][package_file_name]['run_exports'] == {
+            "weak": ["otherpackage > 0.2"]
+        }
 
     for revoked_pkg_name in revoke_instructions:
         try:
@@ -221,6 +227,11 @@ def test_post_package_indexing(
             continue
         assert revoked_pkg.get("revoked", False)
         assert 'package_has_been_revoked' in revoked_pkg["depends"]
+
+    for removed_pkg_name in remove_instructions:
+        assert removed_pkg_name not in data["packages"]
+        if removed_pkg_name == package_file_name:
+            assert removed_pkg_name in data.get("removed", ())
 
     orig_repodata_path = os.path.join(
         pkgstore.channels_dir,
@@ -236,3 +247,4 @@ def test_post_package_indexing(
     assert package_data['run_exports'] == {"weak": ["otherpackage > 0.1"]}
     assert not package_data.get("revoked", False)
     assert "package_has_been_revoked" not in package_data
+    assert not data.get("removed")
