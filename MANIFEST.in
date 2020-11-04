@@ -1,2 +1,3 @@
 graft quetz/basic_frontend
 include quetz/config.toml
+graft quetz/templates

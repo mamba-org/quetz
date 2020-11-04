@@ -15,7 +15,22 @@ from conda_verify.verify import Verify
 import quetz_client
 
 config_dir = appdirs.user_config_dir("quetz_client")
-api_keys_location = os.path.join(config_dir, 'api_keys.toml')
+api_keys_location = os.path.join(config_dir, 'config.toml')
+
+
+def get_installed_api_key(address):
+    parsed_server = urlparse(address)
+    server = parsed_server.netloc
+
+    if os.environ.get('QUETZ_API_KEY'):
+        return os.environ['QUETZ_API_KEY']
+
+    if os.path.exists(api_keys_location):
+        keys = toml.load(api_keys_location)
+    else:
+        raise RuntimeError(f"No API Key for {parsed_server.netloc} found.")
+    if keys.get(server):
+        return keys[server]
 
 
 def get_api_key(args):
@@ -40,12 +55,37 @@ def get_api_key(args):
         toml.dump(keys, fo)
 
 
+def create_channel(args):
+    url = urljoin(args.server, '/api/channels')
+    api_key = get_installed_api_key(args.server)
+    json_data = {
+        "name": args.name,
+        "description": args.description,
+        "private": args.private,
+        # "mirror_channel_url": "string",
+        # "mirror_mode": "string"
+    }
+    response = requests.post(url, json=json_data, headers={'X-API-Key': api_key})
+    print(response.json())
+
+def urljoin_all(pieces):
+    parts = urlparse(pieces[0])
+    result = urljoin(f'{parts.scheme}://{parts.netloc}', '/'.join(pieces))
+    return result
+
+
 def upload_packages(args):
-    channel_url = args.channel_url
-    parts = urlparse(channel_url)
-    if parts.path[:4] != "/api":
-        parts = parts._replace(path=f"/api{parts.path}")
-        channel_url = urlunparse(parts)
+    channel = args.channel
+    if channel.isalnum():
+        # this looks like a channel name, no URL given
+        print(f"Posting file to {channel}")
+        channel_url = urljoin_all([args.server, "api/channels", channel])
+        print("Channel url: ", channel_url)
+    else:
+        parts = urlparse(channel)
+        if parts.path[:4] != "/api":
+            parts = parts._replace(path=f"/api{parts.path}")
+            channel_url = urlunparse(parts)
 
     package_file_names = args.packages
     # Find packages in directory if the single package argument is a directory
@@ -74,8 +114,7 @@ def upload_packages(args):
     if args.force:
         files.append(('force', (None, 'true')))
 
-    api_key = os.getenv('QUETZ_API_KEY')
-
+    api_key = get_installed_api_key(channel_url)
     url = f'{channel_url}/files/'
     if args.dry_run:
         package_lines = "\n  ".join(package_file_names)
@@ -137,6 +176,8 @@ def main():
         ),
     )
 
+    upload_parser.add_argument("-s", "--server", default="https://beta.mamba.pm")
+
     upload_parser.add_argument(
         "-v",
         "--version",
@@ -144,7 +185,7 @@ def main():
         version=f"quetz-client version {quetz_client.__version__}",
     )
 
-    upload_parser.add_argument("channel_url")
+    upload_parser.add_argument("channel")
     upload_parser.add_argument("packages", nargs='+', help="package(s) or build root")
 
     api_key_parser = subparsers.add_parser(
@@ -152,10 +193,27 @@ def main():
     )
 
     api_key_parser.add_argument("server", nargs='?', default="https://beta.mamba.pm")
+
+    create_channel_parser = subparsers.add_parser(
+        'create-channel', usage="%(prog)s", description="Create a channel."
+    )
+
+    # create_channel_parser = channel_parser.add_parser(
+    #     'create', usage="%(prog)s", description="Create channel."
+    # )
+
+    create_channel_parser.add_argument("name")
+    create_channel_parser.add_argument(
+        "-s", "--server", default="https://beta.mamba.pm"
+    )
+    create_channel_parser.add_argument("-d", "--description", default="")
+    create_channel_parser.add_argument("-p", "--private", action='store_true')
+
     args = parser.parse_args()
 
     if args.cmd == 'apikey':
         get_api_key(args)
-
     elif args.cmd == 'upload':
         return upload_packages(args)
+    elif args.cmd == 'create-channel':
+        return create_channel(args)
