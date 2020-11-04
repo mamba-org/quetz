@@ -61,6 +61,34 @@ def patch_repodata(repodata, patches):
                 repodata["removed"].append(removed_pkg_name)
 
 
+@contextmanager
+def extract_from_tarfile(fs):
+    """extract patch_instruction.json from tar.bz2 package"""
+    with tarfile.open(mode='r:bz2', fileobj=fs) as patch_archive:
+        yield patch_archive
+
+
+@contextmanager
+def extract_from_conda(fs):
+    """extract patch_instruction.json from .conda package"""
+    with ZipFile(fs) as zf:
+        pkgtars = [_ for _ in zf.namelist() if _.startswith("pkg-")]
+        pkgtar = pkgtars[0]
+        with zf.open(pkgtar) as zfobj:
+            if pkgtar.endswith(".zst"):
+                zstd = zstandard.ZstdDecompressor()
+                fobj = BytesIO(zstd.stream_reader(zfobj).read())
+            else:
+                fobj = zfobj
+            with tarfile.open(fileobj=fobj, mode="r") as tar:
+                yield tar
+
+
+def _load_instructions(tar, path):
+    patch_instructions = json.load(tar.extractfile(path))
+    return patch_instructions
+
+
 @quetz.hookimpl
 def post_package_indexing(
     pkgstore: "quetz.pkgstores.PackageStore", channel_name, subdirs
@@ -84,71 +112,49 @@ def post_package_indexing(
         fs = pkgstore.serve_path(channel_name, "noarch/" + filename)
         package_format = patches_pkg.package_format
 
-        def extract_from_tarfile(fs, path):
-            with tarfile.open(mode='r:bz2', fileobj=fs) as patch_archive:
-                patch_instructions = _load_instructions(patch_archive, path)
-            return patch_instructions
+        if package_format == PackageFormatEnum.tarbz2:
+            extract_ = extract_from_tarfile
+        else:
+            extract_ = extract_from_conda
 
-        def _load_instructions(tar, path):
-            patch_instructions = json.load(tar.extractfile(path))
-            return patch_instructions
+        with extract_(fs) as tar:
 
-        def extract_from_conda(fs, path):
-            with ZipFile(fs) as zf:
-                pkgtars = [_ for _ in zf.namelist() if _.startswith("pkg-")]
-                pkgtar = pkgtars[0]
-                with zf.open(pkgtar) as zfobj:
-                    if pkgtar.endswith(".zst"):
-                        zstd = zstandard.ZstdDecompressor()
-                        fobj = BytesIO(zstd.stream_reader(zfobj).read())
-                    else:
-                        fobj = zfobj
-                    with tarfile.open(fileobj=fobj, mode="r") as tar:
-                        patch_instructions = _load_instructions(tar, path)
+            for subdir in subdirs:
+                path = f"{subdir}/patch_instructions.json"
 
-            return patch_instructions
+                patch_instructions = _load_instructions(tar, path)
 
-        for subdir in subdirs:
-            if package_format == PackageFormatEnum.tarbz2:
-                patch_instructions = extract_from_tarfile(
-                    fs, f"{subdir}/patch_instructions.json"
-                )
-            else:
-                patch_instructions = extract_from_conda(
-                    fs, f"{subdir}/patch_instructions.json"
-                )
+                for fname in ("repodata", "current_repodata"):
+                    fs = pkgstore.serve_path(channel_name, f"{subdir}/{fname}.json")
 
-            for fname in ("repodata", "current_repodata"):
-                fs = pkgstore.serve_path(channel_name, f"{subdir}/{fname}.json")
+                    repodata_str = fs.read()
+                    repodata = json.loads(repodata_str)
 
-                repodata_str = fs.read()
-                repodata = json.loads(repodata_str)
+                    pkgstore.add_file(
+                        repodata_str,
+                        channel_name,
+                        f"{subdir}/{fname}_from_packages.json",
+                    )
+                    compressed_repodata_str = bz2.compress(repodata_str)
 
-                pkgstore.add_file(
-                    repodata_str,
-                    channel_name,
-                    f"{subdir}/{fname}_from_packages.json",
-                )
-                compressed_repodata_str = bz2.compress(repodata_str)
+                    pkgstore.add_file(
+                        compressed_repodata_str,
+                        channel_name,
+                        f"{subdir}/{fname}_from_packages.json.bz2",
+                    )
 
-                pkgstore.add_file(
-                    compressed_repodata_str,
-                    channel_name,
-                    f"{subdir}/{fname}_from_packages.json.bz2",
-                )
+                    patch_repodata(repodata, patch_instructions)
 
-                patch_repodata(repodata, patch_instructions)
+                    patched_repodata_str = json.dumps(repodata)
+                    compressed_patched_repodata_str = bz2.compress(
+                        patched_repodata_str.encode('utf-8')
+                    )
 
-                patched_repodata_str = json.dumps(repodata)
-                compressed_patched_repodata_str = bz2.compress(
-                    patched_repodata_str.encode('utf-8')
-                )
-
-                pkgstore.add_file(
-                    patched_repodata_str, channel_name, f"{subdir}/{fname}.json"
-                )
-                pkgstore.add_file(
-                    compressed_patched_repodata_str,
-                    channel_name,
-                    f"{subdir}/{fname}.json.bz2",
-                )
+                    pkgstore.add_file(
+                        patched_repodata_str, channel_name, f"{subdir}/{fname}.json"
+                    )
+                    pkgstore.add_file(
+                        compressed_patched_repodata_str,
+                        channel_name,
+                        f"{subdir}/{fname}.json.bz2",
+                    )
