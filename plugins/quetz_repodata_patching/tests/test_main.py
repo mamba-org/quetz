@@ -159,6 +159,7 @@ def pkgstore(config):
     return pkgstore
 
 
+@pytest.mark.parametrize("repodata_stem", ["repodata", "current_repodata"])
 def test_post_package_indexing(
     pkgstore,
     dao,
@@ -167,6 +168,7 @@ def test_post_package_indexing(
     package_repodata_patches,
     db,
     package_file_name,
+    repodata_stem,
 ):
     def get_db():
         yield db
@@ -175,7 +177,7 @@ def test_post_package_indexing(
         indexing.update_indexes(dao, pkgstore, channel_name)
 
     repodata_path = os.path.join(
-        pkgstore.channels_dir, channel_name, "noarch", "repodata.json"
+        pkgstore.channels_dir, channel_name, "noarch", f"{repodata_stem}.json"
     )
     assert os.path.isfile(repodata_path)
     with open(repodata_path) as fid:
@@ -185,7 +187,10 @@ def test_post_package_indexing(
     }
 
     orig_repodata_path = os.path.join(
-        pkgstore.channels_dir, channel_name, "noarch", "repodata_from_packages.json"
+        pkgstore.channels_dir,
+        channel_name,
+        "noarch",
+        f"{repodata_stem}_from_packages.json",
     )
 
     assert os.path.isfile(orig_repodata_path)

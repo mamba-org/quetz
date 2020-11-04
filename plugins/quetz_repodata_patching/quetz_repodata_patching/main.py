@@ -7,6 +7,11 @@ from quetz.db_models import PackageVersion
 from quetz.deps import get_db
 
 
+def patch_repodata(repodata, patches):
+    for pkg, info in patches["packages"].items():
+        repodata["packages"][pkg].update(info)
+
+
 @quetz.hookimpl
 def post_package_indexing(
     pkgstore: "quetz.pkgstores.PackageStore", channel_name, subdirs
@@ -33,18 +38,21 @@ def post_package_indexing(
                 patch_instructions = json.load(
                     patch_archive.extractfile(f"{subdir}/patch_instructions.json")
                 )
-                fs = pkgstore.serve_path(channel_name, f"{subdir}/repodata.json")
 
-                repodata_str = fs.read()
-                repodata = json.loads(repodata_str)
+                for fname in ("repodata", "current_repodata"):
+                    fs = pkgstore.serve_path(channel_name, f"{subdir}/{fname}.json")
 
-                pkgstore.add_file(
-                    repodata_str, channel_name, f"{subdir}/repodata_from_packages.json"
-                )
+                    repodata_str = fs.read()
+                    repodata = json.loads(repodata_str)
 
-                for pkg, info in patch_instructions["packages"].items():
-                    repodata["packages"][pkg].update(info)
+                    pkgstore.add_file(
+                        repodata_str,
+                        channel_name,
+                        f"{subdir}/{fname}_from_packages.json",
+                    )
 
-                pkgstore.add_file(
-                    json.dumps(repodata), channel_name, f"{subdir}/repodata.json"
-                )
+                    patch_repodata(repodata, patch_instructions)
+
+                    pkgstore.add_file(
+                        json.dumps(repodata), channel_name, f"{subdir}/{fname}.json"
+                    )
