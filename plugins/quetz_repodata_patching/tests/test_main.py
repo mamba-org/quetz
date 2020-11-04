@@ -338,3 +338,35 @@ def test_post_package_indexing(
     assert not package_data.get("revoked", False)
     assert "package_has_been_revoked" not in package_data
     assert not data.get("removed")
+
+
+def test_index_html(
+    pkgstore,
+    package_version,
+    package_repodata_patches,
+    channel_name,
+    patched_package_name,
+    dao,
+    db,
+):
+    def get_db():
+        yield db
+
+    with mock.patch("quetz_repodata_patching.main.get_db", get_db):
+        indexing.update_indexes(dao, pkgstore, channel_name)
+
+    index_path = os.path.join(
+        pkgstore.channels_dir,
+        channel_name,
+        "noarch",
+        "index.html",
+    )
+
+    assert os.path.isfile(index_path)
+    with open(index_path, 'r') as fid:
+        content = fid.read()
+
+    assert "repodata.json" in content
+    assert "repodata.json.bz2" in content
+    assert "repodata_from_packages.json" in content
+    assert "repodata_from_packages.json.bz2" in content
