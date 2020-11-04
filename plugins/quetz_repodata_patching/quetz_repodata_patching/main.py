@@ -17,6 +17,9 @@ def update_dict(packages, instructions):
 def patch_repodata(repodata, patches):
     for key in ("packages", "packages.conda"):
         packages = repodata.get(key, {})
+        remove_set = set(patches.get("remove", ()))
+        revoke_set = set(patches.get("revoke", ()))
+
         # patch packages
         update_dict(packages, patches.get(key, {}))
 
@@ -31,8 +34,15 @@ def patch_repodata(repodata, patches):
             }
             update_dict(packages, new_patches)
 
+            remove_set = remove_set.union(
+                {s.replace(".tar.bz2", ".conda") for s in remove_set}
+            )
+            revoke_set = revoke_set.union(
+                {s.replace(".tar.bz2", ".conda") for s in revoke_set}
+            )
+
         # revoke packages
-        for revoked_pkg_name in patches.get("revoke", ()):
+        for revoked_pkg_name in revoke_set:
             if revoked_pkg_name not in packages:
                 continue
             package = packages[revoked_pkg_name]
@@ -41,7 +51,7 @@ def patch_repodata(repodata, patches):
 
         # remove packages
         repodata.setdefault("removed", [])
-        for removed_pkg_name in patches.get("remove", ()):
+        for removed_pkg_name in remove_set:
             popped = packages.pop(removed_pkg_name, None)
             if popped:
                 repodata["removed"].append(removed_pkg_name)

@@ -209,11 +209,21 @@ def pkgstore(config):
 @pytest.mark.parametrize("compressed_repodata", [False, True])
 @pytest.mark.parametrize(
     "revoke_instructions",
-    [[], ["mytestpackage-0.1-0.tar.bz2"], ["nonexistentpackage-0.1-0.tar.bz2"]],
+    [
+        [],
+        ["mytestpackage-0.1-0.tar.bz2"],
+        ["nonexistentpackage-0.1-0.tar.bz2"],
+        ["mytestpackage-0.1-0.conda"],
+    ],
 )
 @pytest.mark.parametrize(
     "remove_instructions",
-    [[], ["mytestpackage-0.1-0.tar.bz2"], ["nonexistentpackage-0.1-0.tar.bz2"]],
+    [
+        [],
+        ["mytestpackage-0.1-0.tar.bz2"],
+        ["nonexistentpackage-0.1-0.tar.bz2"],
+        ["mytestpackage-0.1-0.conda"],
+    ],
 )
 @pytest.mark.parametrize(
     "package_format,patched_package_name",
@@ -263,23 +273,26 @@ def test_post_package_indexing(
 
     packages = data[key]
 
-    if package_file_name not in remove_instructions:
+    is_package_removed = (package_file_name in remove_instructions) or (
+        package_file_name.replace(".conda", ".tar.bz2") in remove_instructions
+    )
+    is_package_revoked = (package_file_name in revoke_instructions) or (
+        package_file_name.replace(".conda", ".tar.bz2") in revoke_instructions
+    )
+
+    if not is_package_removed:
         assert packages[package_file_name]['run_exports'] == {
             "weak": ["otherpackage > 0.2"]
         }
 
-    for revoked_pkg_name in revoke_instructions:
-        try:
-            revoked_pkg = packages[revoked_pkg_name]
-        except KeyError:
-            continue
-        assert revoked_pkg.get("revoked", False)
-        assert 'package_has_been_revoked' in revoked_pkg["depends"]
+        if is_package_revoked:
+            revoked_pkg = packages[package_file_name]
+            assert revoked_pkg.get("revoked", False)
+            assert 'package_has_been_revoked' in revoked_pkg["depends"]
 
-    for removed_pkg_name in remove_instructions:
-        assert removed_pkg_name not in packages
-        if removed_pkg_name == package_file_name:
-            assert removed_pkg_name in data.get("removed", ())
+    else:
+        assert package_file_name not in packages
+        assert package_file_name in data.get("removed", ())
 
     orig_repodata_path = os.path.join(
         pkgstore.channels_dir,
