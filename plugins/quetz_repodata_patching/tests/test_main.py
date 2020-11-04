@@ -1,10 +1,14 @@
 import bz2
 import json
 import os
+import tarfile
+import time
 import uuid
 from unittest import mock
+from zipfile import ZipFile
 
 import pytest
+import zstandard
 
 import quetz
 from quetz import indexing
@@ -91,10 +95,11 @@ def repodata_name(channel):
 
 
 @pytest.fixture
-def repodata_file_name(repodata_name):
+def repodata_file_name(repodata_name, archive_format):
     version = "0.1"
     build_str = "0"
-    return f"{repodata_name}-{version}-{build_str}.tar.bz2"
+    ext = "tar.bz2" if archive_format == 'tarbz2' else 'conda'
+    return f"{repodata_name}-{version}-{build_str}.{ext}"
 
 
 @pytest.fixture
@@ -137,30 +142,52 @@ def patch_content(patched_package_name, revoke_instructions, remove_instructions
 
 
 @pytest.fixture
-def repodata_archive(repodata_file_name, patch_content):
+def archive_format():
+    return "tarbz2"
 
-    import tarfile
-    import time
+
+@pytest.fixture
+def repodata_archive(repodata_file_name, patch_content, archive_format):
+
     from io import BytesIO
 
-    tar_content = BytesIO()
-    tar = tarfile.open(repodata_file_name, "w|bz2", fileobj=tar_content)
+    patch_instructions = json.dumps(patch_content).encode('ascii')
 
-    patch_instructions = BytesIO(json.dumps(patch_content).encode('ascii'))
+    def mk_tarfile(patch_instructions, compr=None):
+        patch_instructions = BytesIO(patch_instructions)
+        mode = f'w|{compr}' if compr else 'w'
+        tar_content = BytesIO()
+        tar = tarfile.open(repodata_file_name, mode, fileobj=tar_content)
+        info = tarfile.TarInfo(name='noarch')
+        info.type = tarfile.DIRTYPE
+        info.mode = 0o755
+        info.mtime = time.time()
+        tar.addfile(tarinfo=info)
 
-    info = tarfile.TarInfo(name='noarch')
-    info.type = tarfile.DIRTYPE
-    info.mode = 0o755
-    info.mtime = time.time()
-    tar.addfile(tarinfo=info)
+        info = tarfile.TarInfo(name='noarch/patch_instructions.json')
+        info.size = len(patch_instructions.getvalue())
+        info.mtime = time.time()
+        tar.addfile(tarinfo=info, fileobj=patch_instructions)
+        tar.close()
+        tar_content.seek(0)
+        return tar_content
 
-    info = tarfile.TarInfo(name='noarch/patch_instructions.json')
-    info.size = len(patch_instructions.getvalue())
-    info.mtime = time.time()
-    tar.addfile(tarinfo=info, fileobj=patch_instructions)
-    tar.close()
-    tar_content.seek(0)
-    yield tar_content
+    if archive_format == 'tarbz2':
+        tar_content = mk_tarfile(patch_instructions, compr='bz2')
+        yield tar_content
+
+    else:
+        file_content = BytesIO()
+        tar_content = mk_tarfile(patch_instructions, compr=None)
+        fn, _ = os.path.splitext(repodata_file_name)
+        with ZipFile(file_content, mode='w') as zf:
+            with zf.open(f"pkg-{fn}.tar.zst", mode='w') as zfobj:
+                cctx = zstandard.ZstdCompressor()
+                compressed = cctx.compress(tar_content.read())
+                zfobj.write(compressed)
+
+        file_content.seek(0)
+        yield file_content
 
 
 @pytest.fixture
@@ -173,6 +200,7 @@ def package_repodata_patches(
     repodata_name,
     repodata_file_name,
     repodata_archive,
+    archive_format,
 ):
 
     package_name = repodata_name
@@ -180,7 +208,7 @@ def package_repodata_patches(
 
     dao.create_package(channel.name, package_data, user.id, "owner")
     package_info = '{"size": 100, "depends":[]}'
-    package_format = "tarbz2"
+    package_format = archive_format
     version = dao.create_version(
         channel.name,
         package_name,
@@ -205,6 +233,7 @@ def pkgstore(config):
     return pkgstore
 
 
+@pytest.mark.parametrize("archive_format", ["tarbz2", "conda"])
 @pytest.mark.parametrize("repodata_stem", ["repodata", "current_repodata"])
 @pytest.mark.parametrize("compressed_repodata", [False, True])
 @pytest.mark.parametrize(
