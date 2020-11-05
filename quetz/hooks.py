@@ -1,3 +1,5 @@
+from typing import List
+
 import fastapi
 import pluggy
 
@@ -31,6 +33,18 @@ def post_add_package_version(
 
 @hookspec
 def post_package_indexing(
-    pkgstore: "quetz.pkgstores.PackageStore", channel_name: str, subdirs
+    pkgstore: "quetz.pkgstores.PackageStore", channel_name: str, subdirs: List[str]
 ) -> None:
+    """hook for post-processsing after building indexes.
+
+    :param quetz.pkgstores.PackageStore pkgstore:
+        package store used to store/retrieve packages
+
+    :param str channel_name:
+        metadata extracted from the archive
+
+    :param list subdirs:
+        list of subdirs with indexes
+
+    """
     pass
