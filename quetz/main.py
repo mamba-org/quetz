@@ -9,7 +9,6 @@ import sys
 import uuid
 from typing import List, Optional
 
-import pluggy
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -33,12 +32,11 @@ from quetz import (
     auth_google,
     authorization,
     db_models,
-    hooks,
     indexing,
     mirror,
     rest_models,
 )
-from quetz.config import Config
+from quetz.config import Config, get_plugin_manager
 from quetz.dao import Dao
 from quetz.deps import get_dao, get_remote_session, get_rules, get_session
 
@@ -78,13 +76,6 @@ class CondaTokenMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         return response
-
-
-def get_plugin_manager():
-    pm = pluggy.PluginManager("quetz")
-    pm.add_hookspecs(hooks)
-    pm.load_setuptools_entrypoints("quetz")
-    return pm
 
 
 pm = get_plugin_manager()

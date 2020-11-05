@@ -11,6 +11,7 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 
 from quetz import channel_data, repo_data
 from quetz.condainfo import MAX_CONDA_TIMESTAMP
+from quetz.config import get_plugin_manager
 
 _iec_prefixes = (
     # IEEE 1541 - IEEE Standard for Prefixes for Binary Multiples
@@ -155,3 +156,9 @@ def update_indexes(dao, pkgstore, channel_name):
             channel_name,
             f"{dir}/index.html",
         )
+
+    pm = get_plugin_manager()
+
+    pm.hook.post_package_indexing(
+        pkgstore=pkgstore, channel_name=channel_name, subdirs=subdirs
+    )
