@@ -281,7 +281,12 @@ def initial_sync_mirror(
                 logger.debug(f"updating package {package_name} form {arch}")
                 pass
 
-            remote_package = remote_repository.open(path)
+            try:
+                remote_package = remote_repository.open(path)
+            except RemoteServerError:
+                logger.error(f"remote server error when getting a file {path}")
+                continue
+
             files = [remote_package]
             try:
                 handle_package_files(
