@@ -36,7 +36,7 @@ from quetz import (
     mirror,
     rest_models,
 )
-from quetz.config import Config, get_plugin_manager
+from quetz.config import Config, configure_logger, get_plugin_manager
 from quetz.dao import Dao
 from quetz.deps import get_dao, get_remote_session, get_rules, get_session
 
@@ -47,6 +47,9 @@ app = FastAPI()
 
 config = Config()
 auth_github.register(config)
+
+
+logger = configure_logger()
 
 app.add_middleware(
     SessionMiddleware,
@@ -641,6 +644,7 @@ def handle_package_files(
 ):
 
     for file in files:
+        logger.debug(f"adding file '{file.filename}' to channel '{channel_name}'")
         condainfo = CondaInfo(file.file, file.filename)
 
         package_name = condainfo.info["name"]
@@ -688,6 +692,9 @@ def handle_package_files(
                 upsert=force,
             )
         except IntegrityError:
+            logger.error(
+                f"duplicate package '{package_name}' in channel '{channel_name}'"
+            )
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT, detail="Duplicate"
             )

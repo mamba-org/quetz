@@ -1,6 +1,7 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
+import logging
 import os
 from base64 import b64encode
 from distutils.util import strtobool
@@ -254,6 +255,34 @@ def create_config(
         config = ''.join(f.readlines())
 
     return config.format(client_id, client_secret, database_url, secret, https)
+
+
+def configure_logger(level=None):
+    """Get quetz logger"""
+
+    if not level:
+        log_level = os.environ.get("QUETZ_LOG_LEVEL", "INFO")
+        level = getattr(logging, log_level.upper())
+
+    # create logger with 'quetz'
+    logger = logging.getLogger('quetz')
+    logger.setLevel(level)
+    ch = logging.StreamHandler()
+
+    try:
+        from uvicorn.logging import ColourizedFormatter
+
+        formatter = ColourizedFormatter(
+            fmt="%(levelprefix)s [%(name)s] %(asctime)s %(message)s", use_colors=True
+        )
+    except ImportError:
+        formatter = logging.Formatter('%(levelname)s %(name)s  %(asctime)s %(message)s')
+    ch.setFormatter(formatter)
+
+    # add the handlers to the logger
+    logger.addHandler(ch)
+
+    return logger
 
 
 def get_plugin_manager() -> pluggy.PluginManager:

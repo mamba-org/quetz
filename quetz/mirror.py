@@ -1,5 +1,6 @@
 import contextlib
 import json
+import logging
 import os
 import shutil
 from tempfile import SpooledTemporaryFile
@@ -31,6 +32,9 @@ KNOWN_SUBDIRS = (
     "win-64",
     "zos-z",
 )
+
+
+logger = logging.getLogger("quetz")
 
 
 def get_from_cache_or_download(
@@ -227,10 +231,12 @@ def initial_sync_mirror(
         repo_file = remote_repository.open(os.path.join(arch, "repodata.json"))
         repodata = json.load(repo_file.file)
     except RemoteServerError:
-        # LOG: can not get repodata.json for channel {channel_name}
+        logger.error(f"can not get repodata.json for channel {channel_name}")
         return
     except json.JSONDecodeError:
-        # LOG: repodata.json badly formatted for arch {arch} in channel {channel_name}
+        logger.error(
+            f"repodata.json badly formatted for arch {arch} in channel {channel_name}"
+        )
         return
 
     channel = dao.get_channel(channel_name)
@@ -267,10 +273,12 @@ def initial_sync_mirror(
 
             # if package is up-to-date skip uploading file
             if is_uptodate:
-                # LOG: f"package {package_name} from {arch} up-to-date. Not updating")
+                logger.debug(
+                    f"package {package_name} from {arch} up-to-date. Not updating"
+                )
                 continue
             else:
-                # LOG: f"updating package {package_name} form {arch}")
+                logger.debug(f"updating package {package_name} form {arch}")
                 pass
 
             remote_package = remote_repository.open(path)
@@ -284,9 +292,10 @@ def initial_sync_mirror(
                     force,
                 )
             except Exception as exc:
-                # LOG: could not process package {package_name}
-                # from channel {channel_name} due to error
-                # {exc}
+                logger.error(
+                    f"could not process package {package_name} from channel"
+                    f"{channel_name} due to error {exc}"
+                )
                 if not skip_errors:
                     raise exc
     indexing.update_indexes(dao, pkgstore, channel_name)
