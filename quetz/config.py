@@ -273,11 +273,14 @@ def configure_logger(config=None):
     else:
         log_level = "INFO"
 
+    if hasattr(config, "logging_file"):
+        filename = config.logging_file
+    else:
+        filename = None
+
     log_level = os.environ.get("QUETZ_LOG_LEVEL", log_level)
 
     level = getattr(logging, log_level.upper())
-
-    print(log_level)
 
     # create logger with 'quetz'
     logger = logging.getLogger('quetz')
@@ -296,6 +299,12 @@ def configure_logger(config=None):
 
     # add the handlers to the logger
     logger.addHandler(ch)
+
+    if filename:
+        fh = logging.FileHandler(filename)
+        formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s  %(message)s')
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
 
     return logger
 
