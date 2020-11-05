@@ -68,6 +68,7 @@ def create_channel(args):
     response = requests.post(url, json=json_data, headers={'X-API-Key': api_key})
     print(response.json())
 
+
 def urljoin_all(pieces):
     parts = urlparse(pieces[0])
     result = urljoin(f'{parts.scheme}://{parts.netloc}', '/'.join(pieces))
