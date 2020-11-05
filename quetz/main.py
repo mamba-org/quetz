@@ -2,6 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 import datetime
 import json
+import logging
 import os
 import re
 import secrets
@@ -49,7 +50,9 @@ config = Config()
 auth_github.register(config)
 
 
-logger = configure_logger()
+configure_logger(config)
+
+logger = logging.getLogger("quetz")
 
 app.add_middleware(
     SessionMiddleware,

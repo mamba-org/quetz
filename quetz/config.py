@@ -82,6 +82,14 @@ class Config:
             [ConfigEntry("client_id", str), ConfigEntry("client_secret", str)],
             required=False,
         ),
+        ConfigSection(
+            "logging",
+            [
+                ConfigEntry("level", str, default="INFO"),
+                ConfigEntry("file", str, default=""),
+            ],
+            required=False,
+        ),
     )
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]
@@ -257,12 +265,19 @@ def create_config(
     return config.format(client_id, client_secret, database_url, secret, https)
 
 
-def configure_logger(level=None):
+def configure_logger(config=None):
     """Get quetz logger"""
 
-    if not level:
-        log_level = os.environ.get("QUETZ_LOG_LEVEL", "INFO")
-        level = getattr(logging, log_level.upper())
+    if hasattr(config, "logging_level"):
+        log_level = config.logging_level
+    else:
+        log_level = "INFO"
+
+    log_level = os.environ.get("QUETZ_LOG_LEVEL", log_level)
+
+    level = getattr(logging, log_level.upper())
+
+    print(log_level)
 
     # create logger with 'quetz'
     logger = logging.getLogger('quetz')
