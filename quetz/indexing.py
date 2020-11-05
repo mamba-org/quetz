@@ -4,6 +4,7 @@
 import bz2
 import hashlib
 import json
+import logging
 import numbers
 from datetime import datetime, timezone
 
@@ -23,6 +24,8 @@ _iec_prefixes = (
     (1024, "{:.0f} KiB"),
     (1, "{:.0f} B"),
 )
+
+logger = logging.getLogger("quetz")
 
 
 def _iec_bytes(n):
@@ -108,6 +111,7 @@ def update_indexes(dao, pkgstore, channel_name):
 
     subdir_template = jinjaenv.get_template("subdir-index.html.j2")
     for dir in subdirs:
+        logger.debug(f"creating indexes for subdir {dir} of channel {channel_name}")
         raw_repodata = repo_data.export(dao, channel_name, dir)
 
         repodata = json.dumps(raw_repodata, indent=2, sort_keys=True)
