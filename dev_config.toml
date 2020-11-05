@@ -10,3 +10,7 @@ database_url = "sqlite:///./quetz.sqlite"
 # openssl rand -hex 32
 secret = "b72376b88e6f249cb0921052ea8a092381ca17fd8bb0caf4d847e337b3d34cf8"
 https_only = false
+
+[logging]
+level = "DEBUG"
+file = "quetz.log"
