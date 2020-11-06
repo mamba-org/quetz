@@ -10,7 +10,8 @@ Welcome to Quetz's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   hooks
+   configuration
+   plugins 
 
 
 
