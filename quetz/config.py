@@ -282,11 +282,6 @@ def configure_logger(config=None):
 
     level = getattr(logging, log_level.upper())
 
-    # create logger with 'quetz'
-    logger = logging.getLogger('quetz')
-    logger.setLevel(level)
-    ch = logging.StreamHandler()
-
     try:
         from uvicorn.logging import ColourizedFormatter
 
@@ -295,18 +290,29 @@ def configure_logger(config=None):
         )
     except ImportError:
         formatter = logging.Formatter('%(levelname)s %(name)s  %(asctime)s %(message)s')
-    ch.setFormatter(formatter)
-
-    # add the handlers to the logger
-    logger.addHandler(ch)
 
     if filename:
         fh = logging.FileHandler(filename)
-        formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s  %(message)s')
-        fh.setFormatter(formatter)
-        logger.addHandler(fh)
+        file_formatter = logging.Formatter(
+            '%(asctime)s %(levelname)s %(name)s  %(message)s'
+        )
+        fh.setFormatter(file_formatter)
+    else:
+        fh = None
 
-    return logger
+    ch = logging.StreamHandler()
+    ch.setFormatter(formatter)
+
+    # configure selected loggers
+    loggers = ["quetz", "urllib3.util.retry"]
+
+    for logger_name in loggers:
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(level)
+
+        # add the handlers to the logger
+        logger.addHandler(ch)
+        logger.addHandler(fh)
 
 
 def get_plugin_manager() -> pluggy.PluginManager:

@@ -16,6 +16,7 @@ from quetz.database import get_session as get_db_session
 config = Config()
 
 DEFAULT_TIMEOUT = 5  # seconds
+MAX_RETRIES = 3
 
 
 class TimeoutHTTPAdapter(HTTPAdapter):
@@ -52,7 +53,7 @@ def get_session(request: Request):
 def get_remote_session():
     session = requests.Session()
     retries = Retry(
-        total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504]
+        total=MAX_RETRIES, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504]
     )
 
     adapter = TimeoutHTTPAdapter(max_retries=retries)
