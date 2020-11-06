@@ -80,10 +80,12 @@ def _subdir_key(dir):
     return _subdir_order.get(dir, dir)
 
 
-def update_indexes(dao, pkgstore, channel_name):
+def update_indexes(dao, pkgstore, channel_name, subdirs=None):
     jinjaenv = _jinjaenv()
     channeldata = channel_data.export(dao, channel_name)
-    subdirs = sorted(channeldata["subdirs"], key=_subdir_key)
+
+    if subdirs is None:
+        subdirs = sorted(channeldata["subdirs"], key=_subdir_key)
 
     # Generate channeldata.json and its compressed version
     chandata_json = json.dumps(channeldata, indent=2, sort_keys=True)
