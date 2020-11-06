@@ -3,19 +3,32 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Quetz's documentation!
-=================================
+Quetz: conda package server
+===========================
+
+The quetz project is an open source server for conda packages. It is built upon FastAPI with an API-first approach. A quetz server can have many users, channels and packages. With quetz, fine-grained permissions on channel and package-name level will be possible.
+
+The development of quetz is taking place on `github`_.
+
+You can also contact the community of quetz developpers and users on our `gitter`_ channel.
+
+Quetz project is supported by `QuantStack`_.
+
+.. _github: https://github.com/mamba-org/quetz
+.. _gitter: https://gitter.im/QuantStack/Lobby
+.. _QuantStack: https://twitter.com/QuantStack
+
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
-   hooks
-
-
+   configuration
+   plugins 
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
