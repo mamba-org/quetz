@@ -291,6 +291,9 @@ def configure_logger(config=None):
     except ImportError:
         formatter = logging.Formatter('%(levelname)s %(name)s  %(asctime)s %(message)s')
 
+    ch = logging.StreamHandler()
+    ch.setFormatter(formatter)
+
     if filename:
         fh = logging.FileHandler(filename)
         file_formatter = logging.Formatter(
@@ -299,9 +302,6 @@ def configure_logger(config=None):
         fh.setFormatter(file_formatter)
     else:
         fh = None
-
-    ch = logging.StreamHandler()
-    ch.setFormatter(formatter)
 
     # configure selected loggers
     loggers = ["quetz", "urllib3.util.retry"]
@@ -312,7 +312,9 @@ def configure_logger(config=None):
 
         # add the handlers to the logger
         logger.addHandler(ch)
-        logger.addHandler(fh)
+
+        if fh:
+            logger.addHandler(fh)
 
 
 def get_plugin_manager() -> pluggy.PluginManager:
