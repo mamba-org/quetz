@@ -254,6 +254,7 @@ def initial_sync_mirror(
     # version_methods are context managers (for example, to update the db
     # after all packages have been checked), so we need to enter the context
     # for each
+    any_updated = False
     with contextlib.ExitStack() as version_stack:
 
         version_checks = [
@@ -279,7 +280,6 @@ def initial_sync_mirror(
                 continue
             else:
                 logger.debug(f"updating package {package_name} form {arch}")
-                pass
 
             try:
                 remote_package = remote_repository.open(path)
@@ -296,6 +296,7 @@ def initial_sync_mirror(
                     auth,
                     force,
                 )
+                any_updated = True
             except Exception as exc:
                 logger.error(
                     f"could not process package {package_name} from channel"
@@ -303,7 +304,9 @@ def initial_sync_mirror(
                 )
                 if not skip_errors:
                     raise exc
-    indexing.update_indexes(dao, pkgstore, channel_name)
+
+    if any_updated:
+        indexing.update_indexes(dao, pkgstore, channel_name, subdirs=[arch])
 
 
 def synchronize_packages(
