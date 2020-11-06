@@ -4,7 +4,9 @@ Define common dependencies for fastapi depenendcy-injection system
 
 import requests
 from fastapi import Depends, Request
+from requests.adapters import HTTPAdapter
 from sqlalchemy.orm import Session
+from urllib3.util.retry import Retry
 
 from quetz import authorization
 from quetz.config import Config
@@ -12,6 +14,24 @@ from quetz.dao import Dao
 from quetz.database import get_session as get_db_session
 
 config = Config()
+
+DEFAULT_TIMEOUT = 5  # seconds
+MAX_RETRIES = 3
+
+
+class TimeoutHTTPAdapter(HTTPAdapter):
+    def __init__(self, *args, **kwargs):
+        self.timeout = DEFAULT_TIMEOUT
+        if "timeout" in kwargs:
+            self.timeout = kwargs["timeout"]
+            del kwargs["timeout"]
+        super().__init__(*args, **kwargs)
+
+    def send(self, request, **kwargs):
+        timeout = kwargs.get("timeout")
+        if timeout is None:
+            kwargs["timeout"] = self.timeout
+        return super().send(request, **kwargs)
 
 
 def get_db():
@@ -31,7 +51,17 @@ def get_session(request: Request):
 
 
 def get_remote_session():
-    return requests.Session()
+    session = requests.Session()
+    retries = Retry(
+        total=MAX_RETRIES, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504]
+    )
+
+    adapter = TimeoutHTTPAdapter(max_retries=retries)
+
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+
+    return session
 
 
 def get_rules(
