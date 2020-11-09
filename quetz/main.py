@@ -301,7 +301,7 @@ def set_user_role(
 ):
 
     user = dao.get_user_by_username(username)
-    auth.assert_read_user_role(user.id)
+    auth.assert_change_user_role(user.id)
 
     dao.set_user_role(username, role=role.role)
 

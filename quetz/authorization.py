@@ -60,12 +60,20 @@ class Rules:
                 status_code=status.HTTP_403_FORBIDDEN, detail='No permission'
             )
 
+    def assert_change_user_role(self, requested_user_id):
+        user_id = self.get_user()
+
+        if not self.assert_user_roles(user_id, [OWNER, MAINTAINER]):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail='No permission'
+            )
+
     def assert_user_roles(self, user_id, roles: list):
 
         return (
             self.db.query(User)
-            .filter(ChannelMember.user_id == user_id)
-            .filter(ChannelMember.role.in_(roles))
+            .filter(User.id == user_id)
+            .filter(User.role.in_(roles))
             .one_or_none()
         )
 

@@ -1,9 +1,11 @@
 import datetime
+import uuid
 from unittest.mock import ANY
 
 import pytest
 
 from quetz.dao import Dao
+from quetz.db_models import User
 from quetz.rest_models import Channel, Package
 
 
@@ -46,6 +48,14 @@ def package_version(db, user, channel_name, package_name):
     db.delete(package)
     db.delete(channel)
     db.commit()
+
+
+@pytest.fixture
+def other_user(db):
+    user = User(id=uuid.uuid4().bytes, username="other")
+    db.add(user)
+    db.commit()
+    yield user
 
 
 def test_get_package_list(package_version, package_name, channel_name, client):
@@ -98,9 +108,9 @@ def test_package_version_list_by_date(
     assert len(response.json()) == 1
 
 
-def test_get_set_user_role(user, client):
+def test_get_set_user_role(user, client, other_user, db):
 
-    # test permissions
+    # test permissions without logged-in user
 
     response = client.get("/api/users/bartosz/role")
 
@@ -110,24 +120,59 @@ def test_get_set_user_role(user, client):
 
     assert response.status_code == 403
 
-    # test with logged user
+    # log a user in
     response = client.get("/api/dummylogin/bartosz")
 
     assert response.status_code == 200
 
-    response = client.get("/api/users/bartosz/role")
+    # no permission for a different user
 
+    response = client.get(f"/api/users/{other_user.username}/role")
+    assert response.status_code == 403
+
+    response = client.put(
+        f"/api/users/{other_user.username}/role", json={"role": "member"}
+    )
+    assert response.status_code == 403
+
+    # ok to check role for oneself
+
+    response = client.get(f"/api/users/{user.username}/role")
     assert response.status_code == 200
     assert response.json() == {"role": None}
 
-    response = client.put("/api/users/bartosz/role", json={"role": "member"})
+    # no permission to change own role for non-maintainers/owners
+
+    response = client.put(f"/api/users/{user.username}/role", json={"role": "member"})
+    assert response.status_code == 403
+
+    # maintainer/owner can read roles for other users
+
+    user.role = "maintainer"
+    db.commit()
+
+    response = client.get(f"/api/users/{user.username}/role")
+    assert response.status_code == 200
+    assert response.json() == {"role": "maintainer"}
+
+    response = client.get(f"/api/users/{other_user.username}/role")
+    assert response.status_code == 200
+    assert response.json() == {"role": None}
+
+    # maintainer/owner can elevate role to member
+
+    response = client.put(
+        f"/api/users/{other_user.username}/role", json={"role": "member"}
+    )
 
     assert response.status_code == 200
 
-    response = client.get("/api/users/bartosz/role")
+    response = client.get(f"/api/users/{other_user.username}/role")
 
     assert response.status_code == 200
     assert response.json() == {"role": "member"}
+
+    # only owner can elevate the role to maintainer
 
     # test validation of role names
 
