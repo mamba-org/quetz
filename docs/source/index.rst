@@ -6,7 +6,7 @@
 Quetz: conda package server
 ===========================
 
-The quetz project is an open source server for conda packages. It is built upon FastAPI with an API-first approach. A quetz server can have many users, channels and packages. With quetz, fine-grained permissions on channel and package-name level will be possible.
+The quetz project is an open source server for conda packages. It is built upon `FastAPI`_ with an API-first approach. A quetz server can have many users, channels and packages. Quetz allows for setting fine-grained permissions on channel and package-name level.
 
 The development of quetz is taking place on `github`_.
 
@@ -17,6 +17,7 @@ Quetz project is supported by `QuantStack`_.
 .. _github: https://github.com/mamba-org/quetz
 .. _gitter: https://gitter.im/QuantStack/Lobby
 .. _QuantStack: https://twitter.com/QuantStack
+.. _FastAPI: https://fastapi.tiangolo.com/
 
 Contents
 --------
