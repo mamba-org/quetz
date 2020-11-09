@@ -50,7 +50,7 @@ class Rules:
         return user_id
 
     def assert_read_user_role(self, requested_user_id):
-        user_id = self.get_user()
+        user_id = self.assert_user()
 
         if not (
             (requested_user_id == user_id)
@@ -61,12 +61,10 @@ class Rules:
             )
 
     def assert_assign_user_role(self, role: str):
-        user_id = self.get_user()
+        user_id = self.assert_user()
 
-        if (
-            role == MAINTAINER
-            or role == OWNER
-            and not self.assert_user_roles(user_id, [OWNER])
+        if (role == MAINTAINER or role == OWNER) and not self.assert_user_roles(
+            user_id, [OWNER]
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

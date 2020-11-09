@@ -287,6 +287,12 @@ def get_user_role(
 ):
 
     user = dao.get_user_by_username(username)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"User {username} not found"
+        )
+
     auth.assert_read_user_role(user.id)
 
     return {"role": user.role}
@@ -299,6 +305,13 @@ def set_user_role(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
+
+    user = dao.get_user_by_username(username)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"User {username} not found"
+        )
 
     auth.assert_assign_user_role(role.role)
 
