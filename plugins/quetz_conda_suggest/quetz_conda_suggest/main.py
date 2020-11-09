@@ -2,6 +2,8 @@ import json
 import os
 from contextlib import contextmanager
 
+from sqlalchemy import and_, func
+
 import quetz
 from quetz.db_models import PackageVersion
 from quetz.deps import get_db
@@ -43,10 +45,30 @@ def post_add_package_version(version, condainfo):
 
 
 def generate_channel_suggest_map(db, channel_name, subdir):
-    all_packages = (
-        db.query(PackageVersion)
+    subq = (
+        db.query(
+            PackageVersion.package_name,
+            func.max(PackageVersion.version).label('max_version'),
+        )
         .filter(PackageVersion.channel_name == channel_name)
         .filter(PackageVersion.platform == subdir)
+        .group_by(PackageVersion.package_name)
+        .subquery()
+    )
+
+    all_packages = (
+        (
+            db.query(PackageVersion)
+            .filter(PackageVersion.channel_name == channel_name)
+            .filter(PackageVersion.platform == subdir)
+        )
+        .join(
+            subq,
+            and_(
+                PackageVersion.package_name == subq.c.package_name,
+                PackageVersion.version == subq.c.max_version,
+            ),
+        )
         .all()
     )
 
