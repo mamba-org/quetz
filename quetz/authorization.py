@@ -60,12 +60,22 @@ class Rules:
                 status_code=status.HTTP_403_FORBIDDEN, detail='No permission'
             )
 
-    def assert_change_user_role(self, requested_user_id):
+    def assert_assign_user_role(self, role: str):
         user_id = self.get_user()
 
-        if not self.assert_user_roles(user_id, [OWNER, MAINTAINER]):
+        if (
+            role == MAINTAINER
+            or role == OWNER
+            and not self.assert_user_roles(user_id, [OWNER])
+        ):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail='No permission'
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='only owner can set maintainer and owner roles',
+            )
+        if role == MEMBER and not self.assert_user_roles(user_id, [OWNER, MAINTAINER]):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='only maintainer and owner can set user roles',
             )
 
     def assert_user_roles(self, user_id, roles: list):

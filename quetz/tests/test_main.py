@@ -159,7 +159,7 @@ def test_get_set_user_role(user, client, other_user, db):
     assert response.status_code == 200
     assert response.json() == {"role": None}
 
-    # maintainer/owner can elevate role to member
+    # maintainer can only elevate role to member
 
     response = client.put(
         f"/api/users/{other_user.username}/role", json={"role": "member"}
@@ -172,7 +172,22 @@ def test_get_set_user_role(user, client, other_user, db):
     assert response.status_code == 200
     assert response.json() == {"role": "member"}
 
-    # only owner can elevate the role to maintainer
+    # only owner can elevate the role to maintainer or owner
+
+    user.role = "owner"
+    db.commit()
+
+    for role_name in ["member", "maintainer", "owner"]:
+        response = client.put(
+            f"/api/users/{other_user.username}/role", json={"role": role_name}
+        )
+
+        assert response.status_code == 200
+
+        response = client.get(f"/api/users/{other_user.username}/role")
+
+        assert response.status_code == 200
+        assert response.json() == {"role": role_name}
 
     # test validation of role names
 

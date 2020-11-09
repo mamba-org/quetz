@@ -300,8 +300,7 @@ def set_user_role(
     auth: authorization.Rules = Depends(get_rules),
 ):
 
-    user = dao.get_user_by_username(username)
-    auth.assert_change_user_role(user.id)
+    auth.assert_assign_user_role(role.role)
 
     dao.set_user_role(username, role=role.role)
 
