@@ -27,6 +27,7 @@ Contents
 
    configuration
    plugins 
+   qeps/index
 
 Indices and tables
 ------------------
