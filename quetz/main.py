@@ -276,6 +276,24 @@ def get_user(username: str, dao: Dao = Depends(get_dao)):
 
 
 @api_router.get(
+    "/users/{username}/role", response_model=rest_models.UserRole, tags=["users"]
+)
+def get_user_role(username: str, dao: Dao = Depends(get_dao)):
+
+    user = dao.get_user_by_username(username)
+
+    return {"role": user.role}
+
+
+@api_router.put("/users/{username}/role", tags=["users"])
+def set_user_role(
+    username: str, role: rest_models.UserRole, dao: Dao = Depends(get_dao)
+):
+
+    dao.set_user_role(username, role=role.role)
+
+
+@api_router.get(
     "/channels", response_model=List[rest_models.Channel], tags=["channels"]
 )
 def get_channels(

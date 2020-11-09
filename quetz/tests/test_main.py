@@ -96,3 +96,30 @@ def test_package_version_list_by_date(
     )
     assert response.status_code == 200
     assert len(response.json()) == 1
+
+
+def test_get_set_user_role(user, client):
+    response = client.get("/api/dummylogin/bartosz")
+
+    assert response.status_code == 200
+
+    response = client.get("/api/users/bartosz/role")
+
+    assert response.status_code == 200
+    assert response.json() == {"role": None}
+
+    response = client.put("/api/users/bartosz/role", json={"role": "member"})
+
+    assert response.status_code == 200
+
+    response = client.get("/api/users/bartosz/role")
+
+    assert response.status_code == 200
+    assert response.json() == {"role": "member"}
+
+    # test validation of role names
+
+    response = client.put("/api/users/bartosz/role", json={"role": "UNDEFINED"})
+
+    assert response.status_code == 422
+    assert "member" in response.json()["detail"][0]["msg"]

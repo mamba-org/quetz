@@ -37,6 +37,8 @@ class User(Base):
         'Profile', uselist=False, back_populates='user', cascade="all,delete-orphan"
     )
 
+    role = Column(String)
+
     @classmethod
     def find(cls, db, name):
         """Find a user by name.

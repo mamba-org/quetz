@@ -109,6 +109,10 @@ class PostMember(BaseModel):
     role: str = Role
 
 
+class UserRole(BaseModel):
+    role: str = Role
+
+
 class CPRole(BaseModel):
     channel: str
     package: Optional[str]
