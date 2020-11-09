@@ -276,19 +276,32 @@ def get_user(username: str, dao: Dao = Depends(get_dao)):
 
 
 @api_router.get(
-    "/users/{username}/role", response_model=rest_models.UserRole, tags=["users"]
+    "/users/{username}/role",
+    response_model=rest_models.UserRole,
+    tags=["users"],
 )
-def get_user_role(username: str, dao: Dao = Depends(get_dao)):
+def get_user_role(
+    username: str,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
 
     user = dao.get_user_by_username(username)
+    auth.assert_read_user_role(user.id)
 
     return {"role": user.role}
 
 
 @api_router.put("/users/{username}/role", tags=["users"])
 def set_user_role(
-    username: str, role: rest_models.UserRole, dao: Dao = Depends(get_dao)
+    username: str,
+    role: rest_models.UserRole,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
 ):
+
+    user = dao.get_user_by_username(username)
+    auth.assert_read_user_role(user.id)
 
     dao.set_user_role(username, role=role.role)
 

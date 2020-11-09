@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from .db_models import ApiKey, ChannelMember, PackageMember
+from .db_models import ApiKey, ChannelMember, PackageMember, User
 
 OWNER = 'owner'
 MAINTAINER = 'maintainer'
@@ -48,6 +48,26 @@ class Rules:
             )
 
         return user_id
+
+    def assert_read_user_role(self, requested_user_id):
+        user_id = self.get_user()
+
+        if not (
+            (requested_user_id == user_id)
+            or (self.assert_user_roles(user_id, [OWNER, MAINTAINER]))
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail='No permission'
+            )
+
+    def assert_user_roles(self, user_id, roles: list):
+
+        return (
+            self.db.query(User)
+            .filter(ChannelMember.user_id == user_id)
+            .filter(ChannelMember.role.in_(roles))
+            .one_or_none()
+        )
 
     def has_channel_role(self, user_id, channel_name: str, roles: list):
         return (
