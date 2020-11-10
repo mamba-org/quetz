@@ -238,8 +238,21 @@ async def me(
 
 
 @api_router.get("/users", response_model=List[rest_models.User], tags=["users"])
-def get_users(dao: Dao = Depends(get_dao), q: str = None):
+def get_users(
+    dao: Dao = Depends(get_dao),
+    q: str = None,
+    auth: authorization.Rules = Depends(get_rules),
+):
+
+    user_id = auth.assert_user()
+
     user_list = dao.get_users(0, -1, q)
+
+    if not auth.has_server_roles(
+        user_id, [authorization.OWNER, authorization.MAINTAINER]
+    ):
+        user_list = [user for user in user_list if user.id == user_id]
+
     for user in user_list:
         user.id = str(uuid.UUID(bytes=user.id))
 
@@ -252,7 +265,10 @@ def get_users(dao: Dao = Depends(get_dao), q: str = None):
     tags=["users"],
 )
 def get_paginated_users(
-    dao: Dao = Depends(get_dao), skip: int = 0, limit: int = 10, q: str = None
+    dao: Dao = Depends(get_dao),
+    skip: int = 0,
+    limit: int = 10,
+    q: str = None,
 ):
     user_list = dao.get_users(skip, limit, q)
     for user in user_list["result"]:

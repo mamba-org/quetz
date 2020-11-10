@@ -254,3 +254,27 @@ def test_get_user_permissions(
 
     if response.status_code == 200:
         assert response.json()["username"] == target_user
+
+
+@pytest.mark.parametrize(
+    "user_role,query,expected_n_users",
+    [
+        ("owner", "", 2),
+        ("maintainer", "", 2),
+        ("member", "", 1),
+        (None, "", 1),
+        ("owner", "bar", 1),
+        (None, "bar", 1),
+        ("owner", "oth", 1),
+        (None, "oth", 0),
+    ],
+)
+def test_get_users_permissions(
+    user_with_role_authenticated, other_user, client, expected_n_users, query
+):
+
+    response = client.get(f"/api/users?q={query}")
+
+    assert response.status_code == 200
+
+    assert len(response.json()) == expected_n_users
