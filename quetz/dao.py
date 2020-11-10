@@ -69,6 +69,13 @@ class Dao:
             .one_or_none()
         )
 
+    def set_user_role(self, username: str, role: str):
+        user = self.db.query(User).filter(User.username == username).one_or_none()
+
+        if user:
+            user.role = role
+            self.db.commit()
+
     def get_channels(
         self, skip: int, limit: int, q: Optional[str], user_id: Optional[bytes]
     ):

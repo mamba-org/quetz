@@ -7,7 +7,7 @@ import pytest
 
 from quetz import rest_models
 from quetz.authorization import Rules
-from quetz.db_models import Channel, Package, PackageVersion
+from quetz.db_models import Channel, Package, PackageVersion, User
 from quetz.indexing import update_indexes
 from quetz.mirror import KNOWN_SUBDIRS, RemoteRepository, initial_sync_mirror
 
@@ -123,7 +123,7 @@ def mirror_package(mirror_channel, db):
     db.commit()
 
 
-def test_set_mirror_url(db, client, user):
+def test_set_mirror_url(db, client, owner):
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 
@@ -141,6 +141,32 @@ def test_set_mirror_url(db, client, user):
 
     assert response.status_code == 200
     assert response.json()["mirror_channel_url"] == "http://my_remote_host"
+
+
+@pytest.mark.parametrize("mirror_mode", ["proxy", "mirror"])
+@pytest.mark.parametrize(
+    "user_role,expected_status",
+    [("owner", 201), ("maintainer", 201), ("member", 403), (None, 403)],
+)
+def test_create_mirror_channel_permissions(
+    client, user, user_role, db, expected_status, dummy_repo, mirror_mode
+):
+
+    db.query(User).filter(User.id == user.id).update({"role": user_role})
+
+    response = client.get("/api/dummylogin/bartosz")
+    assert response.status_code == 200
+
+    response = client.post(
+        "/api/channels",
+        json={
+            "name": "test_create_channel",
+            "private": False,
+            "mirror_channel_url": "http://my_remote_host",
+            "mirror_mode": mirror_mode,
+        },
+    )
+    assert response.status_code == expected_status
 
 
 def test_get_mirror_url(proxy_channel, local_channel, client):
@@ -190,6 +216,14 @@ def package_version(user, mirror_channel, db, dao):
     db.delete(package)
     db.delete(version)
     db.commit()
+
+
+@pytest.fixture
+def owner(user, db):
+    user = db.query(User).get(user.id)
+    user.role = "owner"
+    db.commit()
+    yield user
 
 
 DUMMY_PACKAGE = Path("./test-package-0.1-0.tar.bz2")
@@ -444,7 +478,7 @@ def test_synchronisation_timestamp(
         assert not channel.packages
 
 
-def test_download_remote_file(client, user, dummy_repo):
+def test_download_remote_file(client, owner, dummy_repo):
     """Test downloading from cache."""
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -486,7 +520,7 @@ def test_download_remote_file(client, user, dummy_repo):
     assert dummy_repo == [("http://host/test_file_2.txt")]
 
 
-def test_always_download_repodata(client, user, dummy_repo):
+def test_always_download_repodata(client, owner, dummy_repo):
     """Test downloading from cache."""
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -562,7 +596,7 @@ def test_api_methods_for_mirror_channels(client, mirror_channel):
         ),
     ],
 )
-def test_mirror_initial_sync(client, dummy_repo, user, expected_paths):
+def test_mirror_initial_sync(client, dummy_repo, owner, expected_paths):
 
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -598,7 +632,7 @@ empty_archive = b""
         ]
     ],
 )
-def test_wrong_package_format(client, dummy_repo, user):
+def test_wrong_package_format(client, dummy_repo, owner):
 
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -631,7 +665,7 @@ def test_wrong_package_format(client, dummy_repo, user):
     assert not response.json()
 
 
-def test_mirror_unavailable_url(client, user, db):
+def test_mirror_unavailable_url(client, owner, db):
 
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -731,7 +765,7 @@ def test_disabled_methods_for_mirror_channels(
         (b'{"subdirs":["wonder-arch"]}', 200, ["wonder-arch"]),
     ],
 )
-def test_repo_without_channeldata(user, client, dummy_repo, expected_archs):
+def test_repo_without_channeldata(owner, client, dummy_repo, expected_archs):
 
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
