@@ -8,7 +8,7 @@ from quetz_conda_suggest import db_models
 from quetz.condainfo import CondaInfo
 
 
-def test_conda_suggest_endpoint_without_upload(client, channel, subdir, session_maker):
+def test_conda_suggest_endpoint_without_upload(client, channel, subdir):
     response = client.get(
         f"/api/channels/{channel.name}/{subdir}/conda-suggest"
     )  # noqa
@@ -18,7 +18,7 @@ def test_conda_suggest_endpoint_without_upload(client, channel, subdir, session_
     }
 
 
-def test_post_add_package_version(package_version, db, config, session_maker):
+def test_post_add_package_version(package_version, db, config):
     filename = "test-package-0.1-0.tar.bz2"
 
     with tempfile.SpooledTemporaryFile(mode='wb') as target:
@@ -59,17 +59,15 @@ def test_post_add_package_version(package_version, db, config, session_maker):
     assert meta[0].data == '{"test-bin": "test-package"}'
 
 
-def test_conda_suggest_endpoint_with_upload(
-    client, channel, package, subdir, config, session_maker
-):
+def test_conda_suggest_endpoint_with_upload(client, channel, package, subdir, config):
     response = client.get("/api/dummylogin/madhurt")
 
     filename = "test-package-0.1-0.tar.bz2"
     url = f'/api/channels/{channel.name}/files/'
-    files = [('files', open(filename, 'rb'))]
+    files = {'files': (filename, open(filename, 'rb'))}
     response = client.post(url, files=files)
 
-    # assert response.status_code == 201
+    assert response.status_code == 201
 
     response = client.get(
         f"/api/channels/{channel.name}/{subdir}/conda-suggest"

@@ -81,8 +81,8 @@ def package_version(user, channel, db, dao, package):
 
 
 @fixture
-def subdir(package_version):
-    return package_version.platform
+def subdir():
+    return "linux-64"
 
 
 @fixture
