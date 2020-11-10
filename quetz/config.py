@@ -26,6 +26,7 @@ class ConfigEntry(NamedTuple):
     name: str
     cast: Type
     default: Any = None
+    required: bool = True
 
     def full_name(self, section=""):
         if section:
@@ -93,9 +94,13 @@ class Config:
         ConfigSection(
             "users",
             [
-                ConfigEntry("admins", list),
-                ConfigEntry("maintainers", list),
-                ConfigEntry("members", list),
+                ConfigEntry("admins", list, required=False),
+                ConfigEntry("maintainers", list, required=False),
+                ConfigEntry("members", list, required=False),
+                ConfigEntry("default_role", str, required=False),
+                ConfigEntry(
+                    "create_default_channel", bool, default=False, required=False
+                ),
             ],
             required=False,
         ),
@@ -149,7 +154,8 @@ class Config:
             else:
                 value = self._get_value(entry, section)
 
-            setattr(self, entry.full_name(section), value)
+            if value is not None:
+                setattr(self, entry.full_name(section), value)
 
         for item in self._config_map:
             if isinstance(item, ConfigSection) and (
@@ -190,7 +196,11 @@ class Config:
         msg = f"'{entry.name}' unset but no default specified"
         if section:
             msg += f" for section '{section}'"
-        raise ConfigError(msg)
+
+        if entry.required:
+            raise ConfigError(msg)
+
+        return
 
     def _read_config(self, filename: str) -> Dict[str, str]:
         """Read a configuration file from its path.

@@ -48,9 +48,8 @@ def db(session_maker):
 
 
 @fixture
-def config():
-
-    config_str = r"""
+def config_base():
+    return r"""
 [github]
 # Register the app here: https://github.com/settings/applications/new
 client_id = "aaa"
@@ -63,6 +62,20 @@ database_url = "sqlite:///:memory:"
 secret = "eWrkA6xpa7LTSSYUwZEEVoOU62501Ucf9lmLcgzTj1I="
 https_only = false
 """
+
+
+@fixture
+def config_extra():
+    return ""
+
+
+@fixture
+def config_str(config_base, config_extra):
+    return "\n".join([config_base, config_extra])
+
+
+@fixture
+def config(config_str):
 
     path = tempfile.mkdtemp()
     config_path = os.path.join(path, "config.toml")
