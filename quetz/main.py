@@ -237,26 +237,38 @@ async def me(
     return profile
 
 
+def get_users_handler(dao, q, auth, skip, limit):
+
+    user_id = auth.assert_user()
+
+    results = dao.get_users(skip, limit, q)
+
+    user_list = results["result"] if "result" in results else results
+
+    if not auth.has_server_roles(
+        user_id, [authorization.OWNER, authorization.MAINTAINER]
+    ):
+        append_user = None
+        for user in user_list:
+            if user.id == user_id:
+                append_user = user
+        user_list.clear()
+        if append_user:
+            user_list.append(append_user)
+
+    for user in user_list:
+        user.id = str(uuid.UUID(bytes=user.id))
+
+    return results
+
+
 @api_router.get("/users", response_model=List[rest_models.User], tags=["users"])
 def get_users(
     dao: Dao = Depends(get_dao),
     q: str = None,
     auth: authorization.Rules = Depends(get_rules),
 ):
-
-    user_id = auth.assert_user()
-
-    user_list = dao.get_users(0, -1, q)
-
-    if not auth.has_server_roles(
-        user_id, [authorization.OWNER, authorization.MAINTAINER]
-    ):
-        user_list = [user for user in user_list if user.id == user_id]
-
-    for user in user_list:
-        user.id = str(uuid.UUID(bytes=user.id))
-
-    return user_list
+    return get_users_handler(dao, q, auth, 0, -1)
 
 
 @api_router.get(
@@ -269,12 +281,9 @@ def get_paginated_users(
     skip: int = 0,
     limit: int = 10,
     q: str = None,
+    auth: authorization.Rules = Depends(get_rules),
 ):
-    user_list = dao.get_users(skip, limit, q)
-    for user in user_list["result"]:
-        user.id = str(uuid.UUID(bytes=user.id))
-
-    return user_list
+    return get_users_handler(dao, q, auth, skip, limit)
 
 
 @api_router.get("/users/{username}", response_model=rest_models.User, tags=["users"])

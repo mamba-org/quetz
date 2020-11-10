@@ -84,6 +84,8 @@ def user_with_role_authenticated(user_with_role, client):
 
     assert response.status_code == 200
 
+    yield user_with_role
+
 
 def test_get_package_list(package_version, package_name, channel_name, client):
 
@@ -256,6 +258,7 @@ def test_get_user_permissions(
         assert response.json()["username"] == target_user
 
 
+@pytest.mark.parametrize("paginated", [False, True])
 @pytest.mark.parametrize(
     "user_role,query,expected_n_users",
     [
@@ -270,11 +273,16 @@ def test_get_user_permissions(
     ],
 )
 def test_get_users_permissions(
-    user_with_role_authenticated, other_user, client, expected_n_users, query
+    user_with_role_authenticated, other_user, client, expected_n_users, query, paginated
 ):
 
-    response = client.get(f"/api/users?q={query}")
+    if paginated:
+        response = client.get(f"/api/paginated/users?q={query}")
+        user_list = response.json()["result"]
+    else:
+        response = client.get(f"/api/users?q={query}")
+        user_list = response.json()
 
     assert response.status_code == 200
 
-    assert len(response.json()) == expected_n_users
+    assert len(user_list) == expected_n_users
