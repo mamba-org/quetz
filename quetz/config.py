@@ -90,6 +90,15 @@ class Config:
             ],
             required=False,
         ),
+        ConfigSection(
+            "users",
+            [
+                ConfigEntry("admins", list),
+                ConfigEntry("maintainers", list),
+                ConfigEntry("members", list),
+            ],
+            required=False,
+        ),
     )
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]
@@ -257,7 +266,7 @@ def create_config(
     client_secret : str, optional
         The client secret {default=""}
     database_url : str, optional
-        The URL of the database {default="sqlite:///./quetz.sqlite"}
+        The URL of the database {default="sqlite:///./list, default=list)
     secret : str, optional
         The secret of the session {default=randomly create}
     https : str, optional
