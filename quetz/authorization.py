@@ -50,33 +50,35 @@ class Rules:
         return user_id
 
     def assert_read_user_role(self, requested_user_id):
+
         user_id = self.assert_user()
 
         if not (
             (requested_user_id == user_id)
-            or (self.assert_user_roles(user_id, [OWNER, MAINTAINER]))
+            or (self.assert_server_roles([OWNER, MAINTAINER]))
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail='No permission'
             )
 
     def assert_assign_user_role(self, role: str):
-        user_id = self.assert_user()
 
-        if (role == MAINTAINER or role == OWNER) and not self.assert_user_roles(
-            user_id, [OWNER]
+        if (role == MAINTAINER or role == OWNER) and not self.assert_server_roles(
+            [OWNER]
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail='only owner can set maintainer and owner roles',
             )
-        if role == MEMBER and not self.assert_user_roles(user_id, [OWNER, MAINTAINER]):
+        if role == MEMBER and not self.assert_server_roles([OWNER, MAINTAINER]):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail='only maintainer and owner can set user roles',
             )
 
-    def assert_user_roles(self, user_id, roles: list):
+    def assert_server_roles(self, roles: list):
+
+        user_id = self.assert_user()
 
         return (
             self.db.query(User)
@@ -186,6 +188,10 @@ class Rules:
         self.assert_channel_or_package_roles(
             channel_name, [OWNER, MAINTAINER], package_name, [OWNER, MAINTAINER]
         )
+
+    def assert_create_mirror_channel(self, channel_name: str):
+
+        pass
 
     def assert_synchronize_mirror(self, channel_name):
         self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])
