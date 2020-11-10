@@ -5,7 +5,7 @@ from unittest.mock import ANY
 import pytest
 
 from quetz.dao import Dao
-from quetz.db_models import User
+from quetz.db_models import Profile, User
 from quetz.rest_models import Channel, Package
 
 
@@ -53,9 +53,36 @@ def package_version(db, user, channel_name, package_name):
 @pytest.fixture
 def other_user(db):
     user = User(id=uuid.uuid4().bytes, username="other")
+    profile = Profile(name="Other", avatar_url="http:///avatar", user=user)
     db.add(user)
+    db.add(profile)
     db.commit()
     yield user
+
+
+@pytest.fixture
+def user_role():
+    return None
+
+
+@pytest.fixture
+def user_with_role(user, user_role, db):
+    # assign a role to the requester
+    db_user = db.query(User).get(user.id)
+    db_user.role = user_role
+    db.commit()
+    yield db_user
+
+
+@pytest.fixture
+def user_with_role_authenticated(user_with_role, client):
+
+    session_user = user_with_role.username
+
+    # log a user in
+    response = client.get(f"/api/dummylogin/{session_user}")
+
+    assert response.status_code == 200
 
 
 def test_get_package_list(package_version, package_name, channel_name, client):
@@ -118,42 +145,30 @@ def test_validate_user_role_names(user, client, other_user, db):
 
 
 @pytest.mark.parametrize(
-    "session_user,target_user,session_user_role,target_user_role,expected_status",
+    "target_user,user_role,target_user_role,expected_status",
     [
-        ("bartosz", "other", None, "member", 403),
-        ("bartosz", "other", "member", "member", 403),
-        ("bartosz", "other", "member", "maintainer", 403),
-        ("bartosz", "other", "member", "owner", 403),
-        ("bartosz", "other", "maintainer", "member", 200),
-        ("bartosz", "other", "maintainer", "maintainer", 403),
-        ("bartosz", "other", "maintainer", "owner", 403),
-        ("bartosz", "other", "owner", "member", 200),
-        ("bartosz", "other", "owner", "maintainer", 200),
-        ("bartosz", "other", "owner", "owner", 200),
-        ("bartosz", "missing_user", "owner", "member", 404),
+        ("other", None, "member", 403),
+        ("other", "member", "member", 403),
+        ("other", "member", "maintainer", 403),
+        ("other", "member", "owner", 403),
+        ("other", "maintainer", "member", 200),
+        ("other", "maintainer", "maintainer", 403),
+        ("other", "maintainer", "owner", 403),
+        ("other", "owner", "member", 200),
+        ("other", "owner", "maintainer", 200),
+        ("other", "owner", "owner", 200),
+        ("missing_user", "owner", "member", 404),
     ],
 )
 def test_set_user_role(
-    user,
+    user_with_role_authenticated,
     client,
     other_user,
-    db,
-    session_user,
     target_user,
-    session_user_role,
+    user_role,
     target_user_role,
     expected_status,
 ):
-
-    # assign a role to the requester
-    db_user = db.query(User).filter(User.username == session_user).first()
-    db_user.role = session_user_role
-    db.commit()
-
-    # log a user in
-    response = client.get(f"/api/dummylogin/{session_user}")
-
-    assert response.status_code == 200
 
     # test changing role
 
@@ -168,42 +183,25 @@ def test_set_user_role(
         get_response = client.get(f"/api/users/{target_user}/role")
 
         assert get_response.status_code == 200
-        assert get_response.json()['role'] == target_user_role
+        assert get_response.json()["role"] == target_user_role
 
 
 @pytest.mark.parametrize(
-    "session_user,target_user,session_user_role,expected_status",
+    "target_user,user_role,expected_status",
     [
-        ("bartosz", "other", None, 403),
-        ("bartosz", "other", "member", 403),
-        ("bartosz", "other", "maintainer", 200),
-        ("bartosz", "other", "owner", 200),
-        ("bartosz", "bartosz", None, 200),
-        ("bartosz", "bartosz", "member", 200),
-        ("bartosz", "bartosz", "maintainer", 200),
-        ("bartosz", "bartosz", "owner", 200),
+        ("other", None, 403),
+        ("other", "member", 403),
+        ("other", "maintainer", 200),
+        ("other", "owner", 200),
+        ("bartosz", None, 200),
+        ("bartosz", "member", 200),
+        ("bartosz", "maintainer", 200),
+        ("bartosz", "owner", 200),
     ],
 )
 def test_get_user_role(
-    user,
-    client,
-    other_user,
-    db,
-    session_user,
-    target_user,
-    session_user_role,
-    expected_status,
+    user_with_role_authenticated, client, other_user, target_user, expected_status, db
 ):
-
-    # assign a role to the requester
-    db_user = db.query(User).filter(User.username == session_user).first()
-    db_user.role = session_user_role
-    db.commit()
-
-    # log a user in
-    response = client.get(f"/api/dummylogin/{session_user}")
-
-    assert response.status_code == 200
 
     # test reading the role
 
@@ -214,10 +212,10 @@ def test_get_user_role(
 
     if response.status_code == 200:
 
-        assert response.json()['role'] == expected_role
+        assert response.json()["role"] == expected_role
 
 
-def test_get_set_user_role_without_login(user, client, other_user, db):
+def test_get_set_user_role_without_login(user, client):
     # test permissions without logged-in user
 
     response = client.get("/api/users/bartosz/role")
@@ -227,3 +225,32 @@ def test_get_set_user_role_without_login(user, client, other_user, db):
     response = client.put("/api/users/bartosz/role", json={"role": "member"})
 
     assert response.status_code == 401
+
+
+@pytest.mark.parametrize(
+    "user_role,target_user,expected_status",
+    [
+        ("owner", "other", 200),
+        ("maintainer", "other", 200),
+        ("member", "other", 403),
+        (None, "other", 403),
+        ("owner", "bartosz", 200),
+        ("maintainer", "bartosz", 200),
+        ("member", "bartosz", 200),
+        (None, "bartosz", 200),
+    ],
+)
+def test_get_user_permissions(
+    user_with_role_authenticated,
+    other_user,
+    target_user,
+    client,
+    expected_status,
+):
+
+    response = client.get(f"/api/users/{target_user}")
+
+    assert response.status_code == expected_status
+
+    if response.status_code == 200:
+        assert response.json()["username"] == target_user

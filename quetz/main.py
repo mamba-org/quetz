@@ -262,8 +262,14 @@ def get_paginated_users(
 
 
 @api_router.get("/users/{username}", response_model=rest_models.User, tags=["users"])
-def get_user(username: str, dao: Dao = Depends(get_dao)):
+def get_user(
+    username: str,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
     user = dao.get_user_by_username(username)
+
+    auth.assert_read_user_data(user.id)
 
     if not user:
         raise HTTPException(
@@ -293,7 +299,7 @@ def get_user_role(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"User {username} not found"
         )
 
-    auth.assert_read_user_role(user.id)
+    auth.assert_read_user_data(user.id)
 
     return {"role": user.role}
 

@@ -49,7 +49,7 @@ class Rules:
 
         return user_id
 
-    def assert_read_user_role(self, requested_user_id):
+    def assert_read_user_data(self, requested_user_id):
 
         user_id = self.assert_user()
 

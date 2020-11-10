@@ -23,7 +23,7 @@ Role permissions:
 
 * empty
  
-  - can modify their user data
+  - can read their user data
 
 * ``member``
 
@@ -33,7 +33,7 @@ Role permissions:
 
   - all above and
   - can assign ``member`` role to users
-  - can read/modify all users' data
+  - can read all users' data
   - can create mirror and proxy channels
   - has access to all channels (including all private channels)
 
