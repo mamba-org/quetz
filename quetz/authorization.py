@@ -53,32 +53,27 @@ class Rules:
 
         user_id = self.assert_user()
 
-        if not (
-            (requested_user_id == user_id)
-            or (self.assert_server_roles([OWNER, MAINTAINER]))
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail='No permission'
-            )
+        if not (requested_user_id == user_id):
+            self.assert_server_roles([OWNER, MAINTAINER])
 
     def assert_assign_user_role(self, role: str):
 
-        if (role == MAINTAINER or role == OWNER) and not self.assert_server_roles(
-            [OWNER]
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail='only owner can set maintainer and owner roles',
-            )
-        if role == MEMBER and not self.assert_server_roles([OWNER, MAINTAINER]):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail='only maintainer and owner can set user roles',
-            )
+        if role == MAINTAINER or role == OWNER:
+            self.assert_server_roles([OWNER])
+        if role == MEMBER:
+            self.assert_server_roles([OWNER, MAINTAINER])
 
     def assert_server_roles(self, roles: list):
-
         user_id = self.assert_user()
+
+        if not self.has_server_roles(user_id, roles):
+
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='this operation requires' + " or ".join(roles) + ' roles',
+            )
+
+    def has_server_roles(self, user_id, roles: list):
 
         return (
             self.db.query(User)
@@ -189,9 +184,13 @@ class Rules:
             channel_name, [OWNER, MAINTAINER], package_name, [OWNER, MAINTAINER]
         )
 
-    def assert_create_mirror_channel(self, channel_name: str):
+    def assert_create_mirror_channel(self):
 
-        pass
+        self.assert_server_roles([OWNER, MAINTAINER])
+
+    def assert_create_proxy_channel(self):
+
+        self.assert_server_roles([OWNER, MAINTAINER])
 
     def assert_synchronize_mirror(self, channel_name):
         self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])

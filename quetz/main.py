@@ -389,9 +389,13 @@ def post_channel(
         )
 
     if new_channel.mirror_channel_url and new_channel.mirror_mode == "mirror":
+        auth.assert_create_mirror_channel()
         mirror.synchronize_packages(
             new_channel, dao, pkgstore, auth, session, background_tasks
         )
+
+    if new_channel.mirror_channel_url and new_channel.mirror_mode == "proxy":
+        auth.assert_create_proxy_channel()
 
     dao.create_channel(new_channel, user_id, authorization.OWNER)
 
