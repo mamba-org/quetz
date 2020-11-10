@@ -9,9 +9,13 @@ from sqlalchemy.orm import Session
 
 from .db_models import ApiKey, ChannelMember, PackageMember, User
 
-OWNER = 'owner'
-MAINTAINER = 'maintainer'
-MEMBER = 'member'
+OWNER = "owner"
+MAINTAINER = "maintainer"
+MEMBER = "member"
+
+SERVER_OWNER = OWNER
+SERVER_MAINTAINER = MAINTAINER
+SERVER_MEMBER = MEMBER
 
 ROLES = [OWNER, MAINTAINER, MEMBER]
 
@@ -32,7 +36,7 @@ class Rules:
             if api_key:
                 user_id = api_key.user_id
         else:
-            user_id = self.session.get('user_id')
+            user_id = self.session.get("user_id")
             if user_id:
                 user_id = uuid.UUID(user_id).bytes
 
@@ -44,7 +48,7 @@ class Rules:
         if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail='Not logged in',
+                detail="Not logged in",
             )
 
         return user_id
@@ -54,14 +58,14 @@ class Rules:
         user_id = self.assert_user()
 
         if not (requested_user_id == user_id):
-            self.assert_server_roles([OWNER, MAINTAINER])
+            self.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
     def assert_assign_user_role(self, role: str):
 
-        if role == MAINTAINER or role == OWNER:
-            self.assert_server_roles([OWNER])
-        if role == MEMBER:
-            self.assert_server_roles([OWNER, MAINTAINER])
+        if role == SERVER_MAINTAINER or role == SERVER_OWNER:
+            self.assert_server_roles([SERVER_OWNER])
+        if role == SERVER_MEMBER:
+            self.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
     def assert_server_roles(self, roles: list):
         user_id = self.assert_user()
@@ -70,7 +74,7 @@ class Rules:
 
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail='this operation requires' + " or ".join(roles) + ' roles',
+                detail="this operation requires" + " or ".join(roles) + " roles",
             )
 
     def has_server_roles(self, user_id, roles: list):
@@ -90,14 +94,6 @@ class Rules:
             .filter(ChannelMember.role.in_(roles))
             .one_or_none()
         )
-
-    def require_channel_role(self, channel_name: str, roles: list):
-        user_id = self.assert_user()
-
-        if not self.has_channel_role(user_id, channel_name, roles):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail='No permission'
-            )
 
     def has_package_role(
         self, user_id, channel_name: str, package_name: str, roles: list
@@ -119,16 +115,24 @@ class Rules:
         package_name: str,
         package_roles: list,
     ):
-        return self.has_channel_role(
-            user_id, channel_name, channel_roles
-        ) or self.has_package_role(user_id, channel_name, package_name, package_roles)
+        return (
+            self.is_user_elevated(user_id)
+            or self.has_channel_role(user_id, channel_name, channel_roles)
+            or self.has_package_role(user_id, channel_name, package_name, package_roles)
+        )
+
+    def is_user_elevated(self, user_id):
+        return self.has_server_roles(user_id, [SERVER_OWNER, SERVER_MAINTAINER])
 
     def assert_channel_roles(self, channel_name: str, channel_roles: list):
         user_id = self.assert_user()
 
-        if not self.has_channel_role(user_id, channel_name, channel_roles):
+        if not (
+            self.is_user_elevated(user_id)
+            or self.has_channel_role(user_id, channel_name, channel_roles)
+        ):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail='No permission'
+                status_code=status.HTTP_403_FORBIDDEN, detail="No permission"
             )
 
     def assert_channel_or_package_roles(
@@ -144,14 +148,14 @@ class Rules:
             user_id, channel_name, channel_roles, package_name, package_roles
         ):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail='No permission'
+                status_code=status.HTTP_403_FORBIDDEN, detail="No permission"
             )
 
     def assert_add_channel_member(self, channel_name: str, role: str):
-        self.require_channel_role(channel_name, [OWNER])
+        self.assert_channel_role(channel_name, [OWNER])
 
     def assert_remove_channel_member(self, channel_name: str, role: str):
-        self.require_channel_role(channel_name, [OWNER])
+        self.assert_channel_role(channel_name, [OWNER])
 
     def assert_add_package_member(self, channel_name, package_name, role):
         self.assert_channel_or_package_roles(
@@ -186,11 +190,11 @@ class Rules:
 
     def assert_create_mirror_channel(self):
 
-        self.assert_server_roles([OWNER, MAINTAINER])
+        self.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
     def assert_create_channel(self):
 
-        self.assert_server_roles([OWNER, MAINTAINER, MEMBER])
+        self.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER, SERVER_MEMBER])
 
     def assert_create_proxy_channel(self):
 

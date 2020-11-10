@@ -245,9 +245,7 @@ def get_users_handler(dao, q, auth, skip, limit):
 
     user_list = results["result"] if "result" in results else results
 
-    if not auth.has_server_roles(
-        user_id, [authorization.OWNER, authorization.MAINTAINER]
-    ):
+    if not auth.is_user_elevated(user_id):
         append_user = None
         for user in user_list:
             if user.id == user_id:

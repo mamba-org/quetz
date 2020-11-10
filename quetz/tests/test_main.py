@@ -20,6 +20,49 @@ def channel_name():
 
 
 @pytest.fixture
+def private_channel(dao, other_user):
+
+    channel_name = "private-channel"
+
+    channel_data = Channel(name=channel_name, private=True)
+    channel = dao.create_channel(channel_data, other_user.id, "owner")
+
+    return channel
+
+
+@pytest.fixture
+def private_package(dao, other_user, private_channel):
+
+    package_name = "private-package"
+    package_data = Package(name=package_name)
+    package = dao.create_package(
+        private_channel.name, package_data, other_user.id, "owner"
+    )
+
+    return package
+
+
+@pytest.fixture
+def private_package_version(dao, private_channel, private_package, other_user):
+    package_format = "tarbz2"
+    package_info = "{}"
+    version = dao.create_version(
+        private_channel.name,
+        private_package.name,
+        package_format,
+        "linux-64",
+        "0.1",
+        "0",
+        "",
+        "",
+        package_info,
+        other_user.id,
+    )
+
+    return version
+
+
+@pytest.fixture
 def package_version(db, user, channel_name, package_name):
     dao = Dao(db)
     channel_data = Channel(name=channel_name, private=False)
@@ -302,5 +345,36 @@ def test_create_normal_channel_permissions(
             "name": "test_create_channel",
             "private": False,
         },
+    )
+    assert response.status_code == expected_status
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "/api/channels/{channel_name}",
+        "/api/channels/{channel_name}/packages",
+        "/api/channels/{channel_name}/packages/{package_name}",
+        "/api/channels/{channel_name}/packages/{package_name}/versions",
+    ],
+)
+@pytest.mark.parametrize(
+    "user_role,expected_status",
+    [("owner", 200), ("maintainer", 200), ("member", 403), (None, 403)],
+)
+def test_permissions_channel_endpoints(
+    client,
+    user_with_role_authenticated,
+    private_channel,
+    expected_status,
+    endpoint,
+    private_package,
+    private_package_version,
+):
+
+    response = client.get(
+        endpoint.format(
+            channel_name=private_channel.name, package_name=private_package.name
+        )
     )
     assert response.status_code == expected_status
