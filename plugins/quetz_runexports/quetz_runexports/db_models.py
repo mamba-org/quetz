@@ -10,6 +10,8 @@ class PackageVersionMetadata(Base):
     version_id = Column(UUID, ForeignKey("package_versions.id"), primary_key=True)
     package_version = relationship(
         "PackageVersion",
-        backref=backref("runexports", uselist=False, cascade="delete,all"),
+        backref=backref(
+            "runexports", uselist=False, cascade="delete,all", passive_deletes=True
+        ),
     )
     data = Column(String)

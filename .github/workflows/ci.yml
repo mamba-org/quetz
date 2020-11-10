@@ -81,3 +81,6 @@ jobs:
           
           pip install ./plugins/quetz_repodata_patching
           pytest -v ./plugins/quetz_repodata_patching
+
+          pip install ./plugins/quetz_conda_suggest
+          pytest -v ./plugins/quetz_conda_suggest

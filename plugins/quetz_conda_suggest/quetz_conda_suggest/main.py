@@ -83,10 +83,11 @@ def generate_channel_suggest_map(db, channel_name, subdir):
                 channel_suggest_map[k] = v
 
     map_filename = "{0}.{1}.map".format(channel_name, subdir)
-    map_filepath = os.path.join(
-        os.getcwd(), "channels", channel_name, subdir, map_filename
-    )
+    map_filepath = os.path.join(os.getcwd(), "channels", channel_name, subdir)
 
-    with open(map_filepath, "w") as f:
+    if not os.path.exists(map_filepath):
+        os.makedirs(map_filepath)
+
+    with open(os.path.join(map_filepath, map_filename), "w") as f:
         for (k, v) in sorted(channel_suggest_map.items()):
             f.write("{0}:{1}\n".format(k, v))
