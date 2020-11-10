@@ -286,3 +286,21 @@ def test_get_users_permissions(
     assert response.status_code == 200
 
     assert len(user_list) == expected_n_users
+
+
+@pytest.mark.parametrize(
+    "user_role,expected_status",
+    [("owner", 201), ("maintainer", 201), ("member", 201), (None, 403)],
+)
+def test_create_normal_channel_permissions(
+    client, user_with_role_authenticated, expected_status
+):
+
+    response = client.post(
+        "/api/channels",
+        json={
+            "name": "test_create_channel",
+            "private": False,
+        },
+    )
+    assert response.status_code == expected_status

@@ -419,6 +419,9 @@ def post_channel(
             detail=f"Channel {new_channel.name} exists",
         )
 
+    if not new_channel.mirror_channel_url:
+        auth.assert_create_channel()
+
     if new_channel.mirror_channel_url and new_channel.mirror_mode == "mirror":
         auth.assert_create_mirror_channel()
         mirror.synchronize_packages(

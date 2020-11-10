@@ -188,6 +188,10 @@ class Rules:
 
         self.assert_server_roles([OWNER, MAINTAINER])
 
+    def assert_create_channel(self):
+
+        self.assert_server_roles([OWNER, MAINTAINER, MEMBER])
+
     def assert_create_proxy_channel(self):
 
         self.assert_server_roles([OWNER, MAINTAINER])

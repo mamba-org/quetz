@@ -29,7 +29,7 @@ class Data:
         Profile(name='userb', user=self.userb, avatar_url='')
         db.add(self.userb)
 
-        self.userc = User(id=uuid.uuid4().bytes, username='userc')
+        self.userc = User(id=uuid.uuid4().bytes, username='userc', role="owner")
         Profile(name='userc', user=self.userc, avatar_url='')
         db.add(self.userc)
 
