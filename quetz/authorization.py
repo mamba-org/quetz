@@ -198,7 +198,7 @@ class Rules:
 
     def assert_create_proxy_channel(self):
 
-        self.assert_server_roles([OWNER, MAINTAINER])
+        self.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
     def assert_synchronize_mirror(self, channel_name):
         self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])
