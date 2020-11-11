@@ -53,7 +53,7 @@ def config_base():
 [github]
 # Register the app here: https://github.com/settings/applications/new
 client_id = "aaa"
-client_secret = ""
+client_secret = "bbb"
 
 [sqlalchemy]
 database_url = "sqlite:///:memory:"

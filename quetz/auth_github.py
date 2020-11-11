@@ -5,20 +5,25 @@ import json
 import uuid
 
 from authlib.integrations.starlette_client import OAuth
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from starlette.responses import RedirectResponse
 
+from quetz.deps import get_db
+
 from .dao_github import get_user_by_github_identity
-from .database import get_session
 
 router = APIRouter()
 oauth = OAuth()
 
 
-def register(config):
+def register(config, client_kwargs=None):
     # Register the app here: https://github.com/settings/applications/new
+
+    if client_kwargs is None:
+        client_kwargs = {}
+
     oauth.register(
-        name='github',
+        name="github",
         client_id=config.github_client_id,
         client_secret=config.github_client_secret,
         access_token_url='https://github.com/login/oauth/access_token',
@@ -26,8 +31,11 @@ def register(config):
         authorize_url='https://github.com/login/oauth/authorize',
         authorize_params=None,
         api_base_url='https://api.github.com/',
-        client_kwargs={'scope': 'user:email'},
+        client_kwargs={'scope': 'user:email', **client_kwargs},
         quetz_db_url=config.sqlalchemy_database_url,
+        default_user_role=config.users_default_role
+        if config.configured_section("users")
+        else None,
     )
 
 
@@ -46,14 +54,14 @@ async def login(request):
     return await github.authorize_redirect(request, redirect_uri)
 
 
-@router.route('/auth/github/authorize', name='authorize_github')
-async def authorize(request: Request):
+@router.get('/auth/github/authorize', name='authorize_github')
+async def authorize(request: Request, db=Depends(get_db)):
     token = await oauth.github.authorize_access_token(request)
     resp = await oauth.github.get('user', token=token)
     profile = resp.json()
-    db = get_session(oauth.github.server_metadata['quetz_db_url'])
+    default_user_role = oauth.github.server_metadata['default_user_role']
     try:
-        user = get_user_by_github_identity(db, profile)
+        user = get_user_by_github_identity(db, profile, default_user_role)
     finally:
         db.close()
 

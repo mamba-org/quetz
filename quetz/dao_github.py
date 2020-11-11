@@ -2,15 +2,18 @@
 # Distributed under the terms of the Modified BSD License.
 
 import uuid
+from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from .db_models import Identity, Profile, User
 
 
-def create_user_with_github_identity(db: Session, github_profile) -> User:
+def create_user_with_github_identity(db: Session, github_profile, default_role) -> User:
 
-    user = User(id=uuid.uuid4().bytes, username=github_profile['login'])
+    user = User(
+        id=uuid.uuid4().bytes, username=github_profile['login'], role=default_role
+    )
 
     identity = Identity(
         provider='github',
@@ -51,7 +54,9 @@ def update_user_from_github_profile(db: Session, user, identity, profile) -> Use
     return user
 
 
-def get_user_by_github_identity(db: Session, profile) -> User:
+def get_user_by_github_identity(
+    db: Session, profile, default_role: Optional[str] = None
+) -> User:
     try:
         user, identity = db.query(User, Identity).join(Identity).filter(
             Identity.provider == 'github'
@@ -67,4 +72,4 @@ def get_user_by_github_identity(db: Session, profile) -> User:
             return update_user_from_github_profile(db, user, identity, profile)
         return user
 
-    return create_user_with_github_identity(db, profile)
+    return create_user_with_github_identity(db, profile, default_role)
