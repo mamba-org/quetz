@@ -47,9 +47,8 @@ def _init_db(db: Session, config: Config):
 
     dao = Dao(db)
     if config.configured_section("users"):
-        if config.users_admins:
-            for username in config.users_admins:
-                dao.create_user(username, "owner")
+        for username in config.users_admins:
+            dao.create_user_with_role(username, "owner")
 
 
 def _fill_test_database(db: Session) -> NoReturn:

@@ -438,8 +438,13 @@ class Dao:
             .order_by(Package.name)
         )
 
-    def create_user(self, user_name: str, role: Optional[str] = None):
-        """create a user without a profile"""
-        user = User(id=uuid.uuid4().bytes, username=user_name, role=role)
-        self.db.add(user)
+    def create_user_with_role(self, user_name: str, role: Optional[str] = None):
+        """create a user without a profile or return a user if already exists and replace
+        role"""
+        user = self.db.query(User).filter(User.username == user_name).one_or_none()
+        if not user:
+            user = User(id=uuid.uuid4().bytes, username=user_name, role=role)
+            self.db.add(user)
+        user.role = role
         self.db.commit()
+        return user

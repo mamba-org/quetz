@@ -27,3 +27,18 @@ def test_init_db(db, config, config_dir):
     assert user.role == 'owner'
     assert user.username == "bartosz"
     assert not user.profile
+
+
+def test_init_db_user_exists(db, config, user, config_dir):
+    def get_db(_):
+        return db
+
+    with mock.patch("quetz.cli.get_session", get_db):
+        cli.init_db(config_dir)
+
+    user = db.query(User).filter(User.username == "bartosz").one_or_none()
+
+    assert user
+
+    assert user.role == 'owner'
+    assert user.username == "bartosz"

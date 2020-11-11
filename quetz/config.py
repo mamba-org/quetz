@@ -94,9 +94,9 @@ class Config:
         ConfigSection(
             "users",
             [
-                ConfigEntry("admins", list, required=False),
-                ConfigEntry("maintainers", list, required=False),
-                ConfigEntry("members", list, required=False),
+                ConfigEntry("admins", list, default=list),
+                ConfigEntry("maintainers", list, default=list),
+                ConfigEntry("members", list, default=list),
                 ConfigEntry("default_role", str, required=False),
                 ConfigEntry(
                     "create_default_channel", bool, default=False, required=False
@@ -190,6 +190,8 @@ class Config:
 
         except KeyError:
             if entry.default is not None:
+                if callable(entry.default):
+                    return entry.default()
                 return entry.default
 
         msg = f"'{entry.name}' unset but no default specified"
