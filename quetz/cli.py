@@ -46,9 +46,15 @@ def _init_db(db: Session, config: Config):
     """Initialize the database and add users from config."""
 
     dao = Dao(db)
+    role_map = [
+        (config.users_admins, "owner"),
+        (config.users_maintainers, "maintainer"),
+        (config.users_members, "member"),
+    ]
     if config.configured_section("users"):
-        for username in config.users_admins:
-            dao.create_user_with_role(username, "owner")
+        for users, role in role_map:
+            for username in users:
+                dao.create_user_with_role(username, role)
 
 
 def _fill_test_database(db: Session) -> NoReturn:

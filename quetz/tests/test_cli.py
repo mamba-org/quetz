@@ -7,13 +7,22 @@ from quetz.db_models import User
 
 
 @pytest.fixture
-def config_extra():
-    return """[users]
-    admins = ["bartosz"]
+def user_group():
+    return "admins"
+
+
+@pytest.fixture
+def config_extra(user_group):
+    return f"""[users]
+    {user_group} = ["bartosz"]
     """
 
 
-def test_init_db(db, config, config_dir):
+@pytest.mark.parametrize(
+    "user_group,expected_role",
+    [("admins", "owner"), ("maintainers", "maintainer"), ("members", "member")],
+)
+def test_init_db(db, config, config_dir, user_group, expected_role):
     def get_db(_):
         return db
 
@@ -24,7 +33,7 @@ def test_init_db(db, config, config_dir):
 
     assert user
 
-    assert user.role == 'owner'
+    assert user.role == expected_role
     assert user.username == "bartosz"
     assert not user.profile
 
