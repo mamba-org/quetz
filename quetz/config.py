@@ -154,8 +154,7 @@ class Config:
             else:
                 value = self._get_value(entry, section)
 
-            if value is not None:
-                setattr(self, entry.full_name(section), value)
+            setattr(self, entry.full_name(section), value)
 
         for item in self._config_map:
             if isinstance(item, ConfigSection) and (
@@ -276,7 +275,7 @@ def create_config(
     client_secret : str, optional
         The client secret {default=""}
     database_url : str, optional
-        The URL of the database {default="sqlite:///./list, default=list)
+        The URL of the database {default="sqlite:///./quetz.sqlite"}
     secret : str, optional
         The secret of the session {default=randomly create}
     https : str, optional

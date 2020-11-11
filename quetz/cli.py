@@ -15,6 +15,7 @@ import uvicorn
 from sqlalchemy.orm.session import Session
 
 from quetz.config import Config, _env_config_file, _env_prefix, _user_dir, create_config
+from quetz.dao import Dao
 from quetz.database import get_session
 from quetz.db_models import (
     ApiKey,
@@ -39,6 +40,16 @@ class LogLevel(str, Enum):
     info = "info"
     debug = "debug"
     trace = "trace"
+
+
+def _init_db(db: Session, config: Config):
+    """Initialize the database and add users from config."""
+
+    dao = Dao(db)
+    if config.configured_section("users"):
+        if config.users_admins:
+            for username in config.users_admins:
+                dao.create_user(username, "owner")
 
 
 def _fill_test_database(db: Session) -> NoReturn:
@@ -200,6 +211,20 @@ def _clean_deployments() -> NoReturn:
 
 
 @app.command()
+def init_db(
+    path: str = typer.Argument(None, help="The path of the deployment"),
+) -> NoReturn:
+    """init database and fill users from config file [users] sections"""
+
+    config_file = _get_config(path)
+
+    config = Config(config_file)
+    db = get_session(config.sqlalchemy_database_url)
+
+    _init_db(db, config)
+
+
+@app.command()
 def create(
     path: str = typer.Argument(
         None,
@@ -291,6 +316,25 @@ def create(
     _store_deployment(abs_path, config_file_name)
 
 
+def _get_config(path: str) -> str:
+    """get config path"""
+
+    abs_path = os.path.abspath(path)
+    deployments = _get_deployments()
+
+    try:
+        config_file_name = deployments[abs_path]
+    except KeyError:
+        # we can also start the deployment if we find the config file
+        config_file_name = 'config.toml'
+
+    config_file = os.path.join(abs_path, config_file_name)
+    if not os.path.exists(config_file):
+        typer.echo(f'Could not find config at {config_file}')
+        raise typer.Abort()
+    return config_file
+
+
 @app.command()
 def start(
     path: str = typer.Argument(None, help="The path of the deployment"),
@@ -314,19 +358,7 @@ def start(
     At this time, only Uvicorn is supported as manager.
     """
 
-    abs_path = os.path.abspath(path)
-    deployments = _get_deployments()
-
-    try:
-        config_file_name = deployments[abs_path]
-    except KeyError:
-        # we can also start the deployment if we find the config file
-        config_file_name = 'config.toml'
-
-    config_file = os.path.join(abs_path, config_file_name)
-    if not os.path.exists(config_file):
-        typer.echo(f'Could not find config at {config_file}')
-        raise typer.Abort()
+    config_file = _get_config(path)
 
     os.environ[_env_prefix + _env_config_file] = config_file
     os.chdir(path)

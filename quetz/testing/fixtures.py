@@ -75,19 +75,25 @@ def config_str(config_base, config_extra):
 
 
 @fixture
-def config(config_str):
-
+def config_dir():
     path = tempfile.mkdtemp()
-    config_path = os.path.join(path, "config.toml")
+    yield path
+    shutil.rmtree(path)
+
+
+@fixture
+def config(config_str, config_dir):
+
+    config_path = os.path.join(config_dir, "config.toml")
     with open(config_path, "w") as fid:
         fid.write(config_str)
     old_dir = os.path.abspath(os.curdir)
-    os.chdir(path)
+    os.chdir(config_dir)
     os.environ["QUETZ_CONFIG_FILE"] = config_path
     data_dir = os.path.join(os.path.dirname(quetz.__file__), "tests", "data")
     for filename in os.listdir(data_dir):
         full_path = os.path.join(data_dir, filename)
-        dest = os.path.join(path, filename)
+        dest = os.path.join(config_dir, filename)
         if os.path.isfile(full_path):
             shutil.copy(full_path, dest)
 

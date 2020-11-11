@@ -437,3 +437,9 @@ class Dao:
             .filter(Package.channel_name == channel_name)
             .order_by(Package.name)
         )
+
+    def create_user(self, user_name: str, role: Optional[str] = None):
+        """create a user without a profile"""
+        user = User(id=uuid.uuid4().bytes, username=user_name, role=role)
+        self.db.add(user)
+        self.db.commit()

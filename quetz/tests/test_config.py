@@ -16,8 +16,8 @@ def test_config_users(config):
     assert config.users_default_role == "member"
     assert config.users_create_default_channel
     assert config.users_admins == ["bartosz"]
-    assert not hasattr(config, "maintainers")
-    assert not hasattr(config, "members")
+    assert not config.users_maintainers
+    assert not config.users_members
 
 
 @pytest.mark.xfail
