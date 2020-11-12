@@ -460,7 +460,11 @@ class Dao:
         role: Optional[str],
         exist_ok: bool = False,
     ):
-        """create a user with profile and role"""
+        """create a user with profile and role
+
+        :param exist_ok: flag to check whether the user should be reused if exists
+          or raise an error
+        """
 
         user = self.db.query(User).filter(User.username == username).one_or_none()
 
