@@ -5,6 +5,8 @@ from starlette.requests import Request as ASGIRequest
 from starlette.responses import Response as ASGIResponse
 
 from quetz import auth_github
+from quetz.authorization import SERVER_OWNER
+from quetz.dao import Dao
 from quetz.db_models import Channel, ChannelMember, User
 
 
@@ -49,14 +51,19 @@ default_role = "{default_role}"
 
 
 @pytest.fixture
-def oauth_server(config):
+def login():
+    return "user_with_role"
+
+
+@pytest.fixture
+def oauth_server(config, login):
 
     app = AsyncPathMapDispatch(
         {
             '/login/oauth/access_token': {'body': {'access_token': 'b'}},
             '/user': {
                 "body": {
-                    "login": "user_with_role",
+                    "login": login,
                     "avatar_url": "",
                     "id": 1,
                     "name": "monalisa",
@@ -134,3 +141,27 @@ def test_config_create_default_channel_exists(client, db, oauth_server, channel)
     assert user_channel
 
     assert user_channel.channel_name.startswith("user_with_role")
+
+
+@pytest.fixture
+def user(dao: Dao):
+    user = dao.create_user_with_role("existing_user", role=SERVER_OWNER)
+    return user
+
+
+@pytest.mark.parametrize("login", ["existing_user"])
+def test_config_user_exists(client, db, oauth_server, channel, user):
+
+    assert not user.profile
+    assert not user.identities
+
+    response = client.get('/auth/github/authorize')
+
+    assert response.status_code == 200
+
+    db.refresh(user)
+
+    assert user
+    assert user.profile
+    assert user.identities
+    assert user.identities[0].provider == 'github'

@@ -13,6 +13,7 @@ from .db_models import Channel, Identity, User
 def create_user_with_github_identity(
     dao: Dao, github_profile: dict, default_role: str, create_default_channel: bool
 ) -> User:
+
     username = github_profile["login"]
     user = dao.create_user_with_profile(
         username=username,
@@ -21,6 +22,7 @@ def create_user_with_github_identity(
         name=github_profile["name"],
         avatar_url=github_profile["avatar_url"],
         role=default_role,
+        exist_ok=True,
     )
 
     if create_default_channel:

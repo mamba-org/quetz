@@ -458,10 +458,17 @@ class Dao:
         name: str,
         avatar_url: str,
         role: Optional[str],
+        exist_ok: bool = False,
     ):
         """create a user with profile and role"""
 
-        user = User(id=uuid.uuid4().bytes, username=username, role=role)
+        user = self.db.query(User).filter(User.username == username).one_or_none()
+
+        if user and not exist_ok:
+            raise IntegrityError(f"User {username} exists", "", "")
+
+        if not user:
+            user = User(id=uuid.uuid4().bytes, username=username, role=role)
 
         identity = Identity(
             provider=provider,

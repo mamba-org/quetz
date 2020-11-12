@@ -19,10 +19,20 @@ pytest_plugins = "quetz.testing.fixtures"
 
 
 @fixture
-def user(db):
-    user = User(id=uuid.uuid4().bytes, username="bartosz")
-    profile = Profile(name="Bartosz", avatar_url="http:///avatar", user=user)
-    db.add(user)
+def user_without_profile(db):
+
+    new_user = User(id=uuid.uuid4().bytes, username="bartosz")
+    db.add(new_user)
+    db.commit()
+
+    return new_user
+
+
+@fixture
+def user(db, user_without_profile):
+    profile = Profile(
+        name="Bartosz", avatar_url="http:///avatar", user=user_without_profile
+    )
     db.add(profile)
     db.commit()
-    yield user
+    yield user_without_profile
