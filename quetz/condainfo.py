@@ -50,6 +50,7 @@ class CondaInfo:
         self.about = {}
         self.paths = {}
         self.run_exports = {}
+        self.files = {}
         self._parse_conda(file, filename)
 
     def _map_channeldata(self):
@@ -106,6 +107,9 @@ class CondaInfo:
         self.info = json.load(tar.extractfile("info/index.json"))
         self.about = json.load(tar.extractfile("info/about.json"))
         self.paths = json.load(tar.extractfile("info/paths.json"))
+        with tar.extractfile("info/files") as fp:
+            self.files = fp.readlines()
+
         try:
             exports_file = tar.extractfile("info/run_exports.json")
         except KeyError:
