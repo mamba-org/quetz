@@ -185,7 +185,7 @@ Then in your configuration file (such as `dev_config.toml`) replace the `[sqlalc
 database_url = "postgresql://postgres:mysecretpassword@localhost:5432/quetz"
 ```
 
-Finally, you can create and run a new quetz deployment based on this configuration (we assume that you saved it in file `config_postgres.yml`):
+Finally, you can create and run a new quetz deployment based on this configuration (we assume that you saved it in file `config_postgres.toml`):
 
 
 ```
