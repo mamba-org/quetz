@@ -61,9 +61,15 @@ def test_post_add_package_version(package_version, db, config):
     assert meta[0].data == '{"test-bin": "test-package"}'
 
 
-def test_conda_suggest_endpoint_with_upload(client, channel, package, subdir, config):
+def test_conda_suggest_endpoint_with_upload(
+    client, db, channel, package, subdir, config
+):
     response = client.get("/api/dummylogin/madhurt")
     filename = "test-package-0.1-0.tar.bz2"
+
+    @contextmanager
+    def get_db():
+        yield db
 
     # extract existing data
     tar = tarfile.open(name=filename, mode='r:bz2')
@@ -96,20 +102,17 @@ def test_conda_suggest_endpoint_with_upload(client, channel, package, subdir, co
     tar.addfile(t, io.BytesIO(b))
     tar.close()
 
-    # check if contents have been updated -- works!
-    # tar = tarfile.open(name=filename, mode="r:bz2")
-    # fp = tar.extractfile("info/files")
-    # print()
-    # print(fp.readlines())
-    # tar.close()
+    with mock.patch("quetz_conda_suggest.main.get_db", get_db):
+        url = f'/api/channels/{channel.name}/files/'
+        files = {'files': (filename, open(filename, 'rb'))}
+        response = client.post(url, files=files)
 
-    url = f'/api/channels/{channel.name}/files/'
-    files = {'files': (filename, open(filename, 'rb'))}
-    response = client.post(url, files=files)
-
-    assert response.status_code == 201
+        assert response.status_code == 201
 
     response = client.get(
         f"/api/channels/{channel.name}/{subdir}/conda-suggest"
     )  # noqa
-    print(response.headers)
+
+    assert response.status_code == 200
+    assert response.headers['content-length'] == '22'
+    assert response.content == b'test-bin:test-package\n'
