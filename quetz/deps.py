@@ -53,6 +53,11 @@ class DBSessionDependency:
 get_db = DBSessionDependency()
 
 
+def get_config():
+    config = Config()
+    return config
+
+
 def get_dao(db: Session = Depends(get_db)):
     return Dao(db)
 

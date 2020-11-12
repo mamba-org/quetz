@@ -16,6 +16,7 @@ from .db_models import (
     ApiKey,
     Channel,
     ChannelMember,
+    Identity,
     Package,
     PackageMember,
     PackageVersion,
@@ -447,4 +448,33 @@ class Dao:
             self.db.add(user)
         user.role = role
         self.db.commit()
+        return user
+
+    def create_user_with_profile(
+        self,
+        username: str,
+        provider: str,
+        identity_id: str,
+        name: str,
+        avatar_url: str,
+        role: Optional[str],
+    ):
+        """create a user with profile and role"""
+
+        user = User(id=uuid.uuid4().bytes, username=username, role=role)
+
+        identity = Identity(
+            provider=provider,
+            identity_id=identity_id,
+            username=username,
+        )
+
+        profile = Profile(name=name, avatar_url=avatar_url)
+
+        user.identities.append(identity)
+        user.profile = profile
+        self.db.add(user)
+        self.db.commit()
+        self.db.refresh(user)
+
         return user

@@ -8,8 +8,10 @@ from authlib.integrations.starlette_client import OAuth
 from fastapi import APIRouter, Depends, Request
 from starlette.responses import RedirectResponse
 
-from quetz.deps import get_db
+from quetz.deps import get_config, get_dao
 
+from .config import Config
+from .dao import Dao
 from .dao_github import get_user_by_github_identity
 
 router = APIRouter()
@@ -32,10 +34,6 @@ def register(config, client_kwargs=None):
         authorize_params=None,
         api_base_url='https://api.github.com/',
         client_kwargs={'scope': 'user:email', **client_kwargs},
-        quetz_db_url=config.sqlalchemy_database_url,
-        default_user_role=config.users_default_role
-        if config.configured_section("users")
-        else None,
     )
 
 
@@ -55,15 +53,13 @@ async def login(request):
 
 
 @router.get('/auth/github/authorize', name='authorize_github')
-async def authorize(request: Request, db=Depends(get_db)):
+async def authorize(
+    request: Request, dao: Dao = Depends(get_dao), config: Config = Depends(get_config)
+):
     token = await oauth.github.authorize_access_token(request)
     resp = await oauth.github.get('user', token=token)
     profile = resp.json()
-    default_user_role = oauth.github.server_metadata['default_user_role']
-    try:
-        user = get_user_by_github_identity(db, profile, default_user_role)
-    finally:
-        db.close()
+    user = get_user_by_github_identity(dao, profile, config)
 
     request.session['user_id'] = str(uuid.UUID(bytes=user.id))
 

@@ -5,7 +5,7 @@ from starlette.requests import Request as ASGIRequest
 from starlette.responses import Response as ASGIResponse
 
 from quetz import auth_github
-from quetz.db_models import User
+from quetz.db_models import Channel, ChannelMember, User
 
 
 class AsyncPathMapDispatch:
@@ -88,8 +88,8 @@ def test_github_oauth(client, db, oauth_server, default_role):
     assert user.role == default_role
 
 
-@pytest.mark.parametrize("config_extra", [""])
-def test_config_without_default_role(client, db, oauth_server):
+@pytest.mark.parametrize("config_extra", ["[users]\ncreate_default_channel = true"])
+def test_config_create_default_channel(client, db, oauth_server):
 
     response = client.get('/auth/github/authorize')
 
@@ -97,4 +97,40 @@ def test_config_without_default_role(client, db, oauth_server):
 
     user = db.query(User).filter(User.username == "user_with_role").one_or_none()
     assert user
-    assert user.role is None
+
+    channel = db.query(Channel).filter(Channel.name == "user_with_role").one_or_none()
+
+    assert channel
+    assert user == channel.members[0].user
+
+
+@pytest.fixture
+def channel(db):
+    channel = Channel(name="user_with_role", private=True)
+    db.add(channel)
+    db.commit()
+    return channel
+
+
+@pytest.mark.parametrize("config_extra", ["[users]\ncreate_default_channel = true"])
+def test_config_create_default_channel_exists(client, db, oauth_server, channel):
+
+    response = client.get('/auth/github/authorize')
+
+    assert response.status_code == 200
+
+    user = db.query(User).filter(User.username == "user_with_role").one_or_none()
+    assert user
+
+    channel = db.query(Channel).filter(Channel.name == "user_with_role").one_or_none()
+
+    assert channel
+    assert user not in [member.user for member in channel.members]
+
+    user_channel = (
+        db.query(ChannelMember).filter(ChannelMember.user_id == user.id).one_or_none()
+    )
+
+    assert user_channel
+
+    assert user_channel.channel_name.startswith("user_with_role")
