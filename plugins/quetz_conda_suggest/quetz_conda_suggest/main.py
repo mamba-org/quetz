@@ -31,6 +31,8 @@ def post_add_package_version(version, condainfo):
             if command not in suggest_map:
                 suggest_map[command] = package
 
+    print(suggest_map)  # this works for the last test
+
     with get_db() as db:
         if not version.binfiles:
             metadata = db_models.CondaSuggestMetadata(
@@ -71,6 +73,8 @@ def generate_channel_suggest_map(db, channel_name, subdir):
         )
         .all()
     )
+
+    print(all_packages)  # this is empty for the last test i.e. []
 
     channel_suggest_map = {}
 

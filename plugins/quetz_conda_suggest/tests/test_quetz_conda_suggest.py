@@ -1,4 +1,6 @@
+import io
 import shutil
+import tarfile
 import tempfile
 from contextlib import contextmanager
 from unittest import mock
@@ -61,8 +63,46 @@ def test_post_add_package_version(package_version, db, config):
 
 def test_conda_suggest_endpoint_with_upload(client, channel, package, subdir, config):
     response = client.get("/api/dummylogin/madhurt")
-
     filename = "test-package-0.1-0.tar.bz2"
+
+    # extract existing data
+    tar = tarfile.open(name=filename, mode='r:bz2')
+    existing_files = tar.getmembers()
+    existing_files_data = {}
+    for each_file in existing_files:
+        each_file_data = tar.extractfile(each_file).read()
+        existing_files_data[each_file] = each_file_data
+    tar.close()
+
+    # write content in `info/files`
+    files_data = [
+        'bin/test-bin\n',
+        'include/tpkg.h\n',
+        'include/tpkg_utils.h\n',
+        'lib/cmake/test-package/tpkgConfig.cmake\n',
+        'lib/cmake/test-package/tpkgConfigVersion.cmake\n',
+        'lib/libtpkg.so\n',
+        'lib/pkgconfig/libtpkg.pc\n',
+    ]
+    files_content = "".join(files_data)
+    b = files_content.encode("utf-8").strip()
+    t = tarfile.TarInfo("info/files")
+    t.size = len(b)
+
+    # re-create archive with updated `info/files`
+    tar = tarfile.open(name=filename, mode='w:bz2')
+    for each_file, each_file_data in existing_files_data.items():
+        tar.addfile(each_file, io.BytesIO(each_file_data))
+    tar.addfile(t, io.BytesIO(b))
+    tar.close()
+
+    # check if contents have been updated -- works!
+    # tar = tarfile.open(name=filename, mode="r:bz2")
+    # fp = tar.extractfile("info/files")
+    # print()
+    # print(fp.readlines())
+    # tar.close()
+
     url = f'/api/channels/{channel.name}/files/'
     files = {'files': (filename, open(filename, 'rb'))}
     response = client.post(url, files=files)
@@ -72,4 +112,4 @@ def test_conda_suggest_endpoint_with_upload(client, channel, package, subdir, co
     response = client.get(
         f"/api/channels/{channel.name}/{subdir}/conda-suggest"
     )  # noqa
-    print(response.status_code)
+    print(response.headers)
