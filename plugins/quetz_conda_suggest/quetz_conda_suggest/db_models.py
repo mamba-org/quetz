@@ -11,7 +11,9 @@ class CondaSuggestMetadata(Base):
     package_version = relationship(
         "PackageVersion",
         backref=backref(
-            "binfiles", uselist=False, cascade="delete,all", passive_deletes=True
+            "binfiles",
+            uselist=False,
+            cascade="delete,all",
         ),
     )
     data = Column(String)

@@ -11,7 +11,9 @@ class PackageVersionMetadata(Base):
     package_version = relationship(
         "PackageVersion",
         backref=backref(
-            "runexports", uselist=False, cascade="delete,all", passive_deletes=True
+            "runexports",
+            uselist=False,
+            cascade="delete,all",
         ),
     )
     data = Column(String)
