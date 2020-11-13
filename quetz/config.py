@@ -110,14 +110,29 @@ class Config:
 
     _instance = None
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, deployment_config: str = None):
         if cls._instance is None:
-            cls._instance = super().__new__(cls, *args, **kwargs)
-            # Put any initialization here.
-            cls._instance.init(*args, **kwargs)
+            cls._instance = super().__new__(cls)
+            path = cls.find_file(deployment_config)
+            cls._instance.init(path)
         return cls._instance
 
-    def init(self, deployment_config: str = None) -> NoReturn:
+    @classmethod
+    def find_file(cls, deployment_config: str = None):
+        config_file_env = os.getenv(f"{_env_prefix}{_env_config_file}")
+
+        deployment_config_files = []
+        for f in (deployment_config, config_file_env):
+            if f and os.path.isfile(f):
+                deployment_config_files.append(f)
+
+        # In order, get configuration from:
+        # _site_dir, _user_dir, deployment_config, config_file_env
+        for f in cls._config_files + deployment_config_files:
+            if os.path.isfile(f):
+                return f
+
+    def init(self, path: str) -> NoReturn:
         """Load configurations from various places.
 
         Order of importance for configuration is:
@@ -131,18 +146,8 @@ class Config:
         """
 
         self.config = {}
-        config_file_env = os.getenv(f"{_env_prefix}{_env_config_file}")
 
-        deployment_config_files = []
-        for f in (deployment_config, config_file_env):
-            if f and os.path.isfile(f):
-                deployment_config_files.append(f)
-
-        # In order, get configuration from:
-        # _site_dir, _user_dir, deployment_config, config_file_env
-        for f in self._config_files + deployment_config_files:
-            if os.path.isfile(f):
-                self.config.update(self._read_config(f))
+        self.config.update(self._read_config(path))
 
         def set_entry_attr(entry, section=""):
             env_var_value = os.getenv(entry.env_var(section))
