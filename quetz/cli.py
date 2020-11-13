@@ -56,13 +56,14 @@ class LogLevel(str, Enum):
 def _init_db(db: Session, config: Config):
     """Initialize the database and add users from config."""
 
-    dao = Dao(db)
-    role_map = [
-        (config.users_admins, "owner"),
-        (config.users_maintainers, "maintainer"),
-        (config.users_members, "member"),
-    ]
     if config.configured_section("users"):
+        dao = Dao(db)
+        role_map = [
+            (config.users_admins, "owner"),
+            (config.users_maintainers, "maintainer"),
+            (config.users_members, "member"),
+        ]
+
         for users, role in role_map:
             for username in users:
                 logger.info(f"create user {username} with role {role}")
