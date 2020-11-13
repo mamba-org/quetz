@@ -45,13 +45,7 @@ def default_role():
 
 @pytest.fixture
 def config_extra(default_role):
-    return (
-        f"""[users]
-default_role = "{default_role}"
-"""
-        if default_role
-        else ""
-    )
+    return f'[users]\ndefault_role = "{default_role}"\n' if default_role else ""
 
 
 @pytest.fixture
@@ -85,18 +79,6 @@ def oauth_server(config, login):
 
     auth_github.oauth._registry["github"] = _prev_registry_item
     auth_github.oauth._clients["github"] = _prev_clients_item
-
-
-@pytest.mark.parametrize("default_role", ["member", "maintainer", "owner", None])
-def test_github_oauth(client, db, oauth_server, default_role):
-
-    response = client.get('/auth/github/authorize')
-
-    assert response.status_code == 200
-
-    user = db.query(User).filter(User.username == "user_with_role").one_or_none()
-    assert user
-    assert user.role == default_role
 
 
 @pytest.mark.parametrize("config_extra", ["[users]\ncreate_default_channel = true"])
@@ -154,8 +136,10 @@ def user(dao: Dao):
 
 
 @pytest.mark.parametrize("default_role", ["member", "maintainer", "owner", None])
-@pytest.mark.parametrize("login", ["existing_user"])
-def test_config_user_exists(client, db, oauth_server, channel, user, config):
+@pytest.mark.parametrize("login", ["existing_user", "new_user"])
+def test_config_user_exists(
+    client, db, oauth_server, channel, user, config, login, default_role
+):
 
     assert not user.profile
     assert not user.identities
@@ -166,12 +150,15 @@ def test_config_user_exists(client, db, oauth_server, channel, user, config):
 
     db.refresh(user)
 
-    assert user
-    assert user.username == "existing_user"
-    assert user.role == SERVER_OWNER
-    assert user.profile
-    assert user.identities
-    assert user.identities[0].provider == 'github'
-
-    users = db.query(User).filter(User.username == "existing_user").all()
+    users = db.query(User).filter(User.username == login).all()
     assert len(users) == 1
+
+    new_user = users[0]
+
+    assert new_user
+    assert new_user.username == login
+    assert not login == "existing_user" or new_user.role == SERVER_OWNER
+    assert login == "existing_user" or new_user.role == default_role
+    assert new_user.profile
+    assert new_user.identities
+    assert new_user.identities[0].provider == 'github'
