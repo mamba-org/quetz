@@ -32,30 +32,19 @@ class TimeoutHTTPAdapter(HTTPAdapter):
         return super().send(request, **kwargs)
 
 
-class DBSessionDependency:
-    """create db session object but read read config lazily.
-
-    useful for testing"""
-
-    _database_url = None
-
-    def __call__(self):
-        if not self._database_url:
-            config = Config()
-            self._database_url = config.sqlalchemy_database_url
-        db = get_db_session(self._database_url)
-        try:
-            yield db
-        finally:
-            db.close()
-
-
-get_db = DBSessionDependency()
-
-
 def get_config():
     config = Config()
     return config
+
+
+def get_db(config: Config = Depends(get_config)):
+
+    database_url = config.sqlalchemy_database_url
+    db = get_db_session(database_url)
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 def get_dao(db: Session = Depends(get_db)):

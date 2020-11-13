@@ -6,13 +6,20 @@ from fastapi.testclient import TestClient
 from pytest import fixture
 
 import quetz
-from quetz.config import Config
+from quetz.config import Config, get_plugin_manager
 from quetz.dao import Dao
 from quetz.database import get_engine, get_session_maker
 
 
 @fixture
-def engine():
+def plugin_manager():
+    return get_plugin_manager()
+
+
+@fixture
+def engine(config, plugin_manager):
+    # we need to import the plugins before creating the db tables
+    # because plugins make define some extra db models
     db_url = os.environ.get("QUETZ_TEST_DATABASE", 'sqlite:///:memory:')
     engine = get_engine(db_url)
     yield engine

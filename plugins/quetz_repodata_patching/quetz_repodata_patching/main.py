@@ -10,8 +10,9 @@ from zipfile import ZipFile
 import zstandard
 
 import quetz
+from quetz.config import Config
+from quetz.database import get_session
 from quetz.db_models import PackageFormatEnum, PackageVersion
-from quetz.deps import get_db
 from quetz.indexing import _jinjaenv
 
 
@@ -135,12 +136,23 @@ def update_index(pkgstore, updated_files, channel_name, subdir, packages):
     )
 
 
+@contextmanager
+def get_db_manager():
+    config = Config()
+
+    db = get_session(config.sqlalchemy_database_url)
+
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 @quetz.hookimpl
 def post_package_indexing(
     pkgstore: "quetz.pkgstores.PackageStore", channel_name, subdirs
 ):
 
-    get_db_manager = contextmanager(get_db)
     with get_db_manager() as db:
 
         query = (
