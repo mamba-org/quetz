@@ -2,12 +2,23 @@ import json
 from contextlib import contextmanager
 
 import quetz
-from quetz.deps import get_db
+from quetz.config import Config
+from quetz.database import get_session
 
 from . import db_models
 from .api import router
 
-get_db = contextmanager(get_db)
+
+@contextmanager
+def get_db_manager():
+    config = Config()
+
+    db = get_session(config.sqlalchemy_database_url)
+
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 @quetz.hookimpl
@@ -19,7 +30,7 @@ def register_router():
 def post_add_package_version(version, condainfo):
     run_exports = json.dumps(condainfo.run_exports)
 
-    with get_db() as db:
+    with get_db_manager() as db:
 
         if not version.runexports:
             metadata = db_models.PackageVersionMetadata(

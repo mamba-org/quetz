@@ -2,6 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import json
+import logging
 import os
 import random
 import shutil
@@ -14,7 +15,15 @@ import typer
 import uvicorn
 from sqlalchemy.orm.session import Session
 
-from quetz.config import Config, _env_config_file, _env_prefix, _user_dir, create_config
+from quetz.config import (
+    Config,
+    _env_config_file,
+    _env_prefix,
+    _user_dir,
+    configure_logger,
+    create_config,
+)
+from quetz.dao import Dao
 from quetz.database import get_session
 from quetz.db_models import (
     ApiKey,
@@ -31,6 +40,9 @@ app = typer.Typer()
 
 _deployments_file = os.path.join(_user_dir, 'deployments.json')
 
+logger = logging.getLogger("quetz-cli")
+configure_logger(loggers=("quetz-cli",))
+
 
 class LogLevel(str, Enum):
     critical = "critical"
@@ -39,6 +51,22 @@ class LogLevel(str, Enum):
     info = "info"
     debug = "debug"
     trace = "trace"
+
+
+def _init_db(db: Session, config: Config):
+    """Initialize the database and add users from config."""
+
+    dao = Dao(db)
+    role_map = [
+        (config.users_admins, "owner"),
+        (config.users_maintainers, "maintainer"),
+        (config.users_members, "member"),
+    ]
+    if config.configured_section("users"):
+        for users, role in role_map:
+            for username in users:
+                logger.info(f"create user {username} with role {role}")
+                dao.create_user_with_role(username, role)
 
 
 def _fill_test_database(db: Session) -> NoReturn:
@@ -200,6 +228,22 @@ def _clean_deployments() -> NoReturn:
 
 
 @app.command()
+def init_db(
+    path: str = typer.Argument(None, help="The path of the deployment"),
+) -> NoReturn:
+    """init database and fill users from config file [users] sections"""
+
+    logger.info("Initializing databbase")
+
+    config_file = _get_config(path)
+
+    config = Config(config_file)
+    db = get_session(config.sqlalchemy_database_url)
+
+    _init_db(db, config)
+
+
+@app.command()
 def create(
     path: str = typer.Argument(
         None,
@@ -227,6 +271,8 @@ def create(
     ),
 ) -> NoReturn:
     """Create a new Quetz deployment."""
+
+    logger.info(f"creating new deployment in path {path}")
 
     abs_path = os.path.abspath(path)
     config_file = os.path.join(path, config_file_name)
@@ -291,6 +337,25 @@ def create(
     _store_deployment(abs_path, config_file_name)
 
 
+def _get_config(path: str) -> str:
+    """get config path"""
+
+    abs_path = os.path.abspath(path)
+    deployments = _get_deployments()
+
+    try:
+        config_file_name = deployments[abs_path]
+    except KeyError:
+        # we can also start the deployment if we find the config file
+        config_file_name = 'config.toml'
+
+    config_file = os.path.join(abs_path, config_file_name)
+    if not os.path.exists(config_file):
+        typer.echo(f'Could not find config at {config_file}')
+        raise typer.Abort()
+    return config_file
+
+
 @app.command()
 def start(
     path: str = typer.Argument(None, help="The path of the deployment"),
@@ -314,19 +379,9 @@ def start(
     At this time, only Uvicorn is supported as manager.
     """
 
-    abs_path = os.path.abspath(path)
-    deployments = _get_deployments()
+    logger.info(f"deploying quetz from directory {path}")
 
-    try:
-        config_file_name = deployments[abs_path]
-    except KeyError:
-        # we can also start the deployment if we find the config file
-        config_file_name = 'config.toml'
-
-    config_file = os.path.join(abs_path, config_file_name)
-    if not os.path.exists(config_file):
-        typer.echo(f'Could not find config at {config_file}')
-        raise typer.Abort()
+    config_file = _get_config(path)
 
     os.environ[_env_prefix + _env_config_file] = config_file
     os.chdir(path)
@@ -385,6 +440,7 @@ def run(
 
     abs_path = os.path.abspath(path)
     create(abs_path, config_file_name, copy_conf, create_conf, dev)
+    init_db(abs_path)
     start(abs_path, port, host, proxy_headers, log_level, reload)
 
 

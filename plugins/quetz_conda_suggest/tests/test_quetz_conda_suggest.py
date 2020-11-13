@@ -35,7 +35,7 @@ def test_post_add_package_version(package_version, db, config):
 
     from quetz_conda_suggest import main
 
-    with mock.patch("quetz_conda_suggest.main.get_db", get_db):
+    with mock.patch("quetz_conda_suggest.main.get_db_manager", get_db):
         main.post_add_package_version(package_version, condainfo)
 
     meta = db.query(db_models.CondaSuggestMetadata).first()
@@ -52,7 +52,7 @@ def test_post_add_package_version(package_version, db, config):
         b'lib/libtpkg.so\n',
         b'lib/pkgconfig/libtpkg.pc\n',
     ]
-    with mock.patch("quetz_conda_suggest.main.get_db", get_db):
+    with mock.patch("quetz_conda_suggest.main.get_db_manager", get_db):
         main.post_add_package_version(package_version, condainfo)
 
     meta = db.query(db_models.CondaSuggestMetadata).all()
@@ -102,7 +102,7 @@ def test_conda_suggest_endpoint_with_upload(
     tar.addfile(t, io.BytesIO(b))
     tar.close()
 
-    with mock.patch("quetz_conda_suggest.main.get_db", get_db):
+    with mock.patch("quetz_conda_suggest.main.get_db_manager", get_db):
         url = f'/api/channels/{channel.name}/files/'
         files = {'files': (filename, open(filename, 'rb'))}
         response = client.post(url, files=files)

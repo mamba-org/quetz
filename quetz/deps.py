@@ -13,8 +13,6 @@ from quetz.config import Config
 from quetz.dao import Dao
 from quetz.database import get_session as get_db_session
 
-config = Config()
-
 DEFAULT_TIMEOUT = 5  # seconds
 MAX_RETRIES = 3
 
@@ -34,8 +32,15 @@ class TimeoutHTTPAdapter(HTTPAdapter):
         return super().send(request, **kwargs)
 
 
-def get_db():
-    db = get_db_session(config.sqlalchemy_database_url)
+def get_config():
+    config = Config()
+    return config
+
+
+def get_db(config: Config = Depends(get_config)):
+
+    database_url = config.sqlalchemy_database_url
+    db = get_db_session(database_url)
     try:
         yield db
     finally:

@@ -4,7 +4,6 @@ from unittest.mock import ANY
 
 import pytest
 
-from quetz.dao import Dao
 from quetz.db_models import Profile, User
 from quetz.rest_models import Channel, Package
 
@@ -63,8 +62,7 @@ def private_package_version(dao, private_channel, private_package, other_user):
 
 
 @pytest.fixture
-def package_version(db, user, channel_name, package_name):
-    dao = Dao(db)
+def package_version(db, user, channel_name, package_name, dao):
     channel_data = Channel(name=channel_name, private=False)
     package_data = Package(name=package_name)
 

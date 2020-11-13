@@ -67,7 +67,7 @@ Roles can be configure with a config file:
    # leave out if role should be null
    default_role = "member" 
    # create a default channel for new users named {username}
-   create_default_channel = False
+   create_default_channel = false
 
 API key
 """""""

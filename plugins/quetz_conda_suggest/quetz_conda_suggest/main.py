@@ -5,13 +5,24 @@ from contextlib import contextmanager
 from sqlalchemy import and_, func
 
 import quetz
+from quetz.config import Config
+from quetz.database import get_session
 from quetz.db_models import PackageVersion
-from quetz.deps import get_db
 
 from . import db_models
 from .api import router
 
-get_db = contextmanager(get_db)
+
+@contextmanager
+def get_db_manager():
+    config = Config()
+
+    db = get_session(config.sqlalchemy_database_url)
+
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 @quetz.hookimpl
@@ -31,7 +42,7 @@ def post_add_package_version(version, condainfo):
             if command not in suggest_map:
                 suggest_map[command] = package
 
-    with get_db() as db:
+    with get_db_manager() as db:
         if not version.binfiles:
             metadata = db_models.CondaSuggestMetadata(
                 version_id=version.id, data=json.dumps(suggest_map)

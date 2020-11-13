@@ -2,6 +2,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from quetz import rest_models
+from quetz.dao import Dao
 from quetz.db_models import Channel, PackageVersion
 
 
@@ -126,3 +127,29 @@ def test_update_channel(dao, channel, db):
     channel = db.query(Channel).filter(Channel.name == channel.name).one()
 
     assert channel.private
+
+
+def test_create_user_with_profile(dao: Dao, user_without_profile):
+
+    user = dao.create_user_with_profile(
+        user_without_profile.username,
+        provider="github",
+        identity_id="1",
+        name="new user",
+        avatar_url="http://avatar",
+        role=None,
+        exist_ok=True,
+    )
+
+    assert user.profile
+
+    with pytest.raises(IntegrityError):
+        dao.create_user_with_profile(
+            user_without_profile.username,
+            provider="github",
+            identity_id="1",
+            name="new user",
+            avatar_url="http://avatar",
+            role=None,
+            exist_ok=False,
+        )

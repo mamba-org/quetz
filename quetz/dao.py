@@ -16,6 +16,7 @@ from .db_models import (
     ApiKey,
     Channel,
     ChannelMember,
+    Identity,
     Package,
     PackageMember,
     PackageVersion,
@@ -437,3 +438,54 @@ class Dao:
             .filter(Package.channel_name == channel_name)
             .order_by(Package.name)
         )
+
+    def create_user_with_role(self, user_name: str, role: Optional[str] = None):
+        """create a user without a profile or return a user if already exists and replace
+        role"""
+        user = self.db.query(User).filter(User.username == user_name).one_or_none()
+        if not user:
+            user = User(id=uuid.uuid4().bytes, username=user_name, role=role)
+            self.db.add(user)
+        user.role = role
+        self.db.commit()
+        return user
+
+    def create_user_with_profile(
+        self,
+        username: str,
+        provider: str,
+        identity_id: str,
+        name: str,
+        avatar_url: str,
+        role: Optional[str],
+        exist_ok: bool = False,
+    ):
+        """create a user with profile and role
+
+        :param exist_ok: flag to check whether the user should be reused if exists
+          or raise an error
+        """
+
+        user = self.db.query(User).filter(User.username == username).one_or_none()
+
+        if user and not exist_ok:
+            raise IntegrityError(f"User {username} exists", "", "")
+
+        if not user:
+            user = User(id=uuid.uuid4().bytes, username=username, role=role)
+
+        identity = Identity(
+            provider=provider,
+            identity_id=identity_id,
+            username=username,
+        )
+
+        profile = Profile(name=name, avatar_url=avatar_url)
+
+        user.identities.append(identity)
+        user.profile = profile
+        self.db.add(user)
+        self.db.commit()
+        self.db.refresh(user)
+
+        return user

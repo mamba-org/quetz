@@ -1,32 +1,50 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-import uuid
-
 from sqlalchemy.orm import Session
 
-from .db_models import Identity, Profile, User
+from . import rest_models
+from .authorization import OWNER
+from .config import Config
+from .dao import Dao
+from .db_models import Channel, Identity, User
 
 
-def create_user_with_github_identity(db: Session, github_profile) -> User:
+def create_user_with_github_identity(
+    dao: Dao, github_profile: dict, default_role: str, create_default_channel: bool
+) -> User:
 
-    user = User(id=uuid.uuid4().bytes, username=github_profile['login'])
-
-    identity = Identity(
-        provider='github',
-        identity_id=github_profile['id'],
-        username=github_profile['login'],
+    username = github_profile["login"]
+    user = dao.create_user_with_profile(
+        username=username,
+        provider="github",
+        identity_id=github_profile["id"],
+        name=github_profile["name"],
+        avatar_url=github_profile["avatar_url"],
+        role=default_role,
+        exist_ok=True,
     )
 
-    profile = Profile(
-        name=github_profile['name'], avatar_url=github_profile['avatar_url']
-    )
+    if create_default_channel:
 
-    user.identities.append(identity)
-    user.profile = profile
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+        channel_name = username
+
+        i = 0
+
+        while dao.db.query(Channel).filter(Channel.name == channel_name).one_or_none():
+
+            channel_name = f"{username}-{i}"
+
+            i += 1
+
+        channel_meta = rest_models.Channel(
+            name=channel_name,
+            description=f"{username}'s default channel",
+            private=True,
+        )
+
+        dao.create_channel(channel_meta, user.id, OWNER)
+
     return user
 
 
@@ -51,7 +69,10 @@ def update_user_from_github_profile(db: Session, user, identity, profile) -> Use
     return user
 
 
-def get_user_by_github_identity(db: Session, profile) -> User:
+def get_user_by_github_identity(dao: Dao, profile: dict, config: Config) -> User:
+
+    db = dao.db
+
     try:
         user, identity = db.query(User, Identity).join(Identity).filter(
             Identity.provider == 'github'
@@ -62,9 +83,18 @@ def get_user_by_github_identity(db: Session, profile) -> User:
     except KeyError:
         print(f"unexpected response format: {profile}")
 
+    if config.configured_section("users"):
+        default_role = config.users_default_role
+        create_default_channel = config.users_create_default_channel
+    else:
+        default_role = None
+        create_default_channel = False
+
     if user:
         if user_github_profile_changed(user, identity, profile):
-            return update_user_from_github_profile(db, user, identity, profile)
+            return update_user_from_github_profile(dao, user, identity, profile)
         return user
 
-    return create_user_with_github_identity(db, profile)
+    return create_user_with_github_identity(
+        dao, profile, default_role, create_default_channel
+    )

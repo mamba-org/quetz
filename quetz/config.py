@@ -26,6 +26,7 @@ class ConfigEntry(NamedTuple):
     name: str
     cast: Type
     default: Any = None
+    required: bool = True
 
     def full_name(self, section=""):
         if section:
@@ -90,20 +91,55 @@ class Config:
             ],
             required=False,
         ),
+        ConfigSection(
+            "users",
+            [
+                ConfigEntry("admins", list, default=list),
+                ConfigEntry("maintainers", list, default=list),
+                ConfigEntry("members", list, default=list),
+                ConfigEntry("default_role", str, required=False),
+                ConfigEntry(
+                    "create_default_channel", bool, default=False, required=False
+                ),
+            ],
+            required=False,
+        ),
     )
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]
 
-    _instance = None
+    _instances = {}
 
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls, *args, **kwargs)
-            # Put any initialization here.
-            cls._instance.init(*args, **kwargs)
-        return cls._instance
+    def __new__(cls, deployment_config: str = None):
+        if not deployment_config and None in cls._instances:
+            return cls._instances[None]
+        path = os.path.abspath(cls.find_file(deployment_config))
+        if path not in cls._instances:
+            config = super().__new__(cls)
+            config.init(path)
+            cls._instances[path] = config
+            # optimization - for default config path we also store the instance
+            # under None key
+            if not deployment_config:
+                cls._instances[None] = config
+        return cls._instances[path]
 
-    def init(self, deployment_config: str = None) -> NoReturn:
+    @classmethod
+    def find_file(cls, deployment_config: str = None):
+        config_file_env = os.getenv(f"{_env_prefix}{_env_config_file}")
+
+        deployment_config_files = []
+        for f in (deployment_config, config_file_env):
+            if f and os.path.isfile(f):
+                deployment_config_files.append(f)
+
+        # In order, get configuration from:
+        # _site_dir, _user_dir, deployment_config, config_file_env
+        for f in cls._config_files + deployment_config_files:
+            if os.path.isfile(f):
+                return f
+
+    def init(self, path: str) -> NoReturn:
         """Load configurations from various places.
 
         Order of importance for configuration is:
@@ -117,18 +153,8 @@ class Config:
         """
 
         self.config = {}
-        config_file_env = os.getenv(f"{_env_prefix}{_env_config_file}")
 
-        deployment_config_files = []
-        for f in (deployment_config, config_file_env):
-            if f and os.path.isfile(f):
-                deployment_config_files.append(f)
-
-        # In order, get configuration from:
-        # _site_dir, _user_dir, deployment_config, config_file_env
-        for f in self._config_files + deployment_config_files:
-            if os.path.isfile(f):
-                self.config.update(self._read_config(f))
+        self.config.update(self._read_config(path))
 
         def set_entry_attr(entry, section=""):
             env_var_value = os.getenv(entry.env_var(section))
@@ -176,12 +202,18 @@ class Config:
 
         except KeyError:
             if entry.default is not None:
+                if callable(entry.default):
+                    return entry.default()
                 return entry.default
 
         msg = f"'{entry.name}' unset but no default specified"
         if section:
             msg += f" for section '{section}'"
-        raise ConfigError(msg)
+
+        if entry.required:
+            raise ConfigError(msg)
+
+        return
 
     def _read_config(self, filename: str) -> Dict[str, str]:
         """Read a configuration file from its path.
@@ -274,7 +306,7 @@ def create_config(
     return config.format(client_id, client_secret, database_url, secret, https)
 
 
-def configure_logger(config=None):
+def configure_logger(config=None, loggers=("quetz", "urllib3.util.retry")):
     """Get quetz logger"""
 
     if hasattr(config, "logging_level"):
@@ -295,10 +327,10 @@ def configure_logger(config=None):
         from uvicorn.logging import ColourizedFormatter
 
         formatter = ColourizedFormatter(
-            fmt="%(levelprefix)s [%(name)s] %(asctime)s %(message)s", use_colors=True
+            fmt="%(levelprefix)s [%(name)s] %(message)s", use_colors=True
         )
     except ImportError:
-        formatter = logging.Formatter('%(levelname)s %(name)s  %(asctime)s %(message)s')
+        formatter = logging.Formatter('%(levelname)s [%(name)s] %(message)s')
 
     ch = logging.StreamHandler()
     ch.setFormatter(formatter)
@@ -313,8 +345,6 @@ def configure_logger(config=None):
         fh = None
 
     # configure selected loggers
-    loggers = ["quetz", "urllib3.util.retry"]
-
     for logger_name in loggers:
         logger = logging.getLogger(logger_name)
         logger.setLevel(level)

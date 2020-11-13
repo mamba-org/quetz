@@ -619,7 +619,6 @@ def search(
     auth: authorization.Rules = Depends(get_rules),
 ):
     user_id = auth.get_user()
-    print(user_id)
     return dao.search_packages(query, user_id)
 
 
@@ -840,19 +839,19 @@ def serve_path(
 #     return HTMLResponse(index_content)
 
 if os.path.isfile("../quetz_frontend/dist/index.html"):
-    print("dev frontend found")
+    logger.info("dev frontend found")
     app.mount(
         "/", StaticFiles(directory="../quetz_frontend/dist", html=True), name="frontend"
     )
 elif os.path.isfile(f"{sys.prefix}/share/quetz/frontend/index.html"):
-    print("installed frontend found")
+    logger.info("installed frontend found")
     app.mount(
         "/",
         StaticFiles(directory=f"{sys.prefix}/share/quetz/frontend/", html=True),
         name="frontend",
     )
 else:
-    print("basic frontend")
+    logger.info("basic frontend")
     basic_frontend_dir = os.path.join(
         os.path.dirname(os.path.realpath(__file__)), "basic_frontend"
     )

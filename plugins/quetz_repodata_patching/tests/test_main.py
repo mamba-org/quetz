@@ -4,6 +4,7 @@ import os
 import tarfile
 import time
 import uuid
+from contextlib import contextmanager
 from unittest import mock
 from zipfile import ZipFile
 
@@ -296,10 +297,11 @@ def test_post_package_indexing(
     package_format,
     patched_package_name,
 ):
+    @contextmanager
     def get_db():
         yield db
 
-    with mock.patch("quetz_repodata_patching.main.get_db", get_db):
+    with mock.patch("quetz_repodata_patching.main.get_db_manager", get_db):
         indexing.update_indexes(dao, pkgstore, channel_name)
 
     ext = "json.bz2" if compressed_repodata else "json"
@@ -373,10 +375,11 @@ def test_index_html(
     db,
     remove_instructions,
 ):
+    @contextmanager
     def get_db():
         yield db
 
-    with mock.patch("quetz_repodata_patching.main.get_db", get_db):
+    with mock.patch("quetz_repodata_patching.main.get_db_manager", get_db):
         indexing.update_indexes(dao, pkgstore, channel_name)
 
     index_path = os.path.join(
@@ -413,10 +416,11 @@ def test_patches_for_subdir(
     package_subdir,
     patches_subdir,
 ):
+    @contextmanager
     def get_db():
         yield db
 
-    with mock.patch("quetz_repodata_patching.main.get_db", get_db):
+    with mock.patch("quetz_repodata_patching.main.get_db_manager", get_db):
         indexing.update_indexes(dao, pkgstore, channel_name)
 
     index_path = os.path.join(
@@ -464,10 +468,11 @@ def test_no_repodata_patches_package(
     dao,
     db,
 ):
+    @contextmanager
     def get_db():
         yield db
 
-    with mock.patch("quetz_repodata_patching.main.get_db", get_db):
+    with mock.patch("quetz_repodata_patching.main.get_db_manager", get_db):
         indexing.update_indexes(dao, pkgstore, channel_name)
 
     index_path = os.path.join(
