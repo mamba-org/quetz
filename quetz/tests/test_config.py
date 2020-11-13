@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 from quetz.config import Config
@@ -40,8 +42,38 @@ def test_config_is_singleton(config):
 
     assert c is config
 
-    Config._instance = None
+    Config._instances = {}
 
     c_new = Config()
 
     assert c_new is not config
+
+    c_file = Config("config.toml")
+
+    assert c_file is c_new
+
+
+def test_config_with_path(config_dir, config_base):
+
+    one_path = os.path.join(config_dir, "one_config.toml")
+    other_path = os.path.join(config_dir, "other_config.toml")
+    with open(one_path, 'w') as fid:
+        fid.write("\n".join([config_base, "[users]\nadmins=['one']"]))
+    with open(other_path, 'w') as fid:
+        fid.write("\n".join([config_base, "[users]\nadmins=['other']"]))
+
+    Config._instances = {}
+
+    c_one = Config(one_path)
+
+    assert c_one.configured_section("users")
+    assert c_one.users_admins == ["one"]
+
+    c_other = Config(other_path)
+
+    assert c_other.configured_section("users")
+    assert c_other.users_admins == ["other"]
+
+    c_new = Config(one_path)
+
+    assert c_new is c_one

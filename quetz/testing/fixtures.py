@@ -97,7 +97,7 @@ def config(config_str, config_dir):
         if os.path.isfile(full_path):
             shutil.copy(full_path, dest)
 
-    Config._instance = None
+    Config._instances = {}
     config = Config()
     yield config
     os.chdir(old_dir)

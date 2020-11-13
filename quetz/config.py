@@ -108,14 +108,21 @@ class Config:
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]
 
-    _instance = None
+    _instances = {}
 
     def __new__(cls, deployment_config: str = None):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            path = cls.find_file(deployment_config)
-            cls._instance.init(path)
-        return cls._instance
+        if not deployment_config and None in cls._instances:
+            return cls._instances[None]
+        path = os.path.abspath(cls.find_file(deployment_config))
+        if path not in cls._instances:
+            config = super().__new__(cls)
+            config.init(path)
+            cls._instances[path] = config
+            # optimization - for default config path we also store the instance
+            # under None key
+            if not deployment_config:
+                cls._instances[None] = config
+        return cls._instances[path]
 
     @classmethod
     def find_file(cls, deployment_config: str = None):
