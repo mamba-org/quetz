@@ -94,7 +94,16 @@ class Config:
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]
 
-    def __init__(self, deployment_config: str = None) -> NoReturn:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls, *args, **kwargs)
+            # Put any initialization here.
+            cls._instance.init(*args, **kwargs)
+        return cls._instance
+
+    def init(self, deployment_config: str = None) -> NoReturn:
         """Load configurations from various places.
 
         Order of importance for configuration is:
