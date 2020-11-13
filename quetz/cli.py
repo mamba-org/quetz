@@ -234,7 +234,7 @@ def init_db(
 ) -> NoReturn:
     """init database and fill users from config file [users] sections"""
 
-    logger.info("Initializing databbase")
+    logger.info("Initializing database")
 
     config_file = _get_config(path)
 
