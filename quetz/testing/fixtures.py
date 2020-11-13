@@ -77,6 +77,8 @@ https_only = false
         dest = os.path.join(path, filename)
         if os.path.isfile(full_path):
             shutil.copy(full_path, dest)
+
+    Config._instance = None
     config = Config()
     yield config
     os.chdir(old_dir)
