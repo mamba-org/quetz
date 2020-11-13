@@ -98,7 +98,6 @@ class Config:
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            print('Creating the object')
             cls._instance = super().__new__(cls, *args, **kwargs)
             # Put any initialization here.
             cls._instance.init(*args, **kwargs)
