@@ -2,6 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import json
+import logging
 import os
 import random
 import shutil
@@ -14,7 +15,14 @@ import typer
 import uvicorn
 from sqlalchemy.orm.session import Session
 
-from quetz.config import Config, _env_config_file, _env_prefix, _user_dir, create_config
+from quetz.config import (
+    Config,
+    _env_config_file,
+    _env_prefix,
+    _user_dir,
+    configure_logger,
+    create_config,
+)
 from quetz.dao import Dao
 from quetz.database import get_session
 from quetz.db_models import (
@@ -31,6 +39,9 @@ from quetz.db_models import (
 app = typer.Typer()
 
 _deployments_file = os.path.join(_user_dir, 'deployments.json')
+
+logger = logging.getLogger("quetz-cli")
+configure_logger(loggers=("quetz-cli",))
 
 
 class LogLevel(str, Enum):
@@ -54,6 +65,7 @@ def _init_db(db: Session, config: Config):
     if config.configured_section("users"):
         for users, role in role_map:
             for username in users:
+                logger.info(f"create user {username} with role {role}")
                 dao.create_user_with_role(username, role)
 
 
@@ -221,6 +233,8 @@ def init_db(
 ) -> NoReturn:
     """init database and fill users from config file [users] sections"""
 
+    logger.info("Initializing databbase")
+
     config_file = _get_config(path)
 
     config = Config(config_file)
@@ -257,6 +271,8 @@ def create(
     ),
 ) -> NoReturn:
     """Create a new Quetz deployment."""
+
+    logger.info(f"creating new deployment in path {path}")
 
     abs_path = os.path.abspath(path)
     config_file = os.path.join(path, config_file_name)
@@ -363,6 +379,8 @@ def start(
     At this time, only Uvicorn is supported as manager.
     """
 
+    logger.info(f"deploying quetz from directory {path}")
+
     config_file = _get_config(path)
 
     os.environ[_env_prefix + _env_config_file] = config_file
@@ -422,6 +440,7 @@ def run(
 
     abs_path = os.path.abspath(path)
     create(abs_path, config_file_name, copy_conf, create_conf, dev)
+    init_db(abs_path)
     start(abs_path, port, host, proxy_headers, log_level, reload)
 
 

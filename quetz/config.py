@@ -294,7 +294,7 @@ def create_config(
     return config.format(client_id, client_secret, database_url, secret, https)
 
 
-def configure_logger(config=None):
+def configure_logger(config=None, loggers=("quetz", "urllib3.util.retry")):
     """Get quetz logger"""
 
     if hasattr(config, "logging_level"):
@@ -315,10 +315,10 @@ def configure_logger(config=None):
         from uvicorn.logging import ColourizedFormatter
 
         formatter = ColourizedFormatter(
-            fmt="%(levelprefix)s [%(name)s] %(asctime)s %(message)s", use_colors=True
+            fmt="%(levelprefix)s [%(name)s] %(message)s", use_colors=True
         )
     except ImportError:
-        formatter = logging.Formatter('%(levelname)s %(name)s  %(asctime)s %(message)s')
+        formatter = logging.Formatter('%(levelname)s [%(name)s] %(message)s')
 
     ch = logging.StreamHandler()
     ch.setFormatter(formatter)
@@ -333,8 +333,6 @@ def configure_logger(config=None):
         fh = None
 
     # configure selected loggers
-    loggers = ["quetz", "urllib3.util.retry"]
-
     for logger_name in loggers:
         logger = logging.getLogger(logger_name)
         logger.setLevel(level)
