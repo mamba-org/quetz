@@ -332,6 +332,7 @@ def create(
     Path('channels').mkdir()
     db = get_session(config.sqlalchemy_database_url)
 
+    init_db(abs_path)
     if dev:
         _fill_test_database(db)
 
@@ -441,7 +442,6 @@ def run(
 
     abs_path = os.path.abspath(path)
     create(abs_path, config_file_name, copy_conf, create_conf, dev)
-    init_db(abs_path)
     start(abs_path, port, host, proxy_headers, log_level, reload)
 
 

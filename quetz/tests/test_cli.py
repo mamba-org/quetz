@@ -22,7 +22,6 @@ def config_extra(user_group):
 
 
 def get_user(db, config_dir):
-
     def get_db(_):
         return db
 
