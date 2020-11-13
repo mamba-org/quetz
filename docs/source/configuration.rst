@@ -33,6 +33,45 @@ You can use github as identity provider, i.e., users will connect to quetz with 
 
    Please always keep your credentials secret. Never (!) commit them to a public github repository. If this ever happens, you will need to revoke the credentials and create new ones in github web interface.
 
+``users`` section
+^^^^^^^^^^^^^^^^^
+
+Configure default user permissions, creating default channel and super-admin permissions.
+
+.. code::
+
+   [users]
+   # users with owner role
+   admins = ["admin_user"]
+   # users with maintainer role
+   maintainers = ["other_user"]
+   # users with memeber role
+   members = ["some", "random", "name"]
+   # default role assigned to new users
+   # leave out if role should be null
+   default_role = "member"
+   # create a default channel for new users named {username}
+   create_default_channel = false
+
+You can use one of the following options to configure privilaged users:
+
+:admins: list of users with super-admin permissions (``owner`` role), default: empty list
+:maintainers: list of users with maintainer permission (``maintainer`` role), default: empty list
+:members: list of standard members (``member`` role), default: empty list
+
+For all other users, you can define the default role with the following option:
+
+:default_role: default role assigned to new users, will equal to ``None`` if not specified.
+
+Quetz can also create a channel for a newly connected user:
+
+:create_default_channel: should a channel should be created for a user after first login, default ``false``
+
+.. note::
+
+   Users with role ``None`` will not be able to create channels. However, they will be able to see all public channels and can be given permissions to private channels/packages by their owners/maintainers. You can also set ``create_default_channel`` option to automatically create a channel for the user, where they will have owner permissions.
+
+
 ``session`` section
 ^^^^^^^^^^^^^^^^^^^
 
