@@ -45,9 +45,13 @@ def default_role():
 
 @pytest.fixture
 def config_extra(default_role):
-    return f"""[users]
+    return (
+        f"""[users]
 default_role = "{default_role}"
 """
+        if default_role
+        else ""
+    )
 
 
 @pytest.fixture
@@ -83,7 +87,7 @@ def oauth_server(config, login):
     auth_github.oauth._clients["github"] = _prev_clients_item
 
 
-@pytest.mark.parametrize("default_role", ["member", "maintainer", "owner"])
+@pytest.mark.parametrize("default_role", ["member", "maintainer", "owner", None])
 def test_github_oauth(client, db, oauth_server, default_role):
 
     response = client.get('/auth/github/authorize')
@@ -149,8 +153,9 @@ def user(dao: Dao):
     return user
 
 
+@pytest.mark.parametrize("default_role", ["member", "maintainer", "owner", None])
 @pytest.mark.parametrize("login", ["existing_user"])
-def test_config_user_exists(client, db, oauth_server, channel, user):
+def test_config_user_exists(client, db, oauth_server, channel, user, config):
 
     assert not user.profile
     assert not user.identities
@@ -162,6 +167,11 @@ def test_config_user_exists(client, db, oauth_server, channel, user):
     db.refresh(user)
 
     assert user
+    assert user.username == "existing_user"
+    assert user.role == SERVER_OWNER
     assert user.profile
     assert user.identities
     assert user.identities[0].provider == 'github'
+
+    users = db.query(User).filter(User.username == "existing_user").all()
+    assert len(users) == 1
