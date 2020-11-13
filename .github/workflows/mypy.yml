@@ -31,10 +31,11 @@ jobs:
           export MAMBA_ROOT_PREFIX=~/micromamba
           export MAMBA_EXE=$(pwd)/micromamba
           . $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
-          ./micromamba create -y -p ~/test_env 'python>=3.7' pip fastapi typer authlib \
+          ./micromamba create -y -p ~/test_env python==3.8 pip fastapi typer authlib \
                        httpx=0.12.0 sqlalchemy sqlite psycopg2 python-multipart uvicorn zstandard \
                        appdirs toml fsspec pytest conda requests "h2<4.0.0" mypy pip \
                        -c conda-forge
+          micromamba activate ~/test_env
           pip install sqlalchemy-stubs
      
       - name: type checking
