@@ -124,7 +124,7 @@ class Dao:
         )
         self.db.commit()
 
-    def get_packages(self, channel_name: str, skip: int, limit: int, q: str):
+    def get_packages(self, channel_name: str, skip: int, limit: int, q: Optional[str]):
         query = self.db.query(Package).filter(Package.channel_name == channel_name)
 
         if q:

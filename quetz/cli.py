@@ -85,7 +85,7 @@ def _fill_test_database(db: Session) -> NoReturn:
 
             profile = Profile(name=username.capitalize(), avatar_url='/avatar.jpg')
 
-            user.identities.append(identity)
+            user.identities.append(identity)  # type: ignore
             user.profile = profile
             db.add(user)
             testUsers.append(user)
@@ -103,7 +103,7 @@ def _fill_test_database(db: Session) -> NoReturn:
                     summary=f'package {package_index} summary text',
                     description=f'Description of package{package_index}',
                 )
-                channel.packages.append(package)
+                channel.packages.append(package)  # type: ignore
 
                 test_user = testUsers[random.randint(0, len(testUsers) - 1)]
                 package_member = PackageMember(
@@ -114,7 +114,7 @@ def _fill_test_database(db: Session) -> NoReturn:
 
             if channel_index == 0:
                 package = Package(name='xtensor', description='Description of xtensor')
-                channel.packages.append(package)
+                channel.packages.append(package)  # type: ignore
 
                 test_user = testUsers[random.randint(0, len(testUsers) - 1)]
                 package_member = PackageMember(
@@ -202,8 +202,8 @@ def _get_cleaned_deployments() -> Dict[str, str]:
         The mapping of deployments
     """
 
-    with open(_deployments_file, 'r') as f:
-        deployments = json.load(f)
+    with open(_deployments_file, 'r') as fid:
+        deployments: Dict[str, str] = json.load(fid)
 
     to_delete = []
     for path, f in deployments.items():
@@ -216,13 +216,13 @@ def _get_cleaned_deployments() -> Dict[str, str]:
     }
 
     if len(to_delete) > 0:
-        with open(_deployments_file, 'w') as f:
-            json.dump(cleaned_deployments, f)
+        with open(_deployments_file, 'w') as fid:
+            json.dump(cleaned_deployments, fid)
 
     return cleaned_deployments
 
 
-def _clean_deployments() -> NoReturn:
+def _clean_deployments():
     """Clean the deployments without returning anything."""
     _ = _get_cleaned_deployments()
 
@@ -230,7 +230,7 @@ def _clean_deployments() -> NoReturn:
 @app.command()
 def init_db(
     path: str = typer.Argument(None, help="The path of the deployment"),
-) -> NoReturn:
+):
     """init database and fill users from config file [users] sections"""
 
     logger.info("Initializing databbase")
@@ -269,7 +269,7 @@ def create(
             "(fills the database with test data and allows http access)"
         ),
     ),
-) -> NoReturn:
+):
     """Create a new Quetz deployment."""
 
     logger.info(f"creating new deployment in path {path}")

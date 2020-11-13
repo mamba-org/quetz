@@ -6,7 +6,7 @@ import os
 from base64 import b64encode
 from distutils.util import strtobool
 from secrets import token_bytes
-from typing import Any, Dict, List, NamedTuple, NoReturn, Type, Union
+from typing import Any, Dict, List, NamedTuple, NoReturn, Optional, Type, Union
 
 import appdirs
 import pluggy
@@ -53,6 +53,7 @@ class ConfigSection(NamedTuple):
 
 
 class Config:
+
     _config_map = (
         ConfigSection(
             "github",
@@ -108,7 +109,7 @@ class Config:
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]
 
-    _instances = {}
+    _instances: Dict[Optional[str], "Config"] = {}
 
     def __new__(cls, deployment_config: str = None):
         if not deployment_config and None in cls._instances:
@@ -123,6 +124,9 @@ class Config:
             if not deployment_config:
                 cls._instances[None] = config
         return cls._instances[path]
+
+    def __getattr__(self, name: str) -> Any:
+        super().__getattr__(self, name)
 
     @classmethod
     def find_file(cls, deployment_config: str = None):
@@ -152,7 +156,7 @@ class Config:
             The configuration stored at deployment level
         """
 
-        self.config = {}
+        self.config: Dict[str, Any] = {}
 
         self.config.update(self._read_config(path))
 
@@ -177,7 +181,9 @@ class Config:
             elif isinstance(item, ConfigEntry):
                 set_entry_attr(item)
 
-    def _get_value(self, entry: ConfigEntry, section: str = "") -> Union[str, bool]:
+    def _get_value(
+        self, entry: ConfigEntry, section: str = ""
+    ) -> Union[str, bool, None]:
         """Get an entry value from a configuration mapping.
 
         Parameters
@@ -213,9 +219,9 @@ class Config:
         if entry.required:
             raise ConfigError(msg)
 
-        return
+        return None
 
-    def _read_config(self, filename: str) -> Dict[str, str]:
+    def _read_config(self, filename: str) -> Dict[str, Any]:
         """Read a configuration file from its path.
 
         Parameters
@@ -230,7 +236,7 @@ class Config:
         """
         with open(filename) as f:
             try:
-                return toml.load(f)
+                return dict(toml.load(f))
             except toml.TomlDecodeError as e:
                 raise ConfigError(f"failed to load config file '{filename}': {e}")
 
