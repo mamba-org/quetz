@@ -440,7 +440,7 @@ def post_channel(
 def get_packages(
     channel: db_models.Channel = Depends(get_channel_or_fail),
     dao: Dao = Depends(get_dao),
-    q: str = None,
+    q: Optional[str] = None,
 ):
     """
     Retrieve all packages in a channel, optionally matching a query `q`.
@@ -458,7 +458,7 @@ def get_paginated_packages(
     dao: Dao = Depends(get_dao),
     skip: int = 0,
     limit: int = -1,
-    q: str = None,
+    q: Optional[str] = None,
 ):
     """
     Retrieve all packages in a channel.
@@ -693,9 +693,7 @@ def post_file_to_package(
         ChannelChecker(allow_proxy=False, allow_mirror=False),
     ),
 ):
-    handle_package_files(
-        package.channel.name, files, dao, auth, force, background_tasks, package=package
-    )
+    handle_package_files(package.channel.name, files, dao, auth, force, package=package)
 
 
 @api_router.post("/channels/{channel_name}/files/", status_code=201, tags=["files"])

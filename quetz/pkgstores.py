@@ -11,9 +11,10 @@ from contextlib import contextmanager
 from typing import IO, BinaryIO, NoReturn, Union
 
 import fsspec
-from fastapi import File
 
 from quetz.errors import ConfigError
+
+File = BinaryIO
 
 
 class PackageStore(abc.ABC):

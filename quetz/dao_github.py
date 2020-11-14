@@ -92,7 +92,7 @@ def get_user_by_github_identity(dao: Dao, profile: dict, config: Config) -> User
 
     if user:
         if user_github_profile_changed(user, identity, profile):
-            return update_user_from_github_profile(dao, user, identity, profile)
+            return update_user_from_github_profile(db, user, identity, profile)
         return user
 
     return create_user_with_github_identity(

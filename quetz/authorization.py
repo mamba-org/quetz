@@ -152,10 +152,10 @@ class Rules:
             )
 
     def assert_add_channel_member(self, channel_name: str, role: str):
-        self.assert_channel_role(channel_name, [OWNER])
+        self.assert_channel_roles(channel_name, [OWNER])
 
     def assert_remove_channel_member(self, channel_name: str, role: str):
-        self.assert_channel_role(channel_name, [OWNER])
+        self.assert_channel_roles(channel_name, [OWNER])
 
     def assert_add_package_member(self, channel_name, package_name, role):
         self.assert_channel_or_package_roles(

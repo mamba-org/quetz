@@ -19,7 +19,7 @@ def create_user_with_google_identity(db: Session, google_profile) -> User:
 
     profile = Profile(name=google_profile['name'], avatar_url=google_profile['picture'])
 
-    user.identities.append(identity)
+    user.identities.append(identity)  # type: ignore
     user.profile = profile
     db.add(user)
     db.commit()

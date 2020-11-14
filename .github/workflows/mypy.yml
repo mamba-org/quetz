@@ -1,0 +1,49 @@
+name: Mypy
+
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+    branches:
+    - master
+
+jobs:
+  type_checking:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+      - name: install micromamba
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            wget -qO- https://micromamba.snakepit.net/api/micromamba/linux-64/latest | tar -xvj bin/micromamba --strip-components=1
+          else
+            wget -qO- https://micromamba.snakepit.net/api/micromamba/osx-64/latest | tar -xvj bin/micromamba
+            mv bin/micromamba ./micromamba
+          fi
+          ./micromamba shell init -s bash -p ~/micromamba
+          mkdir -p ~/micromamba/pkgs/
+      - name: install deps
+        shell: bash -l {0}
+        run: |
+          export MAMBA_ROOT_PREFIX=~/micromamba
+          export MAMBA_EXE=$(pwd)/micromamba
+          . $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
+          ./micromamba create -y -p ~/test_env python==3.8 pip fastapi typer authlib \
+                       httpx=0.12.0 sqlalchemy sqlite psycopg2 python-multipart uvicorn zstandard \
+                       appdirs toml fsspec pytest conda requests "h2<4.0.0" mypy pip \
+                       -c conda-forge
+          micromamba activate ~/test_env
+          pip install sqlalchemy-stubs
+     
+      - name: type checking
+        shell: bash -l {0}
+        run: |
+          export MAMBA_ROOT_PREFIX=~/micromamba
+          export MAMBA_EXE=$(pwd)/micromamba
+          . $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
+          micromamba activate ~/test_env
+          pip install -e .
+          mypy quetz --show-error-codes
