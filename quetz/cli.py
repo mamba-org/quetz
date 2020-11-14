@@ -56,13 +56,14 @@ class LogLevel(str, Enum):
 def _init_db(db: Session, config: Config):
     """Initialize the database and add users from config."""
 
-    dao = Dao(db)
-    role_map = [
-        (config.users_admins, "owner"),
-        (config.users_maintainers, "maintainer"),
-        (config.users_members, "member"),
-    ]
     if config.configured_section("users"):
+        dao = Dao(db)
+        role_map = [
+            (config.users_admins, "owner"),
+            (config.users_maintainers, "maintainer"),
+            (config.users_members, "member"),
+        ]
+
         for users, role in role_map:
             for username in users:
                 logger.info(f"create user {username} with role {role}")
@@ -233,7 +234,7 @@ def init_db(
 ):
     """init database and fill users from config file [users] sections"""
 
-    logger.info("Initializing databbase")
+    logger.info("Initializing database")
 
     config_file = _get_config(path)
 
@@ -331,6 +332,7 @@ def create(
     Path('channels').mkdir()
     db = get_session(config.sqlalchemy_database_url)
 
+    init_db(abs_path)
     if dev:
         _fill_test_database(db)
 
@@ -440,7 +442,6 @@ def run(
 
     abs_path = os.path.abspath(path)
     create(abs_path, config_file_name, copy_conf, create_conf, dev)
-    init_db(abs_path)
     start(abs_path, port, host, proxy_headers, log_level, reload)
 
 
