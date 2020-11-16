@@ -36,7 +36,7 @@ class PackageStore(abc.ABC):
 
     @abc.abstractmethod
     def add_file(
-        self, data: Union[str, BinaryIO], channel: str, destination: str
+        self, data: Union[str, bytes], channel: str, destination: str
     ) -> NoReturn:
         pass
 
@@ -79,7 +79,7 @@ class LocalStore(PackageStore):
             shutil.copyfileobj(package, f)
 
     def add_file(
-        self, data: Union[str, BinaryIO], channel: str, destination: str
+        self, data: Union[str, bytes], channel: str, destination: str
     ) -> NoReturn:
 
         mode = "w" if isinstance(data, str) else "wb"
@@ -152,7 +152,7 @@ class S3Store(PackageStore):
                     shutil.copyfileobj(package, pkg)
 
     def add_file(
-        self, data: Union[str, BinaryIO], channel: str, destination: str
+        self, data: Union[str, bytes], channel: str, destination: str
     ) -> NoReturn:
         if type(data) is str:
             mode = "w"
