@@ -25,7 +25,8 @@ Contents
 .. toctree::
    :maxdepth: 2
 
-   configuration
+   deploying/index
+   using/index
    plugins 
    qeps/index
 
