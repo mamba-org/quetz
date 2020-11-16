@@ -239,6 +239,7 @@ def init_db(
     config_file = _get_config(path)
 
     config = Config(config_file)
+    os.chdir(path)
     db = get_session(config.sqlalchemy_database_url)
 
     _init_db(db, config)
@@ -332,7 +333,8 @@ def create(
     Path('channels').mkdir()
     db = get_session(config.sqlalchemy_database_url)
 
-    init_db(abs_path)
+    _init_db(db, config)
+
     if dev:
         _fill_test_database(db)
 

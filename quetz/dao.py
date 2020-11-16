@@ -450,6 +450,7 @@ class Dao:
         if not user:
             user = User(id=uuid.uuid4().bytes, username=user_name, role=role)
             self.db.add(user)
+
         user.role = role
         self.db.commit()
         return user
