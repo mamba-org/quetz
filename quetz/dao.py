@@ -50,7 +50,11 @@ class Dao:
         return self.db.query(User).filter(User.id == user_id).one()
 
     def get_users(self, skip: int, limit: int, q: str):
-        query = self.db.query(User).filter(User.username.isnot(None))
+        query = (
+            self.db.query(User)
+            .filter(User.username.isnot(None))
+            .filter(User.profile.has())
+        )
 
         if q:
             query = query.filter(User.username.ilike(f'%{q}%'))
