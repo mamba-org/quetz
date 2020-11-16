@@ -724,6 +724,11 @@ def handle_package_files(
 
     for file in files:
         logger.debug(f"adding file '{file.filename}' to channel '{channel_name}'")
+
+        # workaround for https://github.com/python/cpython/pull/3249
+        if not hasattr(file.file, "seekable"):
+            file.file.seekable = file.file._file.seekable
+
         condainfo = CondaInfo(file.file, file.filename)
 
         package_name = condainfo.info["name"]

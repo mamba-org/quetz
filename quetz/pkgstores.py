@@ -27,6 +27,10 @@ class PackageStore(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def list_files(self, channel: str):
+        pass
+
+    @abc.abstractmethod
     def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
         pass
 
@@ -84,6 +88,10 @@ class LocalStore(PackageStore):
 
     def serve_path(self, channel, src):
         return self.fs.open(path.join(self.channels_dir, channel, src)).f
+
+    def list_files(self, channel):
+        channel_dir = os.path.join(self.channels_dir, channel)
+        return [os.path.relpath(f, channel_dir) for f in self.fs.find(channel_dir)]
 
 
 class S3Store(PackageStore):
