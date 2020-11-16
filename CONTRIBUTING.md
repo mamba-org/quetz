@@ -21,3 +21,13 @@ You can install all development dependencies via:
 
 This will also setup hooks in your local repository to run linting and code
 formatting checks prior to making a commit.
+
+# Pull requests
+
+Make sure to include the following with your pull requests:
+
+* description,
+* links to relevant issues,
+* any necessary code changes,
+* unit tests for these changes,
+* changes to relevant documentation sections
