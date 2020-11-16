@@ -376,3 +376,41 @@ def test_permissions_channel_endpoints(
         )
     )
     assert response.status_code == expected_status
+
+
+@pytest.fixture
+def owner(db, user):
+    user.role = 'owner'
+    db.commit()
+
+    return user
+
+
+@pytest.fixture
+def authenticated_client(owner, client):
+
+    response = client.get(f"/api/dummylogin/{owner.username}")
+
+    assert response.status_code == 200
+
+    return client
+
+
+@pytest.fixture
+def new_user(db):
+    new_user = User(id=uuid.uuid4().bytes, username="new_user")
+    db.add(new_user)
+    db.commit()
+
+    return new_user
+
+
+def test_get_users_without_profile(authenticated_client, new_user):
+
+    response = authenticated_client.get("/api/users")
+
+    assert response.status_code == 200
+
+    response = authenticated_client.get("/api/users/new_user")
+
+    assert response.status_code == 404

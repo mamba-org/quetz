@@ -294,7 +294,7 @@ def get_user(
 
     auth.assert_read_user_data(user.id)
 
-    if not user:
+    if not user or not user.profile:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"User {username} not found"
         )
