@@ -19,9 +19,14 @@ pytest_plugins = "quetz.testing.fixtures"
 
 
 @fixture
-def user_without_profile(db):
+def user_role():
+    return None
 
-    new_user = User(id=uuid.uuid4().bytes, username="bartosz")
+
+@fixture
+def user_without_profile(db, user_role):
+
+    new_user = User(id=uuid.uuid4().bytes, username="bartosz", role=user_role)
     db.add(new_user)
     db.commit()
 
@@ -36,3 +41,11 @@ def user(db, user_without_profile):
     db.add(profile)
     db.commit()
     yield user_without_profile
+
+
+@fixture
+def auth_client(client, user):
+    """authenticated client"""
+    response = client.get(f"/api/dummylogin/{user.username}")
+    assert response.status_code == 200
+    return client

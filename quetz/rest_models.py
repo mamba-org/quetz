@@ -8,7 +8,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Generic, List, Optional, TypeVar
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, root_validator
 from pydantic.generics import GenericModel
 
 T = TypeVar('T')
@@ -58,27 +58,41 @@ class Pagination(BaseModel):
     all_records_count: int = Field(0, title="The number of available records")
 
 
-class Channel(BaseModel):
+class MirrorMode(str, Enum):
+    proxy = "proxy"
+    mirror = "mirror"
+
+
+class ChannelBase(BaseModel):
+
     name: str = Field(None, title='The name of the channel', max_length=50)
     description: str = Field(
         None, title='The description of the channel', max_length=300
     )
     private: bool
-    mirror_channel_url: Optional[str] = None
-    mirror_mode: str = "proxy"
-
-    @validator("mirror_channel_url")
-    def check_mirror_url_schema(cls, mirror_url):
-        if mirror_url and not (
-            mirror_url.startswith("https://") or mirror_url.startswith("http://")
-        ):
-            raise ValueError(
-                f"schema (http/https) missing (did you mean 'http://{mirror_url}'?)"
-            )
-        return mirror_url
+    mirror_channel_url: Optional[str] = Field(None, regex="^(http|https)://.+")
+    mirror_mode: Optional[MirrorMode] = None
 
     class Config:
         orm_mode = True
+
+
+class Channel(ChannelBase):
+    @root_validator
+    def check_passwords_match(cls, values):
+        mirror_url = values.get("mirror_channel_url")
+        mirror_mode = values.get("mirror_mode")
+
+        if mirror_url and not mirror_mode:
+            raise ValueError(
+                "'mirror_channel_url' provided but 'mirror_mode' is undefined"
+            )
+        if not mirror_url and mirror_mode:
+            raise ValueError(
+                "'mirror_mode' provided but 'mirror_channel_url' is undefined"
+            )
+
+        return values
 
 
 class Package(BaseModel):

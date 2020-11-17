@@ -91,41 +91,21 @@ def package_version(db, user, channel_name, package_name, dao):
     db.commit()
 
 
-@pytest.fixture
-def other_user(db):
+@pytest.fixture()
+def other_user_without_profile(db):
     user = User(id=uuid.uuid4().bytes, username="other")
-    profile = Profile(name="Other", avatar_url="http:///avatar", user=user)
     db.add(user)
+    return user
+
+
+@pytest.fixture
+def other_user(other_user_without_profile, db):
+    profile = Profile(
+        name="Other", avatar_url="http:///avatar", user=other_user_without_profile
+    )
     db.add(profile)
     db.commit()
-    yield user
-
-
-@pytest.fixture
-def user_role():
-    return None
-
-
-@pytest.fixture
-def user_with_role(user, user_role, db):
-    # assign a role to the requester
-    db_user = db.query(User).get(user.id)
-    db_user.role = user_role
-    db.commit()
-    yield db_user
-
-
-@pytest.fixture
-def user_with_role_authenticated(user_with_role, client):
-
-    session_user = user_with_role.username
-
-    # log a user in
-    response = client.get(f"/api/dummylogin/{session_user}")
-
-    assert response.status_code == 200
-
-    yield user_with_role
+    yield other_user_without_profile
 
 
 def test_get_package_list(package_version, package_name, channel_name, client):
@@ -204,8 +184,7 @@ def test_validate_user_role_names(user, client, other_user, db):
     ],
 )
 def test_set_user_role(
-    user_with_role_authenticated,
-    client,
+    auth_client,
     other_user,
     target_user,
     user_role,
@@ -215,7 +194,7 @@ def test_set_user_role(
 
     # test changing role
 
-    response = client.put(
+    response = auth_client.put(
         f"/api/users/{target_user}/role", json={"role": target_user_role}
     )
     assert response.status_code == expected_status
@@ -223,7 +202,7 @@ def test_set_user_role(
     # test if role assigned if previous request was successful
     if response.status_code == 200:
 
-        get_response = client.get(f"/api/users/{target_user}/role")
+        get_response = auth_client.get(f"/api/users/{target_user}/role")
 
         assert get_response.status_code == 200
         assert get_response.json()["role"] == target_user_role
@@ -242,13 +221,11 @@ def test_set_user_role(
         ("bartosz", "owner", 200),
     ],
 )
-def test_get_user_role(
-    user_with_role_authenticated, client, other_user, target_user, expected_status, db
-):
+def test_get_user_role(auth_client, other_user, target_user, expected_status, db):
 
     # test reading the role
 
-    response = client.get(f"/api/users/{target_user}/role")
+    response = auth_client.get(f"/api/users/{target_user}/role")
     assert response.status_code == expected_status
 
     expected_role = db.query(User).filter(User.username == target_user).first().role
@@ -284,14 +261,13 @@ def test_get_set_user_role_without_login(user, client):
     ],
 )
 def test_get_user_permissions(
-    user_with_role_authenticated,
     other_user,
     target_user,
-    client,
+    auth_client,
     expected_status,
 ):
 
-    response = client.get(f"/api/users/{target_user}")
+    response = auth_client.get(f"/api/users/{target_user}")
 
     assert response.status_code == expected_status
 
@@ -314,14 +290,14 @@ def test_get_user_permissions(
     ],
 )
 def test_get_users_permissions(
-    user_with_role_authenticated, other_user, client, expected_n_users, query, paginated
+    other_user, auth_client, expected_n_users, query, paginated
 ):
 
     if paginated:
-        response = client.get(f"/api/paginated/users?q={query}")
+        response = auth_client.get(f"/api/paginated/users?q={query}")
         user_list = response.json()["result"]
     else:
-        response = client.get(f"/api/users?q={query}")
+        response = auth_client.get(f"/api/users?q={query}")
         user_list = response.json()
 
     assert response.status_code == 200
@@ -333,11 +309,9 @@ def test_get_users_permissions(
     "user_role,expected_status",
     [("owner", 201), ("maintainer", 201), ("member", 201), (None, 403)],
 )
-def test_create_normal_channel_permissions(
-    client, user_with_role_authenticated, expected_status
-):
+def test_create_normal_channel_permissions(auth_client, expected_status):
 
-    response = client.post(
+    response = auth_client.post(
         "/api/channels",
         json={
             "name": "test_create_channel",
@@ -361,8 +335,7 @@ def test_create_normal_channel_permissions(
     [("owner", 200), ("maintainer", 200), ("member", 403), (None, 403)],
 )
 def test_permissions_channel_endpoints(
-    client,
-    user_with_role_authenticated,
+    auth_client,
     private_channel,
     expected_status,
     endpoint,
@@ -370,31 +343,12 @@ def test_permissions_channel_endpoints(
     private_package_version,
 ):
 
-    response = client.get(
+    response = auth_client.get(
         endpoint.format(
             channel_name=private_channel.name, package_name=private_package.name
         )
     )
     assert response.status_code == expected_status
-
-
-@pytest.fixture
-def authenticated_client(user_with_role, client):
-
-    response = client.get(f"/api/dummylogin/{user_with_role.username}")
-
-    assert response.status_code == 200
-
-    return client
-
-
-@pytest.fixture
-def new_user(db):
-    new_user = User(id=uuid.uuid4().bytes, username="new_user")
-    db.add(new_user)
-    db.commit()
-
-    return new_user
 
 
 @pytest.fixture
@@ -414,13 +368,16 @@ def public_channel(dao, user, channel_role):
 
 
 @pytest.mark.parametrize("user_role", ["owner"])
-def test_get_users_without_profile(authenticated_client, new_user):
+def test_get_users_without_profile(auth_client, other_user_without_profile, user):
 
-    response = authenticated_client.get("/api/users")
+    response = auth_client.get("/api/users")
 
     assert response.status_code == 200
+    users = response.json()
+    assert len(users) == 1
+    assert users[0]["username"] == user.username
 
-    response = authenticated_client.get("/api/users/new_user")
+    response = auth_client.get(f"/api/users/{other_user_without_profile.username}")
 
     assert response.status_code == 404
 
@@ -429,9 +386,9 @@ def test_get_users_without_profile(authenticated_client, new_user):
     "channel_role,expected_code",
     [("owner", 200), ("maintainer", 200), ("member", 403), (None, 403)],
 )
-def test_channel_action_reindex(authenticated_client, public_channel, expected_code):
+def test_channel_action_reindex(auth_client, public_channel, expected_code):
 
-    response = authenticated_client.put(
+    response = auth_client.put(
         f"/api/channels/{public_channel.name}/actions", json={"action": "reindex"}
     )
 
