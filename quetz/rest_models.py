@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from enum import Enum
 from typing import Generic, List, Optional, TypeVar
 
 from pydantic import BaseModel, Field, validator
@@ -144,3 +145,12 @@ class PackageVersion(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class ChannelActionEnum(str, Enum):
+    synchronize = 'synchronize'
+    reindex = "reindex"
+
+
+class ChannelAction(BaseModel):
+    action: ChannelActionEnum

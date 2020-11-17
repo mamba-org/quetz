@@ -27,12 +27,16 @@ class PackageStore(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def list_files(self, channel: str):
+        pass
+
+    @abc.abstractmethod
     def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
         pass
 
     @abc.abstractmethod
     def add_file(
-        self, data: Union[str, BinaryIO], channel: str, destination: str
+        self, data: Union[str, bytes], channel: str, destination: str
     ) -> NoReturn:
         pass
 
@@ -75,7 +79,7 @@ class LocalStore(PackageStore):
             shutil.copyfileobj(package, f)
 
     def add_file(
-        self, data: Union[str, BinaryIO], channel: str, destination: str
+        self, data: Union[str, bytes], channel: str, destination: str
     ) -> NoReturn:
 
         mode = "w" if isinstance(data, str) else "wb"
@@ -84,6 +88,10 @@ class LocalStore(PackageStore):
 
     def serve_path(self, channel, src):
         return self.fs.open(path.join(self.channels_dir, channel, src)).f
+
+    def list_files(self, channel: str):
+        channel_dir = os.path.join(self.channels_dir, channel)
+        return [os.path.relpath(f, channel_dir) for f in self.fs.find(channel_dir)]
 
 
 class S3Store(PackageStore):
@@ -144,7 +152,7 @@ class S3Store(PackageStore):
                     shutil.copyfileobj(package, pkg)
 
     def add_file(
-        self, data: Union[str, BinaryIO], channel: str, destination: str
+        self, data: Union[str, bytes], channel: str, destination: str
     ) -> NoReturn:
         if type(data) is str:
             mode = "w"
@@ -160,3 +168,13 @@ class S3Store(PackageStore):
     def serve_path(self, channel, src):
         with self._get_fs() as fs:
             return fs.open(path.join(self._bucket_map(channel), src))
+
+    def list_files(self, channel: str):
+        def remove_prefix(text, prefix):
+            if text.startswith(prefix):
+                return text[len(prefix) :].lstrip("/")  # noqa: E203
+            return text
+
+        channel_bucket = self._bucket_map(channel)
+
+        return [remove_prefix(f, channel_bucket) for f in self.fs.find(channel_bucket)]

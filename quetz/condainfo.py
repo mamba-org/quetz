@@ -138,7 +138,13 @@ class CondaInfo:
         self.info["sha256"] = sha.hexdigest()
 
     def _parse_conda(self, file, filename):
-        filehandle = file._file
+
+        # workaround for https://github.com/python/cpython/pull/3249
+        if not hasattr(file, "seekable"):
+            file.seekable = file._file.seekable
+
+        file.seek(0)
+        filehandle = file
         if filename.endswith(".conda"):
             self.package_format = db_models.PackageFormatEnum.conda
             with ZipFile(filehandle) as zf:

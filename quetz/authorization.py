@@ -203,6 +203,9 @@ class Rules:
     def assert_synchronize_mirror(self, channel_name):
         self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])
 
+    def assert_reindex_channel(self, channel_name):
+        self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])
+
     def assert_overwrite_package_version(self, channel_name, package_name):
         self.assert_channel_or_package_roles(
             channel_name, [OWNER], package_name, [OWNER]
