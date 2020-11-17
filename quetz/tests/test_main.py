@@ -102,11 +102,6 @@ def other_user(db):
 
 
 @pytest.fixture
-def user_role():
-    return None
-
-
-@pytest.fixture
 def user_with_role(user, user_role, db):
     # assign a role to the requester
     db_user = db.query(User).get(user.id)
