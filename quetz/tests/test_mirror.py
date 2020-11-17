@@ -790,15 +790,37 @@ def test_repo_without_channeldata(owner, client, dummy_repo, expected_archs):
 
 def test_sync_mirror_channel(mirror_channel, user, client, dummy_repo):
 
-    response = client.put(f"/api/channels/{mirror_channel.name}")
+    response = client.put(
+        f"/api/channels/{mirror_channel.name}/actions", json={"action": "synchronize"}
+    )
 
     assert response.status_code == 401
 
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 
-    response = client.put(f"/api/channels/{mirror_channel.name}")
+    response = client.put(
+        f"/api/channels/{mirror_channel.name}/actions", json={"action": "synchronize"}
+    )
     assert response.status_code == 200
+
+
+def test_sync_local_channel(local_channel, user, client, dummy_repo):
+    response = client.put(
+        f"/api/channels/{local_channel.name}/actions", json={"action": "synchronize"}
+    )
+
+    assert response.status_code == 405
+    assert "synchronize not allowed" in response.json()["detail"]
+
+    response = client.get("/api/dummylogin/bartosz")
+    assert response.status_code == 200
+
+    response = client.put(
+        f"/api/channels/{local_channel.name}/actions", json={"action": "synchronize"}
+    )
+    assert response.status_code == 405
+    assert "synchronize not allowed" in response.json()["detail"]
 
 
 def test_can_not_sync_proxy_and_local_channels(

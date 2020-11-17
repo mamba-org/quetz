@@ -82,11 +82,13 @@ Mirror channels are read only (you can not add or change packages in these chann
 Synchronising mirror channel
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If packages are added or modified on the primary server from which they were pulled initially, they won't be updated automatically in the mirror channel. However, you can trigger such synchronisation manually using the PUT ``/api/channels/{channel_name}`` endpoint:
+If packages are added or modified on the primary server from which they were pulled initially, they won't be updated automatically in the mirror channel. However, you can trigger such synchronisation manually using the PUT ``/api/channels/{channel_name}/actions`` endpoint:
 
 
 .. code:: bash
 
-   curl -X PUT localhost:8000/api/channels/mirror-channel -H "X-API-Key: ${QUETZ_API_KEY}"
+   curl -X PUT localhost:8000/api/channels/mirror-channel/actions \ 
+       -H "X-API-Key: ${QUETZ_API_KEY}" \
+       -d '{"action": "synchronize"}'
 
 Only channel owners or maintainers are allowed to trigger synchronisation, therefore you have to provide a valid API key of a privileged user.

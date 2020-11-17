@@ -385,17 +385,48 @@ def get_channel(channel: db_models.Channel = Depends(get_channel_allow_proxy)):
     return channel
 
 
-@api_router.put("/channels/{channel_name}", tags=["channels"])
-def synchronize_mirror_channel(
+def can_channel_synchronize(channel):
+    return channel.mirror_mode == "mirror"
+
+
+def assert_channel_action(action, channel):
+    if action.action == rest_models.ChannelActionEnum.synchronize:
+        action_allowed = can_channel_synchronize(channel)
+    else:
+        action_allowed = False
+
+    if not action_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+            detail=f"Action {action.action} not allowed for channel {channel.name}",
+        )
+
+
+@api_router.put("/channels/{channel_name}/actions", tags=["channels"])
+def put_mirror_channel_actions(
+    action: rest_models.ChannelAction,
     background_tasks: BackgroundTasks,
-    channel: db_models.Channel = Depends(get_channel_mirror_only),
+    channel: db_models.Channel = Depends(get_channel_allow_proxy),
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
     session=Depends(get_remote_session),
 ):
-    auth.assert_synchronize_mirror(channel.name)
 
-    mirror.synchronize_packages(channel, dao, pkgstore, auth, session, background_tasks)
+    assert_channel_action(action, channel)
+
+    if action.action == rest_models.ChannelActionEnum.synchronize:
+        auth.assert_synchronize_mirror(channel.name)
+
+        mirror.synchronize_packages(
+            channel, dao, pkgstore, auth, session, background_tasks
+        )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail=(
+                f"Action {action.action} on channel {channel.name} is not implemented"
+            ),
+        )
 
 
 @api_router.post("/channels", status_code=201, tags=["channels"])
