@@ -63,7 +63,8 @@ class MirrorMode(str, Enum):
     mirror = "mirror"
 
 
-class Channel(BaseModel):
+class ChannelBase(BaseModel):
+
     name: str = Field(None, title='The name of the channel', max_length=50)
     description: str = Field(
         None, title='The description of the channel', max_length=300
@@ -72,6 +73,11 @@ class Channel(BaseModel):
     mirror_channel_url: Optional[str] = Field(None, regex="^(http|https)://.+")
     mirror_mode: Optional[MirrorMode] = None
 
+    class Config:
+        orm_mode = True
+
+
+class Channel(ChannelBase):
     @root_validator
     def check_passwords_match(cls, values):
         mirror_url = values.get("mirror_channel_url")
@@ -87,9 +93,6 @@ class Channel(BaseModel):
             )
 
         return values
-
-    class Config:
-        orm_mode = True
 
 
 class Package(BaseModel):
