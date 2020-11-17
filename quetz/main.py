@@ -294,12 +294,12 @@ def get_user(
 ):
     user = dao.get_user_by_username(username)
 
-    auth.assert_read_user_data(user.id)
-
     if not user or not user.profile:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"User {username} not found"
         )
+
+    auth.assert_read_user_data(user.id)
 
     user.id = str(uuid.UUID(bytes=user.id))
 

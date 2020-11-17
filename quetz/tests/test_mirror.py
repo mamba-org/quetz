@@ -18,14 +18,6 @@ from quetz.mirror import (
 
 
 @pytest.fixture
-def auth_client(client, user):
-    """authenticated client"""
-    response = client.get(f"/api/dummylogin/{user.username}")
-    assert response.status_code == 200
-    return client
-
-
-@pytest.fixture
 def proxy_channel(db):
 
     channel = Channel(
