@@ -149,6 +149,7 @@ class PackageVersion(BaseModel):
 
 class ChannelActionEnum(str, Enum):
     synchronize = 'synchronize'
+    reindex = "reindex"
 
 
 class ChannelAction(BaseModel):

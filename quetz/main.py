@@ -36,10 +36,12 @@ from quetz import (
     indexing,
     mirror,
     rest_models,
+    tasks,
 )
 from quetz.config import Config, configure_logger, get_plugin_manager
 from quetz.dao import Dao
-from quetz.deps import get_dao, get_remote_session, get_rules, get_session
+from quetz.deps import get_config, get_dao, get_remote_session, get_rules, get_session
+from quetz.rest_models import ChannelActionEnum
 
 from .condainfo import CondaInfo
 from .mirror import LocalCache, RemoteRepository, get_from_cache_or_download
@@ -389,16 +391,23 @@ def can_channel_synchronize(channel):
     return channel.mirror_mode == "mirror"
 
 
-def assert_channel_action(action, channel):
-    if action.action == rest_models.ChannelActionEnum.synchronize:
+def can_channel_reindex(channel):
+    return True
+
+
+def assert_channel_action(action_model, channel):
+    action = action_model.action
+    if action == ChannelActionEnum.synchronize:
         action_allowed = can_channel_synchronize(channel)
+    elif action == ChannelActionEnum.reindex:
+        action_allowed = can_channel_reindex(channel)
     else:
         action_allowed = False
 
     if not action_allowed:
         raise HTTPException(
             status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
-            detail=f"Action {action.action} not allowed for channel {channel.name}",
+            detail=f"Action {action} not allowed for channel {channel.name}",
         )
 
 
@@ -410,15 +419,23 @@ def put_mirror_channel_actions(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
     session=Depends(get_remote_session),
+    config=Depends(get_config),
 ):
 
     assert_channel_action(action, channel)
 
-    if action.action == rest_models.ChannelActionEnum.synchronize:
+    user_id = auth.assert_user()
+
+    if action.action == ChannelActionEnum.synchronize:
         auth.assert_synchronize_mirror(channel.name)
 
         mirror.synchronize_packages(
             channel, dao, pkgstore, auth, session, background_tasks
+        )
+    elif action.action == ChannelActionEnum.reindex:
+        auth.assert_reindex_channel(channel.name)
+        background_tasks.add_task(
+            tasks.reindex_packages_from_store, config, channel.name, user_id
         )
     else:
         raise HTTPException(

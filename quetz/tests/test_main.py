@@ -19,7 +19,7 @@ def channel_name():
 
 
 @pytest.fixture
-def private_channel(dao, other_user):
+def private_channel(dao, other_user, channel_role):
 
     channel_name = "private-channel"
 
@@ -379,17 +379,9 @@ def test_permissions_channel_endpoints(
 
 
 @pytest.fixture
-def owner(db, user):
-    user.role = 'owner'
-    db.commit()
+def authenticated_client(user_with_role, client):
 
-    return user
-
-
-@pytest.fixture
-def authenticated_client(owner, client):
-
-    response = client.get(f"/api/dummylogin/{owner.username}")
+    response = client.get(f"/api/dummylogin/{user_with_role.username}")
 
     assert response.status_code == 200
 
@@ -405,6 +397,23 @@ def new_user(db):
     return new_user
 
 
+@pytest.fixture
+def channel_role():
+    return "owner"
+
+
+@pytest.fixture
+def public_channel(dao, user, channel_role):
+
+    channel_name = "public-channel"
+
+    channel_data = Channel(name=channel_name, private=False)
+    channel = dao.create_channel(channel_data, user.id, channel_role)
+
+    return channel
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
 def test_get_users_without_profile(authenticated_client, new_user):
 
     response = authenticated_client.get("/api/users")
@@ -414,3 +423,16 @@ def test_get_users_without_profile(authenticated_client, new_user):
     response = authenticated_client.get("/api/users/new_user")
 
     assert response.status_code == 404
+
+
+@pytest.mark.parametrize(
+    "channel_role,expected_code",
+    [("owner", 200), ("maintainer", 200), ("member", 403), (None, 403)],
+)
+def test_channel_action_reindex(authenticated_client, public_channel, expected_code):
+
+    response = authenticated_client.put(
+        f"/api/channels/{public_channel.name}/actions", json={"action": "reindex"}
+    )
+
+    assert response.status_code == expected_code
