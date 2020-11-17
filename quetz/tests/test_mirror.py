@@ -9,13 +9,28 @@ from quetz import rest_models
 from quetz.authorization import Rules
 from quetz.db_models import Channel, Package, PackageVersion, User
 from quetz.indexing import update_indexes
-from quetz.mirror import KNOWN_SUBDIRS, RemoteRepository, initial_sync_mirror
+from quetz.mirror import (
+    KNOWN_SUBDIRS,
+    RemoteRepository,
+    RemoteServerError,
+    initial_sync_mirror,
+)
+
+
+@pytest.fixture
+def auth_client(client, user):
+    """authenticated client"""
+    response = client.get(f"/api/dummylogin/{user.username}")
+    assert response.status_code == 200
+    return client
 
 
 @pytest.fixture
 def proxy_channel(db):
 
-    channel = Channel(name="test_proxy_channel", mirror_channel_url="http://host")
+    channel = Channel(
+        name="test_proxy_channel", mirror_channel_url="http://host", mirror_mode="proxy"
+    )
     db.add(channel)
     db.commit()
 
@@ -78,7 +93,7 @@ def dummy_response(repo_content, status_code):
             else:
                 content = repo_content
             if isinstance(content, Path):
-                with open(content.absolute(), 'rb') as fid:
+                with open(content.absolute(), "rb") as fid:
                     content = fid.read()
             self.raw = BytesIO(content)
             self.headers = {"content-type": "application/json"}
@@ -99,6 +114,8 @@ def dummy_repo(app, dummy_response):
 
     class DummySession:
         def get(self, path, stream=False):
+            if path.startswith("http://fantasy_host"):
+                raise RemoteServerError()
             files.append(path)
             return dummy_response()
 
@@ -133,6 +150,7 @@ def test_set_mirror_url(db, client, owner):
             "name": "test_create_channel",
             "private": False,
             "mirror_channel_url": "http://my_remote_host",
+            "mirror_mode": "proxy",
         },
     )
     assert response.status_code == 201
@@ -185,7 +203,7 @@ def test_get_mirror_url(proxy_channel, local_channel, client):
 @pytest.fixture
 def package_version(user, mirror_channel, db, dao):
     # create package version that will added to local repodata
-    package_format = 'tarbz2'
+    package_format = "tarbz2"
     package_info = (
         '{"size": 5000, "sha256": "OLD-SHA", "md5": "OLD-MD5", "subdirs":["noarch"]}'
     )
@@ -471,7 +489,7 @@ def test_synchronisation_timestamp(
     assert channel.timestamp_mirror_sync == expected_timestamp
 
     if new_package:
-        assert channel.packages[0].name == 'test-package'
+        assert channel.packages[0].name == "test-package"
         db.delete(channel.packages[0])
         db.commit()
     else:
@@ -489,6 +507,7 @@ def test_download_remote_file(client, owner, dummy_repo):
             "name": "proxy_channel",
             "private": False,
             "mirror_channel_url": "http://host",
+            "mirror_mode": "proxy",
         },
     )
     assert response.status_code == 201
@@ -531,6 +550,7 @@ def test_always_download_repodata(client, owner, dummy_repo):
             "name": "proxy_channel_2",
             "private": False,
             "mirror_channel_url": "http://host",
+            "mirror_mode": "proxy",
         },
     )
     assert response.status_code == 201
@@ -665,7 +685,7 @@ def test_wrong_package_format(client, dummy_repo, owner):
     assert not response.json()
 
 
-def test_mirror_unavailable_url(client, owner, db):
+def test_mirror_unavailable_url(client, owner, db, dummy_repo):
 
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -684,34 +704,52 @@ def test_mirror_unavailable_url(client, owner, db):
     )
 
     assert response.status_code == 503
-    assert "unavailable" in response.json()['detail']
-    assert host in response.json()['detail']
+    assert "unavailable" in response.json()["detail"]
+    assert host in response.json()["detail"]
 
     channel = db.query(Channel).filter_by(name=channel_name).first()
 
     assert channel is None
 
 
-def test_validate_mirror_url(client, user):
+@pytest.mark.parametrize("user_role", ["owner"])
+@pytest.mark.parametrize(
+    "mirror_mode,mirror_channel_url,error_msg",
+    [
+        ("proxy", None, "'mirror_channel_url' is undefined"),
+        (None, "http://my-host", "'mirror_mode' is undefined"),
+        ("undefined", "http://my-host", "not a valid enumeration member"),
+        ("proxy", "my-host", "does not match"),
+        ("proxy", "http://", "does not match"),
+        ("proxy", "http:my-host", "does not match"),
+        ("proxy", "hosthttp://my-host", "does not match"),
+        (None, None, None),  # non-mirror channel
+        ("proxy", "http://my-host", None),
+        ("proxy", "https://my-host", None),
+        ("mirror", "http://my-host", None),
+        ("mirror", "http://my-host/me/url", None),
+    ],
+)
+def test_validate_mirror_parameters(
+    auth_client, user, dummy_repo, mirror_mode, mirror_channel_url, error_msg
+):
+    channel_name = "my-channel"
 
-    response = client.get("/api/dummylogin/bartosz")
-    assert response.status_code == 200
-
-    channel_name = "mirror_channel_" + str(uuid.uuid4())[:10]
-    host = "no-schema-host"
-
-    response = client.post(
+    response = auth_client.post(
         "/api/channels",
         json={
             "name": channel_name,
             "private": False,
-            "mirror_channel_url": host,
-            "mirror_mode": "mirror",
+            "mirror_channel_url": mirror_channel_url,
+            "mirror_mode": mirror_mode,
         },
     )
 
-    assert response.status_code == 422
-    assert "schema (http/https) missing" in response.json()['detail'][0]['msg']
+    if error_msg:
+        assert response.status_code == 422
+        assert error_msg in response.json()["detail"][0]["msg"]
+    else:
+        assert response.status_code == 201
 
 
 def test_write_methods_for_local_channels(client, local_channel, user, db):
@@ -737,7 +775,7 @@ def test_disabled_methods_for_mirror_channels(
     assert response.status_code == 405
     assert "not implemented" in response.json()["detail"]
 
-    files = {'files': ('my_package-0.1.tar.bz', 'dfdf')}
+    files = {"files": ("my_package-0.1.tar.bz", "dfdf")}
     response = client.post(
         "/api/channels/{}/files/".format(mirror_channel.name), files=files
     )
