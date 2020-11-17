@@ -89,7 +89,7 @@ class LocalStore(PackageStore):
     def serve_path(self, channel, src):
         return self.fs.open(path.join(self.channels_dir, channel, src)).f
 
-    def list_files(self, channel):
+    def list_files(self, channel: str):
         channel_dir = os.path.join(self.channels_dir, channel)
         return [os.path.relpath(f, channel_dir) for f in self.fs.find(channel_dir)]
 
@@ -168,3 +168,13 @@ class S3Store(PackageStore):
     def serve_path(self, channel, src):
         with self._get_fs() as fs:
             return fs.open(path.join(self._bucket_map(channel), src))
+
+    def list_files(self, channel: str):
+        def remove_prefix(text, prefix):
+            if text.startswith(prefix):
+                return text[len(prefix) :].lstrip("/")  # noqa: E203
+            return text
+
+        channel_bucket = self._bucket_map(channel)
+
+        return [remove_prefix(f, channel_bucket) for f in self.fs.find(channel_bucket)]
