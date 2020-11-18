@@ -497,9 +497,9 @@ def test_use_wildcard_api_key_to_authenticate(data, client):
 
     # using per-channel key
 
-    # response = client.get(
-    #    "/api/channels/privatechannel/members", headers={"X-API-Key": channel_key}
-    # )
+    response = client.get(
+        "/api/channels/privatechannel/members", headers={"X-API-Key": channel_key}
+    )
 
     assert response.status_code == 200
 
