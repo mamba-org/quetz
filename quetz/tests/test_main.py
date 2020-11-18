@@ -419,3 +419,12 @@ def test_get_channel_members(auth_client, public_channel, expected_code):
     response = auth_client.get(f"/api/channels/{public_channel.name}/members")
 
     assert response.status_code == expected_code
+
+
+def test_upload_wrong_file_type(auth_client, public_channel):
+    files = {"files": ("my_package-0.1.tar.bz", "dfdf")}
+    response = auth_client.post(
+        f"/api/channels/{public_channel.name}/files/", files=files
+    )
+    assert response.status_code == 400
+    assert "not a bzip2 file" in response.json()['detail']

@@ -33,6 +33,7 @@ from quetz import (
     auth_google,
     authorization,
     db_models,
+    exceptions,
     indexing,
     mirror,
     rest_models,
@@ -779,7 +780,12 @@ def handle_package_files(
     for file in files:
         logger.debug(f"adding file '{file.filename}' to channel '{channel_name}'")
 
-        condainfo = CondaInfo(file.file, file.filename)
+        try:
+            condainfo = CondaInfo(file.file, file.filename)
+        except exceptions.PackageError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail=e.detail
+            )
 
         package_name = condainfo.info["name"]
         if force:
