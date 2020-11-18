@@ -541,6 +541,7 @@ def post_package(
 ):
 
     user_id = auth.assert_user()
+    auth.assert_create_package(channel.name)
     package = dao.get_package(channel.name, new_package.name)
     if package:
         raise HTTPException(

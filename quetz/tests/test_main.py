@@ -393,3 +393,17 @@ def test_channel_action_reindex(auth_client, public_channel, expected_code):
     )
 
     assert response.status_code == expected_code
+
+
+@pytest.mark.parametrize(
+    "channel_role,expected_code",
+    [("owner", 201), ("maintainer", 201), ("member", 403), (None, 403)],
+)
+def test_add_package_permissions(auth_client, public_channel, expected_code):
+
+    response = auth_client.post(
+        f"/api/channels/{public_channel.name}/packages",
+        json={"name": "test-package", "summary": "none", "description": "none"},
+    )
+
+    assert response.status_code == expected_code
