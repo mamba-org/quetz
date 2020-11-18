@@ -77,7 +77,7 @@ def package_version(db, user, channel_name, package_name, dao: Dao):
         package_format,
         "linux-64",
         "0.1",
-        "0",
+        0,
         "",
         "",
         package_info,

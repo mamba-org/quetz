@@ -10,7 +10,7 @@ from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, aliased, joinedload
 
-from quetz import channel_data, rest_models
+from quetz import channel_data, rest_models, versionorder
 
 from .db_models import (
     ApiKey,
@@ -378,7 +378,37 @@ class Dao:
                 info=info,
                 uploader_id=uploader_id,
             )
+
+            all_existing_versions = (
+                self.db.query(PackageVersion)
+                .filter(PackageVersion.channel_name == channel_name)
+                .filter(PackageVersion.package_name == package_name)
+                .order_by(PackageVersion.version_order.asc())
+            )
+
+            new_version = versionorder.VersionOrder(version)
+            for idx, v in enumerate(all_existing_versions):
+                other = versionorder.VersionOrder(v.version)
+                if other <= new_version and v.build_number <= build_number:
+                    version_order = PackageVersion.version_order
+                    (
+                        self.db.query(PackageVersion)
+                        .filter(PackageVersion.channel_name == channel_name)
+                        .filter(PackageVersion.package_name == package_name)
+                        .filter(version_order >= idx)
+                        .update(
+                            {version_order: version_order + 1},
+                            synchronize_session=False,
+                        )
+                    )
+                    break
+            else:
+                # sort this to the end
+                idx = all_existing_versions.count()
+
+            package_version.version_order = idx
             self.db.add(package_version)
+
         elif upsert:
             existing_versions.update(
                 {
@@ -406,6 +436,7 @@ class Dao:
             .outerjoin(ApiKeyProfile, ApiKey.owner_id == ApiKeyProfile.user_id)
             .filter(PackageVersion.channel_name == package.channel_name)
             .filter(PackageVersion.package_name == package.name)
+            .order_by(PackageVersion.version_order.asc())
         )
 
         if time_created_ge:

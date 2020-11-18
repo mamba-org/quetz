@@ -219,6 +219,8 @@ class PackageVersion(Base):
     build_string = Column(String)
     build_number = Column(Integer)
 
+    version_order = Column(Integer, default=0)
+
     filename = Column(String)
     info = Column(String)
     uploader_id = Column(UUID, ForeignKey('users.id'))

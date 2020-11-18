@@ -154,39 +154,41 @@ class VersionOrder:
         self.fillvalue = 0
 
         # find epoch
-        version = version.split('!')
-        if len(version) == 1:
+        split_epoch = version.split('!')
+        if len(split_epoch) == 1:
             # epoch not given => set it to '0'
             epoch = ['0']
-        elif len(version) == 2:
+        elif len(split_epoch) == 2:
             # epoch given, must be an integer
-            if not version[0].isdigit():
+            if not split_epoch[0].isdigit():
                 raise InvalidVersionSpec(vstr, "epoch must be an integer")
-            epoch = [version[0]]
+            epoch = [split_epoch[0]]
+            version = split_epoch[1]
         else:
             raise InvalidVersionSpec(vstr, "duplicated epoch separator '!'")
 
         # find local version string
-        version = version[-1].split('+')
-        if len(version) == 1:
+        split_local = version.split('+')
+        if len(split_local) == 1:
             # no local version
             self.local = []
-        elif len(version) == 2:
+        elif len(split_local) == 2:
             # local version given
-            self.local = version[1].replace('_', '.').split('.')
+            self.local = split_local[1].replace('_', '.').split('.')
+            version = split_local[0]
         else:
             raise InvalidVersionSpec(vstr, "duplicated local version separator '+'")
 
         # split version
-        if version[0][-1] == "_":
+        if version[-1] == "_":
             # If the last character of version is "-" or "_", don't split that out
             # individually. Implements the instructions for openssl-like versions
             # > You can work-around this problem by appending a dash to plain version
             #   numbers
-            split_version = version[0][:-1].replace('_', '.').split('.')
+            split_version = version[:-1].replace('_', '.').split('.')
             split_version[-1] += "_"
         else:
-            split_version = version[0].replace('_', '.').split('.')
+            split_version = version.replace('_', '.').split('.')
         self.version = epoch + split_version
 
         # split components into runs of numerals and non-numerals,
@@ -207,11 +209,11 @@ class VersionOrder:
                         # by upper-casing (all other strings are lower case)
                         c[j] = 'DEV'
                 if v[k][0].isdigit():
-                    v[k] = c
+                    v[k] = c  # type: ignore
                 else:
                     # components shall start with a number to keep numbers and
                     # strings in phase => prepend fillvalue
-                    v[k] = [self.fillvalue] + c
+                    v[k] = [self.fillvalue] + c  # type: ignore
 
     def __str__(self):
         return self.norm_version
