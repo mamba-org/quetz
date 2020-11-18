@@ -104,7 +104,9 @@ class Dao:
 
         return get_paginated_result(query, skip, limit)
 
-    def create_channel(self, data: rest_models.Channel, user_id: bytes, role: str):
+    def create_channel(
+        self, data: rest_models.Channel, user_id: Optional[bytes], role: Optional[str]
+    ):
         channel = Channel(
             name=data.name,
             description=data.description,
@@ -113,10 +115,12 @@ class Dao:
             private=data.private,
         )
 
-        member = ChannelMember(channel=channel, user_id=user_id, role=role)
-
         self.db.add(channel)
-        self.db.add(member)
+
+        if role and user_id:
+            member = ChannelMember(channel=channel, user_id=user_id, role=role)
+            self.db.add(member)
+
         self.db.commit()
 
         return channel

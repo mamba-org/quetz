@@ -4,6 +4,7 @@ from unittest.mock import ANY
 
 import pytest
 
+from quetz.dao import Dao
 from quetz.db_models import Profile, User
 from quetz.rest_models import Channel, Package
 
@@ -62,7 +63,7 @@ def private_package_version(dao, private_channel, private_package, other_user):
 
 
 @pytest.fixture
-def package_version(db, user, channel_name, package_name, dao):
+def package_version(db, user, channel_name, package_name, dao: Dao):
     channel_data = Channel(name=channel_name, private=False)
     package_data = Package(name=package_name)
 
@@ -357,7 +358,7 @@ def channel_role():
 
 
 @pytest.fixture
-def public_channel(dao, user, channel_role):
+def public_channel(dao: Dao, user, channel_role):
 
     channel_name = "public-channel"
 
@@ -405,5 +406,16 @@ def test_add_package_permissions(auth_client, public_channel, expected_code):
         f"/api/channels/{public_channel.name}/packages",
         json={"name": "test-package", "summary": "none", "description": "none"},
     )
+
+    assert response.status_code == expected_code
+
+
+@pytest.mark.parametrize(
+    "channel_role,expected_code",
+    [("owner", 200), ("maintainer", 200), ("member", 403), (None, 403)],
+)
+def test_get_channel_members(auth_client, public_channel, expected_code):
+
+    response = auth_client.get(f"/api/channels/{public_channel.name}/members")
 
     assert response.status_code == expected_code
