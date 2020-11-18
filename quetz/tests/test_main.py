@@ -403,7 +403,7 @@ def test_add_package_permissions(auth_client, public_channel, expected_code):
 
     response = auth_client.post(
         f"/api/channels/{public_channel.name}/packages",
-        json={"name": "test-package", "summry": "none", "description": "none"},
+        json={"name": "test-package", "summary": "none", "description": "none"},
     )
 
     assert response.status_code == expected_code
