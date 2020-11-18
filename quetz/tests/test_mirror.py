@@ -744,12 +744,13 @@ def test_validate_mirror_parameters(
         assert response.status_code == 201
 
 
-def test_write_methods_for_local_channels(client, local_channel, user, db):
+@pytest.mark.parametrize("user_role", ["maintainer"])
+def test_write_methods_for_local_channels(auth_client, local_channel, db):
 
-    response = client.get("/api/dummylogin/bartosz")
+    response = auth_client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 
-    response = client.post(
+    response = auth_client.post(
         "/api/channels/{}/packages".format(local_channel.name),
         json={"name": "my_package"},
     )
