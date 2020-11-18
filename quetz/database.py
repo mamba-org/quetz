@@ -12,7 +12,6 @@ from quetz.db_models import Base
 
 
 def get_engine(db_url, echo: bool = False, **kwargs) -> Engine:
-    kwargs['echo'] = echo
 
     if db_url.startswith('sqlite'):
         kwargs.setdefault('connect_args', {'check_same_thread': False})
@@ -22,7 +21,7 @@ def get_engine(db_url, echo: bool = False, **kwargs) -> Engine:
         # is ever created.
         kwargs.setdefault('poolclass', StaticPool)
 
-    engine = create_engine(db_url, **kwargs)
+    engine = create_engine(db_url, echo=echo, **kwargs)
     Base.metadata.create_all(engine)
     return engine
 

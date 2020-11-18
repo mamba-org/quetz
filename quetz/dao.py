@@ -10,7 +10,7 @@ from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, aliased, joinedload
 
-from quetz import channel_data, rest_models
+from quetz import channel_data, rest_models, versionorder
 
 from .db_models import (
     ApiKey,
@@ -364,7 +364,41 @@ class Dao:
             .filter(PackageVersion.build_string == build_string)
         )
         package_version = existing_versions.one_or_none()
+
         if not package_version:
+
+            all_existing_versions = (
+                self.db.query(PackageVersion)
+                .filter(PackageVersion.channel_name == channel_name)
+                .filter(PackageVersion.package_name == package_name)
+                .order_by(PackageVersion.version_order.asc())
+            ).all()
+
+            version_order = 0
+
+            if all_existing_versions:
+                new_version = versionorder.VersionOrder(version)
+                for v in all_existing_versions:
+                    other = versionorder.VersionOrder(v.version)
+                    is_newer = other < new_version or (
+                        other == new_version and v.build_number < build_number
+                    )
+                    if is_newer:
+                        break
+                version_order = v.version_order if is_newer else v.version_order + 1
+
+                (
+                    self.db.query(PackageVersion)
+                    .filter(PackageVersion.channel_name == channel_name)
+                    .filter(PackageVersion.package_name == package_name)
+                    .filter(PackageVersion.package_format == package_format)
+                    .filter(PackageVersion.platform == platform)
+                    .filter(PackageVersion.version_order >= version_order)
+                    .update(
+                        {"version_order": PackageVersion.version_order + 1},
+                    )
+                )
+
             package_version = PackageVersion(
                 id=uuid.uuid4().bytes,
                 channel_name=channel_name,
@@ -376,9 +410,12 @@ class Dao:
                 build_string=build_string,
                 filename=filename,
                 info=info,
+                version_order=version_order,
                 uploader_id=uploader_id,
             )
+
             self.db.add(package_version)
+
         elif upsert:
             existing_versions.update(
                 {
@@ -387,7 +424,7 @@ class Dao:
                     "uploader_id": uploader_id,
                     "time_modified": datetime.utcnow(),
                 },
-                synchronize_session=False,
+                synchronize_session="evaluate",
             )
         else:
             raise IntegrityError("duplicate package version", "", "")
@@ -406,6 +443,7 @@ class Dao:
             .outerjoin(ApiKeyProfile, ApiKey.owner_id == ApiKeyProfile.user_id)
             .filter(PackageVersion.channel_name == package.channel_name)
             .filter(PackageVersion.package_name == package.name)
+            .order_by(PackageVersion.version_order.asc())
         )
 
         if time_created_ge:

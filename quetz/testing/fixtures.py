@@ -21,7 +21,7 @@ def engine(config, plugin_manager):
     # we need to import the plugins before creating the db tables
     # because plugins make define some extra db models
     db_url = os.environ.get("QUETZ_TEST_DATABASE", 'sqlite:///:memory:')
-    engine = get_engine(db_url)
+    engine = get_engine(db_url, echo=False)
     yield engine
     engine.dispose()
 
