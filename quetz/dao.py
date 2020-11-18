@@ -390,19 +390,17 @@ class Dao:
             for idx, v in enumerate(all_existing_versions):
                 other = versionorder.VersionOrder(v.version)
                 if other <= new_version and v.build_number <= build_number:
-                    version_order = PackageVersion.version_order
-                    print(f" ____ IDX: {idx} _____")
-                    print ([(x.version, x.version_order) for x in (self.db.query(PackageVersion)
-                        .filter(PackageVersion.channel_name == channel_name)
-                        .filter(PackageVersion.package_name == package_name)
-                        .filter(version_order >= idx))])
+                    # print ([(x.version, x.version_order) for x in (self.db.query(PackageVersion)
+                    #     .filter(PackageVersion.channel_name == channel_name)
+                    #     .filter(PackageVersion.package_name == package_name)
+                    #     .filter(PackageVersion.version_order >= idx))])
                     (
                         self.db.query(PackageVersion)
                         .filter(PackageVersion.channel_name == channel_name)
                         .filter(PackageVersion.package_name == package_name)
-                        .filter(version_order >= idx)
+                        .filter(PackageVersion.version_order >= idx)
                         .update(
-                            {version_order: version_order + 1},
+                            {PackageVersion.version_order: PackageVersion.version_order + 1},
                             synchronize_session=False,
                         )
                     )
