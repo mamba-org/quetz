@@ -391,6 +391,11 @@ class Dao:
                 other = versionorder.VersionOrder(v.version)
                 if other <= new_version and v.build_number <= build_number:
                     version_order = PackageVersion.version_order
+                    print(f" ____ IDX: {idx} _____")
+                    print ([(x.version, x.version_order) for x in (self.db.query(PackageVersion)
+                        .filter(PackageVersion.channel_name == channel_name)
+                        .filter(PackageVersion.package_name == package_name)
+                        .filter(version_order >= idx))])
                     (
                         self.db.query(PackageVersion)
                         .filter(PackageVersion.channel_name == channel_name)

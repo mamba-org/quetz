@@ -219,7 +219,7 @@ class PackageVersion(Base):
     build_string = Column(String)
     build_number = Column(Integer)
 
-    version_order = Column(Integer, default=0)
+    version_order = Column(Integer, default=-1)
 
     filename = Column(String)
     info = Column(String)
@@ -248,4 +248,13 @@ UniqueConstraint(
     PackageVersion.build_string,
     PackageVersion.build_number,
     name='package_version_index',
+)
+
+UniqueConstraint(
+    PackageVersion.channel_name,
+    PackageVersion.package_name,
+    PackageVersion.package_format,
+    PackageVersion.platform,
+    PackageVersion.version_order,
+    name='package_version_order',
 )
