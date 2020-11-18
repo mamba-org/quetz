@@ -560,7 +560,10 @@ def post_package(
 def get_channel_members(
     channel: db_models.Channel = Depends(get_channel_or_fail),
     dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
 ):
+
+    auth.assert_list_channel_members(channel.name)
     member_list = dao.get_channel_members(channel.name)
 
     return member_list
