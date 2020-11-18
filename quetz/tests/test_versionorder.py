@@ -14,6 +14,7 @@ from random import shuffle
 
 import pytest
 
+from quetz.dao import Dao
 from quetz.rest_models import Channel, Package
 from quetz.versionorder import VersionOrder
 
@@ -225,11 +226,11 @@ def test_hexrd():
     assert sorted(vos) == vos
 
 
-def test_package_version(db, dao, user, channel_name, package_name):
+def test_package_version(db, dao: Dao, user, channel_name, package_name):
     channel_data = Channel(name=channel_name, private=False)
     package_data = Package(name=package_name)
 
-    channel = dao.create_channel(channel_data, user.id, "owner")
+    dao.create_channel(channel_data, user.id, "owner")
     package = dao.create_package(channel_name, package_data, user.id, "owner")
     package_format = "tarbz2"
     package_info = "{}"
@@ -246,7 +247,7 @@ def test_package_version(db, dao, user, channel_name, package_name):
         ("0.1.0", 2),
     ]
     for v in versions:
-        version = dao.create_version(
+        dao.create_version(
             channel_name,
             package_name,
             package_format,
@@ -258,12 +259,7 @@ def test_package_version(db, dao, user, channel_name, package_name):
             package_info,
             user.id,
         )
-        res = dao.get_package_versions(package)
-        res_versions = [(VersionOrder(x[0].version), x[0].build_number) for x in res]
+    res = dao.get_package_versions(package)
+    res_versions = [(VersionOrder(x[0].version), x[0].build_number) for x in res]
 
-        assert sorted(res_versions)[::-1] == res_versions
-
-    db.delete(version)
-    db.delete(package)
-    db.delete(channel)
-    db.commit()
+    assert sorted(res_versions, reverse=True) == res_versions
