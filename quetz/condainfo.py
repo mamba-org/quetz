@@ -13,6 +13,8 @@ import zstandard
 
 from quetz import db_models
 
+from .exceptions import PackageError
+
 INFO_BOOLEAN_FIELDS = (
     "activate.d",
     "deactivate.d",
@@ -162,8 +164,11 @@ class CondaInfo:
                         self._load_jsons(tar)
         else:
             self.package_format = db_models.PackageFormatEnum.tarbz2
-            with tarfile.open(fileobj=filehandle, mode="r:bz2") as tar:
-                self._load_jsons(tar)
+            try:
+                with tarfile.open(fileobj=filehandle, mode="r:bz2") as tar:
+                    self._load_jsons(tar)
+            except tarfile.ReadError as e:
+                raise PackageError(e.args[0])
 
         self._calculate_file_hashes(file)
 
