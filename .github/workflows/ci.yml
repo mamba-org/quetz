@@ -54,8 +54,8 @@ jobs:
                        appdirs toml fsspec pytest conda requests "h2<4.0.0" -c conda-forge
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
-      - name: run tests
-        shell: bash -l {0}
+      - name: test quetz
+        shell: bash -l -euo pipefail {0}
         env:
           TEST_DB_BACKEND: ${{ matrix.test_database }}
           POSTGRES_HOST: localhost
