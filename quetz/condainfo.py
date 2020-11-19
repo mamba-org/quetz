@@ -63,7 +63,8 @@ class CondaInfo:
             # Convert timestamp from milliseconds to seconds
             timestamp //= 1000
         channeldata["timestamp"] = timestamp
-        channeldata["subdirs"] = [self.info["subdir"]]
+        subdir = self.info.get("subdir", None)
+        channeldata["subdirs"] = [subdir]
 
         for field in INFO_BOOLEAN_FIELDS:
             channeldata[field] = False
@@ -86,7 +87,7 @@ class CondaInfo:
             else:
                 channeldata[field] = None
 
-        for path in self.paths["paths"]:
+        for path in self.paths.get("paths", []):
             pathname = path["_path"]
             if "/etc/conda/deactivate.d/" in pathname:
                 channeldata["deactivate.d"] = True
@@ -107,8 +108,23 @@ class CondaInfo:
 
     def _load_jsons(self, tar):
         self.info = json.load(tar.extractfile("info/index.json"))
-        self.about = json.load(tar.extractfile("info/about.json"))
-        self.paths = json.load(tar.extractfile("info/paths.json"))
+
+        subdir = self.info.get("subdir", None)
+        if not subdir:
+            arch = self.info["arch"]
+            platform = self.info["platform"]
+            if arch == "x86_64":
+                subdir = platform + '-64'
+            self.info['subdir'] = subdir
+
+        try:
+            self.about = json.load(tar.extractfile("info/about.json"))
+        except KeyError:
+            self.about = {}
+        try:
+            self.paths = json.load(tar.extractfile("info/paths.json"))
+        except KeyError:
+            self.paths = {}
         with tar.extractfile("info/files") as fp:
             self.files = fp.readlines()
 
