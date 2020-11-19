@@ -10,6 +10,7 @@ import sys
 import uuid
 from typing import List, Optional
 
+import requests
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -398,8 +399,7 @@ def can_channel_reindex(channel):
     return True
 
 
-def assert_channel_action(action_model, channel):
-    action = action_model.action
+def assert_channel_action(action, channel):
     if action == ChannelActionEnum.synchronize:
         action_allowed = can_channel_synchronize(channel)
     elif action == ChannelActionEnum.reindex:
@@ -425,17 +425,29 @@ def put_mirror_channel_actions(
     config=Depends(get_config),
 ):
 
+    execute_channel_action(action.action, channel, dao, auth, session, background_tasks)
+
+
+def execute_channel_action(
+    action: str,
+    channel: db_models.Channel,
+    dao: Dao,
+    auth: authorization.Rules,
+    session: requests.Session,
+    background_tasks: BackgroundTasks,
+):
+
     assert_channel_action(action, channel)
 
     user_id = auth.assert_user()
 
-    if action.action == ChannelActionEnum.synchronize:
+    if action == ChannelActionEnum.synchronize:
         auth.assert_synchronize_mirror(channel.name)
 
         mirror.synchronize_packages(
             channel, dao, pkgstore, auth, session, background_tasks
         )
-    elif action.action == ChannelActionEnum.reindex:
+    elif action == ChannelActionEnum.reindex:
         auth.assert_reindex_channel(channel.name)
         background_tasks.add_task(
             tasks.reindex_packages_from_store, config, channel.name, user_id
@@ -443,9 +455,7 @@ def put_mirror_channel_actions(
     else:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail=(
-                f"Action {action.action} on channel {channel.name} is not implemented"
-            ),
+            detail=(f"Action {action} on channel {channel.name} is not implemented"),
         )
 
 
@@ -471,16 +481,35 @@ def post_channel(
     if not new_channel.mirror_channel_url:
         auth.assert_create_channel()
 
-    if new_channel.mirror_channel_url and new_channel.mirror_mode == "mirror":
-        auth.assert_create_mirror_channel()
-        mirror.synchronize_packages(
-            new_channel, dao, pkgstore, auth, session, background_tasks
-        )
+    is_mirror = new_channel.mirror_channel_url and new_channel.mirror_mode == "mirror"
 
-    if new_channel.mirror_channel_url and new_channel.mirror_mode == "proxy":
+    is_proxy = new_channel.mirror_channel_url and new_channel.mirror_mode == "proxy"
+
+    if is_mirror:
+        auth.assert_create_mirror_channel()
+
+    if is_proxy:
         auth.assert_create_proxy_channel()
 
-    dao.create_channel(new_channel, user_id, authorization.OWNER)
+    if new_channel.metadata.actions is None:
+        if is_mirror:
+            actions = [ChannelActionEnum.synchronize]
+        else:
+            actions = []
+    else:
+        actions = new_channel.metadata.actions
+
+    channel = dao.create_channel(new_channel, user_id, authorization.OWNER)
+
+    try:
+        for action in actions:
+            execute_channel_action(
+                action, channel, dao, auth, session, background_tasks
+            )
+    except HTTPException as e:
+        dao.db.delete(channel)
+        dao.db.commit()
+        raise e
 
 
 @api_router.get(

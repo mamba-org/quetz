@@ -77,7 +77,24 @@ class ChannelBase(BaseModel):
         orm_mode = True
 
 
+class ChannelActionEnum(str, Enum):
+    synchronize = 'synchronize'
+    reindex = "reindex"
+
+
+class ChannelMetadata(BaseModel):
+
+    actions: Optional[List[ChannelActionEnum]] = Field(
+        None, title="list of actions to run after channel creation"
+    )
+
+
 class Channel(ChannelBase):
+
+    metadata: ChannelMetadata = Field(
+        default_factory=ChannelMetadata, title="channel metadata"
+    )
+
     @root_validator
     def check_passwords_match(cls, values):
         mirror_url = values.get("mirror_channel_url")
@@ -159,11 +176,6 @@ class PackageVersion(BaseModel):
 
     class Config:
         orm_mode = True
-
-
-class ChannelActionEnum(str, Enum):
-    synchronize = 'synchronize'
-    reindex = "reindex"
 
 
 class ChannelAction(BaseModel):
