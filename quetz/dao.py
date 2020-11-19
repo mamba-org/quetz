@@ -2,6 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import json
+import logging
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -23,6 +24,8 @@ from .db_models import (
     Profile,
     User,
 )
+
+logger = logging.getLogger("quetz")
 
 
 def get_paginated_result(query: Query, skip: int, limit: int):
@@ -352,6 +355,15 @@ class Dao:
         uploader_id,
         upsert: bool = False,
     ):
+        # hold a lock on the package
+        package = (  # noqa
+            self.db.query(Package)
+            .with_for_update()
+            .filter(Package.channel_name == channel_name)
+            .filter(Package.name == package_name)
+            .filter(PackageVersion.package_format == package_format)
+            .filter(PackageVersion.platform == platform)
+        ).first()
 
         existing_versions = (
             self.db.query(PackageVersion)
@@ -415,6 +427,10 @@ class Dao:
             )
 
             self.db.add(package_version)
+            logger.debug(
+                f"adding package {package_name} version {version} to "
+                + f"channel {channel_name}",
+            )
 
         elif upsert:
             existing_versions.update(
