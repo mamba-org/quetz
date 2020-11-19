@@ -156,25 +156,30 @@ def _check_timestamp(channel: Channel, dao: Dao):
 
     def _func(package_name, metadata):
 
-        if "time_modified" not in metadata or not last_synchronisation:
+        if "time_modified" not in metadata:
             return None
-
-        logger.debug(f"comparing synchronisation timestamps of {package_name}")
 
         # use nonlocal to be able to modified last_timestamp in the
         # outer scope
         nonlocal last_timestamp
         time_modified = metadata["time_modified"]
-        is_uptodate = time_modified <= last_synchronization
         last_timestamp = max(time_modified, last_timestamp)
+
+        # if channel was never synchronised we can't determine
+        # whether the package is up-to-date from the timestamp
+        is_uptodate = (
+            time_modified <= last_synchronization if last_synchronization else None
+        )
+        if is_uptodate is not None:
+            logger.debug(f"comparing synchronisation timestamps of {package_name}")
         return is_uptodate
 
     yield _func
 
     # after we are done, we need to update the last_synchronisation
     # in the db
-    last_synchronisation = max(last_synchronization, last_timestamp)
-    dao.update_channel(channel.name, {"timestamp_mirror_sync": last_synchronisation})
+    sync_timestamp = max(last_synchronization, last_timestamp)
+    dao.update_channel(channel.name, {"timestamp_mirror_sync": sync_timestamp})
 
 
 @contextlib.contextmanager
