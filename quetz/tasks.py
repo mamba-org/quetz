@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 
 from sqlalchemy.exc import IntegrityError
 
@@ -8,6 +9,7 @@ from quetz.condainfo import CondaInfo
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.database import get_session
+from quetz.indexing import update_indexes
 
 logger = logging.getLogger("quetz.tasks")
 
@@ -25,19 +27,24 @@ def handle_file(
 
     package_name = condainfo.info["name"]
 
-    dao.create_package(
-        channel_name,
-        rest_models.Package(
-            name=package_name,
-            summary=condainfo.about.get("summary", "n/a"),
-            description=condainfo.about.get("description", "n/a"),
-        ),
-        user_id,
-        authorization.OWNER,
-    )
+    package = dao.get_package(channel_name, package_name)
+
+    if not package:
+        dao.create_package(
+            channel_name,
+            rest_models.Package(
+                name=package_name,
+                summary=condainfo.about.get("summary", "n/a"),
+                description=condainfo.about.get("description", "n/a"),
+            ),
+            user_id,
+            authorization.OWNER,
+        )
 
     # Update channeldata info
     dao.update_package_channeldata(channel_name, package_name, condainfo.channeldata)
+
+    filename = os.path.split(filename)[-1]
 
     try:
         version = dao.create_version(
@@ -86,3 +93,4 @@ def reindex_packages_from_store(config: Config, channel_name: str, user_id: byte
     for fname in pkg_files:
         fid = pkgstore.serve_path(channel_name, fname)
         handle_file(channel_name, fname, fid, dao, user_id)
+    update_indexes(dao, pkgstore, channel_name)

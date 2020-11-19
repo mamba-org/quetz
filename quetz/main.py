@@ -872,6 +872,9 @@ def handle_package_files(
 
         dest = os.path.join(condainfo.info["subdir"], file.filename)
         file.file._file.seek(0)
+        logger.debug(
+            f"uploading file {dest} from channel {channel_name} to package store"
+        )
         pkgstore.add_package(file.file, channel_name, dest)
 
         pm.hook.post_add_package_version(version=version, condainfo=condainfo)

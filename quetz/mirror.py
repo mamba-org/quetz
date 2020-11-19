@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 
 from quetz import authorization, indexing
 from quetz.dao import Dao
+from quetz.db_models import Channel
 from quetz.pkgstores import PackageStore
 
 # copy common subdirs from conda:
@@ -146,7 +147,7 @@ class LocalCache:
 
 
 @contextlib.contextmanager
-def _check_timestamp(channel, dao: Dao):
+def _check_timestamp(channel: Channel, dao: Dao):
     """context manager for comparing the package timestamp
     last synchroninsation timestamp saved in quetz database."""
 
@@ -155,8 +156,10 @@ def _check_timestamp(channel, dao: Dao):
 
     def _func(package_name, metadata):
 
-        if "time_modified" not in metadata:
+        if "time_modified" not in metadata or not last_synchronisation:
             return None
+
+        logger.debug(f"comparing synchronisation timestamps of {package_name}")
 
         # use nonlocal to be able to modified last_timestamp in the
         # outer scope
@@ -187,9 +190,11 @@ def _check_checksum(
     def _func(package_name, metadata):
         # use nonlocal to be able to modified last_timestamp in the
         # outer scope
+
         if keyname not in metadata:
             return None
 
+        logger.debug(f"comparing {keyname} checksums of {package_name}")
         nonlocal local_repodata
         if not local_repodata:
             try:
