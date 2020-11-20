@@ -79,6 +79,21 @@ Mirror channels are read only (you can not add or change packages in these chann
 
    curl http://localhost:8000/api/channels/mirror-channel/packages
 
+You can also postpone the synchronising the channel by adding ``{"metadata": {"actions": []}}`` to the request:
+
+.. code:: bash
+
+   curl -X POST "http://localhost:8000/api/channels" \
+       -H  "accept: application/json" \
+       -H  "Content-Type: application/json" \
+       -H  "X-API-Key: ${QUETZ_API_KEY}" \
+       -d '{"name":"mirror-channel",
+            "private":false,
+            "mirror_channel_url":"https://conda.anaconda.org/btel",
+            "mirror_mode":"mirror",
+            "metadata": {"actions": []}}'
+
+
 Synchronising mirror channel
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -92,3 +107,38 @@ If packages are added or modified on the primary server from which they were pul
        -d '{"action": "synchronize"}'
 
 Only channel owners or maintainers are allowed to trigger synchronisation, therefore you have to provide a valid API key of a privileged user.
+
+
+Re-indexing existing package files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If for some reason the database was deleted, but the package files are still in the package store, you can re-create the mirror channel and re-index the existing package files, by sending the POST request to `/api/channels` with data:
+
+.. code:: json
+
+   {
+     "name":"ORIGINAL-CHANNEL-NAME",
+     "private":false,
+     "mirror_channel_url":"ORIGINAL-URL",
+     "mirror_mode":"mirror",
+      "metadata": {
+        "actions": ["reindex"]}
+   }
+
+For example, to re-index the ``mirror-channel`` from previous example, you would use:
+
+.. code:: bash
+
+   curl -X POST "http://localhost:8000/api/channels" \
+       -H  "accept: application/json" \
+       -H  "Content-Type: application/json" \
+       -H  "X-API-Key: ${QUETZ_API_KEY}" \
+       -d '{"name":"mirror-channel",
+            "private":false,
+            "mirror_channel_url":"https://conda.anaconda.org/btel",
+            "mirror_mode":"mirror",
+            "metadata": {"actions": ["reindex"]}}'
+
+This request will add existing package files to the repository, but it won't trigger a new synchronisation. If you want to synchronise the channel you can follow the example from the previous section. This synchronisation should only attempt to download the files that were not present in the package store.
+
+
