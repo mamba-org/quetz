@@ -9,10 +9,11 @@ import requests
 from fastapi import HTTPException, status
 from fastapi.responses import FileResponse, StreamingResponse
 
-from quetz import authorization, indexing
+from quetz import authorization
 from quetz.dao import Dao
 from quetz.db_models import Channel
 from quetz.pkgstores import PackageStore
+from quetz.tasks import indexing
 
 # copy common subdirs from conda:
 # https://github.com/conda/conda/blob/a78a2387f26a188991d771967fc33aa1fb5bb810/conda/base/constants.py#L63
@@ -320,13 +321,16 @@ def initial_sync_mirror(
 
 
 def synchronize_packages(
-    new_channel,
-    dao,
-    pkgstore,
-    auth,
-    session,
-    background_tasks,
+    channel_name: str,
+    dao: Dao,
+    pkgstore: PackageStore,
+    auth: authorization.Rules,
+    session: requests.Session,
 ):
+
+    logger.debug(f"executing synchronize_packages task in a process {os.getpid()}")
+
+    new_channel = dao.get_channel(channel_name)
 
     host = new_channel.mirror_channel_url
 
@@ -346,8 +350,7 @@ def synchronize_packages(
         subdirs = KNOWN_SUBDIRS
 
     for arch in subdirs:
-        background_tasks.add_task(
-            initial_sync_mirror,
+        initial_sync_mirror(
             new_channel.name,
             remote_repo,
             arch,

@@ -8,8 +8,8 @@ import pytest
 from quetz import rest_models
 from quetz.authorization import Rules
 from quetz.db_models import Channel, Package, PackageVersion, User
-from quetz.indexing import update_indexes
-from quetz.mirror import (
+from quetz.tasks.indexing import update_indexes
+from quetz.tasks.mirror import (
     KNOWN_SUBDIRS,
     RemoteRepository,
     RemoteServerError,
@@ -694,33 +694,6 @@ def test_wrong_package_format(client, dummy_repo, owner):
     assert response.status_code == 200
 
     assert not response.json()
-
-
-def test_mirror_unavailable_url(client, owner, db, dummy_repo):
-
-    response = client.get("/api/dummylogin/bartosz")
-    assert response.status_code == 200
-
-    channel_name = "mirror_channel_" + str(uuid.uuid4())[:10]
-    host = "http://fantasy_host"
-
-    response = client.post(
-        "/api/channels",
-        json={
-            "name": channel_name,
-            "private": False,
-            "mirror_channel_url": host,
-            "mirror_mode": "mirror",
-        },
-    )
-
-    assert response.status_code == 503
-    assert "unavailable" in response.json()["detail"]
-    assert host in response.json()["detail"]
-
-    channel = db.query(Channel).filter_by(name=channel_name).first()
-
-    assert channel is None
 
 
 @pytest.mark.parametrize("user_role", ["owner"])

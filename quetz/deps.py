@@ -3,7 +3,7 @@ Define common dependencies for fastapi depenendcy-injection system
 """
 
 import requests
-from fastapi import Depends, Request
+from fastapi import BackgroundTasks, Depends, Request
 from requests.adapters import HTTPAdapter
 from sqlalchemy.orm import Session
 from urllib3.util.retry import Retry
@@ -12,6 +12,8 @@ from quetz import authorization
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.database import get_session as get_db_session
+from quetz.tasks.common import Task
+from quetz.tasks.workers import ThreadingWorker
 
 DEFAULT_TIMEOUT = 5  # seconds
 MAX_RETRIES = 3
@@ -55,7 +57,7 @@ def get_session(request: Request):
     return request.session
 
 
-def get_remote_session():
+def get_remote_session() -> requests.Session:
     session = requests.Session()
     retries = Retry(
         total=MAX_RETRIES, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504]
@@ -75,3 +77,24 @@ def get_rules(
     db: Session = Depends(get_db),
 ):
     return authorization.Rules(request.headers.get("x-api-key"), session, db)
+
+
+def get_tasks_worker(
+    background_tasks: BackgroundTasks,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+    session: requests.Session = Depends(get_remote_session),
+    config: Config = Depends(get_config),
+) -> Task:
+
+    if config.configured_section("worker"):
+        worker = config.worker_type
+    else:
+        worker = "thread"
+
+    if worker == "thread":
+        worker = ThreadingWorker(background_tasks, dao, auth, session, config)
+    else:
+        raise ValueError("wrong configuration in worker.type")
+
+    return Task(auth, worker)

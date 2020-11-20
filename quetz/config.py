@@ -105,6 +105,13 @@ class Config:
             ],
             required=False,
         ),
+        ConfigSection(
+            "worker",
+            [
+                ConfigEntry("type", str, default="threads"),
+            ],
+            required=False,
+        ),
     )
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]
