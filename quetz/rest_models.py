@@ -92,7 +92,7 @@ class ChannelMetadata(BaseModel):
 class Channel(ChannelBase):
 
     metadata: ChannelMetadata = Field(
-        default_factory=ChannelMetadata, title="channel metadata"
+        default_factory=ChannelMetadata, title="channel metadata", example={}
     )
 
     @root_validator
