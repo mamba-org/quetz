@@ -2,7 +2,7 @@ import concurrent.futures
 import inspect
 import logging
 from abc import abstractmethod
-from typing import Optional
+from typing import Callable, Optional
 
 import requests
 from fastapi import BackgroundTasks
@@ -12,6 +12,14 @@ from quetz.config import Config
 from quetz.dao import Dao
 
 logger = logging.getLogger("quetz.tasks")
+
+
+def prepare_arguments(func: Callable, **resources):
+
+    argnames = list(inspect.signature(func).parameters.keys())
+    kwargs = {arg: value for arg, value in resources.items() if arg in argnames}
+
+    return kwargs
 
 
 class AbstractWorker:
@@ -35,7 +43,7 @@ class ThreadingWorker(AbstractWorker):
         self.session = session
         self.config = config
 
-    def _execute_function(self, func, *args, **kwargs):
+    def _execute_function(self, func: Callable, *args, **kwargs):
 
         resources = {
             "dao": self.dao,
@@ -45,11 +53,8 @@ class ThreadingWorker(AbstractWorker):
             "pkgstore": self.config.get_package_store(),
         }
 
-        argnames = list(inspect.signature(func).parameters.keys())
-
-        for arg, value in resources.items():
-            if arg in argnames:
-                kwargs[arg] = value
+        extra_kwargs = prepare_arguments(func, **resources)
+        kwargs.update(extra_kwargs)
 
         self.background_tasks.add_task(
             func,
@@ -96,13 +101,19 @@ class SubprocessWorker(AbstractWorker):
             f"evaluating function {func} in a subprocess task with pid {os.getpid()}"
         )
 
-        return func(
-            *args,
+        extra_kwargs = prepare_arguments(
+            func,
             dao=dao,
             auth=auth,
             session=session,
             config=config,
             pkgstore=pkgstore,
+        )
+
+        kwargs.update(extra_kwargs)
+
+        return func(
+            *args,
             **kwargs,
         )
 
