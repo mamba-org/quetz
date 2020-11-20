@@ -9,7 +9,8 @@ from quetz.condainfo import CondaInfo
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.database import get_session
-from quetz.indexing import update_indexes
+
+from .indexing import update_indexes
 
 logger = logging.getLogger("quetz.tasks")
 

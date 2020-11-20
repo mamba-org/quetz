@@ -9,10 +9,11 @@ import requests
 from fastapi import HTTPException, status
 from fastapi.responses import FileResponse, StreamingResponse
 
-from quetz import authorization, indexing
+from quetz import authorization
 from quetz.dao import Dao
 from quetz.db_models import Channel
 from quetz.pkgstores import PackageStore
+from quetz.tasks import indexing
 
 # copy common subdirs from conda:
 # https://github.com/conda/conda/blob/a78a2387f26a188991d771967fc33aa1fb5bb810/conda/base/constants.py#L63

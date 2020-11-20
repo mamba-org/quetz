@@ -8,8 +8,8 @@ import pytest
 from quetz import rest_models
 from quetz.authorization import Rules
 from quetz.db_models import Channel, Package, PackageVersion, User
-from quetz.indexing import update_indexes
-from quetz.mirror import (
+from quetz.tasks.indexing import update_indexes
+from quetz.tasks.mirror import (
     KNOWN_SUBDIRS,
     RemoteRepository,
     RemoteServerError,

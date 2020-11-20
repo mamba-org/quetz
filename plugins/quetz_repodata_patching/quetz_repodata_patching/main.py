@@ -13,7 +13,7 @@ import quetz
 from quetz.config import Config
 from quetz.database import get_session
 from quetz.db_models import PackageFormatEnum, PackageVersion
-from quetz.indexing import _jinjaenv
+from quetz.tasks.indexing import _jinjaenv
 
 
 def update_dict(packages, instructions):

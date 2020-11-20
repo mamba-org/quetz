@@ -10,7 +10,6 @@ import sys
 import uuid
 from typing import List, Optional
 
-import requests
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -35,8 +34,6 @@ from quetz import (
     authorization,
     db_models,
     exceptions,
-    indexing,
-    mirror,
     rest_models,
     tasks,
 )
@@ -44,9 +41,10 @@ from quetz.config import Config, configure_logger, get_plugin_manager
 from quetz.dao import Dao
 from quetz.deps import get_config, get_dao, get_remote_session, get_rules, get_session
 from quetz.rest_models import ChannelActionEnum
+from quetz.tasks import indexing
+from quetz.tasks.mirror import LocalCache, RemoteRepository, get_from_cache_or_download
 
 from .condainfo import CondaInfo
-from .mirror import LocalCache, RemoteRepository, get_from_cache_or_download
 
 app = FastAPI()
 
@@ -391,29 +389,6 @@ def get_channel(channel: db_models.Channel = Depends(get_channel_allow_proxy)):
     return channel
 
 
-def can_channel_synchronize(channel):
-    return channel.mirror_channel_url and (channel.mirror_mode == "mirror")
-
-
-def can_channel_reindex(channel):
-    return True
-
-
-def assert_channel_action(action, channel):
-    if action == ChannelActionEnum.synchronize:
-        action_allowed = can_channel_synchronize(channel)
-    elif action == ChannelActionEnum.reindex:
-        action_allowed = can_channel_reindex(channel)
-    else:
-        action_allowed = False
-
-    if not action_allowed:
-        raise HTTPException(
-            status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
-            detail=f"Action {action} not allowed for channel {channel.name}",
-        )
-
-
 @api_router.put("/channels/{channel_name}/actions", tags=["channels"])
 def put_mirror_channel_actions(
     action: rest_models.ChannelAction,
@@ -425,38 +400,9 @@ def put_mirror_channel_actions(
     config=Depends(get_config),
 ):
 
-    execute_channel_action(action.action, channel, dao, auth, session, background_tasks)
-
-
-def execute_channel_action(
-    action: str,
-    channel: db_models.Channel,
-    dao: Dao,
-    auth: authorization.Rules,
-    session: requests.Session,
-    background_tasks: BackgroundTasks,
-):
-
-    assert_channel_action(action, channel)
-
-    user_id = auth.assert_user()
-
-    if action == ChannelActionEnum.synchronize:
-        auth.assert_synchronize_mirror(channel.name)
-
-        mirror.synchronize_packages(
-            channel, dao, pkgstore, auth, session, background_tasks
-        )
-    elif action == ChannelActionEnum.reindex:
-        auth.assert_reindex_channel(channel.name)
-        background_tasks.add_task(
-            tasks.reindex_packages_from_store, config, channel.name, user_id
-        )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail=(f"Action {action} on channel {channel.name} is not implemented"),
-        )
+    tasks.execute_channel_action(
+        action.action, channel, dao, auth, session, background_tasks, config
+    )
 
 
 @api_router.post("/channels", status_code=201, tags=["channels"])
@@ -503,8 +449,8 @@ def post_channel(
 
     try:
         for action in actions:
-            execute_channel_action(
-                action, channel, dao, auth, session, background_tasks
+            tasks.execute_channel_action(
+                action, channel, dao, auth, session, background_tasks, config
             )
     except HTTPException as e:
         dao.db.delete(channel)

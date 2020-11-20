@@ -12,8 +12,8 @@ import pytest
 import zstandard
 
 import quetz
-from quetz import indexing
 from quetz.db_models import Channel, Package, Profile, User
+from quetz.tasks import indexing
 
 
 @pytest.fixture

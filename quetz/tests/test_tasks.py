@@ -5,7 +5,7 @@ import pytest
 
 from quetz.db_models import Channel
 from quetz.pkgstores import PackageStore
-from quetz.tasks import reindex_packages_from_store
+from quetz.tasks.reindexing import reindex_packages_from_store
 
 
 @pytest.fixture
@@ -46,7 +46,7 @@ def test_reindex_package_files(
     config, user, package_files, channel, db, pkgstore: PackageStore, package_filenames
 ):
     user_id = user.id
-    with mock.patch("quetz.tasks.get_session", lambda _: db):
+    with mock.patch("quetz.tasks.reindexing.get_session", lambda _: db):
         reindex_packages_from_store(config, channel.name, user_id)
     db.refresh(channel)
 
