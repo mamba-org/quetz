@@ -35,13 +35,12 @@ from quetz import (
     db_models,
     exceptions,
     rest_models,
-    tasks,
 )
 from quetz.config import Config, configure_logger, get_plugin_manager
 from quetz.dao import Dao
-from quetz.deps import get_config, get_dao, get_remote_session, get_rules, get_session
+from quetz.deps import get_dao, get_remote_session, get_rules, get_session
 from quetz.rest_models import ChannelActionEnum
-from quetz.tasks import indexing
+from quetz.tasks import Task, indexing
 from quetz.tasks.mirror import LocalCache, RemoteRepository, get_from_cache_or_download
 
 from .condainfo import CondaInfo
@@ -392,17 +391,12 @@ def get_channel(channel: db_models.Channel = Depends(get_channel_allow_proxy)):
 @api_router.put("/channels/{channel_name}/actions", tags=["channels"])
 def put_mirror_channel_actions(
     action: rest_models.ChannelAction,
-    background_tasks: BackgroundTasks,
     channel: db_models.Channel = Depends(get_channel_allow_proxy),
     dao: Dao = Depends(get_dao),
-    auth: authorization.Rules = Depends(get_rules),
-    session=Depends(get_remote_session),
-    config=Depends(get_config),
+    task: Task = Depends(Task),
 ):
 
-    tasks.execute_channel_action(
-        action.action, channel, dao, auth, session, background_tasks, config
-    )
+    task.execute_channel_action(action.action, channel)
 
 
 @api_router.post("/channels", status_code=201, tags=["channels"])
@@ -411,7 +405,7 @@ def post_channel(
     background_tasks: BackgroundTasks,
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
-    session=Depends(get_remote_session),
+    task: Task = Depends(Task),
 ):
 
     user_id = auth.assert_user()
@@ -449,9 +443,7 @@ def post_channel(
 
     try:
         for action in actions:
-            tasks.execute_channel_action(
-                action, channel, dao, auth, session, background_tasks, config
-            )
+            task.execute_channel_action(action, channel)
     except HTTPException as e:
         dao.db.delete(channel)
         dao.db.commit()

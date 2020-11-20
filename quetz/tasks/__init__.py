@@ -1,1 +1,1 @@
-from .common import execute_channel_action  # noqa
+from .common import Task  # noqa

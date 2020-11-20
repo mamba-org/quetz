@@ -1,7 +1,7 @@
 import requests
-from fastapi import BackgroundTasks, HTTPException, status
+from fastapi import BackgroundTasks, Depends, HTTPException, status
 
-from quetz import authorization, db_models
+from quetz import authorization, deps
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.rest_models import ChannelActionEnum
@@ -24,35 +24,49 @@ def assert_channel_action(action, channel):
         )
 
 
-def execute_channel_action(
-    action: str,
-    channel: db_models.Channel,
-    dao: Dao,
-    auth: authorization.Rules,
-    session: requests.Session,
-    background_tasks: BackgroundTasks,
-    config: Config,
-):
+class Task:
+    def __init__(
+        self,
+        background_tasks: BackgroundTasks,
+        dao: Dao = Depends(deps.get_dao),
+        auth: authorization.Rules = Depends(deps.get_rules),
+        session: requests.Session = Depends(deps.get_remote_session),
+        config: Config = Depends(deps.get_config),
+    ):
+        self.dao = dao
+        self.auth = auth
+        self.session = session
+        self.background_tasks = background_tasks
+        self.config = config
 
-    pkgstore = config.get_package_store()
+    def execute_channel_action(self, action, channel):
+        dao = self.dao
+        auth = self.auth
+        session = self.session
+        background_tasks = self.background_tasks
+        config = self.config
 
-    assert_channel_action(action, channel)
+        pkgstore = config.get_package_store()
 
-    user_id = auth.assert_user()
+        assert_channel_action(action, channel)
 
-    if action == ChannelActionEnum.synchronize:
-        auth.assert_synchronize_mirror(channel.name)
+        user_id = auth.assert_user()
 
-        mirror.synchronize_packages(
-            channel, dao, pkgstore, auth, session, background_tasks
-        )
-    elif action == ChannelActionEnum.reindex:
-        auth.assert_reindex_channel(channel.name)
-        background_tasks.add_task(
-            reindexing.reindex_packages_from_store, config, channel.name, user_id
-        )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail=(f"Action {action} on channel {channel.name} is not implemented"),
-        )
+        if action == ChannelActionEnum.synchronize:
+            auth.assert_synchronize_mirror(channel.name)
+
+            mirror.synchronize_packages(
+                channel, dao, pkgstore, auth, session, background_tasks
+            )
+        elif action == ChannelActionEnum.reindex:
+            auth.assert_reindex_channel(channel.name)
+            background_tasks.add_task(
+                reindexing.reindex_packages_from_store, config, channel.name, user_id
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail=(
+                    f"Action {action} on channel {channel.name} is not implemented"
+                ),
+            )
