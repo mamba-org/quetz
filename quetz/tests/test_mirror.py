@@ -628,6 +628,25 @@ def test_mirror_initial_sync(client, dummy_repo, owner, expected_paths):
     assert dummy_repo == [os.path.join(host, p) for p in expected_paths]
 
 
+@pytest.mark.parametrize("user_role", ['maintainer'])
+def test_add_mirror_without_sync(auth_client, dummy_repo):
+
+    host = "http://mirror3_host"
+    response = auth_client.post(
+        "/api/channels",
+        json={
+            "name": "mirror_channel_" + str(uuid.uuid4())[:10],
+            "private": False,
+            "mirror_channel_url": host,
+            "mirror_mode": "mirror",
+            "metadata": {"actions": []},
+        },
+    )
+    assert response.status_code == 201
+
+    assert not dummy_repo
+
+
 empty_archive = b""
 
 
