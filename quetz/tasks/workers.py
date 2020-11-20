@@ -1,6 +1,8 @@
+import concurrent.futures
 import inspect
 import logging
 from abc import abstractmethod
+from typing import Optional
 
 import requests
 from fastapi import BackgroundTasks
@@ -53,4 +55,58 @@ class ThreadingWorker(AbstractWorker):
             func,
             *args,
             **kwargs,
+        )
+
+
+class SubprocessWorker(AbstractWorker):
+
+    _executor: Optional[concurrent.futures.Executor] = None
+
+    def __init__(self, api_key: str, browser_session: dict):
+
+        if SubprocessWorker._executor is None:
+            logger.debug("creating a new subprocess executor")
+            SubprocessWorker._executor = concurrent.futures.ProcessPoolExecutor()
+        self.api_key = api_key
+        self.browser_session = browser_session
+
+    @staticmethod
+    def wrapper(func, api_key, browser_session, *args, **kwargs):
+
+        import logging
+        import os
+
+        from quetz.authorization import Rules
+        from quetz.config import Config, configure_logger
+        from quetz.dao import Dao
+        from quetz.database import get_session
+        from quetz.deps import get_remote_session
+
+        config = Config()
+        pkgstore = config.get_package_store()
+        db = get_session(config.sqlalchemy_database_url)
+        dao = Dao(db)
+        auth = Rules(api_key, browser_session, db)
+        session = get_remote_session()
+
+        configure_logger(config)
+
+        logger = logging.getLogger("quetz")
+        logger.debug(
+            f"evaluating function {func} in a subprocess task with pid {os.getpid()}"
+        )
+
+        return func(
+            *args,
+            dao=dao,
+            auth=auth,
+            session=session,
+            config=config,
+            pkgstore=pkgstore,
+            **kwargs,
+        )
+
+    def _execute_function(self, func, *args, **kwargs):
+        self._executor.submit(
+            self.wrapper, func, self.api_key, self.browser_session, *args, **kwargs
         )
