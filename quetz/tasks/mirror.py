@@ -321,13 +321,16 @@ def initial_sync_mirror(
 
 
 def synchronize_packages(
-    new_channel,
-    dao,
-    pkgstore,
-    auth,
-    session,
-    background_tasks,
+    channel_name: str,
+    dao: Dao,
+    pkgstore: PackageStore,
+    auth: authorization.Rules,
+    session: requests.Session,
 ):
+
+    logger.debug(f"executing synchronize_packages task in a process {os.getpid()}")
+
+    new_channel = dao.get_channel(channel_name)
 
     host = new_channel.mirror_channel_url
 
@@ -347,8 +350,7 @@ def synchronize_packages(
         subdirs = KNOWN_SUBDIRS
 
     for arch in subdirs:
-        background_tasks.add_task(
-            initial_sync_mirror,
+        initial_sync_mirror(
             new_channel.name,
             remote_repo,
             arch,

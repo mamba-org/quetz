@@ -1,12 +1,14 @@
-import requests
-from fastapi import BackgroundTasks, Depends, HTTPException, status
+import logging
 
-from quetz import authorization, deps
-from quetz.config import Config
-from quetz.dao import Dao
+from fastapi import HTTPException, status
+
+from quetz import authorization, db_models
 from quetz.rest_models import ChannelActionEnum
 
 from . import assertions, mirror, reindexing
+from .workers import AbstractWorker
+
+logger = logging.getLogger("quetz")
 
 
 def assert_channel_action(action, channel):
@@ -27,41 +29,31 @@ def assert_channel_action(action, channel):
 class Task:
     def __init__(
         self,
-        background_tasks: BackgroundTasks,
-        dao: Dao = Depends(deps.get_dao),
-        auth: authorization.Rules = Depends(deps.get_rules),
-        session: requests.Session = Depends(deps.get_remote_session),
-        config: Config = Depends(deps.get_config),
+        auth: authorization.Rules,
+        worker: AbstractWorker,
     ):
-        self.dao = dao
         self.auth = auth
-        self.session = session
-        self.background_tasks = background_tasks
-        self.config = config
+        self.worker = worker
 
-    def execute_channel_action(self, action, channel):
-        dao = self.dao
+    def execute_channel_action(self, action: str, channel: db_models.Channel):
         auth = self.auth
-        session = self.session
-        background_tasks = self.background_tasks
-        config = self.config
 
-        pkgstore = config.get_package_store()
+        channel_name = channel.name
 
         assert_channel_action(action, channel)
 
         user_id = auth.assert_user()
 
         if action == ChannelActionEnum.synchronize:
-            auth.assert_synchronize_mirror(channel.name)
+            auth.assert_synchronize_mirror(channel_name)
 
-            mirror.synchronize_packages(
-                channel, dao, pkgstore, auth, session, background_tasks
-            )
+            self.worker._execute_function(mirror.synchronize_packages, channel_name)
         elif action == ChannelActionEnum.reindex:
-            auth.assert_reindex_channel(channel.name)
-            background_tasks.add_task(
-                reindexing.reindex_packages_from_store, config, channel.name, user_id
+            auth.assert_reindex_channel(channel_name)
+            self.worker._execute_function(
+                reindexing.reindex_packages_from_store,
+                channel_name=channel_name,
+                user_id=user_id,
             )
         else:
             raise HTTPException(

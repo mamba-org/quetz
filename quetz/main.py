@@ -10,6 +10,7 @@ import sys
 import uuid
 from typing import List, Optional
 
+import requests
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -38,9 +39,16 @@ from quetz import (
 )
 from quetz.config import Config, configure_logger, get_plugin_manager
 from quetz.dao import Dao
-from quetz.deps import get_dao, get_remote_session, get_rules, get_session
+from quetz.deps import (
+    get_dao,
+    get_remote_session,
+    get_rules,
+    get_session,
+    get_tasks_worker,
+)
 from quetz.rest_models import ChannelActionEnum
-from quetz.tasks import Task, indexing
+from quetz.tasks import indexing
+from quetz.tasks.common import Task
 from quetz.tasks.mirror import LocalCache, RemoteRepository, get_from_cache_or_download
 
 from .condainfo import CondaInfo
@@ -393,7 +401,7 @@ def put_mirror_channel_actions(
     action: rest_models.ChannelAction,
     channel: db_models.Channel = Depends(get_channel_allow_proxy),
     dao: Dao = Depends(get_dao),
-    task: Task = Depends(Task),
+    task: Task = Depends(get_tasks_worker),
 ):
 
     task.execute_channel_action(action.action, channel)
@@ -405,7 +413,8 @@ def post_channel(
     background_tasks: BackgroundTasks,
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
-    task: Task = Depends(Task),
+    task: Task = Depends(get_tasks_worker),
+    remote_session: requests.Session = Depends(get_remote_session),
 ):
 
     user_id = auth.assert_user()
@@ -441,13 +450,8 @@ def post_channel(
 
     channel = dao.create_channel(new_channel, user_id, authorization.OWNER)
 
-    try:
-        for action in actions:
-            task.execute_channel_action(action, channel)
-    except HTTPException as e:
-        dao.db.delete(channel)
-        dao.db.commit()
-        raise e
+    for action in actions:
+        task.execute_channel_action(action, channel)
 
 
 @api_router.get(

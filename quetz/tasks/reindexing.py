@@ -68,7 +68,11 @@ def handle_file(
     return version
 
 
-def reindex_packages_from_store(config: Config, channel_name: str, user_id: bytes):
+def reindex_packages_from_store(
+    config: Config,
+    channel_name: str,
+    user_id: bytes,
+):
     """Reindex packages from files in the package store"""
 
     db = get_session(config.sqlalchemy_database_url)
