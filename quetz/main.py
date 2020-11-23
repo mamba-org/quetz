@@ -1,4 +1,4 @@
-# Copyright 2020 QuantStack
+# Copyright 2020
 # Distributed under the terms of the Modified BSD License.
 import datetime
 import json
@@ -615,12 +615,7 @@ def get_package_versions(
     version_list = []
 
     for version, profile, api_key_profile in version_profile_list:
-        version.uploader = profile if profile else api_key_profile
-        version.info = json.loads(version.info)
         version_data = rest_models.PackageVersion.from_orm(version)
-        # TODO: don't abuse db models for this.
-        # version.id = str(uuid.UUID(bytes=version.id))
-        # version_list.append(version)
         version_list.append(version_data)
 
     return version_list
