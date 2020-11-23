@@ -1,3 +1,4 @@
+import asyncio
 import concurrent.futures
 import inspect
 import logging
@@ -62,6 +63,9 @@ class ThreadingWorker(AbstractWorker):
             **kwargs,
         )
 
+    async def wait(self):
+        await self.background_tasks()
+
 
 class SubprocessWorker(AbstractWorker):
 
@@ -74,6 +78,7 @@ class SubprocessWorker(AbstractWorker):
             SubprocessWorker._executor = concurrent.futures.ProcessPoolExecutor()
         self.api_key = api_key
         self.browser_session = browser_session
+        self.future = None
 
     @staticmethod
     def wrapper(func, api_key, browser_session, *args, **kwargs):
@@ -85,6 +90,7 @@ class SubprocessWorker(AbstractWorker):
         from quetz.config import Config, configure_logger
         from quetz.dao import Dao
         from quetz.database import get_session
+        from quetz.db_models import User
         from quetz.deps import get_remote_session
 
         config = Config()
@@ -112,12 +118,19 @@ class SubprocessWorker(AbstractWorker):
 
         kwargs.update(extra_kwargs)
 
-        return func(
+        func(
             *args,
             **kwargs,
         )
 
+        return db.query(User).all()
+
     def _execute_function(self, func, *args, **kwargs):
-        self._executor.submit(
+        self.future = self._executor.submit(
             self.wrapper, func, self.api_key, self.browser_session, *args, **kwargs
         )
+
+    async def wait(self):
+        loop = asyncio.get_event_loop()
+        if self.future:
+            return await loop.run_in_executor(None, self.future.result)

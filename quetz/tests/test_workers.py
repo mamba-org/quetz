@@ -3,11 +3,21 @@ import requests
 from fastapi import BackgroundTasks
 
 from quetz.authorization import Rules
-from quetz.tasks.workers import ThreadingWorker
+from quetz.dao import Dao
+from quetz.db_models import User
+from quetz.tasks.workers import SubprocessWorker, ThreadingWorker
 
 
-def basic_function():
-    print("hello world!")
+@pytest.fixture
+def sqlite_url(config_dir):
+    # overriding sqlite_url to save to file so that
+    # we can access the same db from a sub-process
+    return f'sqlite:///{config_dir}/quetz.db'
+
+
+@pytest.fixture
+def http_session():
+    return requests.Session()
 
 
 @pytest.fixture
@@ -17,25 +27,70 @@ def background_tasks():
 
 
 @pytest.fixture
-def http_session():
-    return requests.Session()
+def api_key():
+    return "api-key"
 
 
 @pytest.fixture
-def auth(db):
-    session = {}
-    api_key = "api-key"
+def browser_session():
+    return {}
 
-    return Rules(api_key, session, db)
+
+@pytest.fixture
+def auth(db, api_key, browser_session):
+
+    return Rules(api_key, browser_session, db)
+
+
+@pytest.fixture
+def threading_worker(background_tasks, dao, auth, http_session, config):
+    worker = ThreadingWorker(background_tasks, dao, auth, http_session, config)
+    return worker
+
+
+@pytest.fixture
+def subprocess_worker(api_key, browser_session, db, config):
+    SubprocessWorker._executor = None
+    worker = SubprocessWorker(api_key, browser_session)
+    return worker
+
+
+@pytest.fixture(params=["threading_worker", "subprocess_worker"])
+def any_worker(request):
+    val = request.getfixturevalue(request.param)
+    return val
+
+
+def basic_function():
+    with open("test.txt", "w") as fid:
+        fid.write("hello world!")
+
+
+def function_with_dao(dao: Dao):
+    dao.create_user_with_role("my-user")
 
 
 @pytest.mark.asyncio
-async def test_run_action(capsys, background_tasks, dao, auth, http_session, config):
+async def test_threading_worker_execute(background_tasks, any_worker, db):
 
-    worker = ThreadingWorker(background_tasks, dao, auth, http_session, config)
-    worker._execute_function(basic_function)
+    any_worker._execute_function(basic_function)
 
-    await background_tasks()
+    await any_worker.wait()
 
-    captured = capsys.readouterr()
-    assert captured.out == "hello world!\n"
+    with open("test.txt") as fid:
+        output = fid.read()
+
+    assert output == "hello world!"
+
+
+@pytest.mark.asyncio
+async def test_threading_worker_execute_with_dao(background_tasks, any_worker, db):
+
+    any_worker._execute_function(function_with_dao)
+
+    await any_worker.wait()
+
+    users = db.query(User).all()
+
+    assert len(users) == 1
+    assert users[0].username == 'my-user'

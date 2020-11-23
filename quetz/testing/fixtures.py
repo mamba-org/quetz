@@ -17,11 +17,21 @@ def plugin_manager():
 
 
 @fixture
-def engine(config, plugin_manager):
+def sqlite_url():
+    return "sqlite:///:memory:"
+
+
+@fixture
+def database_url(sqlite_url):
+    db_url = os.environ.get("QUETZ_TEST_DATABASE", sqlite_url)
+    return db_url
+
+
+@fixture
+def engine(config, plugin_manager, database_url):
     # we need to import the plugins before creating the db tables
     # because plugins make define some extra db models
-    db_url = os.environ.get("QUETZ_TEST_DATABASE", 'sqlite:///:memory:')
-    engine = get_engine(db_url, echo=False)
+    engine = get_engine(database_url, echo=False)
     yield engine
     engine.dispose()
 
@@ -55,15 +65,15 @@ def db(session_maker):
 
 
 @fixture
-def config_base():
-    return r"""
+def config_base(database_url):
+    return f"""
 [github]
 # Register the app here: https://github.com/settings/applications/new
 client_id = "aaa"
 client_secret = "bbb"
 
 [sqlalchemy]
-database_url = "sqlite:///:memory:"
+database_url = "{database_url}"
 
 [session]
 secret = "eWrkA6xpa7LTSSYUwZEEVoOU62501Ucf9lmLcgzTj1I="
