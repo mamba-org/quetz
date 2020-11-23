@@ -121,10 +121,11 @@ def config(config_str, config_dir):
 
 
 @fixture
-def app(config, db):
+def app(config, db, mocker):
     from quetz.deps import get_db
     from quetz.main import app
 
+    mocker.patch("quetz.database.get_session", lambda _: db)
     app.dependency_overrides[get_db] = lambda: db
     yield app
     app.dependency_overrides.pop(get_db)

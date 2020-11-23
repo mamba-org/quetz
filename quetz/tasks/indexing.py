@@ -166,5 +166,7 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
     pm = get_plugin_manager()
 
     pm.hook.post_package_indexing(
-        pkgstore=pkgstore, channel_name=channel_name, subdirs=subdirs
+        pkgstore=pkgstore,
+        channel_name=channel_name,
+        subdirs=subdirs,
     )

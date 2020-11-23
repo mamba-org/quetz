@@ -387,6 +387,7 @@ def test_synchronisation_sha(
     n_new_packages,
     arch,
     package_version,
+    mocker,
 ):
     pkgstore = config.get_package_store()
     rules = Rules("", {"user_id": str(uuid.UUID(bytes=user.id))}, db)
@@ -395,6 +396,7 @@ def test_synchronisation_sha(
         def get(self, path, stream=False):
             return dummy_response()
 
+    mocker.patch("quetz.database.get_session", lambda _: db)
     # generate local repodata.json
     update_indexes(dao, pkgstore, mirror_channel.name)
 
