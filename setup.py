@@ -18,6 +18,8 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     include_package_data=True,
     python_requires='>=3.7',
-    extras_require={'dev': ['black', 'flake8', 'isort', 'pre-commit']},
+    extras_require={
+        'dev': ['black', 'flake8', 'isort', 'pre-commit', 'pytest', 'pytest-asyncio']
+    },
     entry_points={'console_scripts': ['quetz = quetz.cli:app']},
 )

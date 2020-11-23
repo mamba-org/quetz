@@ -51,7 +51,7 @@ jobs:
           . $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
           ./micromamba create -y -p ~/test_env 'python>=3.7' pip fastapi typer authlib \
                        httpx=0.12.0 sqlalchemy sqlite psycopg2 python-multipart uvicorn zstandard \
-                       appdirs toml fsspec pytest conda requests "h2<4.0.0" -c conda-forge
+                       appdirs toml fsspec conda requests "h2<4.0.0" -c conda-forge
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
       - name: test quetz
@@ -65,6 +65,10 @@ jobs:
           export MAMBA_EXE=$(pwd)/micromamba
           . $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
           micromamba activate ~/test_env
+
+          # install dev dependencies
+          pip install -e .[dev]
+
           if [ "$TEST_DB_BACKEND" == "postgres" ]; then
             export QUETZ_TEST_DATABASE="postgresql://postgres:mysecretpassword@${POSTGRES_HOST}:${POSTGRES_PORT}/postgres"
             echo "Running with postgres"
