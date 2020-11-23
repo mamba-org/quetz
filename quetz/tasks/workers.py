@@ -16,6 +16,9 @@ logger = logging.getLogger("quetz.tasks")
 
 
 def prepare_arguments(func: Callable, **resources):
+    "select arguments for a function for resources based on its signature." ""
+
+    # poorman's dependency injection pattern
 
     argnames = list(inspect.signature(func).parameters.keys())
     kwargs = {arg: value for arg, value in resources.items() if arg in argnames}
@@ -25,7 +28,7 @@ def prepare_arguments(func: Callable, **resources):
 
 class AbstractWorker:
     @abstractmethod
-    def execute(self, func, *args, **kwargs):
+    def execute(self, func, **kwargs):
         """execute function func on the worker."""
 
     @abstractmethod
@@ -63,7 +66,6 @@ class ThreadingWorker(AbstractWorker):
 
         self.background_tasks.add_task(
             func,
-            *args,
             **kwargs,
         )
 
@@ -85,7 +87,10 @@ class SubprocessWorker(AbstractWorker):
         self.future = None
 
     @staticmethod
-    def wrapper(func, api_key, browser_session, *args, **kwargs):
+    def wrapper(func, api_key, browser_session, **kwargs):
+
+        # database connections etc. are not serializable
+        # so we need to recreate them in the proces
 
         import logging
         import os
@@ -122,10 +127,7 @@ class SubprocessWorker(AbstractWorker):
 
         kwargs.update(extra_kwargs)
 
-        func(
-            *args,
-            **kwargs,
-        )
+        func(**kwargs)
 
         return db.query(User).all()
 

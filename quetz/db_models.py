@@ -143,16 +143,17 @@ class PackageMember(Base):
             ["channel_name", "package_name"], ["packages.channel_name", "packages.name"]
         ),
         ForeignKeyConstraint(["channel_name"], ["channels.name"]),
+        ForeignKeyConstraint(["user_id"], ["users.id"]),
     )
 
     channel_name = Column(String, primary_key=True, index=True)
     package_name = Column(String, primary_key=True, index=True)
-    user_id = Column(UUID, ForeignKey('users.id'), primary_key=True, index=True)
+    user_id = Column(UUID, primary_key=True, index=True)
     role = Column(String)
 
     # primaryjoin condition is needed to avoid conflicts between channel and package
     # relationships that share the same foreign key (channel_name): for package
-    # channel_name # is only required to lookup the package using the composite key
+    # channel_name is only required to lookup the package using the composite key
     # (channel_name + package_name) whereas for channel relationship the channel_name
     # is a writeable column
 

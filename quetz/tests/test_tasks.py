@@ -1,5 +1,4 @@
 import json
-from unittest import mock
 
 import pytest
 
@@ -43,11 +42,17 @@ def channel(dao, user, channel_name):
 
 
 def test_reindex_package_files(
-    config, user, package_files, channel, db, pkgstore: PackageStore, package_filenames
+    config,
+    user,
+    package_files,
+    channel,
+    db,
+    dao,
+    pkgstore: PackageStore,
+    package_filenames,
 ):
     user_id = user.id
-    with mock.patch("quetz.tasks.reindexing.get_session", lambda _: db):
-        reindex_packages_from_store(config, channel.name, user_id)
+    reindex_packages_from_store(dao, config, channel.name, user_id)
     db.refresh(channel)
 
     assert channel.packages

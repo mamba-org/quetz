@@ -86,7 +86,7 @@ class Rules:
             .one_or_none()
         )
 
-    def has_channel_role(self, user_id, channel_name: str, roles: list):
+    def has_channel_role(self, user_id: bytes, channel_name: str, roles: list):
         return (
             self.db.query(ChannelMember)
             .filter(ChannelMember.user_id == user_id)

@@ -8,7 +8,6 @@ from quetz import authorization, rest_models
 from quetz.condainfo import CondaInfo
 from quetz.config import Config
 from quetz.dao import Dao
-from quetz.database import get_session
 
 from .indexing import update_indexes
 
@@ -69,14 +68,14 @@ def handle_file(
 
 
 def reindex_packages_from_store(
+    dao: Dao,
     config: Config,
     channel_name: str,
     user_id: bytes,
 ):
     """Reindex packages from files in the package store"""
 
-    db = get_session(config.sqlalchemy_database_url)
-    dao = Dao(db)
+    db = dao.db
 
     pkgstore = config.get_package_store()
 

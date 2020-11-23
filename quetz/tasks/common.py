@@ -47,7 +47,7 @@ class Task:
         if action == ChannelActionEnum.synchronize:
             auth.assert_synchronize_mirror(channel_name)
 
-            self.worker.execute(mirror.synchronize_packages, channel_name)
+            self.worker.execute(mirror.synchronize_packages, channel_name=channel_name)
         elif action == ChannelActionEnum.reindex:
             auth.assert_reindex_channel(channel_name)
             self.worker.execute(

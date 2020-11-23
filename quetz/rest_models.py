@@ -161,7 +161,7 @@ class ApiKey(BaseApiKey):
 
 
 class PackageVersion(BaseModel):
-    id: str
+    id: uuid.UUID
     channel_name: str
     package_name: str
     platform: str

@@ -121,11 +121,11 @@ def config(config_str, config_dir):
 
 
 @fixture
-def app(config, session_maker):
+def app(config, db):
     from quetz.deps import get_db
     from quetz.main import app
 
-    app.dependency_overrides[get_db] = lambda: session_maker()
+    app.dependency_overrides[get_db] = lambda: db
     yield app
     app.dependency_overrides.pop(get_db)
 
