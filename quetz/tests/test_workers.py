@@ -73,7 +73,7 @@ def function_with_dao(dao: Dao):
 @pytest.mark.asyncio
 async def test_threading_worker_execute(background_tasks, any_worker, db):
 
-    any_worker._execute_function(basic_function)
+    any_worker.execute(basic_function)
 
     await any_worker.wait()
 
@@ -86,7 +86,7 @@ async def test_threading_worker_execute(background_tasks, any_worker, db):
 @pytest.mark.asyncio
 async def test_threading_worker_execute_with_dao(background_tasks, any_worker, db):
 
-    any_worker._execute_function(function_with_dao)
+    any_worker.execute(function_with_dao)
 
     await any_worker.wait()
 

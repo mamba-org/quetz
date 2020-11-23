@@ -25,8 +25,12 @@ def prepare_arguments(func: Callable, **resources):
 
 class AbstractWorker:
     @abstractmethod
-    def _execute_function(self, func, *args, **kwargs):
-        ...
+    def execute(self, func, *args, **kwargs):
+        """execute function func on the worker."""
+
+    @abstractmethod
+    def wait(self):
+        """wait for all jobs to finish"""
 
 
 class ThreadingWorker(AbstractWorker):
@@ -44,7 +48,7 @@ class ThreadingWorker(AbstractWorker):
         self.session = session
         self.config = config
 
-    def _execute_function(self, func: Callable, *args, **kwargs):
+    def execute(self, func: Callable, *args, **kwargs):
 
         resources = {
             "dao": self.dao,
@@ -125,7 +129,7 @@ class SubprocessWorker(AbstractWorker):
 
         return db.query(User).all()
 
-    def _execute_function(self, func, *args, **kwargs):
+    def execute(self, func, *args, **kwargs):
         self.future = self._executor.submit(
             self.wrapper, func, self.api_key, self.browser_session, *args, **kwargs
         )
