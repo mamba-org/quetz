@@ -202,7 +202,7 @@ def package_version(user, mirror_channel, db, dao):
 
     new_package_data = rest_models.Package(name="test-package")
 
-    package = dao.create_package(
+    dao.create_package(
         mirror_channel.name,
         new_package_data,
         user_id=user.id,
@@ -222,10 +222,6 @@ def package_version(user, mirror_channel, db, dao):
         user.id,
     )
     yield version
-
-    db.delete(package)
-    db.delete(version)
-    db.commit()
 
 
 @pytest.fixture
@@ -388,6 +384,7 @@ def test_synchronisation_sha(
     arch,
     package_version,
     mocker,
+    plugin_manager,
 ):
     pkgstore = config.get_package_store()
     rules = Rules("", {"user_id": str(uuid.UUID(bytes=user.id))}, db)
@@ -396,7 +393,7 @@ def test_synchronisation_sha(
         def get(self, path, stream=False):
             return dummy_response()
 
-    mocker.patch("quetz.database.get_session", lambda _: db)
+    mocker.patch("quetz.config.get_plugin_manager", lambda: plugin_manager)
     # generate local repodata.json
     update_indexes(dao, pkgstore, mirror_channel.name)
 

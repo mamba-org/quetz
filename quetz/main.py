@@ -1,4 +1,4 @@
-# Copyright 2020
+# Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 import datetime
 import json

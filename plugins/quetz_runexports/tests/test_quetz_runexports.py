@@ -3,6 +3,7 @@ import tempfile
 from contextlib import contextmanager
 from unittest import mock
 
+import pytest
 from quetz_runexports import db_models
 
 from quetz.condainfo import CondaInfo
@@ -10,8 +11,19 @@ from quetz.condainfo import CondaInfo
 pytest_plugins = "quetz.testing.fixtures"
 
 
+@pytest.fixture
+def plugins():
+    return ["quetz-runexports"]
+
+
 def test_run_exports_endpoint(
-    client, channel, package, package_version, package_runexports, db, session_maker
+    client,
+    channel,
+    package,
+    package_version,
+    package_runexports,
+    db,
+    session_maker,
 ):
     version_id = f"{package_version.version}-{package_version.build_string}"
 
@@ -68,7 +80,13 @@ def test_post_add_package_version(package_version, config, db, session_maker):
 
 
 def test_validate_url_param(
-    client, channel, package, package_version, package_runexports, db, session_maker
+    client,
+    channel,
+    package,
+    package_version,
+    package_runexports,
+    db,
+    session_maker,
 ):
     version_id = f"{package_version.version}"
 

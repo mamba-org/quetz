@@ -1,19 +1,17 @@
 import os
 import shutil
 import tempfile
+from typing import List
 
+import pluggy
 from fastapi.testclient import TestClient
 from pytest import fixture
 
 import quetz
-from quetz.config import Config, get_plugin_manager
+from quetz import hooks
+from quetz.config import Config
 from quetz.dao import Dao
 from quetz.database import get_engine, get_session_maker
-
-
-@fixture
-def plugin_manager():
-    return get_plugin_manager()
 
 
 @fixture
@@ -28,7 +26,7 @@ def database_url(sqlite_url):
 
 
 @fixture
-def engine(config, plugin_manager, database_url):
+def engine(config, database_url):
     # we need to import the plugins before creating the db tables
     # because plugins make define some extra db models
     engine = get_engine(database_url, echo=False)
@@ -121,12 +119,36 @@ def config(config_str, config_dir):
 
 
 @fixture
-def app(config, db, mocker):
+def plugins() -> List[str]:
+    return []
+
+
+@fixture
+def plugin_manager(plugins: List[str]):
+    pm = pluggy.PluginManager("quetz")
+    pm.add_hookspecs(hooks)
+    for name in plugins:
+        pm.load_setuptools_entrypoints("quetz", name=name)
+    # session_mocker.patch("quetz.config.get_plugin_manager", lambda: pm)
+    return pm
+
+
+@fixture
+def app(config, db, mocker, plugin_manager):
+    # disabling/enabling specific plugins for tests
+    mocker.patch("quetz.config.get_plugin_manager", lambda: plugin_manager)
+
     from quetz.deps import get_db
     from quetz.main import app
 
+    # mocking is required for some functions that do not use fastapi
+    # dependency injection (mainly non-request functions)
     mocker.patch("quetz.database.get_session", lambda _: db)
+
+    # overiding dependency works with all requests handlers that
+    # depend on quetz.deps.get_db
     app.dependency_overrides[get_db] = lambda: db
+
     yield app
     app.dependency_overrides.pop(get_db)
 
