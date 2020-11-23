@@ -70,6 +70,23 @@ def function_with_dao(dao: Dao):
     dao.create_user_with_role("my-user")
 
 
+@pytest.fixture
+def db_cleanup(config):
+
+    # we can't use the db fixture for cleaning up because
+    # it automatically rollsback all operations
+
+    yield
+
+    from quetz.database import get_session
+
+    db = get_session(config.sqlalchemy_database_url)
+    user = db.query(User).one_or_none()
+    if user:
+        db.delete(user)
+        db.commit()
+
+
 @pytest.mark.asyncio
 async def test_threading_worker_execute(background_tasks, any_worker, db):
 
@@ -84,7 +101,9 @@ async def test_threading_worker_execute(background_tasks, any_worker, db):
 
 
 @pytest.mark.asyncio
-async def test_threading_worker_execute_with_dao(background_tasks, any_worker, db):
+async def test_threading_worker_execute_with_dao(
+    background_tasks, any_worker, db, db_cleanup
+):
 
     any_worker.execute(function_with_dao)
 
@@ -94,3 +113,6 @@ async def test_threading_worker_execute_with_dao(background_tasks, any_worker, d
 
     assert len(users) == 1
     assert users[0].username == 'my-user'
+
+    # we need to explicitly cleanup because sub-process did not use
+    # our db fixture, this will be done at teardown in the db_cleanup fixture
