@@ -10,5 +10,9 @@ setup(
         "quetz.migrations": [f"{plugin_name} = quetz_runexports.migrations"],
         "quetz.models": [f"{plugin_name} = quetz_runexports.db_models"],
     },
-    packages=["quetz_runexports"],
+    packages=[
+        "quetz_runexports",
+        "quetz_runexports.migrations",
+        "quetz_runexports.migrations.versions",
+    ],
 )

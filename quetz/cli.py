@@ -87,16 +87,12 @@ def _make_migrations(
     found = False
     if not plugin_name == "quetz":
         for entry_point in pkg_resources.iter_entry_points('quetz.models'):
-            print(entry_point.name)
+            logger.debug("loading plugin %r", entry_point.name)
+            entry_point.load()
             if entry_point.name == plugin_name:
-                logger.debug("loading plugin %r", entry_point.name)
-                entry_point.load()
                 found = True
-                break
     else:
         found = True
-
-
 
     if not found:
         raise Exception(
@@ -107,7 +103,9 @@ def _make_migrations(
     alembic_cfg = _alembic_config(db_url)
     if initialize:
         # find path
-        entry_point = next(pkg_resources.iter_entry_points('quetz.migrations', plugin_name))
+        entry_point = next(
+            pkg_resources.iter_entry_points('quetz.migrations', plugin_name)
+        )
         module = entry_point.load()
         version_path = os.path.join(os.path.split(module.__file__)[0], "versions")
 
@@ -118,6 +116,7 @@ def _make_migrations(
             autogenerate=True,
             version_path=version_path,
             branch_label=plugin_name,
+            splice=True,
         )
     else:
         command.revision(

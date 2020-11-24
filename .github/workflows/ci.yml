@@ -79,7 +79,7 @@ jobs:
           pip install -e .
           pytest -v ./quetz/tests/
 
-          echo "testing plugins"
+          echo "install and test plugins"
           pip install ./plugins/quetz_runexports
           pytest -v ./plugins/quetz_runexports/tests
           

@@ -4,11 +4,11 @@ import tempfile
 from typing import List
 
 from alembic.command import upgrade as alembic_upgrade
-from alembic.config import Config as AlembicConfig
 from fastapi.testclient import TestClient
 from pytest import fixture
 
 import quetz
+from quetz.cli import _alembic_config
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.database import get_engine, get_session_maker
@@ -39,7 +39,6 @@ def engine(config, database_url):
 def use_migrations():
     return True
 
-from quetz.cli import _alembic_config
 
 @fixture
 def session_maker(engine, home, database_url, use_migrations):
@@ -56,14 +55,13 @@ def session_maker(engine, home, database_url, use_migrations):
 
     if use_migrations:
 
-        alembic_config_path = os.path.join(home, "alembic.ini")
-        #alembic_config = AlembicConfig(alembic_config_path)
-        #alembic_config.set_main_option('sqlalchemy.url', database_url)
-        #alembic_config.attributes["connection"] = connection
-        #alembic_config.set_main_option("script_location", "quetz:migrations")
+        # alembic_config = AlembicConfig(alembic_config_path)
+        # alembic_config.set_main_option('sqlalchemy.url', database_url)
+        # alembic_config.attributes["connection"] = connection
+        # alembic_config.set_main_option("script_location", "quetz:migrations")
         alembic_config = _alembic_config(database_url)
         alembic_config.attributes["connection"] = connection
-        alembic_upgrade(alembic_config, 'head', sql=False)
+        alembic_upgrade(alembic_config, 'heads', sql=False)
 
     else:
         Base.metadata.create_all(engine)

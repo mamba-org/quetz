@@ -1,15 +1,15 @@
-"""rev 3
+"""initial revision
 
-Revision ID: 2c72f796bd96
+Revision ID: cb095bcf3bb4
 Revises: a80fb051a659
-Create Date: 2020-11-24 18:56:53.615858
+Create Date: 2020-11-25 00:14:48.269216
 
 """
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = '2c72f796bd96'
+revision = 'cb095bcf3bb4'
 down_revision = 'a80fb051a659'
 branch_labels = ('quetz-runexports',)
 depends_on = None
