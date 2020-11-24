@@ -5,6 +5,7 @@ import tempfile
 from contextlib import contextmanager
 from unittest import mock
 
+import pytest
 from quetz_conda_suggest import db_models
 
 from quetz.condainfo import CondaInfo
@@ -61,8 +62,18 @@ def test_post_add_package_version(package_version, db, config):
     assert meta[0].data == '{"test-bin": "test-package"}'
 
 
+@pytest.fixture
+def plugins():
+    return ["quetz-conda_suggest"]
+
+
 def test_conda_suggest_endpoint_with_upload(
-    client, db, channel, package, subdir, config
+    client,
+    db,
+    channel,
+    package,
+    subdir,
+    config,
 ):
     response = client.get("/api/dummylogin/madhurt")
     filename = "test-package-0.1-0.tar.bz2"

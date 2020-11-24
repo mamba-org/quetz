@@ -263,9 +263,6 @@ def get_users_handler(dao, q, auth, skip, limit):
         if append_user:
             user_list.append(append_user)
 
-    for user in user_list:
-        user.id = str(uuid.UUID(bytes=user.id))
-
     return results
 
 
@@ -307,8 +304,6 @@ def get_user(
         )
 
     auth.assert_read_user_data(user.id)
-
-    user.id = str(uuid.UUID(bytes=user.id))
 
     return user
 
@@ -573,13 +568,6 @@ def get_package_members(
 
     member_list = dao.get_package_members(package.channel.name, package.name)
 
-    for member in member_list:
-        # force loading of profile before changing attributes to prevent sqlalchemy
-        # errors.
-        # TODO: don't abuse db models for this.
-        member.user.profile
-        setattr(member.user, "id", str(uuid.UUID(bytes=member.user.id)))
-
     return member_list
 
 
@@ -627,11 +615,8 @@ def get_package_versions(
     version_list = []
 
     for version, profile, api_key_profile in version_profile_list:
-        # TODO: don't abuse db models for this.
-        version.id = str(uuid.UUID(bytes=version.id))
-        version.info = json.loads(version.info)
-        version.uploader = profile if profile else api_key_profile
-        version_list.append(version)
+        version_data = rest_models.PackageVersion.from_orm(version)
+        version_list.append(version_data)
 
     return version_list
 

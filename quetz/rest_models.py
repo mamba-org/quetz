@@ -3,12 +3,13 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime
 from enum import Enum
 from typing import Generic, List, Optional, TypeVar
 
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field, root_validator, validator
 from pydantic.generics import GenericModel
 
 T = TypeVar('T')
@@ -161,7 +162,7 @@ class ApiKey(BaseApiKey):
 
 
 class PackageVersion(BaseModel):
-    id: str
+    id: uuid.UUID
     channel_name: str
     package_name: str
     platform: str
@@ -176,6 +177,20 @@ class PackageVersion(BaseModel):
 
     class Config:
         orm_mode = True
+
+    @validator("uploader", pre=True)
+    def convert_uploader(cls, v):
+        if hasattr(v, "profile"):
+            return v.profile
+        else:
+            return v
+
+    @validator("info", pre=True)
+    def load_json(cls, v):
+        if isinstance(v, str):
+            return json.loads(v)
+        else:
+            return v
 
 
 class ChannelAction(BaseModel):
