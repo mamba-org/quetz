@@ -1,0 +1,2 @@
+graft migrations
+global-exclude *.py[cod]

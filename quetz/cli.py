@@ -70,7 +70,6 @@ def _alembic_config(db_url: str) -> AlembicConfig:
     alembic_cfg = AlembicConfig()
     alembic_cfg.set_main_option('script_location', script_location)
     alembic_cfg.set_main_option('version_locations', version_locations)
-    print(version_locations)
     alembic_cfg.set_main_option('sqlalchemy.url', db_url)
     return alembic_cfg
 
@@ -97,6 +96,8 @@ def _make_migrations(
     else:
         found = True
 
+
+
     if not found:
         raise Exception(
             f"models entrypoint (quetz.models) for plugin {plugin_name} not registered"
@@ -105,11 +106,11 @@ def _make_migrations(
     logger.info('Making DB migrations on %r for %r', db_url, plugin_name)
     alembic_cfg = _alembic_config(db_url)
     if initialize:
-        version_path = (
-            f"../plugins/{plugin_name}/{plugin_name}/migrations/versions".replace(
-                '-', '_'
-            )
-        )
+        # find path
+        entry_point = next(pkg_resources.iter_entry_points('quetz.migrations', plugin_name))
+        module = entry_point.load()
+        version_path = os.path.join(os.path.split(module.__file__)[0], "versions")
+
         command.revision(
             alembic_cfg,
             head="quetz",
