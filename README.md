@@ -36,7 +36,8 @@ Then create an environment:
 
 ```
 mamba create -n quetz -c conda-forge 'python>=3.7' fastapi typer authlib=0.14.3 httpx=0.12.0 sqlalchemy sqlite \
-python-multipart uvicorn zstandard conda-build appdirs toml quetz-client fsspec "h2<4.0.0" pluggy
+python-multipart uvicorn zstandard conda-build appdirs toml quetz-client fsspec "h2<4.0.0" pluggy itsdangerous \
+aiofiles
 
 conda activate quetz
 ```
