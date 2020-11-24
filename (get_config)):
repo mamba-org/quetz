@@ -1,0 +1,150 @@
+[1mdiff --git a/plugins/quetz_repodata_patching/quetz_repodata_patching/main.py b/plugins/quetz_repodata_patching/quetz_repodata_patching/main.py[m
+[1mindex 75e08bd..835b0bc 100644[m
+[1m--- a/plugins/quetz_repodata_patching/quetz_repodata_patching/main.py[m
+[1m+++ b/plugins/quetz_repodata_patching/quetz_repodata_patching/main.py[m
+[36m@@ -11,7 +11,8 @@[m [mimport zstandard[m
+ [m
+ import quetz[m
+ from quetz.db_models import PackageFormatEnum, PackageVersion[m
+[31m-from quetz.deps import get_db[m
+[32m+[m[32mfrom quetz.database import get_session[m
+[32m+[m[32mfrom quetz.config import Config[m
+ from quetz.indexing import _jinjaenv[m
+ [m
+ [m
+[36m@@ -135,12 +136,23 @@[m [mdef update_index(pkgstore, updated_files, channel_name, subdir, packages):[m
+     )[m
+ [m
+ [m
+[32m+[m[32m@contextmanager[m
+[32m+[m[32mdef get_db_manager():[m
+[32m+[m[32m    config = Config()[m
+[32m+[m
+[32m+[m[32m    db = get_session(config.sqlalchemy_database_url)[m
+[32m+[m
+[32m+[m[32m    try:[m
+[32m+[m[32m        yield db[m
+[32m+[m[32m    finally:[m
+[32m+[m[32m        db.close()[m
+[32m+[m
+[32m+[m
+ @quetz.hookimpl[m
+ def post_package_indexing([m
+     pkgstore: "quetz.pkgstores.PackageStore", channel_name, subdirs[m
+ ):[m
+ [m
+[31m-    get_db_manager = contextmanager(get_db)[m
+     with get_db_manager() as db:[m
+ [m
+         query = ([m
+[1mdiff --git a/plugins/quetz_repodata_patching/tests/test_main.py b/plugins/quetz_repodata_patching/tests/test_main.py[m
+[1mindex 4bbf885..515f282 100644[m
+[1m--- a/plugins/quetz_repodata_patching/tests/test_main.py[m
+[1m+++ b/plugins/quetz_repodata_patching/tests/test_main.py[m
+[36m@@ -13,6 +13,7 @@[m [mimport zstandard[m
+ import quetz[m
+ from quetz import indexing[m
+ from quetz.db_models import Channel, Package, Profile, User[m
+[32m+[m[32mfrom contextlib import contextmanager[m
+ [m
+ [m
+ @pytest.fixture[m
+[36m@@ -296,10 +297,11 @@[m [mdef test_post_package_indexing([m
+     package_format,[m
+     patched_package_name,[m
+ ):[m
+[32m+[m[32m    @contextmanager[m
+     def get_db():[m
+         yield db[m
+ [m
+[31m-    with mock.patch("quetz_repodata_patching.main.get_db", get_db):[m
+[32m+[m[32m    with mock.patch("quetz_repodata_patching.main.get_db_manager", get_db):[m
+         indexing.update_indexes(dao, pkgstore, channel_name)[m
+ [m
+     ext = "json.bz2" if compressed_repodata else "json"[m
+[36m@@ -373,10 +375,11 @@[m [mdef test_index_html([m
+     db,[m
+     remove_instructions,[m
+ ):[m
+[32m+[m[32m    @contextmanager[m
+     def get_db():[m
+         yield db[m
+ [m
+[31m-    with mock.patch("quetz_repodata_patching.main.get_db", get_db):[m
+[32m+[m[32m    with mock.patch("quetz_repodata_patching.main.get_db_manager", get_db):[m
+         indexing.update_indexes(dao, pkgstore, channel_name)[m
+ [m
+     index_path = os.path.join([m
+[36m@@ -413,10 +416,11 @@[m [mdef test_patches_for_subdir([m
+     package_subdir,[m
+     patches_subdir,[m
+ ):[m
+[32m+[m[32m    @contextmanager[m
+     def get_db():[m
+         yield db[m
+ [m
+[31m-    with mock.patch("quetz_repodata_patching.main.get_db", get_db):[m
+[32m+[m[32m    with mock.patch("quetz_repodata_patching.main.get_db_manager", get_db):[m
+         indexing.update_indexes(dao, pkgstore, channel_name)[m
+ [m
+     index_path = os.path.join([m
+[36m@@ -464,10 +468,11 @@[m [mdef test_no_repodata_patches_package([m
+     dao,[m
+     db,[m
+ ):[m
+[32m+[m[32m    @contextmanager[m
+     def get_db():[m
+         yield db[m
+ [m
+[31m-    with mock.patch("quetz_repodata_patching.main.get_db", get_db):[m
+[32m+[m[32m    with mock.patch("quetz_repodata_patching.main.get_db_manager", get_db):[m
+         indexing.update_indexes(dao, pkgstore, channel_name)[m
+ [m
+     index_path = os.path.join([m
+[1mdiff --git a/quetz/deps.py b/quetz/deps.py[m
+[1mindex 3686c7b..68a9304 100644[m
+[1m--- a/quetz/deps.py[m
+[1m+++ b/quetz/deps.py[m
+[36m@@ -32,32 +32,21 @@[m [mclass TimeoutHTTPAdapter(HTTPAdapter):[m
+         return super().send(request, **kwargs)[m
+ [m
+ [m
+[31m-class DBSessionDependency:[m
+[31m-    """create db session object but read read config lazily.[m
+[31m-[m
+[31m-    useful for testing"""[m
+[31m-[m
+[31m-    _database_url = None[m
+[31m-[m
+[31m-    def __call__(self):[m
+[31m-        if not self._database_url:[m
+[31m-            config = Config()[m
+[31m-            self._database_url = config.sqlalchemy_database_url[m
+[31m-        db = get_db_session(self._database_url)[m
+[31m-        try:[m
+[31m-            yield db[m
+[31m-        finally:[m
+[31m-            db.close()[m
+[31m-[m
+[31m-[m
+[31m-get_db = DBSessionDependency()[m
+[31m-[m
+[31m-[m
+ def get_config():[m
+     config = Config()[m
+     return config[m
+ [m
+ [m
+[32m+[m[32mdef get_db(config: Config = Depends(get_config)):[m
+[32m+[m
+[32m+[m[32m    database_url = config.sqlalchemy_database_url[m
+[32m+[m[32m    db = get_db_session(database_url)[m
+[32m+[m[32m    try:[m
+[32m+[m[32m        yield db[m
+[32m+[m[32m    finally:[m
+[32m+[m[32m        db.close()[m
+[32m+[m
+[32m+[m
+ def get_dao(db: Session = Depends(get_db)):[m
+     return Dao(db)[m
+ [m
