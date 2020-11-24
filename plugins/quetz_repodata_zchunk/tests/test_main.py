@@ -2,8 +2,6 @@ import json
 import os
 import subprocess
 import uuid
-from contextlib import contextmanager
-from unittest import mock
 
 import pytest
 
@@ -114,12 +112,7 @@ def test_repodata_zchunk(
     dao,
     db,
 ):
-    @contextmanager
-    def get_db():
-        yield db
-
-    with mock.patch("quetz_repodata_patching.main.get_db_manager", get_db):
-        indexing.update_indexes(dao, pkgstore, channel_name)
+    indexing.update_indexes(dao, pkgstore, channel_name)
 
     index_path = os.path.join(
         pkgstore.channels_dir,
@@ -136,7 +129,7 @@ def test_repodata_zchunk(
     assert "repodata.json.bz2" in content
     assert "repodata.json.zck" in content
 
-    for fname in ("repodata.json", "current_repodata.json", "repodata.json.zck"):
+    for fname in ("repodata.json", "repodata.json.zck"):
 
         repodata_path = os.path.join(
             pkgstore.channels_dir, channel_name, "noarch", fname
