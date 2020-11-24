@@ -11,6 +11,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, NoReturn
 
+import pkg_resources
 import typer
 import uvicorn
 from alembic import command
@@ -55,13 +56,72 @@ class LogLevel(str, Enum):
     trace = "trace"
 
 
-def _run_migrations(db_url: str) -> None:
+def _alembic_config(db_url: str) -> AlembicConfig:
     script_location = "quetz:migrations"
-    logger.info('Running DB migrations in %r on %r', script_location, db_url)
+
+    migration_modules = [
+        f"{entry_point.module_name}:versions"
+        for entry_point in pkg_resources.iter_entry_points('quetz.migrations')
+    ]
+    migration_modules.append("quetz:migrations/versions")
+
+    version_locations = " ".join(migration_modules)
+
     alembic_cfg = AlembicConfig()
     alembic_cfg.set_main_option('script_location', script_location)
+    alembic_cfg.set_main_option('version_locations', version_locations)
+    print(version_locations)
     alembic_cfg.set_main_option('sqlalchemy.url', db_url)
-    command.upgrade(alembic_cfg, 'head')
+    return alembic_cfg
+
+
+def _run_migrations(db_url: str, branch_name: str = "heads") -> None:
+    logger.info('Running DB migrations on %r', db_url)
+    alembic_cfg = _alembic_config(db_url)
+    command.upgrade(alembic_cfg, branch_name)
+
+
+def _make_migrations(
+    db_url: str, message: str, plugin_name: str = "quetz", initialize: bool = False
+) -> None:
+
+    found = False
+    if not plugin_name == "quetz":
+        for entry_point in pkg_resources.iter_entry_points('quetz.models'):
+            print(entry_point.name)
+            if entry_point.name == plugin_name:
+                logger.debug("loading plugin %r", entry_point.name)
+                entry_point.load()
+                found = True
+                break
+    else:
+        found = True
+
+    if not found:
+        raise Exception(
+            f"models entrypoint (quetz.models) for plugin {plugin_name} not registered"
+        )
+
+    logger.info('Making DB migrations on %r for %r', db_url, plugin_name)
+    alembic_cfg = _alembic_config(db_url)
+    if initialize:
+        version_path = (
+            f"../plugins/{plugin_name}/{plugin_name}/migrations/versions".replace(
+                '-', '_'
+            )
+        )
+        command.revision(
+            alembic_cfg,
+            head="quetz",
+            message=message,
+            autogenerate=True,
+            version_path=version_path,
+            branch_label=plugin_name,
+        )
+    else:
+        command.revision(
+            alembic_cfg, head=f"{plugin_name}@head", message=message, autogenerate=True
+        )
 
 
 def _init_db(db: Session, config: Config):
@@ -255,6 +315,25 @@ def init_db(
 
     _run_migrations(config.sqlalchemy_database_url)
     _init_db(db, config)
+
+
+@app.command()
+def make_migrations(
+    path: str = typer.Argument(None, help="The path of the deployment"),
+    message: str = typer.Option(None, help="revision message"),
+    plugin: str = typer.Option("quetz", help="head or heads or plugin name"),
+    initialize: bool = typer.Option(False, help="initialize migrations"),
+):
+    """make database migrations for quetz or a plugin"""
+
+    logger.info("Initializing database")
+
+    config_file = _get_config(path)
+
+    config = Config(config_file)
+    os.chdir(path)
+
+    _make_migrations(config.sqlalchemy_database_url, message, plugin, initialize)
 
 
 @app.command()
