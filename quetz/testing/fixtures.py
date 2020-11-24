@@ -3,15 +3,16 @@ import shutil
 import tempfile
 from typing import List
 
-import pluggy
+from alembic.command import upgrade as alembic_upgrade
+from alembic.config import Config as AlembicConfig
 from fastapi.testclient import TestClient
 from pytest import fixture
 
 import quetz
-from quetz import hooks
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.database import get_engine, get_session_maker
+from quetz.db_models import Base
 
 
 @fixture
@@ -35,7 +36,12 @@ def engine(config, database_url):
 
 
 @fixture
-def session_maker(engine):
+def use_migrations():
+    return False
+
+
+@fixture
+def session_maker(engine, home, database_url, use_migrations):
 
     # run the tests with a separate external DB transaction
     # so that we can easily rollback all db changes (even if commited)
@@ -46,7 +52,23 @@ def session_maker(engine):
     # see also: https://docs.sqlalchemy.org/en/13/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites # noqa
 
     connection = engine.connect()
+
+    if use_migrations:
+
+        alembic_config_path = os.path.join(home, "alembic.ini")
+        alembic_config = AlembicConfig(alembic_config_path)
+        alembic_config.set_main_option('sqlalchemy.url', database_url)
+        alembic_config.attributes["connection"] = connection
+        alembic_config.set_main_option(
+            "script_location", os.path.join(home, "migrations")
+        )
+        alembic_upgrade(alembic_config, 'head', sql=False)
+
+    else:
+        Base.metadata.create_all(engine)
+
     trans = connection.begin()
+
     yield get_session_maker(connection)
     trans.rollback()
     connection.close()
@@ -63,7 +85,7 @@ def db(session_maker):
 
 
 @fixture
-def config_base(database_url):
+def config_base(database_url, plugins):
     return f"""
 [github]
 # Register the app here: https://github.com/settings/applications/new
@@ -76,6 +98,9 @@ database_url = "{database_url}"
 [session]
 secret = "eWrkA6xpa7LTSSYUwZEEVoOU62501Ucf9lmLcgzTj1I="
 https_only = false
+
+[plugins]
+enabled = {plugins}
 """
 
 
@@ -90,7 +115,12 @@ def config_str(config_base, config_extra):
 
 
 @fixture
-def config_dir():
+def home():
+    return os.path.abspath(os.path.curdir)
+
+
+@fixture
+def config_dir(home):
     path = tempfile.mkdtemp()
     yield path
     shutil.rmtree(path)
@@ -124,19 +154,8 @@ def plugins() -> List[str]:
 
 
 @fixture
-def plugin_manager(plugins: List[str]):
-    pm = pluggy.PluginManager("quetz")
-    pm.add_hookspecs(hooks)
-    for name in plugins:
-        pm.load_setuptools_entrypoints("quetz", name=name)
-    # session_mocker.patch("quetz.config.get_plugin_manager", lambda: pm)
-    return pm
-
-
-@fixture
-def app(config, db, mocker, plugin_manager):
+def app(config, db, mocker):
     # disabling/enabling specific plugins for tests
-    mocker.patch("quetz.config.get_plugin_manager", lambda: plugin_manager)
 
     from quetz.deps import get_db
     from quetz.main import app
