@@ -37,7 +37,7 @@ def engine(config, database_url):
 
 @fixture
 def use_migrations():
-    return False
+    return True
 
 
 @fixture
@@ -59,9 +59,7 @@ def session_maker(engine, home, database_url, use_migrations):
         alembic_config = AlembicConfig(alembic_config_path)
         alembic_config.set_main_option('sqlalchemy.url', database_url)
         alembic_config.attributes["connection"] = connection
-        alembic_config.set_main_option(
-            "script_location", os.path.join(home, "migrations")
-        )
+        alembic_config.set_main_option("script_location", "quetz:migrations")
         alembic_upgrade(alembic_config, 'head', sql=False)
 
     else:
