@@ -13,6 +13,8 @@ from typing import Dict, NoReturn
 
 import typer
 import uvicorn
+from alembic import command
+from alembic.config import Config as AlembicConfig
 from sqlalchemy.orm.session import Session
 
 from quetz.config import (
@@ -41,7 +43,7 @@ app = typer.Typer()
 _deployments_file = os.path.join(_user_dir, 'deployments.json')
 
 logger = logging.getLogger("quetz-cli")
-configure_logger(loggers=("quetz-cli",))
+configure_logger(loggers=("quetz-cli", "alembic"))
 
 
 class LogLevel(str, Enum):
@@ -51,6 +53,15 @@ class LogLevel(str, Enum):
     info = "info"
     debug = "debug"
     trace = "trace"
+
+
+def _run_migrations(db_url: str) -> None:
+    script_location = "quetz:migrations"
+    logger.info('Running DB migrations in %r on %r', script_location, db_url)
+    alembic_cfg = AlembicConfig()
+    alembic_cfg.set_main_option('script_location', script_location)
+    alembic_cfg.set_main_option('sqlalchemy.url', db_url)
+    command.upgrade(alembic_cfg, 'head')
 
 
 def _init_db(db: Session, config: Config):
@@ -242,6 +253,7 @@ def init_db(
     os.chdir(path)
     db = get_session(config.sqlalchemy_database_url)
 
+    _run_migrations(config.sqlalchemy_database_url)
     _init_db(db, config)
 
 
@@ -333,6 +345,7 @@ def create(
     Path('channels').mkdir()
     db = get_session(config.sqlalchemy_database_url)
 
+    _run_migrations(config.sqlalchemy_database_url)
     _init_db(db, config)
 
     if dev:

@@ -1,5 +1,4 @@
 import os
-from logging.config import fileConfig
 
 from alembic import context
 from alembic.config import Config as AlembicConfig
@@ -14,7 +13,7 @@ config: AlembicConfig = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-fileConfig(config.config_file_name)
+# fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
@@ -39,7 +38,6 @@ def get_url():
         db_path = quetz_config.sqlalchemy_database_url
         abs_path = os.path.abspath(deployment_path)
 
-    if db_path.startswith("sqlite:///./"):
         db_path = db_path.replace("sqlite:///.", f"sqlite:///{abs_path}")
     return db_path
 
