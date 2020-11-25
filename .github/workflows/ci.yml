@@ -16,6 +16,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         test_database: ["sqlite", "postgres"]
+        db_init: ["use-migrations", "create-tables"]
     services:
       postgres:
         image: postgres
@@ -58,9 +59,11 @@ jobs:
         shell: bash -l -euo pipefail {0}
         env:
           TEST_DB_BACKEND: ${{ matrix.test_database }}
+          QUETZ_TEST_DBINIT: ${{ matrix.db_init }}
           POSTGRES_HOST: localhost
           POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }}
         run: |
+          echo ${QUETZ_TEST_DBINIT}
           export MAMBA_ROOT_PREFIX=~/micromamba
           export MAMBA_EXE=$(pwd)/micromamba
           . $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
@@ -73,6 +76,11 @@ jobs:
             export QUETZ_TEST_DATABASE="postgresql://postgres:mysecretpassword@${POSTGRES_HOST}:${POSTGRES_PORT}/postgres"
             echo "Running with postgres"
           fi
+
+          if [ "$QUETZ_TEST_DBINIT" == "use-migrations"]; then
+            echo "Using migrations"
+          fi
+
           export QUETZ_IS_TEST=1
 
           echo "testing server"

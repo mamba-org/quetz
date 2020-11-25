@@ -36,8 +36,18 @@ def engine(config, database_url):
 
 
 @fixture
-def use_migrations():
-    return True
+def use_migrations() -> bool:
+    USE_MIGRATIONS = "use-migrations"
+    CREATE_TABLES = "create-tables"
+    migrations_env = os.environ.get("QUETZ_TEST_DBINIT", CREATE_TABLES)
+    if migrations_env.lower() == CREATE_TABLES:
+        return False
+    elif migrations_env.lower() == USE_MIGRATIONS:
+        return True
+    else:
+        raise ValueError(
+            f"QUETZ_TESET_DBINIT should be either {CREATE_TABLES} or {USE_MIGRATIONS}"
+        )
 
 
 @fixture
