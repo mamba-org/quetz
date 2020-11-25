@@ -10,6 +10,8 @@ import uuid
 from enum import Enum
 from pathlib import Path
 from typing import Dict, NoReturn, Optional
+from distutils.spawn import find_executable
+import subprocess
 
 import pkg_resources
 import typer
@@ -592,6 +594,36 @@ def list() -> NoReturn:
 
     if len(deployments) > 0:
         typer.echo('\n'.join([p for p in deployments]))
+
+
+@app.command()
+def plugin(
+    cmd: str, path: str = typer.Argument(None, help="Path to the plugin folder")
+) -> NoReturn:
+
+    if cmd == 'install':
+        abs_path = Path(path).absolute()
+        assert (abs_path / "setup.py").exists()
+
+        exes = ['micromamba', 'mamba', 'conda']
+        if (abs_path / "requirements.txt").exists():
+            for exe in exes:
+                exe_path = find_executable(exe)
+                if exe_path:
+                    break
+
+        if not exe_path:
+            print(f"Could not find any of {exes}")
+
+        print(f"Installing requirements.txt for {os.path.split(abs_path)[1]}")
+        subprocess.call(
+            [exe_path, 'install', '--file', abs_path / "requirements.txt", "-y"]
+        )
+
+        pip_exe_path = find_executable('pip')
+        subprocess.call([pip_exe_path, 'install', abs_path])
+    else:
+        print(f"Command '{cmd}' not yet understood.")
 
 
 if __name__ == "__main__":
