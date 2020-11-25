@@ -51,7 +51,24 @@ def use_migrations() -> bool:
 
 
 @fixture
-def session_maker(engine, home, database_url, use_migrations):
+def sql_connection(engine):
+
+    connection = engine.connect()
+    yield connection
+    connection.close()
+
+
+@fixture
+def alembic_config(database_url, sql_connection):
+    alembic_config = _alembic_config(database_url)
+    alembic_config.attributes["connection"] = sql_connection
+    return alembic_config
+
+
+@fixture
+def session_maker(
+    engine, home, database_url, use_migrations, sql_connection, alembic_config
+):
 
     # run the tests with a separate external DB transaction
     # so that we can easily rollback all db changes (even if commited)
@@ -61,26 +78,17 @@ def session_maker(engine, home, database_url, use_migrations):
 
     # see also: https://docs.sqlalchemy.org/en/13/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites # noqa
 
-    connection = engine.connect()
-
     if use_migrations:
 
-        # alembic_config = AlembicConfig(alembic_config_path)
-        # alembic_config.set_main_option('sqlalchemy.url', database_url)
-        # alembic_config.attributes["connection"] = connection
-        # alembic_config.set_main_option("script_location", "quetz:migrations")
-        alembic_config = _alembic_config(database_url)
-        alembic_config.attributes["connection"] = connection
         alembic_upgrade(alembic_config, 'heads', sql=False)
 
     else:
         Base.metadata.create_all(engine)
 
-    trans = connection.begin()
+    trans = sql_connection.begin()
 
-    yield get_session_maker(connection)
+    yield get_session_maker(sql_connection)
     trans.rollback()
-    connection.close()
 
 
 @fixture

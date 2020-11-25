@@ -9,7 +9,7 @@ import shutil
 import uuid
 from enum import Enum
 from pathlib import Path
-from typing import Dict, NoReturn
+from typing import Dict, NoReturn, Optional
 
 import pkg_resources
 import typer
@@ -74,10 +74,15 @@ def _alembic_config(db_url: str) -> AlembicConfig:
     return alembic_cfg
 
 
-def _run_migrations(db_url: str, branch_name: str = "heads") -> None:
+def _run_migrations(
+    db_url: Optional[str] = None,
+    alembic_config: Optional[AlembicConfig] = None,
+    branch_name: str = "heads",
+) -> None:
     logger.info('Running DB migrations on %r', db_url)
-    alembic_cfg = _alembic_config(db_url)
-    command.upgrade(alembic_cfg, branch_name)
+    if not alembic_config:
+        alembic_config = _alembic_config(db_url)
+    command.upgrade(alembic_config, branch_name)
 
 
 def _make_migrations(
