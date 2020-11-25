@@ -45,5 +45,5 @@ jobs:
           export MAMBA_EXE=$(pwd)/micromamba
           . $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
           micromamba activate ~/test_env
-          pip install -e .
+          pip install -e .[dev]
           mypy quetz --show-error-codes

@@ -27,9 +27,7 @@ def database_url(sqlite_url):
 
 
 @fixture
-def engine(config, database_url):
-    # we need to import the plugins before creating the db tables
-    # because plugins make define some extra db models
+def engine(database_url):
     engine = get_engine(database_url, echo=False)
     yield engine
     engine.dispose()
@@ -66,9 +64,16 @@ def alembic_config(database_url, sql_connection):
 
 
 @fixture
-def session_maker(
-    engine, home, database_url, use_migrations, sql_connection, alembic_config
-):
+def create_tables(alembic_config, engine, use_migrations):
+
+    if use_migrations:
+        alembic_upgrade(alembic_config, 'heads', sql=False)
+    else:
+        Base.metadata.create_all(engine)
+
+
+@fixture
+def session_maker(sql_connection, create_tables):
 
     # run the tests with a separate external DB transaction
     # so that we can easily rollback all db changes (even if commited)
@@ -77,13 +82,6 @@ def session_maker(
     # Note: that won't work when rollback is explictly called in the implementation
 
     # see also: https://docs.sqlalchemy.org/en/13/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites # noqa
-
-    if use_migrations:
-
-        alembic_upgrade(alembic_config, 'heads', sql=False)
-
-    else:
-        Base.metadata.create_all(engine)
 
     trans = sql_connection.begin()
 

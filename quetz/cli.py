@@ -18,6 +18,7 @@ from alembic import command
 from alembic.config import Config as AlembicConfig
 from sqlalchemy.orm.session import Session
 
+import quetz
 from quetz.config import (
     Config,
     _env_config_file,
@@ -80,52 +81,66 @@ def _run_migrations(
     branch_name: str = "heads",
 ) -> None:
     logger.info('Running DB migrations on %r', db_url)
-    if not alembic_config:
+    if not alembic_config and db_url:
         alembic_config = _alembic_config(db_url)
     command.upgrade(alembic_config, branch_name)
 
 
 def _make_migrations(
-    db_url: str, message: str, plugin_name: str = "quetz", initialize: bool = False
+    db_url: Optional[str],
+    message: str,
+    plugin_name: str = "quetz",
+    initialize: bool = False,
+    alembic_config: Optional[AlembicConfig] = None,
 ) -> None:
 
-    found = False
-    if not plugin_name == "quetz":
-        for entry_point in pkg_resources.iter_entry_points('quetz.models'):
-            logger.debug("loading plugin %r", entry_point.name)
-            entry_point.load()
-            if entry_point.name == plugin_name:
-                found = True
-    else:
-        found = True
+    if not (db_url or alembic_config):
+        raise ValueError("provide either alembic_config or db_url")
 
-    if not found:
+    found = False
+    for entry_point in pkg_resources.iter_entry_points('quetz.models'):
+        logger.debug("loading plugin %r", entry_point.name)
+        entry_point.load()
+        if entry_point.name == plugin_name:
+            found = True
+
+    if not plugin_name == "quetz" and not found:
         raise Exception(
             f"models entrypoint (quetz.models) for plugin {plugin_name} not registered"
         )
 
     logger.info('Making DB migrations on %r for %r', db_url, plugin_name)
-    alembic_cfg = _alembic_config(db_url)
-    if initialize:
-        # find path
+    if not alembic_config and db_url:
+        alembic_config = _alembic_config(db_url)
+
+    # find path
+    if plugin_name == "quetz":
+        version_path = Path(quetz.__file__).parent / 'migrations' / 'versions'
+    else:
         entry_point = next(
             pkg_resources.iter_entry_points('quetz.migrations', plugin_name)
         )
         module = entry_point.load()
-        version_path = os.path.join(os.path.split(module.__file__)[0], "versions")
+        version_path = Path(module.__file__).parent / "versions"
+    if initialize:
 
         command.revision(
-            alembic_cfg,
-            head="quetz",
+            alembic_config,
+            head="base",
+            depends_on="quetz",
             message=message,
             autogenerate=True,
-            version_path=version_path,
+            version_path=str(version_path),
             branch_label=plugin_name,
             splice=True,
         )
     else:
         command.revision(
-            alembic_cfg, head=f"{plugin_name}@head", message=message, autogenerate=True
+            alembic_config,
+            head=f"{plugin_name}@head",
+            message=message,
+            autogenerate=True,
+            version_path=str(version_path),
         )
 
 

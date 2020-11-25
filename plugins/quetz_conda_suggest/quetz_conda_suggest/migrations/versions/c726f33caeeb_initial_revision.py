@@ -1,18 +1,18 @@
 """initial revision
 
-Revision ID: b8b107f2c752
-Revises: a80fb051a659
-Create Date: 2020-11-25 10:30:37.716199
+Revision ID: c726f33caeeb
+Revises:
+Create Date: 2020-11-26 00:15:03.617759
 
 """
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = 'b8b107f2c752'
-down_revision = 'a80fb051a659'
+revision = 'c726f33caeeb'
+down_revision = None
 branch_labels = ('quetz-conda_suggest',)
-depends_on = None
+depends_on = 'quetz'
 
 
 def upgrade():
