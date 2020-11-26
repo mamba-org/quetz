@@ -33,10 +33,9 @@ def test_local_store():
     assert files == ["test_2.txt"]
 
 
-@pytest.mark.skipif(s3_config['key'] is None, reason="requires s3 credentials")
+@pytest.mark.skipif(not s3_config['key'], reason="requires s3 credentials")
 def test_s3_store():
     pkg_store = S3Store(s3_config)
-    print(s3_config)
 
     pkg_store.create_channel("mychannel")
     pkg_store.add_file("content", "mychannel", "test.txt")
