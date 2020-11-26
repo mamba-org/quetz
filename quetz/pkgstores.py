@@ -8,7 +8,7 @@ import os.path as path
 import shutil
 import tempfile
 from contextlib import contextmanager
-from typing import IO, BinaryIO, NoReturn, Union
+from typing import IO, BinaryIO, List, NoReturn, Union
 
 import fsspec
 
@@ -27,7 +27,7 @@ class PackageStore(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def list_files(self, channel: str):
+    def list_files(self, channel: str) -> List[str]:
         pass
 
     @abc.abstractmethod
@@ -42,6 +42,10 @@ class PackageStore(abc.ABC):
 
     @abc.abstractmethod
     def serve_path(self, channel, src):
+        pass
+
+    @abc.abstractmethod
+    def delete_file(self, channel: str, destination: str):
         pass
 
 

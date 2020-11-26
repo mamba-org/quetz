@@ -5,6 +5,7 @@ from unittest.mock import ANY
 import pytest
 
 from quetz import db_models
+from quetz.config import Config
 from quetz.dao import Dao
 from quetz.db_models import Profile, User
 from quetz.rest_models import Channel, Package
@@ -347,8 +348,11 @@ def test_delete_channel_permissions(
 
 @pytest.mark.parametrize("user_role", ["owner"])
 def test_delete_channel_with_packages(
-    db, auth_client, private_channel, private_package_version
+    db, auth_client, private_channel, private_package_version, config: Config
 ):
+
+    pkg_store = config.get_package_store()
+    pkg_store.add_file("test-file", private_channel.name, "test_file.txt")
 
     response = auth_client.delete(f"/api/channels/{private_channel.name}")
 
@@ -369,10 +373,13 @@ def test_delete_channel_with_packages(
         .one_or_none()
     )
 
+    files = pkg_store.list_files(private_channel.name)
+
     assert response.status_code == 200
     assert channel is None
     assert version is None
     assert package is None
+    assert not files
 
 
 @pytest.mark.parametrize(
