@@ -2,8 +2,9 @@ import os
 
 import pytest
 
-from quetz.config import Config
+from quetz.config import Config, ConfigEntry, ConfigSection
 from quetz.dao import Dao
+from quetz.errors import ConfigError
 
 
 @pytest.fixture
@@ -77,3 +78,43 @@ def test_config_with_path(config_dir, config_base):
     c_new = Config(one_path)
 
     assert c_new is c_one
+
+
+def test_config_extend_require(config):
+    with pytest.raises(ConfigError):
+        config.register(
+            [
+                ConfigSection(
+                    "other_plugin",
+                    [
+                        ConfigEntry("some_config_value", str),
+                    ],
+                )
+            ]
+        )
+    # remove last entry again
+    config._config_map.pop()
+
+
+@pytest.mark.parametrize(
+    "config_extra", ["[extra_plugin]\nsome=\"testvalue\"\nconfig=\"othervalue\"\n"]
+)
+def test_config_extend(config):
+    config.register(
+        [
+            ConfigSection(
+                "extra_plugin",
+                [
+                    ConfigEntry("some", str),
+                    ConfigEntry("config", str),
+                    ConfigEntry("has_default", str, "iamdefault"),
+                ],
+            )
+        ]
+    )
+
+    assert config.extra_plugin_some == 'testvalue'
+    assert config.extra_plugin_config == 'othervalue'
+    assert config.extra_plugin_has_default == 'iamdefault'
+
+    config._config_map.pop()

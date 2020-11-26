@@ -87,6 +87,8 @@ def upload_packages(args):
         if parts.path[:4] != "/api":
             parts = parts._replace(path=f"/api{parts.path}")
             channel_url = urlunparse(parts)
+        else:
+            channel_url = channel
 
     package_file_names = args.packages
     # Find packages in directory if the single package argument is a directory
