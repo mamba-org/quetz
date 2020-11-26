@@ -96,3 +96,6 @@ jobs:
 
           pip install ./plugins/quetz_conda_suggest
           pytest -v ./plugins/quetz_conda_suggest
+
+          pip install ./plugins/quetz_current_repodata
+          pytest -v ./plugins/quetz_current_repodata
