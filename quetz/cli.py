@@ -18,7 +18,6 @@ from alembic import command
 from alembic.config import Config as AlembicConfig
 from sqlalchemy.orm.session import Session
 
-import quetz
 from quetz.config import (
     Config,
     _env_config_file,
@@ -115,13 +114,13 @@ def _make_migrations(
 
     # find path
     if plugin_name == "quetz":
-        version_path = Path(quetz.__file__).parent / 'migrations' / 'versions'
+        version_path = None  # Path(quetz.__file__).parent / 'migrations' / 'versions'
     else:
         entry_point = next(
             pkg_resources.iter_entry_points('quetz.migrations', plugin_name)
         )
         module = entry_point.load()
-        version_path = Path(module.__file__).parent / "versions"
+        version_path = str(Path(module.__file__).parent / "versions")
     if initialize:
 
         command.revision(
@@ -130,7 +129,7 @@ def _make_migrations(
             depends_on="quetz",
             message=message,
             autogenerate=True,
-            version_path=str(version_path),
+            version_path=version_path,
             branch_label=plugin_name,
             splice=True,
         )
@@ -140,7 +139,7 @@ def _make_migrations(
             head=f"{plugin_name}@head",
             message=message,
             autogenerate=True,
-            version_path=str(version_path),
+            version_path=version_path,
         )
 
 
