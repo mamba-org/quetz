@@ -63,6 +63,10 @@ jobs:
           QUETZ_TEST_DBINIT: ${{ matrix.db_init }}
           POSTGRES_HOST: localhost
           POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }}
+          S3_ACCESS_KEY: ${{ secrets.s3_access_key }}
+          S3_SECRET_KEY: ${{ secrets.s3_secret_key }}
+          S3_ENDPOINT: https://s3.sbg.cloud.ovh.net/
+          S3_REGION: sbg
         run: |
           echo ${QUETZ_TEST_DBINIT}
           export MAMBA_ROOT_PREFIX=~/micromamba
