@@ -391,6 +391,19 @@ def get_channel(channel: db_models.Channel = Depends(get_channel_allow_proxy)):
     return channel
 
 
+@api_router.delete(
+    "/channels/{channel_name}",
+    tags=["channels"],
+)
+def delete_channel(
+    channel: db_models.Channel = Depends(get_channel_allow_proxy),
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    auth.assert_delete_channel(channel)
+    dao.delete_channel(channel.name)
+
+
 @api_router.put("/channels/{channel_name}/actions", tags=["channels"])
 def put_mirror_channel_actions(
     action: rest_models.ChannelAction,

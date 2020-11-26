@@ -4,6 +4,7 @@ from unittest.mock import ANY
 
 import pytest
 
+from quetz import db_models
 from quetz.dao import Dao
 from quetz.db_models import Profile, User
 from quetz.rest_models import Channel, Package
@@ -320,6 +321,58 @@ def test_create_normal_channel_permissions(auth_client, expected_status):
         },
     )
     assert response.status_code == expected_status
+
+
+@pytest.mark.parametrize("channel_role", ["owner", "maintainer", "member"])
+@pytest.mark.parametrize("user_role", ["owner", "maintainer", "member", None])
+def test_delete_channel_permissions(
+    db, auth_client, public_channel, user_role, channel_role
+):
+
+    response = auth_client.delete("/api/channels/public-channel")
+
+    channel = (
+        db.query(db_models.Channel)
+        .filter(db_models.Channel.name == "public-channel")
+        .one_or_none()
+    )
+
+    if user_role in ["owner", "maintainer"] or channel_role in ["owner", "maintainer"]:
+        assert response.status_code == 200
+        assert channel is None
+    else:
+        assert response.status_code == 403
+        assert channel is not None
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+def test_delete_channel_with_packages(
+    db, auth_client, private_channel, private_package_version
+):
+
+    response = auth_client.delete(f"/api/channels/{private_channel.name}")
+
+    channel = (
+        db.query(db_models.Channel)
+        .filter(db_models.Channel.name == private_channel.name)
+        .one_or_none()
+    )
+
+    version = (
+        db.query(db_models.PackageVersion)
+        .filter_by(package_name=private_package_version.package_name)
+        .one_or_none()
+    )
+    package = (
+        db.query(db_models.Package)
+        .filter_by(name=private_package_version.package_name)
+        .one_or_none()
+    )
+
+    assert response.status_code == 200
+    assert channel is None
+    assert version is None
+    assert package is None
 
 
 @pytest.mark.parametrize(
