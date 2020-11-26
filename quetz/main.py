@@ -400,8 +400,12 @@ def delete_channel(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
+
     auth.assert_delete_channel(channel)
     dao.delete_channel(channel.name)
+    files = pkgstore.list_files(channel.name)
+    for f in files:
+        pkgstore.delete_file(channel.name, destination=f)
 
 
 @api_router.put("/channels/{channel_name}/actions", tags=["channels"])

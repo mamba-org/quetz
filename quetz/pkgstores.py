@@ -46,12 +46,12 @@ class PackageStore(abc.ABC):
 
     @abc.abstractmethod
     def delete_file(self, channel: str, destination: str):
-        pass
+        """remove file from package store"""
 
 
 class LocalStore(PackageStore):
     def __init__(self, config):
-        self.fs = fsspec.filesystem("file")
+        self.fs: fsspec.AbstractFileSystem = fsspec.filesystem("file")
         self.channels_dir = config['channels_dir']
 
     @contextmanager
@@ -89,6 +89,9 @@ class LocalStore(PackageStore):
         mode = "w" if isinstance(data, str) else "wb"
         with self._atomic_open(channel, destination, mode) as f:
             f.write(data)
+
+    def delete_file(self, channel: str, destination: str):
+        self.fs.delete(path.join(self.channels_dir, channel, destination))
 
     def serve_path(self, channel, src):
         return self.fs.open(path.join(self.channels_dir, channel, src)).f

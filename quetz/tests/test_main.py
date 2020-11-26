@@ -353,6 +353,7 @@ def test_delete_channel_with_packages(
 
     pkg_store = config.get_package_store()
     pkg_store.add_file("test-file", private_channel.name, "test_file.txt")
+    pkg_store.add_file("second", private_channel.name, "subdir/second_file.txt")
 
     response = auth_client.delete(f"/api/channels/{private_channel.name}")
 
