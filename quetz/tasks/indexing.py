@@ -2,7 +2,6 @@
 # Distributed under the terms of the Modified BSD License.
 
 import bz2
-import hashlib
 import json
 import logging
 import numbers
@@ -13,6 +12,7 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 import quetz.config
 from quetz import channel_data, repo_data
 from quetz.condainfo import MAX_CONDA_TIMESTAMP
+from quetz.utils import add_entry_for_index
 
 _iec_prefixes = (
     # IEEE 1541 - IEEE Standard for Prefixes for Binary Multiples
@@ -111,57 +111,24 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
 
     # NB. No rss.xml is being generated here
 
+    files = {}
+    packages = {}
     subdir_template = jinjaenv.get_template("subdir-index.html.j2")
     for dir in subdirs:
         logger.debug(f"creating indexes for subdir {dir} of channel {channel_name}")
         raw_repodata = repo_data.export(dao, channel_name, dir)
 
-        repodata = json.dumps(raw_repodata, indent=2, sort_keys=True)
-        md5_repodata = hashlib.md5()
-        md5_repodata.update(repodata.encode("utf-8"))
-        sha_repodata = hashlib.sha256()
-        sha_repodata.update(repodata.encode("utf-8"))
+        repodata = json.dumps(raw_repodata, indent=2, sort_keys=True).encode("utf-8")
+        compressed_repodata = bz2.compress(repodata)
 
-        compressed_repodata = bz2.compress(repodata.encode("utf-8"))
-        md5_compressed = hashlib.md5()
-        md5_compressed.update(compressed_repodata)
-        sha_compressed = hashlib.sha256()
-        sha_compressed.update(compressed_repodata)
+        files[dir] = []
+        packages[dir] = raw_repodata["packages"]
+        fname = "repodata.json"
+        pkgstore.add_file(compressed_repodata, channel_name, f"{dir}/{fname}.bz2")
+        pkgstore.add_file(repodata, channel_name, f"{dir}/{fname}")
 
-        add_files = []
-        for fname in ("repodata.json", "current_repodata.json"):
-            pkgstore.add_file(compressed_repodata, channel_name, f"{dir}/{fname}.bz2")
-            pkgstore.add_file(repodata, channel_name, f"{dir}/{fname}")
-            add_files.append(
-                {
-                    "name": f"{fname}",
-                    "size": len(repodata),
-                    "timestamp": datetime.now(timezone.utc),
-                    "md5": md5_repodata.hexdigest(),
-                    "sha256": sha_repodata.hexdigest(),
-                }
-            )
-            add_files.append(
-                {
-                    "name": f"{fname}.bz2",
-                    "size": len(compressed_repodata),
-                    "timestamp": datetime.now(timezone.utc),
-                    "md5": md5_compressed.hexdigest(),
-                    "sha256": sha_compressed.hexdigest(),
-                }
-            )
-
-        # Generate subdir index.html
-        pkgstore.add_file(
-            subdir_template.render(
-                title=f"{channel_name}/{dir}",
-                packages=raw_repodata["packages"],
-                current_time=datetime.now(timezone.utc),
-                add_files=add_files,
-            ),
-            channel_name,
-            f"{dir}/index.html",
-        )
+        add_entry_for_index(files, dir, fname, repodata)
+        add_entry_for_index(files, dir, f"{fname}.bz2", compressed_repodata)
 
     pm = quetz.config.get_plugin_manager()
 
@@ -169,4 +136,19 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
         pkgstore=pkgstore,
         channel_name=channel_name,
         subdirs=subdirs,
+        files=files,
+        packages=packages,
     )
+
+    for dir in subdirs:
+        # Generate subdir index.html
+        pkgstore.add_file(
+            subdir_template.render(
+                title=f"{channel_name}/{dir}",
+                packages=packages[dir],
+                current_time=datetime.now(timezone.utc),
+                add_files=files[dir],
+            ),
+            channel_name,
+            f"{dir}/index.html",
+        )

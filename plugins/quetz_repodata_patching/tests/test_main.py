@@ -251,7 +251,7 @@ def pkgstore(config):
 
 
 @pytest.mark.parametrize("archive_format", ["tarbz2", "conda"])
-@pytest.mark.parametrize("repodata_stem", ["repodata", "current_repodata"])
+@pytest.mark.parametrize("repodata_stem", ["repodata"])
 @pytest.mark.parametrize("compressed_repodata", [False, True])
 @pytest.mark.parametrize(
     "revoke_instructions",
@@ -439,25 +439,25 @@ def test_patches_for_subdir(
     assert "repodata_from_packages.json" in content
     assert "repodata_from_packages.json.bz2" in content
 
-    for fname in ("repodata.json", "current_repodata.json"):
+    fname = "repodata.json"
 
-        repodata_path = os.path.join(
-            pkgstore.channels_dir, channel_name, package_subdir, fname
-        )
+    repodata_path = os.path.join(
+        pkgstore.channels_dir, channel_name, package_subdir, fname
+    )
 
-        assert os.path.isfile(repodata_path)
+    assert os.path.isfile(repodata_path)
 
-        with open(repodata_path) as fid:
-            data = json.load(fid)
+    with open(repodata_path) as fid:
+        data = json.load(fid)
 
-        packages = data["packages"]
+    packages = data["packages"]
 
-        pkg = packages[package_file_name]
+    pkg = packages[package_file_name]
 
-        if patches_subdir == package_subdir:
-            assert pkg['run_exports'] == {"weak": ["otherpackage > 0.2"]}
-        else:
-            assert pkg['run_exports'] == {"weak": ["otherpackage > 0.1"]}
+    if patches_subdir == package_subdir:
+        assert pkg['run_exports'] == {"weak": ["otherpackage > 0.2"]}
+    else:
+        assert pkg['run_exports'] == {"weak": ["otherpackage > 0.1"]}
 
 
 def test_no_repodata_patches_package(
@@ -491,24 +491,22 @@ def test_no_repodata_patches_package(
     assert "repodata_from_packages.json" not in content
     assert "repodata_from_packages.json.bz2" not in content
 
-    for fname in ("repodata.json", "current_repodata.json"):
+    fname = "repodata.json"
 
-        repodata_path = os.path.join(
-            pkgstore.channels_dir, channel_name, "noarch", fname
-        )
+    repodata_path = os.path.join(pkgstore.channels_dir, channel_name, "noarch", fname)
 
-        assert os.path.isfile(repodata_path)
+    assert os.path.isfile(repodata_path)
 
-        with open(repodata_path) as fid:
-            data = json.load(fid)
+    with open(repodata_path) as fid:
+        data = json.load(fid)
 
-        packages = data["packages"]
+    packages = data["packages"]
 
-        pkg = packages[package_file_name]
+    pkg = packages[package_file_name]
 
-        assert pkg['run_exports'] == {"weak": ["otherpackage > 0.1"]}
+    assert pkg['run_exports'] == {"weak": ["otherpackage > 0.1"]}
 
-        assert not pkg.get("revoked", False)
-        assert 'package_has_been_revoked' not in pkg["depends"]
+    assert not pkg.get("revoked", False)
+    assert 'package_has_been_revoked' not in pkg["depends"]
 
-        assert package_file_name not in data.get("removed", ())
+    assert package_file_name not in data.get("removed", ())

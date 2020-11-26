@@ -1,5 +1,4 @@
 import json
-import os
 from contextlib import contextmanager
 
 from sqlalchemy import and_, func
@@ -8,14 +7,17 @@ import quetz
 from quetz.config import Config
 from quetz.database import get_session
 from quetz.db_models import PackageVersion
+from quetz.utils import add_entry_for_index
 
 from . import db_models
 from .api import router
 
+config = Config()
+pkgstore = config.get_package_store()
+
 
 @contextmanager
 def get_db_manager():
-    config = Config()
 
     db = get_session(config.sqlalchemy_database_url)
 
@@ -28,6 +30,21 @@ def get_db_manager():
 @quetz.hookimpl
 def register_router():
     return router
+
+
+@quetz.hookimpl
+def post_package_indexing(
+    pkgstore: "quetz.pkgstores.PackageStore", channel_name, subdirs, files, packages
+):
+    for subdir in subdirs:
+        fname = f"{channel_name}.{subdir}.map"
+        try:
+            f = pkgstore.serve_path(channel_name, f"{subdir}/{fname}")
+            data_bytes = f.read()
+
+            add_entry_for_index(files, subdir, fname, data_bytes)
+        except FileNotFoundError:
+            pass
 
 
 @quetz.hookimpl
@@ -93,12 +110,10 @@ def generate_channel_suggest_map(db, channel_name, subdir):
             for (k, v) in files_data.items():
                 channel_suggest_map[k] = v
 
-    map_filename = "{0}.{1}.map".format(channel_name, subdir)
-    map_filepath = os.path.join(os.getcwd(), "channels", channel_name, subdir)
+    fname = f"{channel_name}.{subdir}.map"
+    path = f"{subdir}/{fname}"
+    data_bytes = (
+        "\n".join(f"{k}:{v}" for (k, v) in sorted(channel_suggest_map.items())) + "\n"
+    ).encode("utf-8")
 
-    if not os.path.exists(map_filepath):
-        os.makedirs(map_filepath)
-
-    with open(os.path.join(map_filepath, map_filename), "w") as f:
-        for (k, v) in sorted(channel_suggest_map.items()):
-            f.write("{0}:{1}\n".format(k, v))
+    pkgstore.add_file(data_bytes, channel_name, path)

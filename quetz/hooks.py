@@ -33,7 +33,11 @@ def post_add_package_version(
 
 @hookspec
 def post_package_indexing(
-    pkgstore: "quetz.pkgstores.PackageStore", channel_name: str, subdirs: List[str]
+    pkgstore: "quetz.pkgstores.PackageStore",
+    channel_name: str,
+    subdirs: List[str],
+    files: dict,
+    packages: dict,
 ) -> None:
     """hook for post-processsing after building indexes.
 
@@ -46,5 +50,12 @@ def post_package_indexing(
     :param list subdirs:
         list of subdirs with indexes
 
+    :param dict files:
+        a dict that contains list of files for each subdir
+        - used in updating the index
+
+    :param dict packages:
+        a dict that contains list of packages for each subdir
+        - used in updating the index
     """
     pass

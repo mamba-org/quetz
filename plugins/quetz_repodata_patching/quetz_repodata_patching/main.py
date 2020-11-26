@@ -1,9 +1,7 @@
 import bz2
-import hashlib
 import json
 import tarfile
 from contextlib import contextmanager
-from datetime import datetime, timezone
 from io import BytesIO
 from zipfile import ZipFile
 
@@ -13,7 +11,7 @@ import quetz
 from quetz.config import Config
 from quetz.database import get_session
 from quetz.db_models import PackageFormatEnum, PackageVersion
-from quetz.tasks.indexing import _jinjaenv
+from quetz.utils import add_entry_for_index
 
 
 def update_dict(packages, instructions):
@@ -96,46 +94,6 @@ def _load_instructions(tar, path):
     return patch_instructions
 
 
-def update_index(pkgstore, updated_files, channel_name, subdir, packages):
-    "update index.html in platform subdir"
-
-    add_files = []
-
-    for fname, data in updated_files:
-        md5 = hashlib.md5()
-        sha = hashlib.sha256()
-        if not isinstance(data, bytes):
-            data_bytes = data.encode("utf-8")
-        else:
-            data_bytes = data
-        md5.update(data_bytes)
-        sha.update(data_bytes)
-
-        add_files.append(
-            {
-                "name": f"{fname}",
-                "size": len(data_bytes),
-                "timestamp": datetime.now(timezone.utc),
-                "md5": md5.hexdigest(),
-                "sha256": sha.hexdigest(),
-            }
-        )
-
-    jinjaenv = _jinjaenv()
-    subdir_template = jinjaenv.get_template("subdir-index.html.j2")
-
-    pkgstore.add_file(
-        subdir_template.render(
-            title=f"{channel_name}/{subdir}",
-            packages=packages,
-            current_time=datetime.now(timezone.utc),
-            add_files=add_files,
-        ),
-        channel_name,
-        f"{subdir}/index.html",
-    )
-
-
 @contextmanager
 def get_db_manager():
     config = Config()
@@ -150,7 +108,7 @@ def get_db_manager():
 
 @quetz.hookimpl
 def post_package_indexing(
-    pkgstore: "quetz.pkgstores.PackageStore", channel_name, subdirs
+    pkgstore: "quetz.pkgstores.PackageStore", channel_name, subdirs, files, packages
 ):
 
     with get_db_manager() as db:
@@ -187,33 +145,29 @@ def post_package_indexing(
             pkgstore.add_file(content, channel_name, subdir_path)
             pkgstore.add_file(compressed_content, channel_name, subdir_path + ".bz2")
 
-            updated_files.append((path, content))
-            updated_files.append((path + ".bz2", compressed_content))
+            add_entry_for_index(files, subdir, path, content)
+            add_entry_for_index(files, subdir, f"{path}.bz2", compressed_content)
 
         with extract_(fs) as tar:
 
             for subdir in subdirs:
-                updated_files = []
-                packages = {}
+                packages[subdir] = {}
                 path = f"{subdir}/patch_instructions.json"
 
                 patch_instructions = _load_instructions(tar, path)
 
-                for fname in ("repodata", "current_repodata"):
-                    fs = pkgstore.serve_path(channel_name, f"{subdir}/{fname}.json")
+                fname = "repodata"
+                fs = pkgstore.serve_path(channel_name, f"{subdir}/{fname}.json")
 
-                    repodata_str = fs.read()
-                    repodata = json.loads(repodata_str)
+                repodata_str = fs.read()
+                repodata = json.loads(repodata_str)
 
-                    _addfile(repodata_str, f"{fname}_from_packages.json")
+                _addfile(repodata_str, f"{fname}_from_packages.json")
 
-                    patch_repodata(repodata, patch_instructions)
+                patch_repodata(repodata, patch_instructions)
 
-                    if fname == 'repodata':
-                        packages.update(repodata["packages"])
-                        packages.update(repodata["packages.conda"])
+                packages[subdir].update(repodata["packages"])
+                packages[subdir].update(repodata["packages.conda"])
 
-                    patched_repodata_str = json.dumps(repodata)
-                    _addfile(patched_repodata_str, f"{fname}.json")
-
-                update_index(pkgstore, updated_files, channel_name, subdir, packages)
+                patched_repodata_str = json.dumps(repodata)
+                _addfile(patched_repodata_str, f"{fname}.json")
