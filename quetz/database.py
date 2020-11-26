@@ -8,8 +8,6 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
 from sqlalchemy.pool import StaticPool
 
-from quetz.db_models import Base
-
 
 def get_engine(db_url, echo: bool = False, **kwargs) -> Engine:
 
@@ -22,7 +20,6 @@ def get_engine(db_url, echo: bool = False, **kwargs) -> Engine:
         kwargs.setdefault('poolclass', StaticPool)
 
     engine = create_engine(db_url, echo=echo, **kwargs)
-    Base.metadata.create_all(engine)
     return engine
 
 

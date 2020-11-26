@@ -16,6 +16,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         test_database: ["sqlite", "postgres"]
+        db_init: ["use-migrations", "create-tables"]
     services:
       postgres:
         image: postgres
@@ -51,16 +52,18 @@ jobs:
           . $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
           ./micromamba create -y -p ~/test_env 'python>=3.7' pip fastapi typer authlib \
                        httpx=0.12.0 sqlalchemy sqlite psycopg2 python-multipart uvicorn zstandard \
-                       appdirs toml fsspec conda requests "h2<4.0.0" starlette-full jinja2 itsdangerous -c conda-forge
+                       appdirs toml fsspec conda requests "h2<4.0.0" starlette-full jinja2 itsdangerous alembic -c conda-forge
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
       - name: test quetz
         shell: bash -l -euo pipefail {0}
         env:
           TEST_DB_BACKEND: ${{ matrix.test_database }}
+          QUETZ_TEST_DBINIT: ${{ matrix.db_init }}
           POSTGRES_HOST: localhost
           POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }}
         run: |
+          echo ${QUETZ_TEST_DBINIT}
           export MAMBA_ROOT_PREFIX=~/micromamba
           export MAMBA_EXE=$(pwd)/micromamba
           . $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
@@ -73,13 +76,18 @@ jobs:
             export QUETZ_TEST_DATABASE="postgresql://postgres:mysecretpassword@${POSTGRES_HOST}:${POSTGRES_PORT}/postgres"
             echo "Running with postgres"
           fi
+
+          if [ "$QUETZ_TEST_DBINIT" == "use-migrations"]; then
+            echo "Using migrations"
+          fi
+
           export QUETZ_IS_TEST=1
 
           echo "testing server"
           pip install -e .
           pytest -v ./quetz/tests/
 
-          echo "testing plugins"
+          echo "install and test plugins"
           pip install ./plugins/quetz_runexports
           pytest -v ./plugins/quetz_runexports/tests
           

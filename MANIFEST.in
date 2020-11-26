@@ -1,3 +1,4 @@
 graft quetz/basic_frontend
 include quetz/config.toml
 graft quetz/templates
+recursive-include quetz/migrations *.py

@@ -112,6 +112,12 @@ class Config:
             ],
             required=False,
         ),
+        ConfigSection(
+            "plugins",
+            [
+                ConfigEntry("enabled", list, default=list),
+            ],
+        ),
     )
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]
@@ -319,7 +325,9 @@ def create_config(
     return config.format(client_id, client_secret, database_url, secret, https)
 
 
-def configure_logger(config=None, loggers=("quetz", "urllib3.util.retry")):
+def configure_logger(
+    config=None, loggers=("quetz", "urllib3.util.retry", "alembic", "sqlalchemy")
+):
     """Get quetz logger"""
 
     if hasattr(config, "logging_level"):
@@ -369,9 +377,17 @@ def configure_logger(config=None, loggers=("quetz", "urllib3.util.retry")):
             logger.addHandler(fh)
 
 
-def get_plugin_manager() -> pluggy.PluginManager:
+def get_plugin_manager(config=None) -> pluggy.PluginManager:
     """Create an instance of plugin manager."""
+
+    if not config:
+        config = Config()
+
     pm = pluggy.PluginManager("quetz")
     pm.add_hookspecs(hooks)
-    pm.load_setuptools_entrypoints("quetz")
+    if config.configured_section("plugins"):
+        for name in config.plugins_enabled:
+            pm.load_setuptools_entrypoints("quetz", name)
+    else:
+        pm.load_setuptools_entrypoints("quetz")
     return pm

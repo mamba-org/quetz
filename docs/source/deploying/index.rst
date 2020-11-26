@@ -10,5 +10,6 @@ infrastructure.
 
    configuration
    database
+   migrations
    frontend
 
