@@ -37,6 +37,7 @@ def post_package_indexing(
     channel_name: str,
     subdirs: List[str],
     files: dict,
+    packages: dict,
 ) -> None:
     """hook for post-processsing after building indexes.
 
@@ -51,6 +52,10 @@ def post_package_indexing(
 
     :param dict files:
         a dict that contains list of files for each subdir
+        - used in updating the index
+
+    :param dict packages:
+        a dict that contains list of packages for each subdir
         - used in updating the index
     """
     pass

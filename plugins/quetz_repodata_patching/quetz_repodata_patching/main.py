@@ -108,7 +108,7 @@ def get_db_manager():
 
 @quetz.hookimpl
 def post_package_indexing(
-    pkgstore: "quetz.pkgstores.PackageStore", channel_name, subdirs, files
+    pkgstore: "quetz.pkgstores.PackageStore", channel_name, subdirs, files, packages
 ):
 
     with get_db_manager() as db:
@@ -151,7 +151,7 @@ def post_package_indexing(
         with extract_(fs) as tar:
 
             for subdir in subdirs:
-                packages = {}
+                packages[subdir] = {}
                 path = f"{subdir}/patch_instructions.json"
 
                 patch_instructions = _load_instructions(tar, path)
@@ -166,9 +166,8 @@ def post_package_indexing(
 
                 patch_repodata(repodata, patch_instructions)
 
-                if fname == 'repodata':
-                    packages.update(repodata["packages"])
-                    packages.update(repodata["packages.conda"])
+                packages[subdir].update(repodata["packages"])
+                packages[subdir].update(repodata["packages.conda"])
 
                 patched_repodata_str = json.dumps(repodata)
                 _addfile(patched_repodata_str, f"{fname}.json")

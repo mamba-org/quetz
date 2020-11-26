@@ -34,7 +34,7 @@ def register_router():
 
 @quetz.hookimpl
 def post_package_indexing(
-    pkgstore: "quetz.pkgstores.PackageStore", channel_name, subdirs, files
+    pkgstore: "quetz.pkgstores.PackageStore", channel_name, subdirs, files, packages
 ):
     for subdir in subdirs:
         fname = f"{channel_name}.{subdir}.map"

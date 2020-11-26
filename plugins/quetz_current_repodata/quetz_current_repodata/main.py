@@ -9,7 +9,7 @@ from quetz.utils import add_entry_for_index
 
 @quetz.hookimpl
 def post_package_indexing(
-    pkgstore: "quetz.pkgstores.PackageStore", channel_name, subdirs, files
+    pkgstore: "quetz.pkgstores.PackageStore", channel_name, subdirs, files, packages
 ):
     fname = "current_repodata.json"
     pins = {}
