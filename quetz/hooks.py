@@ -49,5 +49,8 @@ def post_package_indexing(
     :param list subdirs:
         list of subdirs with indexes
 
+    :param dict files:
+        a dict that contains list of files for each subdir
+        - used in updating the index
     """
     pass

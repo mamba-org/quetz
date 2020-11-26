@@ -1,7 +1,5 @@
-import hashlib
 import json
 from contextlib import contextmanager
-from datetime import datetime, timezone
 
 from sqlalchemy import and_, func
 
@@ -9,6 +7,7 @@ import quetz
 from quetz.config import Config
 from quetz.database import get_session
 from quetz.db_models import PackageVersion
+from quetz.utils import add_entry_for_index
 
 from . import db_models
 from .api import router
@@ -43,21 +42,7 @@ def post_package_indexing(
             f = pkgstore.serve_path(channel_name, f"{subdir}/{fname}")
             data_bytes = f.read()
 
-            md5 = hashlib.md5()
-            sha = hashlib.sha256()
-
-            md5.update(data_bytes)
-            sha.update(data_bytes)
-
-            files[subdir].append(
-                {
-                    "name": fname,
-                    "size": len(data_bytes),
-                    "timestamp": datetime.now(timezone.utc),
-                    "md5": md5.hexdigest(),
-                    "sha256": sha.hexdigest(),
-                }
-            )
+            add_entry_for_index(files, subdir, fname, data_bytes)
         except FileNotFoundError:
             pass
 
@@ -127,8 +112,8 @@ def generate_channel_suggest_map(db, channel_name, subdir):
 
     fname = f"{channel_name}.{subdir}.map"
     path = f"{subdir}/{fname}"
-    data_bytes = "\n".join(
-        f"{k}:{v}" for (k, v) in sorted(channel_suggest_map.items())
+    data_bytes = (
+        "\n".join(f"{k}:{v}" for (k, v) in sorted(channel_suggest_map.items())) + "\n"
     ).encode("utf-8")
 
     pkgstore.add_file(data_bytes, channel_name, path)
