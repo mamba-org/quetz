@@ -6,7 +6,17 @@ import os
 from base64 import b64encode
 from distutils.util import strtobool
 from secrets import token_bytes
-from typing import Any, Dict, List, NamedTuple, NoReturn, Optional, Type, Union
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    NamedTuple,
+    NoReturn,
+    Optional,
+    Type,
+    Union,
+)
 
 import appdirs
 import pluggy
@@ -54,7 +64,7 @@ class ConfigSection(NamedTuple):
 
 class Config:
 
-    _config_map = (
+    _config_map = [
         ConfigSection(
             "github",
             [
@@ -118,7 +128,7 @@ class Config:
                 ConfigEntry("enabled", list, default=list),
             ],
         ),
-    )
+    ]
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]
 
@@ -173,6 +183,9 @@ class Config:
 
         self.config.update(self._read_config(path))
 
+        self._trigger_update_config()
+
+    def _trigger_update_config(self):
         def set_entry_attr(entry, section=""):
             env_var_value = os.getenv(entry.env_var(section))
 
@@ -290,6 +303,11 @@ class Config:
         """
 
         return bool(self.config.get(section))
+
+    def register(self, extra_config: Iterable[ConfigSection]):
+        """Register additional config variables"""
+        self._config_map += extra_config
+        self._trigger_update_config()
 
 
 def create_config(
