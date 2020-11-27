@@ -219,6 +219,9 @@ class Rules:
             channel_name, [OWNER], package_name, [OWNER]
         )
 
+    def assert_delete_channel(self, channel):
+        self.assert_channel_roles(channel.name, [OWNER, MAINTAINER])
+
     def assert_channel_read(self, channel):
         if channel.private:
             self.assert_channel_roles(channel.name, [OWNER, MAINTAINER, MEMBER])

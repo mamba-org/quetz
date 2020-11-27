@@ -135,6 +135,12 @@ class Dao:
         )
         self.db.commit()
 
+    def delete_channel(self, channel_name):
+        channel = self.get_channel(channel_name)
+
+        self.db.delete(channel)
+        self.db.commit()
+
     def get_packages(self, channel_name: str, skip: int, limit: int, q: Optional[str]):
         query = self.db.query(Package).filter(Package.channel_name == channel_name)
 
