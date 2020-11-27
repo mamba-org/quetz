@@ -190,4 +190,5 @@ class S3Store(PackageStore):
 
         channel_bucket = self._bucket_map(channel)
 
-        return [remove_prefix(f, channel_bucket) for f in self.fs.find(channel_bucket)]
+        with self._get_fs() as fs:
+            return [remove_prefix(f, channel_bucket) for f in fs.find(channel_bucket)]
