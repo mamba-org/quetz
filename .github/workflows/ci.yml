@@ -75,6 +75,7 @@ jobs:
 
           # install dev dependencies
           pip install -e .[dev]
+          pip install pytest-github-actions-annotate-failures
 
           if [ "$TEST_DB_BACKEND" == "postgres" ]; then
             export QUETZ_TEST_DATABASE="postgresql://postgres:mysecretpassword@${POSTGRES_HOST}:${POSTGRES_PORT}/postgres"
@@ -88,7 +89,6 @@ jobs:
           export QUETZ_IS_TEST=1
 
           echo "testing server"
-          pip install -e .
           pytest -v ./quetz/tests/
 
           echo "install and test plugins"
