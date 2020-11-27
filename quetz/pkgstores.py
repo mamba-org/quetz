@@ -177,7 +177,10 @@ class S3Store(PackageStore):
             return fs.open(path.join(self._bucket_map(channel), src))
 
     def delete_file(self, channel: str, dest: str):
-        pass
+        channel_bucket = self._bucket_map(channel)
+
+        with self._get_fs() as fs:
+            fs.delete(path.join(channel_bucket, dest))
 
     def list_files(self, channel: str):
         def remove_prefix(text, prefix):
