@@ -52,7 +52,7 @@ jobs:
           . $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
           ./micromamba create -y -p ~/test_env 'python>=3.7' pip fastapi typer authlib \
                        httpx=0.12.0 sqlalchemy sqlite psycopg2 python-multipart uvicorn zstandard \
-                       appdirs toml fsspec conda requests "h2<4.0.0" starlette-full jinja2 itsdangerous alembic -c conda-forge
+                       appdirs toml fsspec conda requests "h2<4.0.0" starlette-full jinja2 itsdangerous alembic conda-build -c conda-forge
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
       - name: test quetz
