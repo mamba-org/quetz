@@ -1,5 +1,6 @@
 import os
 import tempfile
+import uuid
 
 import pytest
 
@@ -34,32 +35,37 @@ def test_local_store():
 
 
 @pytest.fixture
-def s3_store():
+def channel_name():
+    return "mychannel" + str(uuid.uuid4())
+
+
+@pytest.fixture
+def s3_store(channel_name):
     pkg_store = S3Store(s3_config)
-    pkg_store.create_channel("mychannel")
+    pkg_store.create_channel(channel_name)
 
     yield pkg_store
 
     # cleanup
-    files = pkg_store.list_files("mychannel")
+    files = pkg_store.list_files(channel_name)
     for f in files:
-        pkg_store.delete_file("mychannel", f)
-    pkg_store.fs.rmdir(pkg_store._bucket_map("mychannel"))
+        pkg_store.delete_file(channel_name, f)
+    pkg_store.fs.rmdir(pkg_store._bucket_map(channel_name))
 
 
 @pytest.mark.skipif(not s3_config['key'], reason="requires s3 credentials")
-def test_s3_store(s3_store):
+def test_s3_store(s3_store, channel_name):
 
     pkg_store = s3_store
 
-    pkg_store.add_file("content", "mychannel", "test.txt")
-    pkg_store.add_file("content", "mychannel", "test_2.txt")
+    pkg_store.add_file("content", channel_name, "test.txt")
+    pkg_store.add_file("content", channel_name, "test_2.txt")
 
-    files = pkg_store.list_files("mychannel")
+    files = pkg_store.list_files(channel_name)
 
     assert files == ["test.txt", "test_2.txt"]
 
-    pkg_store.delete_file("mychannel", "test.txt")
+    pkg_store.delete_file(channel_name, "test.txt")
 
-    files = pkg_store.list_files("mychannel")
+    files = pkg_store.list_files(channel_name)
     assert files == ["test_2.txt"]
