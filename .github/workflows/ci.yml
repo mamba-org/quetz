@@ -52,7 +52,8 @@ jobs:
           . $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
           ./micromamba create -y -p ~/test_env 'python>=3.7' pip fastapi typer authlib \
                        httpx=0.12.0 sqlalchemy sqlite psycopg2 python-multipart uvicorn zstandard \
-                       appdirs toml fsspec conda requests "h2<4.0.0" starlette-full jinja2 itsdangerous alembic conda-build -c conda-forge
+                       appdirs toml fsspec conda requests "h2<4.0.0" starlette-full jinja2 itsdangerous alembic \
+                       zchunk conda-build -c conda-forge
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
       - name: test quetz
@@ -90,9 +91,12 @@ jobs:
           echo "install and test plugins"
           pip install ./plugins/quetz_runexports
           pytest -v ./plugins/quetz_runexports/tests
-          
+
           pip install ./plugins/quetz_repodata_patching
           pytest -v ./plugins/quetz_repodata_patching
+
+          pip install ./plugins/quetz_repodata_zchunk
+          pytest -v ./plugins/quetz_repodata_zchunk
 
           pip install ./plugins/quetz_conda_suggest
           pytest -v ./plugins/quetz_conda_suggest
