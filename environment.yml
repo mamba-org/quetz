@@ -20,3 +20,7 @@ dependencies:
   - sphinx
   - sphinx-book-theme
   - pluggy
+  - starlette-full
+  - jinja2
+  - itsdangerous
+  - alembic
