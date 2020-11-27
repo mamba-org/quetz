@@ -127,10 +127,17 @@ Environment
 
 You can also use a couple of environment variables to configure the behaviour of quetz:
 
-====================  ======================================  ===========================  ===================
-Variable              description                             values                       default
-====================  ======================================  ===========================  ===================
-``QUETZ_LOG_LEVEL``   log level                               ERROR, INFO, WARNING, DEBUG  INFO or config file
-``QUETZ_API_KEY``     api key used by quetz-client log level  string  
-====================  ======================================  ===========================  ===================
+=======================  ======================================  ===========================  ===================
+Variable                 description                             values                       default
+=======================  ======================================  ===========================  ===================
+``QUETZ_LOG_LEVEL``      log level                               ERROR, INFO, WARNING, DEBUG  INFO or config file
+``QUETZ_API_KEY``        api key used by quetz-client log level  string  
+``QUETZ_TEST_DATABASE``  uri to the database used in tests       string                       sqlite:///:memory:
+``QUETZ_TEST_DBINIT``    method to create db tabels in tests     "create-tables" or           "create-tables"
+                                                                 "use-migrations" 
+``S3_ACCESS_KEY``        access key to s3 (used in tests)        string                                         
+``S3_SECRET_KEY``        secret key to s3 (used in tests)        string                                         
+``S3_ENDPOINT``          s3 endpoint url                         string                                         
+``S3_REGION``            s3 region                               string                                         
+=======================  ======================================  ===========================  ===================
 
