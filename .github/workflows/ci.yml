@@ -49,7 +49,7 @@ jobs:
           export MAMBA_ROOT_PREFIX=~/micromamba
           export MAMBA_EXE=$(pwd)/micromamba
           . $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
-          ./micromamba create -y -p ~/test_env -f environment.yml
+          ./micromamba create -y -f environment.yml
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
       - name: test quetz
@@ -68,7 +68,7 @@ jobs:
           export MAMBA_ROOT_PREFIX=~/micromamba
           export MAMBA_EXE=$(pwd)/micromamba
           . $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
-          micromamba activate ~/test_env
+          micromamba activate quetz 
 
           # install dev dependencies
           pip install -e .[dev]
