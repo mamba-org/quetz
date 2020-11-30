@@ -11,7 +11,7 @@ from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, aliased, joinedload
 
-from quetz import channel_data, rest_models, versionorder
+from quetz import channel_data, errors, rest_models, versionorder
 
 from .db_models import (
     ApiKey,
@@ -204,7 +204,12 @@ class Dao:
 
         self.db.add(package)
         self.db.add(member)
-        self.db.commit()
+
+        try:
+            self.db.commit()
+        except IntegrityError as exc:
+            self.db.rollback()
+            raise errors.DBError(str(exc))
 
         return package
 

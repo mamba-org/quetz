@@ -1,9 +1,13 @@
+import uuid
+
 import pytest
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.exc import ObjectDeletedError
 
-from quetz import rest_models
+from quetz import errors, rest_models
 from quetz.dao import Dao
-from quetz.db_models import Channel, PackageVersion
+from quetz.database import get_session
+from quetz.db_models import Channel, Package, PackageVersion
 
 
 @pytest.fixture
@@ -23,8 +27,11 @@ def channel(dao, db, user, channel_name):
     channel = dao.create_channel(channel_data, user.id, "owner")
     yield channel
 
-    db.delete(channel)
-    db.commit()
+    try:
+        db.delete(channel)
+        db.commit()
+    except ObjectDeletedError:
+        pass
 
 
 @pytest.fixture
@@ -153,3 +160,65 @@ def test_create_user_with_profile(dao: Dao, user_without_profile):
             role=None,
             exist_ok=False,
         )
+
+
+@pytest.fixture
+def db_extra(database_url):
+    """a separate session for db connection
+
+    Use only for tests that require two sessions concurrently.
+    For most cases you will want to use the db fixture (from quetz.testing.fixtures)"""
+
+    session = get_session(database_url)
+
+    yield session
+
+    session.close()
+
+
+@pytest.fixture
+def dao_extra(db_extra):
+
+    return Dao(db_extra)
+
+
+@pytest.fixture
+def user_with_channel(dao, db):
+    channel_data = rest_models.Channel(name="new-test-channel", private=False)
+
+    user = dao.create_user_with_role("new-user")
+    user_id = user.id
+    channel = dao.create_channel(channel_data, user_id, "owner")
+    db.commit()
+
+    yield user_id
+    db.delete(channel)
+    db.delete(user)
+    db.commit()
+
+
+# disable running tests in transaction and use on disk database
+# because we want to connect to the db with two different
+# client concurrently
+@pytest.mark.parametrize("sqlite_in_memory", [False])
+@pytest.mark.parametrize("auto_rollback", [False])
+def test_rollback_on_collision(dao: Dao, db, dao_extra, user_with_channel):
+    """testing rollback on concurrent writes."""
+
+    new_package = rest_models.Package(name=f"new-package-{uuid.uuid4()}")
+
+    user_id = user_with_channel
+    channel_name = "new-test-channel"
+
+    dao.create_package(channel_name, new_package, user_id, "owner")
+    with pytest.raises(errors.DBError, match="(IntegrityError)|(UniqueViolation)"):
+        dao_extra.create_package(channel_name, new_package, user_id, "owner")
+
+    requested = db.query(Package).filter(Package.name == new_package.name).one_or_none()
+
+    assert requested
+
+    # need to clean up because we didn't run the test in a transaction
+
+    db.delete(requested)
+    db.commit()

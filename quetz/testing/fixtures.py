@@ -16,8 +16,17 @@ from quetz.db_models import Base
 
 
 @fixture
-def sqlite_url():
-    return "sqlite:///:memory:"
+def sqlite_in_memory():
+    """whether to create a sqlite DB in memory or on the filesystem."""
+    return True
+
+
+@fixture
+def sqlite_url(sqlite_in_memory):
+    if sqlite_in_memory:
+        return "sqlite:///:memory:"
+    else:
+        return "sqlite:///./quetz.sqlite"
 
 
 @fixture
@@ -73,20 +82,39 @@ def create_tables(alembic_config, engine, use_migrations):
 
 
 @fixture
-def session_maker(sql_connection, create_tables):
+def auto_rollback():
+    """Whether to revert automatically the changes in the database after each test.
+
+    In most cases, you will want to set this flag to True, only sporadically you might
+    run the tests outside a revertible transaction (for example, to test interaction
+    between two concurrent clients). But then you will need to clean up the db objects
+    manually after each test. Use with care.
+
+    See also the comment in session_maker fixture."""
+
+    return True
+
+
+@fixture
+def session_maker(sql_connection, create_tables, auto_rollback):
 
     # run the tests with a separate external DB transaction
     # so that we can easily rollback all db changes (even if commited)
     # done by the test client
 
-    # Note: that won't work when rollback is explictly called in the implementation
+    # Note: when rollback is explictly called in the implementation,
+    #       it will remove all objects created in the test even the ones
+    #       that were already committed!
 
     # see also: https://docs.sqlalchemy.org/en/13/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites # noqa
 
-    trans = sql_connection.begin()
+    if auto_rollback:
+        trans = sql_connection.begin()
 
     yield get_session_maker(sql_connection)
-    trans.rollback()
+
+    if auto_rollback:
+        trans.rollback()
 
 
 @fixture

@@ -311,7 +311,8 @@ def initial_sync_mirror(
             except Exception as exc:
                 logger.error(
                     f"could not process package {package_name} from channel"
-                    f"{channel_name} due to error {exc}"
+                    f"{channel_name} due to error {exc} of "
+                    f"type {exc.__class__.__name__}"
                 )
                 if not skip_errors:
                     raise exc
