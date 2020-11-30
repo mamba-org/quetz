@@ -209,7 +209,7 @@ class Dao:
             self.db.commit()
         except IntegrityError as exc:
             self.db.rollback()
-            raise errors.DBError(exc._sql_message(as_unicode=True))
+            raise errors.DBError(str(exc))
 
         return package
 
