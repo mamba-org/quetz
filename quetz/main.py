@@ -173,9 +173,12 @@ def get_package_or_fail(
     package_name: str,
     channel: db_models.Channel = Depends(get_channel_or_fail),
     dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
 ) -> db_models.Package:
 
     package = dao.get_package(channel.name, package_name)
+    auth.assert_package_read(package)
+
     if not package:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -519,8 +522,13 @@ def get_package(package: db_models.Package = Depends(get_package_or_fail)):
     tags=["packages"],
 )
 def delete_package(
-    package: db_models.Package = Depends(get_package_or_fail), db=Depends(get_db)
+    package: db_models.Package = Depends(get_package_or_fail),
+    db=Depends(get_db),
+    auth: authorization.Rules = Depends(get_rules),
 ):
+
+    auth.assert_package_write(package)
+
     db.delete(package)
     db.commit()
 
