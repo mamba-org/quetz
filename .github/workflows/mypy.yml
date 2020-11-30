@@ -16,7 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: install micromamba
-      - name: install mamba
         uses: mamba-org/provision-with-micromamba@main
       - name: type checking
         shell: bash -l {0}
