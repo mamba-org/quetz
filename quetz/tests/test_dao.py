@@ -187,11 +187,15 @@ def dao_extra(db_extra):
 # client concurrently
 @pytest.mark.parametrize("sqlite_in_memory", [False])
 @pytest.mark.parametrize("auto_rollback", [False])
-def test_rollback_on_collision(dao, channel, db, user, dao_extra):
+def test_rollback_on_collision(dao: Dao, db, dao_extra):
     """testing rollback on concurrent writes."""
 
     new_package = rest_models.Package(name=f"new-package-{uuid.uuid4()}")
+    channel_data = rest_models.Channel(name="new-channel", private=False)
+
+    user = dao.create_user_with_role("new-user")
     user_id = user.id
+    channel = dao.create_channel(channel_data, user_id, "owner")
 
     dao.create_package(channel.name, new_package, user_id, "owner")
     with pytest.raises(errors.DBError):
@@ -204,4 +208,5 @@ def test_rollback_on_collision(dao, channel, db, user, dao_extra):
     # need to clean up because we didn't run the test in a transaction
 
     db.delete(requested)
+    db.delete(user)
     db.commit()
