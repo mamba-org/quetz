@@ -166,9 +166,10 @@ def _fill_test_database(db: Session) -> NoReturn:
     """Create dummy users and channels to allow further testing in dev mode."""
 
     testUsers = []
+    dao = Dao(db)
     try:
         for index, username in enumerate(['alice', 'bob', 'carol', 'dave']):
-            user = User(id=uuid.uuid4().bytes, username=username)
+            user = dao.create_user_with_role(username)
 
             identity = Identity(
                 provider='dummy',

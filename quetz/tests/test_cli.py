@@ -30,14 +30,14 @@ def config_extra(user_group):
                 """
 
 
-def get_user(db, config_dir):
+def get_user(db, config_dir, username="bartosz"):
     def get_db(_):
         return db
 
     with mock.patch("quetz.cli.get_session", get_db):
         cli.init_db(config_dir)
 
-    return db.query(User).filter(User.username == "bartosz").one_or_none()
+    return db.query(User).filter(User.username == username).one_or_none()
 
 
 @pytest.mark.parametrize(
@@ -72,6 +72,30 @@ def test_init_db_user_exists(db, config, config_dir, user, mocker):
 
     assert user.role == 'owner'
     assert user.username == "bartosz"
+    _run_migrations.assert_called_once()
+
+
+@pytest.mark.parametrize("config_extra", ['[users]\nadmins = ["alice"]\n'])
+def test_init_db_create_test_users(db, config, mocker, config_dir):
+
+    _run_migrations: MagicMock = mocker.patch("quetz.cli._run_migrations")
+
+    def get_db(_):
+        return db
+
+    with mock.patch("quetz.cli.get_session", get_db):
+        cli.create(
+            Path(config_dir) / "new-deployment",
+            config_file_name="config.toml",
+            copy_conf="config.toml",
+            create_conf=None,
+            dev=True,
+        )
+
+    user = db.query(User).filter(User.username == "alice").one_or_none()
+
+    assert user.role == "owner"
+
     _run_migrations.assert_called_once()
 
 
