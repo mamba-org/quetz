@@ -343,9 +343,7 @@ def create_config(
     return config.format(client_id, client_secret, database_url, secret, https)
 
 
-def configure_logger(
-    config=None, loggers=("quetz", "urllib3.util.retry", "alembic", "sqlalchemy")
-):
+def configure_logger(config=None, loggers=("quetz", "urllib3.util.retry", "alembic")):
     """Get quetz logger"""
 
     if hasattr(config, "logging_level"):

@@ -113,6 +113,11 @@ def channel_role():
 
 
 @pytest.fixture
+def package_role():
+    return "owner"
+
+
+@pytest.fixture
 def public_channel(dao: Dao, user, channel_role):
 
     channel_name = "public-channel"
@@ -121,3 +126,16 @@ def public_channel(dao: Dao, user, channel_role):
     channel = dao.create_channel(channel_data, user.id, channel_role)
 
     return channel
+
+
+@pytest.fixture
+def public_package(db, user, public_channel, dao, package_role):
+    package_name = "public-package"
+
+    package_data = Package(name=package_name)
+
+    package = dao.create_package(
+        public_channel.name, package_data, user.id, package_role
+    )
+
+    return package
