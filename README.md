@@ -35,8 +35,7 @@ You should have [mamba](https://github.com/mamba-org/mamba) or conda installed.
 Then create an environment:
 
 ```
-mamba create -n quetz -c conda-forge 'python>=3.7' fastapi typer authlib httpx=0.12.0 sqlalchemy sqlite \
-python-multipart uvicorn zstandard conda-build appdirs toml quetz-client fsspec "h2<4.0.0" pluggy starlette-full jinja2 itsdangerous
+mamba env create -c conda-forge -f environment.yml
 
 conda activate quetz
 ```
@@ -44,8 +43,7 @@ conda activate quetz
 Get `Quetz` sources:
 
 ```
-mkdir quetz
-git clone https://github.com/TheSnakePit/quetz.git quetz
+git clone https://github.com/mamba-org/quetz.git
 ```
 
 Install `Quetz`:
