@@ -41,6 +41,7 @@ from quetz.config import Config, configure_logger, get_plugin_manager
 from quetz.dao import Dao
 from quetz.deps import (
     get_dao,
+    get_db,
     get_remote_session,
     get_rules,
     get_session,
@@ -510,6 +511,18 @@ def get_paginated_packages(
 )
 def get_package(package: db_models.Package = Depends(get_package_or_fail)):
     return package
+
+
+@api_router.delete(
+    "/channels/{channel_name}/packages/{package_name}",
+    response_model=rest_models.Package,
+    tags=["packages"],
+)
+def delete_package(
+    package: db_models.Package = Depends(get_package_or_fail), db=Depends(get_db)
+):
+    db.delete(package)
+    db.commit()
 
 
 @api_router.post(
