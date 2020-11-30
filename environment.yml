@@ -1,26 +1,32 @@
-name: quetz-rtd
+name: quetz
 channels:
   - conda-forge
 dependencies:
+  - python>=3.7
+  - pip
   - fastapi
   - typer
-  - authlib=0.14.3
+  - authlib
+  - psycopg2
   - httpx=0.12.0
-  - sqlalchemy 
+  - sqlalchemy
   - sqlite
-  - python-multipart 
-  - uvicorn 
+  - python-multipart
+  - uvicorn
   - zstandard
   - conda-build
   - appdirs
   - toml
   - quetz-client
   - fsspec
+  - requests
   - h2<4.0.0
-  - sphinx
-  - sphinx-book-theme
   - pluggy
   - starlette-full
   - jinja2
   - itsdangerous
   - alembic
+  - zchunk
+  - s3fs
+  - sphinx
+  - sphinx-book-theme
