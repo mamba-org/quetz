@@ -1,3 +1,5 @@
+import os
+
 import pytest
 import requests
 from fastapi import BackgroundTasks
@@ -51,25 +53,24 @@ def threading_worker(background_tasks, dao, auth, http_session, config):
 @pytest.fixture
 def subprocess_worker(api_key, browser_session, db, config):
     SubprocessWorker._executor = None
-    worker = SubprocessWorker(api_key, browser_session)
+    worker = SubprocessWorker(api_key, browser_session, config)
     return worker
 
 
 @pytest.fixture
 def redis_worker(api_key, browser_session, db, config):
-    worker = RQManager(
-        config.redis_ip, config.redis_port, config.redis_db, api_key, browser_session
-    )
+    worker = RQManager(api_key, browser_session, config)
     return worker
 
 
-@pytest.fixture(params=["redis_worker"])
+@pytest.fixture(params=["threading_worker", "subprocess_worker", "redis_worker"])
 def any_worker(request):
     val = request.getfixturevalue(request.param)
     return val
 
 
-def basic_function():
+def basic_function(config_dir):
+    os.chdir(config_dir)
     with open("test.txt", "w") as fid:
         fid.write("hello world!")
 
@@ -96,9 +97,9 @@ def db_cleanup(config):
 
 
 @pytest.mark.asyncio
-async def test_threading_worker_execute(background_tasks, any_worker, db):
+async def test_threading_worker_execute(background_tasks, any_worker, db, config_dir):
 
-    any_worker.execute(basic_function)
+    any_worker.execute(basic_function, config_dir=config_dir)
 
     await any_worker.wait()
 

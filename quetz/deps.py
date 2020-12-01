@@ -95,15 +95,9 @@ def get_tasks_worker(
     if worker == "thread":
         worker = ThreadingWorker(background_tasks, dao, auth, session, config)
     elif worker == "subprocess":
-        worker = SubprocessWorker(auth.API_key, auth.session)
+        worker = SubprocessWorker(auth.API_key, auth.session, config)
     elif worker == "redis-queue":
-        worker = RQManager(
-            config.redis_ip,
-            config.redis_port,
-            config.redis_db,
-            auth.API_key,
-            auth.session,
-        )
+        worker = RQManager(auth.API_key, auth.session, config)
     else:
         raise ValueError("wrong configuration in worker.type")
 
