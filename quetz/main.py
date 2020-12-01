@@ -41,6 +41,7 @@ from quetz.config import Config, configure_logger, get_plugin_manager
 from quetz.dao import Dao
 from quetz.deps import (
     get_dao,
+    get_db,
     get_remote_session,
     get_rules,
     get_session,
@@ -172,9 +173,12 @@ def get_package_or_fail(
     package_name: str,
     channel: db_models.Channel = Depends(get_channel_or_fail),
     dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
 ) -> db_models.Package:
 
     package = dao.get_package(channel.name, package_name)
+    auth.assert_package_read(package)
+
     if not package:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -510,6 +514,32 @@ def get_paginated_packages(
 )
 def get_package(package: db_models.Package = Depends(get_package_or_fail)):
     return package
+
+
+@api_router.delete(
+    "/channels/{channel_name}/packages/{package_name}",
+    response_model=rest_models.Package,
+    tags=["packages"],
+)
+def delete_package(
+    package: db_models.Package = Depends(get_package_or_fail),
+    db=Depends(get_db),
+    auth: authorization.Rules = Depends(get_rules),
+):
+
+    auth.assert_package_write(package)
+
+    filenames = [
+        os.path.join(version.platform, version.filename)
+        for version in package.package_versions  # type: ignore
+    ]
+    channel_name = package.channel_name
+
+    db.delete(package)
+    db.commit()
+
+    for filename in filenames:
+        pkgstore.delete_file(channel_name, filename)
 
 
 @api_router.post(

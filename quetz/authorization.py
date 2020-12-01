@@ -226,3 +226,17 @@ class Rules:
     def assert_channel_read(self, channel):
         if channel.private:
             self.assert_channel_roles(channel.name, [OWNER, MAINTAINER, MEMBER])
+
+    def assert_package_read(self, package):
+        if package.channel.private:
+            self.assert_channel_or_package_roles(
+                package.channel_name,
+                [OWNER, MAINTAINER, MEMBER],
+                package.name,
+                [OWNER, MAINTAINER, MEMBER],
+            )
+
+    def assert_package_write(self, package):
+        self.assert_channel_or_package_roles(
+            package.channel_name, [OWNER, MAINTAINER], package.name, [OWNER, MAINTAINER]
+        )

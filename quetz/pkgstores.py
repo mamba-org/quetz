@@ -8,6 +8,7 @@ import os.path as path
 import shutil
 import tempfile
 from contextlib import contextmanager
+from os import PathLike
 from typing import IO, BinaryIO, List, NoReturn, Union
 
 import fsspec
@@ -15,6 +16,8 @@ import fsspec
 from quetz.errors import ConfigError
 
 File = BinaryIO
+
+StrPath = Union[str, PathLike]
 
 
 class PackageStore(abc.ABC):
@@ -36,7 +39,7 @@ class PackageStore(abc.ABC):
 
     @abc.abstractmethod
     def add_file(
-        self, data: Union[str, bytes], channel: str, destination: str
+        self, data: Union[str, bytes], channel: str, destination: StrPath
     ) -> NoReturn:
         pass
 
@@ -55,7 +58,7 @@ class LocalStore(PackageStore):
         self.channels_dir = config['channels_dir']
 
     @contextmanager
-    def _atomic_open(self, channel: str, destination: str, mode="wb") -> IO:
+    def _atomic_open(self, channel: str, destination: StrPath, mode="wb") -> IO:
         full_path = path.join(self.channels_dir, channel, destination)
         self.fs.makedirs(path.dirname(full_path), exist_ok=True)
 
@@ -83,7 +86,7 @@ class LocalStore(PackageStore):
             shutil.copyfileobj(package, f)
 
     def add_file(
-        self, data: Union[str, bytes], channel: str, destination: str
+        self, data: Union[str, bytes], channel: str, destination: StrPath
     ) -> NoReturn:
 
         mode = "w" if isinstance(data, str) else "wb"
@@ -159,7 +162,7 @@ class S3Store(PackageStore):
                     shutil.copyfileobj(package, pkg)
 
     def add_file(
-        self, data: Union[str, bytes], channel: str, destination: str
+        self, data: Union[str, bytes], channel: str, destination: StrPath
     ) -> NoReturn:
         if type(data) is str:
             mode = "w"
