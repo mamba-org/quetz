@@ -531,7 +531,7 @@ def delete_package(
 
     filenames = [
         os.path.join(version.platform, version.filename)
-        for version in package.package_versions
+        for version in package.package_versions  # type: ignore
     ]
     channel_name = package.channel_name
 
