@@ -1,7 +1,9 @@
 import uuid
+from pathlib import Path
 
 import pytest
 
+from quetz.config import Config
 from quetz.dao import Dao
 from quetz.db_models import Profile, User
 from quetz.rest_models import Channel, Package
@@ -61,7 +63,14 @@ def private_package_version(dao, private_channel, private_package, other_user):
 
 
 @pytest.fixture
-def package_version(db, user, channel_name, package_name, public_package, dao: Dao):
+def package_version(
+    db, user, channel_name, package_name, public_package, dao: Dao, config: Config
+):
+
+    pkgstore = config.get_package_store()
+    filename = Path("test-package-0.1-0.tar.bz2")
+    with open(filename, 'rb') as fid:
+        pkgstore.add_file(fid.read(), channel_name, 'linux-64' / filename)
     package_format = "tarbz2"
     package_info = "{}"
     version = dao.create_version(
@@ -72,7 +81,7 @@ def package_version(db, user, channel_name, package_name, public_package, dao: D
         "0.1",
         0,
         "",
-        "",
+        str(filename),
         package_info,
         user.id,
     )

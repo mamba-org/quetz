@@ -25,7 +25,7 @@ def test_get_package_list(package_version, package_name, channel_name, client):
             "version": "0.1",
             "build_string": "",
             "build_number": 0,
-            "filename": "",
+            "filename": "test-package-0.1-0.tar.bz2",
             "info": {},
             "uploader": {"name": "Bartosz", "avatar_url": "http:///avatar"},
             "time_created": ANY,
