@@ -227,11 +227,11 @@ def test_delete_channel_permissions(
     db, auth_client, public_channel, user_role, channel_role
 ):
 
-    response = auth_client.delete("/api/channels/public-channel")
+    response = auth_client.delete(f"/api/channels/{public_channel.name}")
 
     channel = (
         db.query(db_models.Channel)
-        .filter(db_models.Channel.name == "public-channel")
+        .filter(db_models.Channel.name == public_channel.name)
         .one_or_none()
     )
 

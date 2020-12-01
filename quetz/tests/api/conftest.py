@@ -61,12 +61,7 @@ def private_package_version(dao, private_channel, private_package, other_user):
 
 
 @pytest.fixture
-def package_version(db, user, channel_name, package_name, dao: Dao):
-    channel_data = Channel(name=channel_name, private=False)
-    package_data = Package(name=package_name)
-
-    channel = dao.create_channel(channel_data, user.id, "owner")
-    package = dao.create_package(channel_name, package_data, user.id, "owner")
+def package_version(db, user, channel_name, package_name, public_package, dao: Dao):
     package_format = "tarbz2"
     package_info = "{}"
     version = dao.create_version(
@@ -85,8 +80,6 @@ def package_version(db, user, channel_name, package_name, dao: Dao):
     yield version
 
     db.delete(version)
-    db.delete(package)
-    db.delete(channel)
     db.commit()
 
 
@@ -118,9 +111,7 @@ def package_role():
 
 
 @pytest.fixture
-def public_channel(dao: Dao, user, channel_role):
-
-    channel_name = "public-channel"
+def public_channel(dao: Dao, user, channel_role, channel_name):
 
     channel_data = Channel(name=channel_name, private=False)
     channel = dao.create_channel(channel_data, user.id, channel_role)
@@ -129,8 +120,7 @@ def public_channel(dao: Dao, user, channel_role):
 
 
 @pytest.fixture
-def public_package(db, user, public_channel, dao, package_role):
-    package_name = "public-package"
+def public_package(db, user, public_channel, dao, package_role, package_name):
 
     package_data = Package(name=package_name)
 

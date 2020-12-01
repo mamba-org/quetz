@@ -1,7 +1,7 @@
 import pytest
 
 from quetz.authorization import MAINTAINER, MEMBER, OWNER
-from quetz.db_models import Package
+from quetz.db_models import Package, PackageVersion
 
 
 @pytest.mark.parametrize("package_role", [OWNER, MAINTAINER, MEMBER])
@@ -49,3 +49,24 @@ def test_delete_package_non_member(
     )
 
     assert package is not None
+
+
+def test_delete_package_version(
+    auth_client, public_channel, public_package, package_version, dao, db
+):
+
+    assert package_version.package_name == public_package.name
+
+    response = auth_client.delete(
+        f"/api/channels/{public_channel.name}/packages/{public_package.name}"
+    )
+
+    assert response.status_code == 200
+
+    versions = (
+        db.query(PackageVersion)
+        .filter(PackageVersion.package_name == public_package.name)
+        .all()
+    )
+
+    assert len(versions) == 0
