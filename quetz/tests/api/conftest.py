@@ -138,3 +138,8 @@ def public_package(db, user, public_channel, dao, package_role, package_name):
     )
 
     return package
+
+
+@pytest.fixture
+def pkgstore(config):
+    return config.get_package_store()

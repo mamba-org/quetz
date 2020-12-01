@@ -52,7 +52,7 @@ def test_delete_package_non_member(
 
 
 def test_delete_package_version(
-    auth_client, public_channel, public_package, package_version, dao, db
+    auth_client, public_channel, public_package, package_version, dao, db, pkgstore
 ):
 
     assert package_version.package_name == public_package.name
@@ -70,3 +70,7 @@ def test_delete_package_version(
     )
 
     assert len(versions) == 0
+
+    files = pkgstore.list_files(public_channel.name)
+
+    assert len(files) == 0

@@ -529,8 +529,17 @@ def delete_package(
 
     auth.assert_package_write(package)
 
+    filenames = [
+        os.path.join(version.platform, version.filename)
+        for version in package.package_versions
+    ]
+    channel_name = package.channel_name
+
     db.delete(package)
     db.commit()
+
+    for filename in filenames:
+        pkgstore.delete_file(channel_name, filename)
 
 
 @api_router.post(
