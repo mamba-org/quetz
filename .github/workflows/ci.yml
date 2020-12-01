@@ -73,8 +73,6 @@ jobs:
 
           echo "testing server"
 
-          rq worker &
-
           pytest -v ./quetz/tests/
 
           echo "install and test plugins"

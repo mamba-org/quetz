@@ -29,10 +29,12 @@ def prepare_arguments(func: Callable, **resources):
     return kwargs
 
 
-def wrapper(func, api_key, browser_session, config, **kwargs):
+def job_wrapper(func, api_key, browser_session, config, **kwargs):
 
     # database connections etc. are not serializable
-    # so we need to recreate them in the proces
+    # so we need to recreate them in the process.
+    # This allows us to manage database connectivity prior
+    # to running a job.
 
     import logging
     import os
@@ -133,7 +135,7 @@ class SubprocessWorker(AbstractWorker):
 
     def execute(self, func, *args, **kwargs):
         self.future = self._executor.submit(
-            wrapper,
+            job_wrapper,
             func,
             self.api_key,
             self.browser_session,
@@ -149,20 +151,28 @@ class SubprocessWorker(AbstractWorker):
 
 
 class RQManager(AbstractWorker):
-    def __init__(self, api_key: str, browser_session: dict, config: Config):
+    def __init__(
+        self,
+        host,
+        port,
+        db,
+        api_key: str,
+        browser_session: dict,
+        config: Config,
+        no_testing=True,
+    ):
+        self.host = host
+        self.port = port
+        self.db = db
         self.api_key = api_key
         self.browser_session = browser_session
         self.config = config
-        self.conn = redis.StrictRedis(
-            host=self.config.redis_ip,
-            port=self.config.redis_port,
-            db=self.config.redis_db,
-        )
-        self.queue = Queue(connection=self.conn)
+        self.conn = redis.StrictRedis(host=self.host, port=self.port, db=self.db)
+        self.queue = Queue(connection=self.conn, is_async=no_testing)
 
     def execute(self, func, *args, **kwargs):
         self.job = self.queue.enqueue(
-            wrapper,
+            job_wrapper,
             func,
             self.api_key,
             self.browser_session,

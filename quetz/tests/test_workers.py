@@ -40,8 +40,22 @@ def browser_session():
 
 @pytest.fixture
 def auth(db, api_key, browser_session):
-
     return Rules(api_key, browser_session, db)
+
+
+@pytest.fixture
+def redis_ip():
+    return "127.0.0.1"
+
+
+@pytest.fixture
+def redis_port():
+    return 6379
+
+
+@pytest.fixture
+def redis_db():
+    return 0
 
 
 @pytest.fixture
@@ -58,8 +72,16 @@ def subprocess_worker(api_key, browser_session, db, config):
 
 
 @pytest.fixture
-def redis_worker(api_key, browser_session, db, config):
-    worker = RQManager(api_key, browser_session, config)
+def redis_worker(redis_ip, redis_port, redis_db, api_key, browser_session, db, config):
+    worker = RQManager(
+        redis_ip,
+        redis_port,
+        redis_db,
+        api_key,
+        browser_session,
+        config,
+        no_testing=False,
+    )
     return worker
 
 
