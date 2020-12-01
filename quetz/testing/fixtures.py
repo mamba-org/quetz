@@ -144,6 +144,8 @@ https_only = false
 
 [plugins]
 enabled = {plugins}
+
+[redis]
 """
 
 

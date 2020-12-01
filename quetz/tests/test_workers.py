@@ -5,7 +5,7 @@ from fastapi import BackgroundTasks
 from quetz.authorization import Rules
 from quetz.dao import Dao
 from quetz.db_models import User
-from quetz.tasks.workers import SubprocessWorker, ThreadingWorker
+from quetz.tasks.workers import RQManager, SubprocessWorker, ThreadingWorker
 
 
 @pytest.fixture
@@ -55,7 +55,15 @@ def subprocess_worker(api_key, browser_session, db, config):
     return worker
 
 
-@pytest.fixture(params=["threading_worker", "subprocess_worker"])
+@pytest.fixture
+def redis_worker(api_key, browser_session, db, config):
+    worker = RQManager(
+        config.redis_ip, config.redis_port, config.redis_db, api_key, browser_session
+    )
+    return worker
+
+
+@pytest.fixture(params=["redis_worker"])
 def any_worker(request):
     val = request.getfixturevalue(request.param)
     return val

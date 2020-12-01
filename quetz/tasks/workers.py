@@ -157,7 +157,8 @@ class RQManager(AbstractWorker):
             wrapper, func, self.api_key, self.browser_session, *args, **kwargs
         )
 
-    def wait(self):
+    async def wait(self):
         while not self.job.is_finished:
             time.sleep(1)
-        return self.job.result
+        if self.job.result:
+            return await self.job.result
