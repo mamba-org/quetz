@@ -128,6 +128,15 @@ class Config:
                 ConfigEntry("enabled", list, default=list),
             ],
         ),
+        ConfigSection(
+            "redis",
+            [
+                ConfigEntry("ip", str, default="127.0.0.1"),
+                ConfigEntry("port", int, default=6379),
+                ConfigEntry("db", int, default=0),
+            ],
+            required=False,
+        ),
     ]
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]

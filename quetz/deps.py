@@ -13,7 +13,7 @@ from quetz.config import Config
 from quetz.dao import Dao
 from quetz.database import get_session as get_db_session
 from quetz.tasks.common import Task
-from quetz.tasks.workers import SubprocessWorker, ThreadingWorker
+from quetz.tasks.workers import RQManager, SubprocessWorker, ThreadingWorker
 
 DEFAULT_TIMEOUT = 5  # seconds
 MAX_RETRIES = 3
@@ -96,6 +96,14 @@ def get_tasks_worker(
         worker = ThreadingWorker(background_tasks, dao, auth, session, config)
     elif worker == "subprocess":
         worker = SubprocessWorker(auth.API_key, auth.session)
+    elif worker == "redis-queue":
+        worker = RQManager(
+            config.redis_ip,
+            config.redis_port,
+            config.redis_db,
+            auth.API_key,
+            auth.session,
+        )
     else:
         raise ValueError("wrong configuration in worker.type")
 

@@ -30,3 +30,5 @@ dependencies:
   - s3fs
   - sphinx
   - sphinx-book-theme
+  - redis-py
+  - rq
