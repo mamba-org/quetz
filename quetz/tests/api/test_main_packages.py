@@ -74,3 +74,29 @@ def test_delete_package_version(
     files = pkgstore.list_files(public_channel.name)
 
     assert len(files) == 0
+
+
+def test_get_package_version(auth_client, public_channel, package_version, dao):
+    filename = "test-package-0.1-0.tar.bz2"
+    platform = "linux-64"
+    response = auth_client.get(
+        f"/api/channels/{public_channel.name}/"
+        f"packages/test-package/versions/{platform}/{filename}"
+    )
+
+    assert response.status_code == 200
+    assert response.json()['filename'] == filename
+    assert response.json()['platform'] == platform
+
+
+def test_get_non_existing_package_version(
+    auth_client, public_channel, package_version, dao
+):
+    filename = "test-package-0.2-0.tar.bz2"
+    platform = "linux-64"
+    response = auth_client.get(
+        f"/api/channels/{public_channel.name}/"
+        f"packages/test-package/versions/{platform}/{filename}"
+    )
+
+    assert response.status_code == 404

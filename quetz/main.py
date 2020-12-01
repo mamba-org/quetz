@@ -669,6 +669,27 @@ def get_package_versions(
 
 
 @api_router.get(
+    "/channels/{channel_name}/packages/{package_name}/versions/{platform}/{filename}",
+    response_model=rest_models.PackageVersion,
+    tags=["packages"],
+)
+def get_package_version(
+    platform: str,
+    filename: str,
+    dao: Dao = Depends(get_dao),
+):
+    version = dao.get_package_version_by_filename(filename, platform)
+
+    if not version:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"package version {platform}/{filename} not found",
+        )
+
+    return version
+
+
+@api_router.get(
     "/search/{query}", response_model=List[rest_models.PackageSearch], tags=["search"]
 )
 def search(

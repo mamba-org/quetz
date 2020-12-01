@@ -478,6 +478,16 @@ class Dao:
 
         return query.all()
 
+    def get_package_version_by_filename(self, filename: str, platform: str):
+
+        query = (
+            self.db.query(PackageVersion)
+            .filter(PackageVersion.filename == filename)
+            .filter(PackageVersion.platform == platform)
+        )
+
+        return query.one_or_none()
+
     def is_active_platform(self, channel_name: str, platform: str):
         if platform == 'noarch':
             return True
