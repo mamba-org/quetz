@@ -92,17 +92,22 @@ def get_tasks_worker(
     else:
         worker = "thread"
 
+    if config.configured_section("redis"):
+        redis_ip = config.redis_ip
+        redis_port = config.redis_port
+        redis_db = config.redis_db
+    else:
+        redis_ip = "127.0.0.1"
+        redis_port = 6379
+        redis_db = 0
+
     if worker == "thread":
         worker = ThreadingWorker(background_tasks, dao, auth, session, config)
     elif worker == "subprocess":
-        worker = SubprocessWorker(auth.API_key, auth.session)
+        worker = SubprocessWorker(auth.API_key, auth.session, config)
     elif worker == "redis-queue":
         worker = RQManager(
-            config.redis_ip,
-            config.redis_port,
-            config.redis_db,
-            auth.API_key,
-            auth.session,
+            redis_ip, redis_port, redis_db, auth.API_key, auth.session, config
         )
     else:
         raise ValueError("wrong configuration in worker.type")

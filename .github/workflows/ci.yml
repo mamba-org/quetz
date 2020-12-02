@@ -30,6 +30,15 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
     steps:
       - uses: actions/checkout@v2
 
@@ -63,6 +72,7 @@ jobs:
           export QUETZ_IS_TEST=1
 
           echo "testing server"
+
           pytest -v ./quetz/tests/
 
           echo "install and test plugins"
