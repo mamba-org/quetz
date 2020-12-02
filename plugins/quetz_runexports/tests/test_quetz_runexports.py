@@ -25,10 +25,11 @@ def test_run_exports_endpoint(
     db,
     session_maker,
 ):
-    version_id = f"{package_version.version}-{package_version.build_string}"
+    filename = package_version.filename
+    platform = package_version.platform
 
     response = client.get(
-        f"/api/channels/{channel.name}/packages/{package.name}/versions/{version_id}/run_exports"  # noqa
+        f"/api/channels/{channel.name}/packages/{package.name}/versions/{platform}/{filename}/run_exports"  # noqa
     )
     assert response.status_code == 200
     assert response.json() == {"weak": ["somepackage > 3.0"]}
@@ -37,10 +38,11 @@ def test_run_exports_endpoint(
 def test_endpoint_without_metadata(
     client, channel, package, package_version, db, session_maker
 ):
-    version_id = f"{package_version.version}-{package_version.build_string}"
+    filename = package_version.filename
+    platform = package_version.platform
 
     response = client.get(
-        f"/api/channels/{channel.name}/packages/{package.name}/versions/{version_id}/run_exports"  # noqa
+        f"/api/channels/{channel.name}/packages/{package.name}/versions/{platform}/{filename}/run_exports"  # noqa
     )
     assert response.status_code == 404
 
@@ -77,36 +79,3 @@ def test_post_add_package_version(package_version, config, db, session_maker):
     assert len(meta) == 1
 
     assert meta[0].data == '{"weak": ["somepackage < 0.3"]}'
-
-
-def test_validate_url_param(
-    client,
-    channel,
-    package,
-    package_version,
-    package_runexports,
-    db,
-    session_maker,
-):
-    version_id = f"{package_version.version}"
-
-    response = client.get(
-        f"/api/channels/{channel.name}/packages/{package.name}/versions/{version_id}/run_exports"  # noqa
-    )
-    assert response.status_code == 422
-
-    version_id = f"{package_version.build_string}"
-
-    response = client.get(
-        f"/api/channels/{channel.name}/packages/{package.name}/versions/{version_id}/run_exports"  # noqa
-    )
-    assert response.status_code == 422
-
-    version_id = (
-        f"{package.name}-{package_version.build_string}-{package_version.build_string}"
-    )
-
-    response = client.get(
-        f"/api/channels/{channel.name}/packages/{package.name}/versions/{version_id}/run_exports"  # noqa
-    )
-    assert response.status_code == 422
