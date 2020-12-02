@@ -20,7 +20,7 @@ def channel_name():
 
 
 @pytest.fixture
-def private_channel(dao, other_user, channel_role):
+def private_channel(dao, other_user):
 
     channel_name = "private-channel"
 
@@ -43,9 +43,16 @@ def private_package(dao, other_user, private_channel):
 
 
 @pytest.fixture
-def private_package_version(dao, private_channel, private_package, other_user):
+def private_package_version(dao, private_channel, private_package, other_user, config):
     package_format = "tarbz2"
     package_info = "{}"
+    channel_name = private_channel.name
+    filename = Path("test-package-0.1-0.tar.bz2")
+
+    pkgstore = config.get_package_store()
+    with open(filename, 'rb') as fid:
+        pkgstore.add_file(fid.read(), channel_name, 'linux-64' / filename)
+
     version = dao.create_version(
         private_channel.name,
         private_package.name,
@@ -54,7 +61,7 @@ def private_package_version(dao, private_channel, private_package, other_user):
         "0.1",
         "0",
         "",
-        "",
+        str(filename),
         package_info,
         other_user.id,
     )

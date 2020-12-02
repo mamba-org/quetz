@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from quetz.authorization import MAINTAINER, MEMBER, OWNER
-from quetz.db_models import Package, PackageVersion
+from quetz.db_models import ChannelMember, Package, PackageMember, PackageVersion
 from quetz.pkgstores import PackageStore
 
 
@@ -90,6 +90,106 @@ def test_get_package_version(auth_client, public_channel, package_version, dao):
     assert response.status_code == 200
     assert response.json()['filename'] == filename
     assert response.json()['platform'] == platform
+
+
+@pytest.mark.parametrize("user_package_role", [OWNER, MAINTAINER, MEMBER, None])
+@pytest.mark.parametrize("user_channel_role", [OWNER, MAINTAINER, MEMBER, None])
+@pytest.mark.parametrize("private", [True, False])
+def test_get_package_version_permissions(
+    auth_client,
+    user,
+    private_package_version,
+    user_package_role,
+    user_channel_role,
+    private_channel,
+    db,
+    private_package,
+    private,
+):
+    private_channel.private = private
+
+    if user_channel_role:
+        channel_member = ChannelMember(
+            channel=private_channel, user=user, role=user_channel_role
+        )
+        db.add(channel_member)
+    if user_package_role:
+        package_member = PackageMember(
+            channel=private_channel,
+            user=user,
+            package=private_package,
+            role=user_package_role,
+        )
+        db.add(package_member)
+    db.commit()
+
+    filename = private_package_version.filename
+    platform = private_package_version.platform
+    channel_name = private_package_version.channel_name
+    package_name = private_package_version.package_name
+    response = auth_client.get(
+        f"/api/channels/{channel_name}/"
+        f"packages/{package_name}/versions/{platform}/{filename}"
+    )
+
+    if not private:
+        assert response.status_code == 200
+    elif user_channel_role in [OWNER, MAINTAINER, MEMBER]:
+        assert response.status_code == 200
+    elif user_package_role in [OWNER, MAINTAINER, MEMBER]:
+        assert response.status_code == 200
+    else:
+        assert response.status_code == 403
+
+
+@pytest.mark.parametrize("user_package_role", [OWNER, MAINTAINER, MEMBER, None])
+@pytest.mark.parametrize("user_channel_role", [OWNER, MAINTAINER, MEMBER, None])
+@pytest.mark.parametrize("private", [True, False])
+def test_delete_package_version_permissions(
+    auth_client,
+    user,
+    private_package_version,
+    user_package_role,
+    user_channel_role,
+    private_channel,
+    db,
+    private_package,
+    pkgstore,
+    private,
+):
+
+    private_channel.private = private
+
+    if user_channel_role:
+        channel_member = ChannelMember(
+            channel=private_channel, user=user, role=user_channel_role
+        )
+        db.add(channel_member)
+    if user_package_role:
+        package_member = PackageMember(
+            channel=private_channel,
+            user=user,
+            package=private_package,
+            role=user_package_role,
+        )
+        db.add(package_member)
+    db.commit()
+
+    filename = private_package_version.filename
+    platform = private_package_version.platform
+    channel_name = private_package_version.channel_name
+    package_name = private_package_version.package_name
+    response = auth_client.delete(
+        f"/api/channels/{channel_name}/"
+        f"packages/{package_name}/versions/{platform}/{filename}"
+    )
+
+    if user_channel_role in [OWNER, MAINTAINER]:
+        assert response.status_code == 200
+    elif user_package_role in [OWNER, MAINTAINER]:
+        assert response.status_code == 200
+    else:
+        assert response.status_code == 403
 
 
 def test_get_non_existing_package_version(

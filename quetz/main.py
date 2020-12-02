@@ -171,20 +171,20 @@ get_channel_mirror_only = ChannelChecker(allow_mirror=True, allow_local=False)
 
 def get_package_or_fail(
     package_name: str,
-    channel: db_models.Channel = Depends(get_channel_or_fail),
+    channel_name: str,
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ) -> db_models.Package:
 
-    package = dao.get_package(channel.name, package_name)
-    auth.assert_package_read(package)
+    package = dao.get_package(channel_name, package_name)
 
     if not package:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Package {channel.name}/{package_name} not found",
+            detail=f"Package {channel_name}/{package_name} not found",
         )
 
+    auth.assert_package_read(package)
     return package
 
 
@@ -527,7 +527,7 @@ def delete_package(
     auth: authorization.Rules = Depends(get_rules),
 ):
 
-    auth.assert_package_write(package)
+    auth.assert_package_delete(package)
 
     filenames = [
         os.path.join(version.platform, version.filename)
@@ -678,6 +678,7 @@ def get_package_version(
     filename: str,
     package_name: str,
     channel_name: str,
+    package: db_models.Package = Depends(get_package_or_fail),
     dao: Dao = Depends(get_dao),
 ):
     version = dao.get_package_version_by_filename(
@@ -705,10 +706,14 @@ def delete_package_version(
     package_name: str,
     dao: Dao = Depends(get_dao),
     db=Depends(get_db),
+    auth: authorization.Rules = Depends(get_rules),
 ):
+
     version = dao.get_package_version_by_filename(
         channel_name, package_name, filename, platform
     )
+
+    auth.assert_package_delete(version.package)
 
     if not version:
         raise HTTPException(
