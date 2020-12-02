@@ -237,3 +237,33 @@ def test_delete_package_version(
 
     with pytest.raises(Exception):
         pkgstore.serve_path(public_channel.name, str(Path(platform) / filename))
+
+
+@pytest.mark.parametrize("user_package_role,n_packages", [(MEMBER, 1), (None, 0)])
+def test_list_private_package_versions(
+    auth_client,
+    private_package,
+    private_channel,
+    user,
+    user_package_role,
+    db,
+    n_packages,
+):
+
+    if user_package_role:
+        package_member = PackageMember(
+            channel=private_channel,
+            user=user,
+            package=private_package,
+            role=user_package_role,
+        )
+        db.add(package_member)
+    db.commit()
+
+    channel_name = private_package.channel_name
+
+    response = auth_client.get(f"/api/channels/{channel_name}/packages")
+
+    assert response.status_code == 200
+
+    assert len(response.json()) == n_packages
