@@ -202,7 +202,7 @@ def _check_checksum(dao: Dao, channel_name: str, platform: str, keyname="sha256"
                 .all()
             )
 
-            print(
+            logger.debug(
                 f"Got {len(package_versions)} existing packages for "
                 f"{channel_name} / {platform}"
             )
@@ -278,16 +278,18 @@ def initial_sync_mirror(
         update_size = 0
 
         def handle_batch(update_batch):
-            logger.debug(update_batch)
+            logger.debug("Handling batch: ", update_batch)
             if not update_batch:
                 return False
 
             remote_packages = []
-            try:
-                remote_packages.append(remote_repository.open(path))
-            except RemoteServerError:
-                logger.error(f"remote server error when getting a file {path}")
-                return
+            for path in update_batch:
+                try:
+                    remote_packages.append(remote_repository.open(path))
+                    logger.debug(f"Fetched file {path}")
+                except RemoteServerError:
+                    logger.error(f"remote server error when getting a file {path}")
+                    return
 
             try:
                 handle_package_files(
@@ -327,19 +329,20 @@ def initial_sync_mirror(
                 )
                 continue
             else:
-                logger.debug(f"updating package {package_name} form {arch}")
+                logger.debug(f"updating package {package_name} from {arch}")
 
             update_batch.append(path)
-            update_size += metadata['size']
+            update_size += metadata.get('size', 100_000)
 
             if len(update_batch) >= max_batch_length or update_size >= max_batch_size:
                 logger.debug(f"Executing batch with {update_size}")
-                any_updated = handle_batch(update_batch)
+                any_updated |= handle_batch(update_batch)
                 update_batch = []
                 update_size = 0
+                indexing.update_indexes(dao, pkgstore, channel_name, subdirs=[arch])
 
         # handle final batch
-        any_updated = handle_batch(update_batch)
+        any_updated |= handle_batch(update_batch)
 
     if any_updated:
         indexing.update_indexes(dao, pkgstore, channel_name, subdirs=[arch])
