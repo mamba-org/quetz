@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 from tempfile import SpooledTemporaryFile
 
 import requests
@@ -224,6 +225,12 @@ def _check_checksum(dao: Dao, channel_name: str, platform: str, keyname="sha256"
     yield _func
 
 
+def download_file(remote_repository, path):
+    f = remote_repository.open(path)
+    logger.debug(f"Fetched file {path}")
+    return f
+
+
 def initial_sync_mirror(
     channel_name: str,
     remote_repository: RemoteRepository,
@@ -278,15 +285,20 @@ def initial_sync_mirror(
         update_size = 0
 
         def handle_batch(update_batch):
-            logger.debug("Handling batch: ", update_batch)
+            logger.debug(f"Handling batch: {update_batch}")
             if not update_batch:
                 return False
 
             remote_packages = []
-            for path in update_batch:
+
+            with ThreadPoolExecutor(max_workers=10) as executor:
                 try:
-                    remote_packages.append(remote_repository.open(path))
-                    logger.debug(f"Fetched file {path}")
+                    for f in executor.map(
+                        download_file,
+                        (remote_repository,) * len(update_batch),
+                        update_batch,
+                    ):
+                        remote_packages.append(f)
                 except RemoteServerError:
                     logger.error(f"remote server error when getting a file {path}")
                     return
@@ -300,6 +312,7 @@ def initial_sync_mirror(
                     force,
                 )
                 return True
+
             except Exception as exc:
                 logger.error(
                     f"could not process package {update_batch} from channel"
