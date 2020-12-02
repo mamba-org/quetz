@@ -104,7 +104,7 @@ def check_redis():
     params=[
         "threading_worker",
         "subprocess_worker",
-        pytest.param(
+        pytest.param(  # type: ignore
             "redis_worker",
             marks=pytest.mark.skipif(not check_redis(), reason='no redis'),
         ),
