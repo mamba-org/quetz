@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 
 from quetz import authorization
 from quetz.dao import Dao
-from quetz.db_models import Channel
+from quetz.db_models import Channel, PackageVersion
 from quetz.pkgstores import PackageStore
 from quetz.tasks import indexing
 
@@ -185,38 +185,32 @@ def _check_timestamp(channel: Channel, dao: Dao):
 
 @contextlib.contextmanager
 def _check_checksum(
-    pkgstore: PackageStore, channel_name: str, arch: str, keyname="sha256"
+    dao: Dao, channel_name: str, platform: str, keyname="sha256"
 ):
     """context manager to compare sha or md5 hashes"""
 
     # lazily load repodata on first request
-    local_repodata = None
-    package_fingerprints = []
+    package_fingerprints = None
 
     def _func(package_name, metadata):
+        nonlocal package_fingerprints
+
+        if package_fingerprints is None:
+            package_versions = (dao.db.query(PackageVersion)
+                .filter(PackageVersion.channel_name == channel_name)
+                .filter(PackageVersion.platform == platform)
+                .all())
+
+            print(f"Got {len(package_versions)} existing packages for {channel_name} / {platform}")
+            package_fingerprints = set()
+            for v in package_versions:
+                info = json.loads(v.info)
+                package_fingerprints.add((v.filename, info[keyname]))
+
         # use nonlocal to be able to modified last_timestamp in the
         # outer scope
-
         if keyname not in metadata:
             return None
-
-        logger.debug(f"comparing {keyname} checksums of {package_name}")
-        nonlocal local_repodata
-        if not local_repodata:
-            try:
-                fid = pkgstore.serve_path(
-                    channel_name, os.path.join(arch, 'repodata.json')
-                )
-            except FileNotFoundError:
-                # no packages for this platform locally, need to add package version
-                local_repodata = True
-                return False
-            local_repodata = json.load(fid)
-            fid.close()
-            for local_package, local_metadata in local_repodata.get(
-                "packages", []
-            ).items():
-                package_fingerprints.append((local_package, local_metadata[keyname]))
 
         fingerprint = (package_name, metadata[keyname])
         is_uptodate = fingerprint in package_fingerprints
@@ -258,8 +252,8 @@ def initial_sync_mirror(
 
     version_methods = [
         _check_timestamp(channel, dao),
-        _check_checksum(pkgstore, channel_name, arch, "sha256"),
-        _check_checksum(pkgstore, channel_name, arch, "md5"),
+        _check_checksum(dao, channel_name, arch, "sha256"),
+        _check_checksum(dao, channel_name, arch, "md5"),
     ]
 
     # version_methods are context managers (for example, to update the db
