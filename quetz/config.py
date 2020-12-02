@@ -133,6 +133,7 @@ class Config:
             [
                 ConfigEntry("batch_length", int, default=10),
                 ConfigEntry("batch_size", int, default=int(1e8)),
+                ConfigEntry("num_parallel_downloads", int, default=int(10)),
             ],
         ),
         ConfigSection(

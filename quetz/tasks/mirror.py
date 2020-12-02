@@ -291,7 +291,7 @@ def initial_sync_mirror(
 
             remote_packages = []
 
-            with ThreadPoolExecutor(max_workers=10) as executor:
+            with ThreadPoolExecutor(max_workers=config.mirroring_num_parallel_downloads) as executor:
                 try:
                     for f in executor.map(
                         download_file,
@@ -300,7 +300,7 @@ def initial_sync_mirror(
                     ):
                         remote_packages.append(f)
                 except RemoteServerError:
-                    logger.error(f"remote server error when getting a file {path}")
+                    logger.error(f"remote server error when getting a file")
                     return
 
             try:
