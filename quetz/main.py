@@ -676,9 +676,13 @@ def get_package_versions(
 def get_package_version(
     platform: str,
     filename: str,
+    package_name: str,
+    channel_name: str,
     dao: Dao = Depends(get_dao),
 ):
-    version = dao.get_package_version_by_filename(filename, platform)
+    version = dao.get_package_version_by_filename(
+        channel_name, package_name, filename, platform
+    )
 
     if not version:
         raise HTTPException(
@@ -687,6 +691,36 @@ def get_package_version(
         )
 
     return version
+
+
+@api_router.delete(
+    "/channels/{channel_name}/packages/{package_name}/versions/{platform}/{filename}",
+    response_model=rest_models.PackageVersion,
+    tags=["packages"],
+)
+def delete_package_version(
+    platform: str,
+    filename: str,
+    channel_name: str,
+    package_name: str,
+    dao: Dao = Depends(get_dao),
+    db=Depends(get_db),
+):
+    version = dao.get_package_version_by_filename(
+        channel_name, package_name, filename, platform
+    )
+
+    if not version:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"package version {platform}/{filename} not found",
+        )
+
+    db.delete(version)
+    db.commit()
+
+    path = os.path.join(platform, filename)
+    pkgstore.delete_file(channel_name, path)
 
 
 @api_router.get(

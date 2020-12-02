@@ -1,7 +1,10 @@
+from pathlib import Path
+
 import pytest
 
 from quetz.authorization import MAINTAINER, MEMBER, OWNER
 from quetz.db_models import Package, PackageVersion
+from quetz.pkgstores import PackageStore
 
 
 @pytest.mark.parametrize("package_role", [OWNER, MAINTAINER, MEMBER])
@@ -51,7 +54,7 @@ def test_delete_package_non_member(
     assert package is not None
 
 
-def test_delete_package_version(
+def test_delete_package_versions(
     auth_client, public_channel, public_package, package_version, dao, db, pkgstore
 ):
 
@@ -81,7 +84,7 @@ def test_get_package_version(auth_client, public_channel, package_version, dao):
     platform = "linux-64"
     response = auth_client.get(
         f"/api/channels/{public_channel.name}/"
-        f"packages/test-package/versions/{platform}/{filename}"
+        f"packages/{package_version.package_name}/versions/{platform}/{filename}"
     )
 
     assert response.status_code == 200
@@ -100,3 +103,27 @@ def test_get_non_existing_package_version(
     )
 
     assert response.status_code == 404
+
+
+def test_delete_package_version(
+    auth_client, public_channel, package_version, dao, pkgstore: PackageStore, db
+):
+    filename = "test-package-0.1-0.tar.bz2"
+    platform = "linux-64"
+    response = auth_client.delete(
+        f"/api/channels/{public_channel.name}/"
+        f"packages/{package_version.package_name}/versions/{platform}/{filename}"
+    )
+
+    assert response.status_code == 200
+
+    versions = (
+        db.query(PackageVersion)
+        .filter(PackageVersion.package_name == package_version.package_name)
+        .all()
+    )
+
+    assert len(versions) == 0
+
+    with pytest.raises(Exception):
+        pkgstore.serve_path(public_channel.name, str(Path(platform) / filename))
