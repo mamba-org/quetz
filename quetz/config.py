@@ -118,7 +118,10 @@ class Config:
         ConfigSection(
             "worker",
             [
-                ConfigEntry("type", str, default="threads"),
+                ConfigEntry("type", str, default="thread"),
+                ConfigEntry("redis_ip", str, default="127.0.0.1"),
+                ConfigEntry("redis_port", int, default=6379),
+                ConfigEntry("redis_db", int, default=0),
             ],
             required=False,
         ),
@@ -135,15 +138,6 @@ class Config:
                 ConfigEntry("batch_size", int, default=int(1e8)),
                 ConfigEntry("num_parallel_downloads", int, default=int(10)),
             ],
-        ),
-        ConfigSection(
-            "redis",
-            [
-                ConfigEntry("ip", str, default="127.0.0.1"),
-                ConfigEntry("port", int, default=6379),
-                ConfigEntry("db", int, default=0),
-            ],
-            required=False,
         ),
     ]
     _config_dirs = [_site_dir, _user_dir]

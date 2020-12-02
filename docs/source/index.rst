@@ -10,7 +10,7 @@ The quetz project is an open source server for conda packages. It is built upon 
 
 The development of quetz is taking place on `github`_.
 
-You can also contact the community of quetz developpers and users on our `gitter`_ channel.
+You can also contact the community of quetz developers and users on our `gitter`_ channel.
 
 Quetz project is supported by `QuantStack`_.
 

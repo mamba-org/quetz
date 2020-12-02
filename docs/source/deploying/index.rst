@@ -12,4 +12,5 @@ infrastructure.
    database
    migrations
    frontend
+   workers
 

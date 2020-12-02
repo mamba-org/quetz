@@ -181,8 +181,11 @@ class RQManager(AbstractWorker):
             **kwargs,
         )
 
+    # the function is blocking in nature and is declared
+    # as 'async' so as to make redis-queue compatible
+    # with the testing framework. It is not to be used otherwise.
     async def wait(self):
         while not self.job.is_finished:
             time.sleep(1)
         if self.job.result:
-            return await self.job.result
+            return self.job.result

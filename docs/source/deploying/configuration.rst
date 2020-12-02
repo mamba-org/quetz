@@ -122,6 +122,31 @@ Quetz can store package in object cloud storage compatible with S3 interface. To
 :bucket_prefix:
 :bucket_suffix: channel directories on S3 are created with the following semantics: ``{bucket_prefix}{channel_name}{bucket_suffix}``
 
+``worker`` section
+^^^^^^^^^^^^^^^^^^^^^^
+
+Quetz can use parallel processing to speed up computation. This is achieved through invoking functions asynchronously with workers.
+Different worker backends can be used. Quetz currently offers 3 types of them -- Threads, Subprocesses, and Redis-Queue workers.
+Which backend to use can be configured by setting the ``type`` parameter.
+
+If Redis-Queue is used, additional parameters such as ``redis_ip``, ``redis_port`` and ``redis_db`` need to be supplied to configure
+the ``redis-server``.
+
+.. code::
+
+   [worker]
+   type = "redis"
+   redis_ip = "127.0.0.1"
+   redis_port = 6379
+   redis_db = 0
+
+:type: One of the three worker backends (``thread``, ``subprocess`` or ``redis``)
+:redis_ip: IP address of the redis-server.
+:redis_port: The port on which the redis-server is started.
+:redis_db: The database index in redis-server to connect to.
+
+For more information, see :ref:`Task Workers`
+
 Environment
 -----------
 
