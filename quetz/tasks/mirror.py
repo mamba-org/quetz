@@ -226,7 +226,12 @@ def _check_checksum(dao: Dao, channel_name: str, platform: str, keyname="sha256"
 
 
 def download_file(remote_repository, path):
-    f = remote_repository.open(path)
+    try:
+        f = remote_repository.open(path)
+    except RemoteServerError:
+        logger.error(f"remote server error when getting a file {path}")
+        return None
+
     logger.debug(f"Fetched file {path}")
     return f
 
@@ -291,17 +296,16 @@ def initial_sync_mirror(
 
             remote_packages = []
 
-            with ThreadPoolExecutor(max_workers=config.mirroring_num_parallel_downloads) as executor:
-                try:
-                    for f in executor.map(
-                        download_file,
-                        (remote_repository,) * len(update_batch),
-                        update_batch,
-                    ):
+            with ThreadPoolExecutor(
+                max_workers=config.mirroring_num_parallel_downloads
+            ) as executor:
+                for f in executor.map(
+                    download_file,
+                    (remote_repository,) * len(update_batch),
+                    update_batch,
+                ):
+                    if f is not None:
                         remote_packages.append(f)
-                except RemoteServerError:
-                    logger.error(f"remote server error when getting a file")
-                    return
 
             try:
                 handle_package_files(
