@@ -92,6 +92,7 @@ def test_get_package_version(auth_client, public_channel, package_version, dao):
     assert response.json()['platform'] == platform
 
 
+@pytest.mark.parametrize("user_server_role", [OWNER, MAINTAINER])
 @pytest.mark.parametrize("user_package_role", [OWNER, MAINTAINER, MEMBER, None])
 @pytest.mark.parametrize("user_channel_role", [OWNER, MAINTAINER, MEMBER, None])
 @pytest.mark.parametrize("private", [True, False])
@@ -105,8 +106,10 @@ def test_get_package_version_permissions(
     db,
     private_package,
     private,
+    user_server_role,
 ):
     private_channel.private = private
+    user.role = user_server_role
 
     if user_channel_role:
         channel_member = ChannelMember(
@@ -134,6 +137,8 @@ def test_get_package_version_permissions(
 
     if not private:
         assert response.status_code == 200
+    elif user_server_role in [OWNER, MAINTAINER]:
+        assert response.status_code == 200
     elif user_channel_role in [OWNER, MAINTAINER, MEMBER]:
         assert response.status_code == 200
     elif user_package_role in [OWNER, MAINTAINER, MEMBER]:
@@ -142,6 +147,7 @@ def test_get_package_version_permissions(
         assert response.status_code == 403
 
 
+@pytest.mark.parametrize("user_server_role", [OWNER, MAINTAINER])
 @pytest.mark.parametrize("user_package_role", [OWNER, MAINTAINER, MEMBER, None])
 @pytest.mark.parametrize("user_channel_role", [OWNER, MAINTAINER, MEMBER, None])
 @pytest.mark.parametrize("private", [True, False])
@@ -156,9 +162,11 @@ def test_delete_package_version_permissions(
     private_package,
     pkgstore,
     private,
+    user_server_role,
 ):
 
     private_channel.private = private
+    user.role = user_server_role
 
     if user_channel_role:
         channel_member = ChannelMember(
@@ -184,7 +192,9 @@ def test_delete_package_version_permissions(
         f"packages/{package_name}/versions/{platform}/{filename}"
     )
 
-    if user_channel_role in [OWNER, MAINTAINER]:
+    if user_server_role in [OWNER, MAINTAINER]:
+        assert response.status_code == 200
+    elif user_channel_role in [OWNER, MAINTAINER]:
         assert response.status_code == 200
     elif user_package_role in [OWNER, MAINTAINER]:
         assert response.status_code == 200
