@@ -1,4 +1,6 @@
 import os
+import socket
+from contextlib import closing
 
 import pytest
 import requests
@@ -85,7 +87,29 @@ def redis_worker(redis_ip, redis_port, redis_db, api_key, browser_session, db, c
     return worker
 
 
-@pytest.fixture(params=["threading_worker", "subprocess_worker", "redis_worker"])
+def check_socket(host, port):
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+        sock.settimeout(2)
+        if sock.connect_ex((host, port)) == 0:
+            return True
+        else:
+            return False
+
+
+def check_redis():
+    return check_socket('127.0.0.1', 6379)
+
+
+@pytest.fixture(
+    params=[
+        "threading_worker",
+        "subprocess_worker",
+        pytest.param(
+            "redis_worker",
+            marks=pytest.mark.skipif(not check_redis(), reason='no redis'),
+        ),
+    ]
+)
 def any_worker(request):
     val = request.getfixturevalue(request.param)
     return val
