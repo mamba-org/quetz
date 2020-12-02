@@ -129,6 +129,13 @@ class Config:
             ],
         ),
         ConfigSection(
+            "mirroring",
+            [
+                ConfigEntry("batch_length", int, default=10),
+                ConfigEntry("batch_size", int, default=int(1e8)),
+            ],
+        ),
+        ConfigSection(
             "redis",
             [
                 ConfigEntry("ip", str, default="127.0.0.1"),

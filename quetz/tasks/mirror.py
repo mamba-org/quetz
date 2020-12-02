@@ -10,6 +10,7 @@ from fastapi import HTTPException, status
 from fastapi.responses import FileResponse, StreamingResponse
 
 from quetz import authorization
+from quetz.config import Config
 from quetz.dao import Dao
 from quetz.db_models import Channel, PackageVersion
 from quetz.pkgstores import PackageStore
@@ -72,7 +73,7 @@ def get_from_cache_or_download(
 
 
 class RemoteRepository:
-    """Ressource object for external package repositories."""
+    """Resource object for external package repositories."""
 
     def __init__(self, host, session):
         self.host = host
@@ -184,9 +185,7 @@ def _check_timestamp(channel: Channel, dao: Dao):
 
 
 @contextlib.contextmanager
-def _check_checksum(
-    dao: Dao, channel_name: str, platform: str, keyname="sha256"
-):
+def _check_checksum(dao: Dao, channel_name: str, platform: str, keyname="sha256"):
     """context manager to compare sha or md5 hashes"""
 
     # lazily load repodata on first request
@@ -196,12 +195,17 @@ def _check_checksum(
         nonlocal package_fingerprints
 
         if package_fingerprints is None:
-            package_versions = (dao.db.query(PackageVersion)
+            package_versions = (
+                dao.db.query(PackageVersion)
                 .filter(PackageVersion.channel_name == channel_name)
                 .filter(PackageVersion.platform == platform)
-                .all())
+                .all()
+            )
 
-            print(f"Got {len(package_versions)} existing packages for {channel_name} / {platform}")
+            print(
+                f"Got {len(package_versions)} existing packages for "
+                f"{channel_name} / {platform}"
+            )
             package_fingerprints = set()
             for v in package_versions:
                 info = json.loads(v.info)
@@ -256,6 +260,10 @@ def initial_sync_mirror(
         _check_checksum(dao, channel_name, arch, "md5"),
     ]
 
+    config = Config()
+    max_batch_length = config.mirroring_batch_length
+    max_batch_size = config.mirroring_batch_size
+
     # version_methods are context managers (for example, to update the db
     # after all packages have been checked), so we need to enter the context
     # for each
@@ -265,6 +273,41 @@ def initial_sync_mirror(
         version_checks = [
             version_stack.enter_context(method) for method in version_methods
         ]
+
+        update_batch = []
+        update_size = 0
+
+        def handle_batch(update_batch):
+            logger.debug(update_batch)
+            if not update_batch:
+                return False
+
+            remote_packages = []
+            try:
+                remote_packages.append(remote_repository.open(path))
+            except RemoteServerError:
+                logger.error(f"remote server error when getting a file {path}")
+                return
+
+            try:
+                handle_package_files(
+                    channel_name,
+                    remote_packages,
+                    dao,
+                    auth,
+                    force,
+                )
+                return True
+            except Exception as exc:
+                logger.error(
+                    f"could not process package {update_batch} from channel"
+                    f"{channel_name} due to error {exc} of "
+                    f"type {exc.__class__.__name__}"
+                )
+                if not skip_errors:
+                    raise exc
+
+            return False
 
         for package_name, metadata in packages.items():
             path = os.path.join(arch, package_name)
@@ -286,30 +329,17 @@ def initial_sync_mirror(
             else:
                 logger.debug(f"updating package {package_name} form {arch}")
 
-            try:
-                remote_package = remote_repository.open(path)
-            except RemoteServerError:
-                logger.error(f"remote server error when getting a file {path}")
-                continue
+            update_batch.append(path)
+            update_size += metadata['size']
 
-            files = [remote_package]
-            try:
-                handle_package_files(
-                    channel_name,
-                    files,
-                    dao,
-                    auth,
-                    force,
-                )
-                any_updated = True
-            except Exception as exc:
-                logger.error(
-                    f"could not process package {package_name} from channel"
-                    f"{channel_name} due to error {exc} of "
-                    f"type {exc.__class__.__name__}"
-                )
-                if not skip_errors:
-                    raise exc
+            if len(update_batch) >= max_batch_length or update_size >= max_batch_size:
+                logger.debug(f"Executing batch with {update_size}")
+                any_updated = handle_batch(update_batch)
+                update_batch = []
+                update_size = 0
+
+        # handle final batch
+        any_updated = handle_batch(update_batch)
 
     if any_updated:
         indexing.update_indexes(dao, pkgstore, channel_name, subdirs=[arch])
