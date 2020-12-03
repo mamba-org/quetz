@@ -7,6 +7,7 @@ import os
 import re
 import secrets
 import sys
+import traceback
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from email.utils import formatdate
@@ -35,6 +36,13 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse
 from starlette.staticfiles import StaticFiles
+from tenacity import (
+    after_log,
+    retry,
+    retry_if_result,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from quetz import (
     auth_github,
@@ -912,22 +920,51 @@ def trigger_indexing(
     background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel.name)
 
 
-def _upload_package(channel_name: str, file, pkgstore):
-    condainfo = CondaInfo(file.file, file.filename)
+@retry(
+    stop=stop_after_attempt(3),
+    retry=(retry_if_result(lambda x: x is None)),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    after=after_log(logger, logging.WARNING),
+)
+def _extract_and_upload_package(file, channel_name, pkgstore):
+    if file.file is None or (hasattr(file.file, '_file') and file.file._file is None):
+        logger.error(f"File is NONE: {file.file}")
+
+    try:
+        conda_info = CondaInfo(file.file, file.filename)
+    except exceptions.PackageError as e:
+        logger.error(
+            f"Could not extract conda-info from package {file.filename}\n{str(e)}"
+        )
+        raise e
+    except Exception as e:
+        logger.error(
+            f"Could not extract conda-info from package {file.filename}\n{str(e)}"
+        )
+        raise e
+
+    dest = os.path.join(conda_info.info["subdir"], file.filename)
     parts = file.filename.rsplit("-", 2)
 
-    # check that the filename matches the package name
-    # TODO also validate version and build string
-    if parts[0] != condainfo.info["name"]:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+    if parts[0] != conda_info.info["name"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"package file name and info files do not match {file.filename}",
+        )
 
-    file.file._file.seek(0)
-    dest = os.path.join(condainfo.info["subdir"], file.filename)
-
-    logger.debug(f"uploading file {dest} from channel {channel_name} to package store")
-
-    pkgstore.add_package(file.file, channel_name, dest)
-    return condainfo
+    try:
+        file.file._file.seek(0)
+        logger.debug(
+            f"uploading file {dest} from channel {channel_name} to package store"
+        )
+        pkgstore.add_package(file.file, channel_name, dest)
+    except AttributeError as e:
+        logger.error(f"Could not upload {file}, {file.filename}. {str(e)}")
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        logger.error(repr(traceback.format_tb(exc_traceback)))
+        # TODO FIX THIS!?
+        return None
+    return conda_info
 
 
 def handle_package_files(
@@ -941,13 +978,13 @@ def handle_package_files(
     user_id = auth.assert_user()
 
     # quick fail if not allowed to upload
-    # note: we're checking later that `parts[0] == condainfo.package_name`
+    # note: we're checking later that `parts[0] == conda_info.package_name`
     for file in files:
-        logger.info(f"FILE NAME: {file.filename}")
         parts = file.filename.rsplit("-", 2)
         if len(parts) != 3:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="package filename wrong"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"package file name has wrong format {file.filename}",
             )
         else:
             package_name = parts[0]
@@ -957,24 +994,27 @@ def handle_package_files(
 
         logger.debug(f"adding file '{file.filename}' to channel '{channel_name}'")
 
-    pkgstore.create_channel(channel_name)
-
-    with TicToc("condainfos"):
-        with ThreadPoolExecutor(max_workers=10) as executor:
+    with TicToc("extract conda-info and upload file"):
+        pkgstore.create_channel(channel_name)
+        nthreads = config.general_package_unpack_threads
+        with ThreadPoolExecutor(max_workers=nthreads) as executor:
             try:
-                condainfos = [
+                conda_infos = [
                     ci
                     for ci in executor.map(
-                        lambda file: _upload_package(channel_name, file, pkgstore),
+                        _extract_and_upload_package,
                         files,
+                        (channel_name,) * len(files),
+                        (pkgstore,) * len(files),
                     )
                 ]
             except exceptions.PackageError as e:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST, detail=e.detail
                 )
+    conda_infos = [ci for ci in conda_infos if ci is not None]
 
-    for file, condainfo in zip(files, condainfos):
+    for file, condainfo in zip(files, conda_infos):
         logger.debug(f"Handling {condainfo.info['name']} -> {file.filename}")
 
         package_name = condainfo.info["name"]
@@ -1044,8 +1084,7 @@ def handle_package_files(
                 status_code=status.HTTP_409_CONFLICT, detail="Duplicate"
             )
 
-        with TicToc("Executing post hooks"):
-            pm.hook.post_add_package_version(version=version, condainfo=condainfo)
+        pm.hook.post_add_package_version(version=version, condainfo=condainfo)
 
 
 app.include_router(
