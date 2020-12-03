@@ -148,16 +148,22 @@ class Config:
     def __new__(cls, deployment_config: str = None):
         if not deployment_config and None in cls._instances:
             return cls._instances[None]
-        path = os.path.abspath(cls.find_file(deployment_config))
-        if path not in cls._instances:
-            config = super().__new__(cls)
-            config.init(path)
-            cls._instances[path] = config
-            # optimization - for default config path we also store the instance
-            # under None key
-            if not deployment_config:
-                cls._instances[None] = config
-        return cls._instances[path]
+        try:
+            path = os.path.abspath(cls.find_file(deployment_config))
+            if path not in cls._instances:
+                config = super().__new__(cls)
+                config.init(path)
+                cls._instances[path] = config
+                # optimization - for default config path we also store the instance
+                # under None key
+                if not deployment_config:
+                    cls._instances[None] = config
+            return cls._instances[path]
+        except TypeError:
+            raise ValueError(
+                "Environment Variable QUETZ_CONFIG_FILE \
+                 should be set to name / path of the config file"
+            )
 
     def __getattr__(self, name: str) -> Any:
         super().__getattr__(self, name)
