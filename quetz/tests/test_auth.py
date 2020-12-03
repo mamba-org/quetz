@@ -5,6 +5,7 @@ from unittest import mock
 
 from pytest import fixture
 
+from quetz.authorization import Rules
 from quetz.db_models import (
     ApiKey,
     Channel,
@@ -35,7 +36,11 @@ class Data:
 
         assert len(db.query(User).all()) == 3
 
-        db.add(ApiKey(key=self.keya, user_id=self.usera.id, owner_id=self.usera.id))
+        self.keya_obj = ApiKey(
+            key=self.keya, user_id=self.usera.id, owner_id=self.usera.id
+        )
+
+        db.add(self.keya_obj)
         db.add(ApiKey(key=self.keyb, user_id=self.userb.id, owner_id=self.userb.id))
 
         self.channel1 = Channel(name="testchannel", private=False)
@@ -518,3 +523,22 @@ def test_use_wildcard_api_key_to_authenticate(data, client):
         "/api/channels/my-new-channel/packages", headers={"X-API-Key": channel_key}
     )
     assert response.status_code == 403
+
+
+def test_authorizations_with_deleted_api_key(data: Data, db):
+
+    auth = Rules(data.keya, {}, db)
+
+    user_id = auth.get_user()
+
+    assert user_id == data.usera.id
+
+    data.keya_obj.deleted = True
+
+    db.commit()
+
+    user_id = auth.get_user()
+
+    assert not user_id
+
+    data.keya_obj.deleted = False

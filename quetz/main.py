@@ -25,6 +25,7 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse
@@ -79,17 +80,17 @@ class CondaTokenMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app):
         super().__init__(app)
-        self.token_pattern = re.compile('^/t/([^/]+?)/')
+        self.token_pattern = re.compile("^/t/([^/]+?)/")
 
     async def dispatch(self, request, call_next):
-        path = request.scope['path']
+        path = request.scope["path"]
         match = self.token_pattern.search(path)
         if match:
             prefix_length = len(match.group(0)) - 1
             new_path = path[prefix_length:]
             api_key = match.group(1)
-            request.scope['path'] = new_path
-            request.scope['headers'].append((b'x-api-key', api_key.encode()))
+            request.scope["path"] = new_path
+            request.scope["headers"].append((b"x-api-key", api_key.encode()))
 
         response = await call_next(request)
 
@@ -807,6 +808,21 @@ def post_api_key(
     return rest_models.ApiKey(
         description=api_key.description, roles=api_key.roles, key=key
     )
+
+
+@api_router.delete("/api-keys/{key}", tags=["API keys"])
+def delete_api_keys(
+    key: str,
+    dao: Dao = Depends(get_dao),
+    db: Session = Depends(get_db),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    api_key = dao.get_api_key(key)
+    auth.assert_delete_api_key(api_key)
+
+    api_key.deleted = True
+
+    db.commit()
 
 
 @api_router.post(
