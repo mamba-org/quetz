@@ -159,7 +159,8 @@ class S3Store(PackageStore):
                 with fs.open(
                     path.join(bucket, destination), "wb", acl="private"
                 ) as pkg:
-                    shutil.copyfileobj(package, pkg)
+                    # use a chunk size of 10 Megabytes
+                    shutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
