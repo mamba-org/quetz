@@ -5,7 +5,6 @@ import pytest
 
 from quetz import db_models
 from quetz.config import Config
-from quetz.db_models import User
 
 
 def test_get_package_list(package_version, package_name, channel_name, client):
@@ -56,153 +55,6 @@ def test_package_version_list_by_date(
     )
     assert response.status_code == 200
     assert len(response.json()) == 1
-
-
-def test_validate_user_role_names(user, client, other_user, db):
-    # test validation of role names
-
-    response = client.put("/api/users/bartosz/role", json={"role": "UNDEFINED"})
-
-    assert response.status_code == 422
-    assert "member" in response.json()["detail"][0]["msg"]
-
-
-@pytest.mark.parametrize(
-    "target_user,user_role,target_user_role,expected_status",
-    [
-        ("other", None, "member", 403),
-        ("other", "member", "member", 403),
-        ("other", "member", "maintainer", 403),
-        ("other", "member", "owner", 403),
-        ("other", "maintainer", "member", 200),
-        ("other", "maintainer", "maintainer", 403),
-        ("other", "maintainer", "owner", 403),
-        ("other", "owner", "member", 200),
-        ("other", "owner", "maintainer", 200),
-        ("other", "owner", "owner", 200),
-        ("missing_user", "owner", "member", 404),
-    ],
-)
-def test_set_user_role(
-    auth_client,
-    other_user,
-    target_user,
-    user_role,
-    target_user_role,
-    expected_status,
-):
-
-    # test changing role
-
-    response = auth_client.put(
-        f"/api/users/{target_user}/role", json={"role": target_user_role}
-    )
-    assert response.status_code == expected_status
-
-    # test if role assigned if previous request was successful
-    if response.status_code == 200:
-
-        get_response = auth_client.get(f"/api/users/{target_user}/role")
-
-        assert get_response.status_code == 200
-        assert get_response.json()["role"] == target_user_role
-
-
-@pytest.mark.parametrize(
-    "target_user,user_role,expected_status",
-    [
-        ("other", None, 403),
-        ("other", "member", 403),
-        ("other", "maintainer", 200),
-        ("other", "owner", 200),
-        ("bartosz", None, 200),
-        ("bartosz", "member", 200),
-        ("bartosz", "maintainer", 200),
-        ("bartosz", "owner", 200),
-    ],
-)
-def test_get_user_role(auth_client, other_user, target_user, expected_status, db):
-
-    # test reading the role
-
-    response = auth_client.get(f"/api/users/{target_user}/role")
-    assert response.status_code == expected_status
-
-    expected_role = db.query(User).filter(User.username == target_user).first().role
-
-    if response.status_code == 200:
-
-        assert response.json()["role"] == expected_role
-
-
-def test_get_set_user_role_without_login(user, client):
-    # test permissions without logged-in user
-
-    response = client.get("/api/users/bartosz/role")
-
-    assert response.status_code == 401
-
-    response = client.put("/api/users/bartosz/role", json={"role": "member"})
-
-    assert response.status_code == 401
-
-
-@pytest.mark.parametrize(
-    "user_role,target_user,expected_status",
-    [
-        ("owner", "other", 200),
-        ("maintainer", "other", 200),
-        ("member", "other", 403),
-        (None, "other", 403),
-        ("owner", "bartosz", 200),
-        ("maintainer", "bartosz", 200),
-        ("member", "bartosz", 200),
-        (None, "bartosz", 200),
-    ],
-)
-def test_get_user_permissions(
-    other_user,
-    target_user,
-    auth_client,
-    expected_status,
-):
-
-    response = auth_client.get(f"/api/users/{target_user}")
-
-    assert response.status_code == expected_status
-
-    if response.status_code == 200:
-        assert response.json()["username"] == target_user
-
-
-@pytest.mark.parametrize("paginated", [False, True])
-@pytest.mark.parametrize(
-    "user_role,query,expected_n_users",
-    [
-        ("owner", "", 2),
-        ("maintainer", "", 2),
-        ("member", "", 1),
-        (None, "", 1),
-        ("owner", "bar", 1),
-        (None, "bar", 1),
-        ("owner", "oth", 1),
-        (None, "oth", 0),
-    ],
-)
-def test_get_users_permissions(
-    other_user, auth_client, expected_n_users, query, paginated
-):
-
-    if paginated:
-        response = auth_client.get(f"/api/paginated/users?q={query}")
-        user_list = response.json()["result"]
-    else:
-        response = auth_client.get(f"/api/users?q={query}")
-        user_list = response.json()
-
-    assert response.status_code == 200
-
-    assert len(user_list) == expected_n_users
 
 
 @pytest.mark.parametrize(
@@ -308,21 +160,6 @@ def test_permissions_channel_endpoints(
         )
     )
     assert response.status_code == expected_status
-
-
-@pytest.mark.parametrize("user_role", ["owner"])
-def test_get_users_without_profile(auth_client, other_user_without_profile, user):
-
-    response = auth_client.get("/api/users")
-
-    assert response.status_code == 200
-    users = response.json()
-    assert len(users) == 1
-    assert users[0]["username"] == user.username
-
-    response = auth_client.get(f"/api/users/{other_user_without_profile.username}")
-
-    assert response.status_code == 404
 
 
 @pytest.mark.parametrize(
