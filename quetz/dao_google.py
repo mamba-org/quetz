@@ -1,29 +1,50 @@
 # Copyright 2020 QuantStack, Codethink Ltd
 # Distributed under the terms of the Modified BSD License.
 
-import uuid
-
 from sqlalchemy.orm import Session
 
-from .db_models import Identity, Profile, User
+from . import rest_models
+from .authorization import OWNER
+from .config import Config
+from .dao import Dao
+from .db_models import Channel, Identity, User
 
 
-def create_user_with_google_identity(db: Session, google_profile) -> User:
-    user = User(id=uuid.uuid4().bytes, username=google_profile['email'])
+def create_user_with_google_identity(
+    dao: Dao, google_profile: dict, default_role: str, create_default_channel: bool
+) -> User:
 
-    identity = Identity(
-        provider='google',
-        identity_id=google_profile['sub'],
-        username=google_profile['email'],
+    username = google_profile['email']
+    user = dao.create_user_with_profile(
+        username=username,
+        provider="google",
+        identity_id=google_profile["sub"],
+        name=google_profile["name"],
+        avatar_url=google_profile['picture'],
+        role=default_role,
+        exist_ok=True,
     )
 
-    profile = Profile(name=google_profile['name'], avatar_url=google_profile['picture'])
+    if create_default_channel:
 
-    user.identities.append(identity)  # type: ignore
-    user.profile = profile
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+        channel_name = username
+
+        i = 0
+
+        while dao.db.query(Channel).filter(Channel.name == channel_name).one_or_none():
+
+            channel_name = f"{username}-{i}"
+
+            i += 1
+
+        channel_meta = rest_models.Channel(
+            name=channel_name,
+            description=f"{username}'s default channel",
+            private=True,
+        )
+
+        dao.create_channel(channel_meta, user.id, OWNER)
+
     return user
 
 
@@ -48,14 +69,32 @@ def update_user_from_google_profile(db: Session, user, identity, profile) -> Use
     return user
 
 
-def get_user_by_google_identity(db: Session, profile) -> User:
-    user, identity = db.query(User, Identity).join(Identity).filter(
-        Identity.provider == 'google'
-    ).filter(Identity.identity_id == profile['sub']).one_or_none() or (None, None)
+def get_user_by_google_identity(dao: Dao, profile: dict, config: Config) -> User:
+
+    db = dao.db
+
+    try:
+        user, identity = db.query(User, Identity).join(Identity).filter(
+            Identity.provider == 'google'
+        ).filter(Identity.identity_id == str(profile['sub'])).one_or_none() or (
+            None,
+            None,
+        )
+    except KeyError:
+        print(f"unexpected response format: {profile}")
+
+    if config.configured_section("users"):
+        default_role = config.users_default_role
+        create_default_channel = config.users_create_default_channel
+    else:
+        default_role = None
+        create_default_channel = False
 
     if user:
         if user_google_profile_changed(user, identity, profile):
             return update_user_from_google_profile(db, user, identity, profile)
         return user
 
-    return create_user_with_google_identity(db, profile)
+    return create_user_with_google_identity(
+        dao, profile, default_role, create_default_channel
+    )
