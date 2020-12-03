@@ -122,6 +122,8 @@ Quetz can store package in object cloud storage compatible with S3 interface. To
 :bucket_prefix:
 :bucket_suffix: channel directories on S3 are created with the following semantics: ``{bucket_prefix}{channel_name}{bucket_suffix}``
 
+.. _worker_config:
+
 ``worker`` section
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -145,7 +147,7 @@ the ``redis-server``.
 :redis_port: The port on which the redis-server is started.
 :redis_db: The database index in redis-server to connect to.
 
-For more information, see :ref:`Task Workers`
+For more information, see :ref:`task_workers`.
 
 Environment
 -----------

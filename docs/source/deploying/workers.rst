@@ -1,3 +1,5 @@
+.. _task_workers:
+
 Task Workers
 =============
 
@@ -20,27 +22,38 @@ Subprocess workers start in a separate process and are implemented through ``Pro
 Redis
 -----------
 
-For advanced use-cases, Quetz also offers the ability to use ``redis-queue`` to manage jobs and run them on
+For advanced use-cases, Quetz also offers the ability to use `redis-queue`_ to manage jobs and run them on
 multiple processes or even multiple servers.
 
 To use this backend, one needs to setup ``redis`` and ``redis-queue``.
 
+.. _redis-queue: https://python-rq.org/
+
 Setting up ``redis``
 ^^^^^^^^^^^^^^^^^^^^
 
-Make sure that ``redis`` is installed. There are multiple ways to do this. One can compile it from source (recommended),
-use a package manager for your distribution (such as ``brew`` for MacOS) and even use a Docker image.
+Make sure that ``redis`` is installed. There are multiple ways to do this. One can compile it from source,
+use a package manager for your distribution (such as ``brew`` for MacOS, ``apt-get`` for Debian/Ubuntu) or use a
+Docker `redis image`_.
+(``docker pull redis`` if you have docker installed).
+
+.. _redis image: https://hub.docker.com/_/redis/
 
 Once ``redis`` is installed, it needs to be started. This is as simple as executing the command ``redis-server`` on a
-terminal (or can be run in a container).
+terminal.
+(or can be run in a container through ``docker run -p 6379:6379 redis``)
 
-We also need to install ``redis-py`` (https://github.com/andymccurdy/redis-py) - the python client for Redis.
+We also need to install `redis-py`_ - the python client for Redis.
+
+.. _redis-py: https://github.com/andymccurdy/redis-py
 
 Installing ``redis-queue``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``redis-queue`` is a python library that facilitates using Redis for queueing jobs and processing them in the background with
-workers. The installation can be done by following instructions here: https://python-rq.org/#installation
+workers. The installation can be done by following the appropriate `instructions`_.
+
+.. _instructions: https://python-rq.org/#installation
 
 Once this has been done, a new worker needs to be spawned (which will continuously listen for jobs to execute). This can be done by
 running ``rq worker`` in a separate terminal.
@@ -55,4 +68,4 @@ Make sure to add a ``[worker]`` section with the ``type`` parameter set to ``red
     present in the ``config.toml`` file. The default values (corresponding to running the server locally) will be picked up
     if they are not explicitly supplied.
 
-    See :ref:`Configuration` for more details.
+    See :ref:`worker_config` for more details.
