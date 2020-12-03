@@ -7,10 +7,19 @@ from quetz.db_models import ApiKey
 def api_keys(other_user, user, db):
 
     keys = [
-        ApiKey(key='key', user=user, owner=user),
-        ApiKey(key='other_key', user=other_user, owner=other_user),
-        ApiKey(key='other_user_is_user', user=other_user, owner=user),
-        ApiKey(key='user_is_user', user=user, owner=other_user),
+        ApiKey(key='key', description="key", user=user, owner=user),
+        ApiKey(
+            key='other_key', description="other_key", user=other_user, owner=other_user
+        ),
+        ApiKey(
+            key='other_user_is_user',
+            description="other_user_is_user",
+            user=other_user,
+            owner=user,
+        ),
+        ApiKey(
+            key='user_is_user', description="user_is_user", user=user, owner=other_user
+        ),
     ]
 
     for key in keys:
@@ -60,3 +69,18 @@ def test_delete_api_key_does_not_exist(auth_client):
     assert response.status_code == 404
 
     assert "does not exist" in response.json()['detail']
+
+
+def test_unlist_delete_api_keys(auth_client, api_keys, db):
+
+    response = auth_client.get("/api/api-keys")
+
+    assert response.status_code == 200
+    response_keys = response.json()
+    assert len(response_keys) == len(api_keys)
+    assert api_keys[0].description in [k.description for k in response.json()]
+
+    api_keys[0].deleted = True
+    db.commit()
+
+    response = auth_client.list("/api/api-keys")
