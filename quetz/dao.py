@@ -40,6 +40,8 @@ def get_paginated_result(query: Query, skip: int, limit: int):
 
 
 class Dao:
+    db: Session
+
     def __init__(self, db: Session):
         self.db = db
 
@@ -361,6 +363,9 @@ class Dao:
         self.db.commit()
 
         return db_api_key
+
+    def get_api_key(self, key):
+        return self.db.query(ApiKey).get(key)
 
     def create_version(
         self,

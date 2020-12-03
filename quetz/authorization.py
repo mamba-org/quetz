@@ -32,7 +32,9 @@ class Rules:
 
         if self.API_key:
             api_key = (
-                self.db.query(ApiKey).filter(ApiKey.key == self.API_key).one_or_none()
+                self.db.query(ApiKey)
+                .filter(ApiKey.key == self.API_key, ~ApiKey.deleted)
+                .one_or_none()
             )
             if api_key:
                 user_id = api_key.user_id
@@ -190,6 +192,20 @@ class Rules:
             else:
                 # create key without assigning special channel/package privilages
                 return True
+
+    def assert_delete_api_key(self, api_key):
+
+        user_id = self.assert_user()
+
+        if (
+            not self.is_user_elevated(user_id)
+            and not api_key.user_id == user_id
+            and not api_key.owner_id == user_id
+        ):
+
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="No permission"
+            )
 
     def assert_upload_file(self, channel_name, package_name):
         self.assert_channel_or_package_roles(
