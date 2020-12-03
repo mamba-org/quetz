@@ -364,7 +364,7 @@ def test_get_channel_members(auth_client, public_channel, expected_code):
 
 
 def test_upload_wrong_file_type(auth_client, public_channel):
-    files = {"files": ("my_package-0.1.tar.bz", "dfdf")}
+    files = {"files": ("my_package-0.1-0.tar.bz", "dfdf")}
     response = auth_client.post(
         f"/api/channels/{public_channel.name}/files/", files=files
     )
