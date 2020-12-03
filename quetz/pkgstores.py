@@ -97,6 +97,7 @@ class LocalStore(PackageStore):
         self.fs.delete(path.join(self.channels_dir, channel, destination))
 
     def serve_path(self, channel, src):
+
         return self.fs.open(path.join(self.channels_dir, channel, src)).f
 
     def list_files(self, channel: str):
