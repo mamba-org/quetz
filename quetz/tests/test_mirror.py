@@ -316,8 +316,8 @@ OTHER_DUMMY_PACKAGE_V2 = Path("./other-package-0.2-0.tar.bz2")
         pytest.param(
             [
                 b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA"}, "other-package-0.2-0.tar.bz2": {"sha256": "SHA-V2"}}}',  # noqa
+                OTHER_DUMMY_PACKAGE_V2,
                 DUMMY_PACKAGE_V2,
-                OTHER_DUMMY_PACKAGE_V2
             ],
             "noarch",
             1,
@@ -424,21 +424,30 @@ def test_synchronisation_sha(
     [
         # package modified but no server timestamp set
         (
-            [b'{"packages": {"test-package-0.1-0.tar.bz2": {"time_modified": 100}}}', DUMMY_PACKAGE],
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"time_modified": 100}}}',
+                DUMMY_PACKAGE,
+            ],
             0,
             100,
             True,
         ),
         # package modified with later timestamp
         (
-            [b'{"packages": {"test-package-0.1-0.tar.bz2": {"time_modified": 1000}}}', DUMMY_PACKAGE],
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"time_modified": 1000}}}',  # noqa
+                DUMMY_PACKAGE,
+            ],
             100,
             1000,
             True,
         ),
         # package modified with earlier timestamp
         (
-            [b'{"packages": {"test-package-0.1-0.tar.bz2": {"time_modified": 100}}}', DUMMY_PACKAGE],
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"time_modified": 100}}}',
+                DUMMY_PACKAGE,
+            ],
             1000,
             1000,
             False,
