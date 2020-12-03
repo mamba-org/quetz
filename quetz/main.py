@@ -315,7 +315,7 @@ def get_user(
     return user
 
 
-@api_router.delete("/users/{username}")
+@api_router.delete("/users/{username}", tags=["users"])
 def delete_user(
     username: str,
     dao: Dao = Depends(get_dao),
