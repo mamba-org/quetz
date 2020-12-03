@@ -5,7 +5,7 @@ import pytest
 
 from quetz.config import Config
 from quetz.dao import Dao
-from quetz.db_models import Profile, User
+from quetz.db_models import Identity, Profile, User
 from quetz.rest_models import Channel, Package
 
 
@@ -50,8 +50,8 @@ def private_package_version(dao, private_channel, private_package, other_user, c
     filename = Path("test-package-0.1-0.tar.bz2")
 
     pkgstore = config.get_package_store()
-    with open(filename, 'rb') as fid:
-        pkgstore.add_file(fid.read(), channel_name, 'linux-64' / filename)
+    with open(filename, "rb") as fid:
+        pkgstore.add_file(fid.read(), channel_name, "linux-64" / filename)
 
     version = dao.create_version(
         private_channel.name,
@@ -76,8 +76,8 @@ def package_version(
 
     pkgstore = config.get_package_store()
     filename = Path("test-package-0.1-0.tar.bz2")
-    with open(filename, 'rb') as fid:
-        pkgstore.add_file(fid.read(), channel_name, 'linux-64' / filename)
+    with open(filename, "rb") as fid:
+        pkgstore.add_file(fid.read(), channel_name, "linux-64" / filename)
     package_format = "tarbz2"
     package_info = "{}"
     version = dao.create_version(
@@ -111,7 +111,14 @@ def other_user(other_user_without_profile, db):
     profile = Profile(
         name="Other", avatar_url="http:///avatar", user=other_user_without_profile
     )
+    identity = Identity(
+        provider="github",
+        identity_id="github",
+        username="btel",
+        user=other_user_without_profile,
+    )
     db.add(profile)
+    db.add(identity)
     db.commit()
     yield other_user_without_profile
 

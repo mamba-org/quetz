@@ -314,6 +314,18 @@ def get_user(
     return user
 
 
+@api_router.delete("/users/{username}")
+def delete_user(
+    username: str,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    user = dao.get_user_by_username(username)
+
+    auth.assert_delete_user(user.id)
+    dao.delete_user(user.id)
+
+
 @api_router.get(
     "/users/{username}/role",
     response_model=rest_models.UserRole,

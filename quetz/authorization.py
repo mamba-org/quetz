@@ -54,7 +54,14 @@ class Rules:
 
         return user_id
 
-    def assert_read_user_data(self, requested_user_id):
+    def assert_read_user_data(self, requested_user_id: bytes):
+
+        user_id = self.assert_user()
+
+        if not (requested_user_id == user_id):
+            self.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
+
+    def assert_delete_user(self, requested_user_id: bytes):
 
         user_id = self.assert_user()
 

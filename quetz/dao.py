@@ -77,6 +77,13 @@ class Dao:
             .one_or_none()
         )
 
+    def delete_user(self, user_id: bytes):
+        # we are not really removing users
+        # only their identity providers and profiles
+        self.db.query(Profile).filter(Profile.user_id == user_id).delete()
+        self.db.query(Identity).filter(Identity.user_id == user_id).delete()
+        self.db.commit()
+
     def set_user_role(self, username: str, role: str):
         user = self.db.query(User).filter(User.username == username).one_or_none()
 
