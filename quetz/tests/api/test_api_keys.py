@@ -51,3 +51,12 @@ def test_delete_api_key(auth_client, api_keys, db, target_key, expected_status):
         assert deleted_key.deleted
     else:
         assert not deleted_key.deleted
+
+
+def test_delete_api_key_does_not_exist(auth_client):
+
+    response = auth_client.delete("/api/api-keys/key")
+
+    assert response.status_code == 404
+
+    assert "does not exist" in response.json()['detail']

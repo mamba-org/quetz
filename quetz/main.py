@@ -818,6 +818,12 @@ def delete_api_keys(
     auth: authorization.Rules = Depends(get_rules),
 ):
     api_key = dao.get_api_key(key)
+
+    if not api_key:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, detail=f"key '{key}' does not exist"
+        )
+
     auth.assert_delete_api_key(api_key)
 
     api_key.deleted = True
