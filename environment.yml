@@ -8,7 +8,7 @@ dependencies:
   - typer
   - authlib
   - psycopg2
-  - httpx=0.12.0
+  - httpx=0.16.0
   - sqlalchemy
   - sqlite
   - python-multipart
