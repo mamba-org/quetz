@@ -9,7 +9,9 @@ Thread
 -----------
 
 Thread workers process tasks in a separate thread. This functionality is in-built into FastAPI using
-``BackgroundTasks`` (https://fastapi.tiangolo.com/tutorial/background-tasks/).
+`BackgroundTasks`_.
+
+.. _BackgroundTasks: https://fastapi.tiangolo.com/tutorial/background-tasks/
 
 
 Subprocess
