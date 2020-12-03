@@ -8,6 +8,7 @@ import re
 import secrets
 import sys
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional
 
 import requests
@@ -51,6 +52,7 @@ from quetz.rest_models import ChannelActionEnum
 from quetz.tasks import indexing
 from quetz.tasks.common import Task
 from quetz.tasks.mirror import LocalCache, RemoteRepository, get_from_cache_or_download
+from quetz.utils import TicToc
 
 from .condainfo import CondaInfo
 
@@ -839,23 +841,51 @@ def handle_package_files(
     force,
     package=None,
 ):
+    user_id = auth.assert_user()
 
+    # quick fail if not allowed to upload
+    # note: we're checking later that `parts[0] == conda_info.package_name`
     for file in files:
-        logger.debug(f"adding file '{file.filename}' to channel '{channel_name}'")
-
-        try:
-            condainfo = CondaInfo(file.file, file.filename)
-        except exceptions.PackageError as e:
+        logger.info(f"FILE NAME: {file.filename}")
+        parts = file.filename.rsplit("-", 2)
+        if len(parts) != 3:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail=e.detail
+                status_code=status.HTTP_400_BAD_REQUEST, detail="package filename wrong"
             )
-
-        package_name = condainfo.info["name"]
+        else:
+            package_name = parts[0]
+        auth.assert_upload_file(channel_name, package_name)
         if force:
             auth.assert_overwrite_package_version(channel_name, package_name)
 
-        parts = file.filename.split("-")
+        logger.debug(f"adding file '{file.filename}' to channel '{channel_name}'")
 
+    with TicToc("conda_infos"):
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            try:
+                conda_infos = [
+                    ci
+                    for ci in executor.map(
+                        CondaInfo,
+                        (f.file for f in files),
+                        (f.filename for f in files),
+                    )
+                ]
+            except exceptions.PackageError as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, detail=e.detail
+                )
+
+    for file, condainfo in zip(files, conda_infos):
+        logger.debug(f"Handling {condainfo.info['name']} -> {file.filename}")
+
+        package_name = condainfo.info["name"]
+        parts = file.filename.rsplit("-", 2)
+
+        # check that the filename matches the package name
+        # TODO also validate version and build string
+        if parts[0] != condainfo.info["name"]:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
         if package and (parts[0] != package.name or package_name != package.name):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
@@ -867,7 +897,7 @@ def handle_package_files(
                     summary=condainfo.about.get("summary", "n/a"),
                     description=condainfo.about.get("description", "n/a"),
                 ),
-                auth.assert_user(),
+                user_id,
                 authorization.OWNER,
             )
 
@@ -875,10 +905,6 @@ def handle_package_files(
         dao.update_package_channeldata(
             channel_name, package_name, condainfo.channeldata
         )
-
-        auth.assert_upload_file(channel_name, package_name)
-
-        user_id = auth.assert_user()
 
         try:
             version = dao.create_version(
@@ -902,16 +928,18 @@ def handle_package_files(
                 status_code=status.HTTP_409_CONFLICT, detail="Duplicate"
             )
 
-        pkgstore.create_channel(channel_name)
+        with TicToc("create channel & upload file"):
+            pkgstore.create_channel(channel_name)
+            dest = os.path.join(condainfo.info["subdir"], file.filename)
+            file.file._file.seek(0)
+            logger.debug(
+                f"uploading file {dest} from channel {channel_name} to package store"
+            )
 
-        dest = os.path.join(condainfo.info["subdir"], file.filename)
-        file.file._file.seek(0)
-        logger.debug(
-            f"uploading file {dest} from channel {channel_name} to package store"
-        )
-        pkgstore.add_package(file.file, channel_name, dest)
+            pkgstore.add_package(file.file, channel_name, dest)
 
-        pm.hook.post_add_package_version(version=version, condainfo=condainfo)
+        with TicToc("Executing post hooks"):
+            pm.hook.post_add_package_version(version=version, condainfo=condainfo)
 
 
 app.include_router(
