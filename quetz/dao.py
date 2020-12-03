@@ -82,6 +82,9 @@ class Dao:
         # only their identity providers and profiles
         self.db.query(Profile).filter(Profile.user_id == user_id).delete()
         self.db.query(Identity).filter(Identity.user_id == user_id).delete()
+        self.db.query(ApiKey).filter(
+            or_(ApiKey.user_id == user_id, ApiKey.owner_id == user_id)
+        ).delete()
         self.db.commit()
 
     def set_user_role(self, username: str, role: str):

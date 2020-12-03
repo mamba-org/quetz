@@ -1,6 +1,8 @@
+import uuid
+
 import pytest
 
-from quetz.db_models import User
+from quetz.db_models import ApiKey, User
 
 
 def test_validate_user_role_names(user, client, other_user, db):
@@ -151,6 +153,19 @@ def test_get_users_permissions(
     assert len(user_list) == expected_n_users
 
 
+@pytest.fixture
+def api_keys(user, other_user, db):
+
+    users = [user, other_user]
+
+    for key_user in users:
+        for key_owner in users:
+            key = ApiKey(key=str(uuid.uuid4()), user=key_user, owner=key_owner)
+            db.add(key)
+
+    db.commit()
+
+
 @pytest.mark.parametrize(
     "user_role,target_user,expected_status",
     [
@@ -165,30 +180,35 @@ def test_get_users_permissions(
     ],
 )
 def test_delete_user_permission(
-    other_user, auth_client, db, user_role, target_user, expected_status, user
+    other_user, auth_client, db, user_role, target_user, expected_status, user, api_keys
 ):
 
     response = auth_client.delete(f"/api/users/{target_user}")
 
     deleted_user = db.query(User).filter(User.username == target_user).one_or_none()
 
-    existing_user = db.query(User).filter(User.username == user.username).one_or_none()
-
     if expected_status == 200:
         assert response.status_code == 200
         assert deleted_user
         assert not deleted_user.profile
         assert not deleted_user.identities
-        assert existing_user
-        assert existing_user.profile
-    else:
+        assert not deleted_user.api_keys_owner
+        assert not deleted_user.api_keys_user
 
+    else:
         assert response.status_code == expected_status
         assert deleted_user
         assert deleted_user.profile
         assert deleted_user.identities
-        assert existing_user
-        assert existing_user.profile
+        assert deleted_user.api_keys_owner
+        assert deleted_user.api_keys_user
+
+    # check if other users were not accidently removed
+    existing_user = db.query(User).filter(User.username != target_user).one_or_none()
+    assert existing_user
+    assert existing_user.profile
+    assert existing_user.api_keys_owner
+    assert existing_user.api_keys_user
 
 
 @pytest.mark.parametrize("user_role", ["owner"])
