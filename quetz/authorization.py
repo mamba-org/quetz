@@ -240,3 +240,8 @@ class Rules:
         self.assert_channel_or_package_roles(
             package.channel_name, [OWNER, MAINTAINER], package.name, [OWNER, MAINTAINER]
         )
+
+    def assert_package_delete(self, package):
+        self.assert_channel_or_package_roles(
+            package.channel_name, [OWNER, MAINTAINER], package.name, [OWNER, MAINTAINER]
+        )
