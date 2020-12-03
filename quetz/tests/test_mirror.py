@@ -234,6 +234,8 @@ def owner(user, db):
 
 DUMMY_PACKAGE = Path("./test-package-0.1-0.tar.bz2")
 DUMMY_PACKAGE_V2 = Path("./test-package-0.2-0.tar.bz2")
+OTHER_DUMMY_PACKAGE = Path("./other-package-0.1-0.tar.bz2")
+OTHER_DUMMY_PACKAGE_V2 = Path("./other-package-0.2-0.tar.bz2")
 
 
 @pytest.mark.parametrize(
@@ -282,8 +284,8 @@ DUMMY_PACKAGE_V2 = Path("./test-package-0.2-0.tar.bz2")
         # new package name
         pytest.param(
             [
-                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA"}}}',
-                DUMMY_PACKAGE,
+                b'{"packages": {"other-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA"}}}',
+                OTHER_DUMMY_PACKAGE,
             ],
             "linux-64",
             1,
@@ -302,9 +304,9 @@ DUMMY_PACKAGE_V2 = Path("./test-package-0.2-0.tar.bz2")
         # two new versions
         pytest.param(
             [
-                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "NEW-SHA"}, "test-package-0.2-0.tar.bz2": {"sha256": "OLD-SHA"}}}',  # noqa
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "NEW-SHA"}, "other-package-0.2-0.tar.bz2": {"sha256": "OLD-SHA"}}}',  # noqa
                 DUMMY_PACKAGE,
-                DUMMY_PACKAGE_V2,
+                OTHER_DUMMY_PACKAGE_V2,
             ],
             "noarch",
             2,
@@ -313,8 +315,9 @@ DUMMY_PACKAGE_V2 = Path("./test-package-0.2-0.tar.bz2")
         # only one of the two is new
         pytest.param(
             [
-                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA"}, "test-package-0.2-0.tar.bz2": {"sha256": "SHA-V2"}}}',  # noqa
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "OLD-SHA"}, "other-package-0.2-0.tar.bz2": {"sha256": "SHA-V2"}}}',  # noqa
                 DUMMY_PACKAGE_V2,
+                OTHER_DUMMY_PACKAGE_V2
             ],
             "noarch",
             1,
