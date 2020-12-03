@@ -926,7 +926,7 @@ def invalid_api():
 
 
 @app.get("/channels/{channel_name}/{path:path}")
-def serve_path(
+async def serve_path(
     path,
     channel: db_models.Channel = Depends(get_channel_allow_proxy),
     cache: LocalCache = Depends(LocalCache),
@@ -936,32 +936,35 @@ def serve_path(
         repository = RemoteRepository(channel.mirror_channel_url, session)
         return get_from_cache_or_download(repository, cache, path)
 
+    chunk_size = 10_000
+
+    def iter_chunks(fid):
+        while True:
+            data = fid.read(chunk_size)
+            if not data:
+                break
+            yield data
+
     if path == "" or path.endswith("/"):
         path += "index.html"
-    try:
-        return StreamingResponse(pkgstore.serve_path(channel.name, path))
-    except FileNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"{channel.name}/{path} not found",
-        )
-    except IsADirectoryError:
+    package_content_iter = None
+
+    while not package_content_iter:
+
         try:
-            path += "/index.html"
-            return StreamingResponse(pkgstore.serve_path(channel.name, path))
+            package_content_iter = iter_chunks(pkgstore.serve_path(channel.name, path))
         except FileNotFoundError:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"{channel.name}/{path} not found",
             )
+        except IsADirectoryError:
+            path += "/index.html"
+
+    return StreamingResponse(package_content_iter)
 
 
-# from starlette.responses import FileResponse, HTMLResponse
-# @app.get("/.*", include_in_schema=False)
-# def root():
-#     with open("../quetz_frontend/dist/index.html") as fi:
-#         index_content = fi.read()
-#     return HTMLResponse(index_content)
+# mount frontend
 
 if os.path.isfile("../quetz_frontend/dist/index.html"):
     logger.info("dev frontend found")
