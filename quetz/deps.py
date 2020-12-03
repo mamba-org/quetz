@@ -13,7 +13,12 @@ from quetz.config import Config
 from quetz.dao import Dao
 from quetz.database import get_session as get_db_session
 from quetz.tasks.common import Task
-from quetz.tasks.workers import RQManager, SubprocessWorker, ThreadingWorker
+from quetz.tasks.workers import (
+    RQManager,
+    SubprocessWorker,
+    ThreadingWorker,
+    rq_available,
+)
 
 DEFAULT_TIMEOUT = 5  # seconds
 MAX_RETRIES = 3
@@ -97,14 +102,17 @@ def get_tasks_worker(
     elif worker == "subprocess":
         worker = SubprocessWorker(auth.API_key, auth.session, config)
     elif worker == "redis":
-        worker = RQManager(
-            config.worker_redis_ip,
-            config.worker_redis_port,
-            config.worker_redis_db,
-            auth.API_key,
-            auth.session,
-            config,
-        )
+        if rq_available:
+            worker = RQManager(
+                config.worker_redis_ip,
+                config.worker_redis_port,
+                config.worker_redis_db,
+                auth.API_key,
+                auth.session,
+                config,
+            )
+        else:
+            raise ValueError("redis and rq not installed on machine")
     else:
         raise ValueError("wrong configuration in worker.type")
 

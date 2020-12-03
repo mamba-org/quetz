@@ -6,14 +6,20 @@ import time
 from abc import abstractmethod
 from typing import Callable, Optional
 
-import redis
 import requests
 from fastapi import BackgroundTasks
-from rq import Queue
 
 from quetz import authorization
 from quetz.config import Config
 from quetz.dao import Dao
+
+try:
+    import redis
+    from rq import Queue
+
+    rq_available = True
+except ImportError:
+    rq_available = False
 
 logger = logging.getLogger("quetz.tasks")
 

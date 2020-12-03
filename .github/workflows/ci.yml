@@ -58,6 +58,7 @@ jobs:
         run: |
           # install dev dependencies
           pip install -e .[dev]
+          pip install redis rq
           pip install pytest-github-actions-annotate-failures
 
           if [ "$TEST_DB_BACKEND" == "postgres" ]; then
