@@ -74,7 +74,7 @@ jobs:
 
           echo "testing server"
 
-          pytest -v ./quetz/tests/
+          pytest -v ./quetz/tests/ --cov=./
 
           echo "install and test plugins"
           pip install ./plugins/quetz_runexports
@@ -91,3 +91,5 @@ jobs:
 
           pip install ./plugins/quetz_current_repodata
           pytest -v ./plugins/quetz_current_repodata
+
+      - uses: codecov/codecov-action@v1
