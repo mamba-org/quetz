@@ -1,24 +1,24 @@
 import pytest
 
-from quetz.db_models import ApiKey
+from quetz.db_models import ApiKey, ChannelMember, PackageMember
 
 
 @pytest.fixture
 def api_keys(other_user, user, db):
 
     keys = [
-        ApiKey(key='key', description="key", user=user, owner=user),
+        ApiKey(key="key", description="key", user=user, owner=user),
         ApiKey(
-            key='other_key', description="other_key", user=other_user, owner=other_user
+            key="other_key", description="other_key", user=other_user, owner=other_user
         ),
         ApiKey(
-            key='other_user_is_user',
+            key="other_user_is_user",
             description="other_user_is_user",
             user=other_user,
             owner=user,
         ),
         ApiKey(
-            key='user_is_user', description="user_is_user", user=user, owner=other_user
+            key="user_is_user", description="user_is_user", user=user, owner=other_user
         ),
     ]
 
@@ -68,7 +68,86 @@ def test_delete_api_key_does_not_exist(auth_client):
 
     assert response.status_code == 404
 
-    assert "does not exist" in response.json()['detail']
+    assert "does not exist" in response.json()["detail"]
+
+
+def test_list_keys_with_channel_roles(
+    auth_client, api_keys, db, user, other_user, private_channel
+):
+
+    channel_member = ChannelMember(
+        channel=private_channel, user=user, role="maintainer"
+    )
+    db.add(channel_member)
+    db.commit()
+
+    response = auth_client.get("/api/api-keys")
+    assert response.status_code == 200
+    returned_keys = {key["description"]: key["roles"] for key in response.json()}
+    assert len(returned_keys) == 2
+
+    assert returned_keys["other_user_is_user"] == [
+        {
+            "channel": private_channel.name,
+            "package": None,
+            "role": "owner",
+        }
+    ]
+    assert returned_keys["key"] == [
+        {
+            "channel": private_channel.name,
+            "package": None,
+            "role": "maintainer",
+        }
+    ]
+
+
+def test_list_keys_with_package_roles(
+    auth_client,
+    api_keys,
+    db,
+    user,
+    other_user,
+    private_channel,
+    private_package,
+):
+
+    package_member = PackageMember(
+        channel=private_channel, package=private_package, user=user, role="maintainer"
+    )
+    db.add(package_member)
+    db.commit()
+
+    response = auth_client.get("/api/api-keys")
+    assert response.status_code == 200
+    returned_keys = {key["description"]: key["roles"] for key in response.json()}
+    assert len(returned_keys) == 2
+
+    assert returned_keys["other_user_is_user"] == [
+        # package role
+        {
+            "channel": private_channel.name,
+            "package": private_package.name,
+            "role": "owner",
+        },
+        # channel role
+        {
+            "channel": private_channel.name,
+            "package": None,
+            "role": "owner",
+        },
+    ]
+    assert returned_keys["key"] == [
+        {
+            "channel": private_channel.name,
+            "package": private_package.name,
+            "role": "maintainer",
+        }
+    ]
+
+
+def test_list_keys_without_roles(auth_client, api_keys, db):
+    pass
 
 
 def test_unlist_delete_api_keys(auth_client, api_keys, db):
@@ -78,7 +157,7 @@ def test_unlist_delete_api_keys(auth_client, api_keys, db):
     assert response.status_code == 200
     response_keys = response.json()
     assert len(response_keys) == len(api_keys)
-    assert api_keys[0].description in [k.description for k in response.json()]
+    assert api_keys[0].description in [k["description"] for k in response.json()]
 
     api_keys[0].deleted = True
     db.commit()

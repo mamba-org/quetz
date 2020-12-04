@@ -769,6 +769,7 @@ def get_api_keys(
 
     return [
         rest_models.ApiKey(
+            key=api_key.key,
             description=api_key.description,
             roles=[
                 rest_models.CPRole(
