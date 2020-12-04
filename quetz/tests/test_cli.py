@@ -109,7 +109,7 @@ def refresh_db(engine, database_url):
 
 
 def test_run_migrations(
-    sql_connection, engine, database_url, alembic_config, refresh_db
+    config, sql_connection, engine, database_url, alembic_config, refresh_db
 ):
     db = sql_connection
     with pytest.raises(sa.exc.DatabaseError):
