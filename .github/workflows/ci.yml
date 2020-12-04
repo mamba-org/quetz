@@ -74,7 +74,7 @@ jobs:
 
           echo "testing server"
 
-          pytest -v ./quetz/tests/ --cov=./quetz
+          pytest -v ./quetz/tests/ --cov=./quetz --cov-report=xml
 
           echo "install and test plugins"
           pip install ./plugins/quetz_runexports
@@ -93,3 +93,6 @@ jobs:
           pytest -v ./plugins/quetz_current_repodata
 
       - uses: codecov/codecov-action@v1
+        verbose: true
+        file: ./coverage.xml
+
