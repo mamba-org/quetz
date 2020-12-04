@@ -296,6 +296,17 @@ class Dao:
         self.db.add(member)
         self.db.commit()
 
+    def get_api_keys_with_members(self, user_id):
+        return (
+            self.db.query(ApiKey, PackageMember, ChannelMember)
+            .select_from(ApiKey)
+            .filter(ApiKey.user_id == user_id)
+            .filter(~ApiKey.deleted)
+            .outerjoin(ChannelMember, ChannelMember.user_id == user_id)
+            .outerjoin(PackageMember, PackageMember.user_id == user_id)
+            .all()
+        )
+
     def get_package_api_keys(self, user_id):
         return (
             self.db.query(PackageMember, ApiKey)

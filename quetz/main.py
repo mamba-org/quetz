@@ -49,7 +49,7 @@ from quetz.deps import (
     get_session,
     get_tasks_worker,
 )
-from quetz.rest_models import ChannelActionEnum
+from quetz.rest_models import ChannelActionEnum, CPRole
 from quetz.tasks import indexing
 from quetz.tasks.common import Task
 from quetz.tasks.mirror import LocalCache, RemoteRepository, get_from_cache_or_download
@@ -762,31 +762,40 @@ def get_api_keys(
     """Get API keys for current user"""
 
     user_id = auth.assert_user()
-    api_key_list = dao.get_package_api_keys(user_id)
-    api_channel_key_list = dao.get_channel_api_keys(user_id)
+    api_key_list = dao.get_api_keys_with_members(user_id)
 
     from itertools import groupby
 
-    return [
-        rest_models.ApiKey(
-            key=api_key.key,
-            description=api_key.description,
-            roles=[
-                rest_models.CPRole(
-                    channel=member.channel_name,
-                    package=member.package_name
-                    if hasattr(member, "package_name")
-                    else None,
-                    role=member.role,
+    api_keys = []
+
+    grouped_by_key = groupby(api_key_list, key=lambda k: k[0])
+
+    for group_key, group_items in grouped_by_key:
+        roles = []
+        for _, package_member, channel_member in group_items:
+            if package_member:
+                roles.append(
+                    CPRole(
+                        channel=package_member.channel_name,
+                        package=package_member.package_name,
+                        role=package_member.role,
+                    )
                 )
-                for member, api_key in member_key_list
-            ],
+            if channel_member:
+                roles.append(
+                    CPRole(
+                        channel=channel_member.channel_name,
+                        package=None,
+                        role=channel_member.role,
+                    )
+                )
+        api_keys.append(
+            rest_models.ApiKey(
+                key=group_key.key, description=group_key.description, roles=roles
+            )
         )
-        for api_key, member_key_list in groupby(
-            [*api_key_list, *api_channel_key_list],
-            lambda member_api_key: member_api_key[1],
-        )
-    ]
+
+    return api_keys
 
 
 @api_router.post(

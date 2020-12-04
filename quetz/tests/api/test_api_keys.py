@@ -136,7 +136,18 @@ def test_list_keys_with_package_roles(
 
 def test_list_keys_without_roles(auth_client, dao, user):
 
-    pass
+    dao.create_api_key(
+        user.id,
+        BaseApiKey.parse_obj(dict(description="user-key", roles=[])),
+        "user-key",
+    )
+
+    response = auth_client.get("/api/api-keys")
+    assert response.status_code == 200
+    returned_keys = {key["description"]: key["roles"] for key in response.json()}
+    assert len(returned_keys) == 1
+    assert "user-key" in returned_keys
+    assert returned_keys['user-key'] == []
 
 
 def test_unlist_delete_api_keys(auth_client, api_keys, db, private_channel, user):
