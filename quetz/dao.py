@@ -302,6 +302,7 @@ class Dao:
             .join(User, PackageMember.user_id == User.id)
             .join(ApiKey, ApiKey.user_id == User.id)
             .filter(ApiKey.owner_id == user_id)
+            .filter(~ApiKey.deleted)
             .all()
         )
 
@@ -311,6 +312,7 @@ class Dao:
             .join(User, ChannelMember.user_id == User.id)
             .join(ApiKey, ApiKey.user_id == User.id)
             .filter(ApiKey.owner_id == user_id)
+            .filter(~ApiKey.deleted)
             .all()
         )
 

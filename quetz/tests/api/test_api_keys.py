@@ -27,7 +27,7 @@ def api_keys(other_user, user, db):
 
     db.commit()
 
-    yield keys
+    yield {k.description: k for k in keys}
 
     for key in keys:
         db.delete(key)
@@ -150,16 +150,25 @@ def test_list_keys_without_roles(auth_client, api_keys, db):
     pass
 
 
-def test_unlist_delete_api_keys(auth_client, api_keys, db):
+def test_unlist_delete_api_keys(auth_client, api_keys, db, private_channel, user):
+
+    channel_member = ChannelMember(
+        channel=private_channel, user=user, role="maintainer"
+    )
+    db.add(channel_member)
+    db.commit()
 
     response = auth_client.get("/api/api-keys")
 
     assert response.status_code == 200
-    response_keys = response.json()
-    assert len(response_keys) == len(api_keys)
-    assert api_keys[0].description in [k["description"] for k in response.json()]
+    returned_keys = {key["description"]: key["roles"] for key in response.json()}
+    assert "key" in returned_keys
 
-    api_keys[0].deleted = True
+    api_keys["key"].deleted = True
     db.commit()
 
-    response = auth_client.list("/api/api-keys")
+    response = auth_client.get("/api/api-keys")
+    assert response.status_code == 200
+
+    returned_keys = {key["description"]: key["roles"] for key in response.json()}
+    assert "key" not in returned_keys
