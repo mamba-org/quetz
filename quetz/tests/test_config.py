@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 import pytest
 
@@ -14,6 +15,25 @@ admins=["bartosz"]
 default_role = "member"
 create_default_channel = true
 """
+
+
+def test_config_without_file_path_set(config_str):
+
+    # the env variable should not be defined for this test to work
+    assert not os.environ.get("QUETZ_CONFIG_FILE")
+
+    # we need to check whether Config was not initialised before
+    assert not Config._instances
+    with pytest.raises(ValueError, match="Environment"):
+        Config()
+
+    # check if it works with path even if QUETZ_CONFIG_FILE is
+    # not defined
+    with tempfile.NamedTemporaryFile("w", delete=False) as fid:
+        fid.write(config_str)
+        fid.flush()
+        config = Config(fid.name)
+    assert config.configured_section("users")
 
 
 def test_config_users(config):

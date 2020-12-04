@@ -188,6 +188,8 @@ def config(config_str, config_dir):
     Config._instances = {}
     config = Config()
     yield config
+    del os.environ["QUETZ_CONFIG_FILE"]
+    Config._instances = {}
     os.chdir(old_dir)
 
 

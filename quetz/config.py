@@ -148,7 +148,13 @@ class Config:
     def __new__(cls, deployment_config: str = None):
         if not deployment_config and None in cls._instances:
             return cls._instances[None]
-        path = os.path.abspath(cls.find_file(deployment_config))
+        try:
+            path = os.path.abspath(cls.find_file(deployment_config))
+        except TypeError:
+            raise ValueError(
+                "Environment Variable QUETZ_CONFIG_FILE \
+                 should be set to name / path of the config file"
+            )
         if path not in cls._instances:
             config = super().__new__(cls)
             config.init(path)
