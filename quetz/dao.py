@@ -300,10 +300,10 @@ class Dao:
         return (
             self.db.query(ApiKey, PackageMember, ChannelMember)
             .select_from(ApiKey)
-            .filter(ApiKey.user_id == user_id)
+            .filter(ApiKey.owner_id == user_id)
             .filter(~ApiKey.deleted)
-            .outerjoin(ChannelMember, ChannelMember.user_id == user_id)
-            .outerjoin(PackageMember, PackageMember.user_id == user_id)
+            .outerjoin(ChannelMember, ChannelMember.user_id == ApiKey.user_id)
+            .outerjoin(PackageMember, PackageMember.user_id == ApiKey.user_id)
             .all()
         )
 

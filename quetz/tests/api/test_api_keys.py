@@ -134,6 +134,30 @@ def test_list_keys_with_package_roles(
     ]
 
 
+def test_list_keys_subrole(auth_client, dao, user, private_channel):
+
+    dao.create_api_key(
+        user.id,
+        BaseApiKey.parse_obj(
+            dict(
+                description="user-key",
+                roles=[
+                    {"channel": private_channel.name, 'package': None, "role": "owner"}
+                ],
+            )
+        ),
+        "user-key",
+    )
+
+    response = auth_client.get("/api/api-keys")
+    returned_keys = {key["description"]: key["roles"] for key in response.json()}
+    assert len(returned_keys) == 1
+    assert "user-key" in returned_keys
+    assert returned_keys['user-key'] == [
+        {"channel": private_channel.name, "package": None, "role": "owner"}
+    ]
+
+
 def test_list_keys_without_roles(auth_client, dao, user):
 
     dao.create_api_key(
