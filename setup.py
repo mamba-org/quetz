@@ -27,6 +27,7 @@ setuptools.setup(
             'pytest',
             'pytest-asyncio',
             'pytest-mock',
+            'pytest-cov',
         ]
     },
     entry_points={'console_scripts': ['quetz = quetz.cli:app']},

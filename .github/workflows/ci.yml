@@ -74,7 +74,7 @@ jobs:
 
           echo "testing server"
 
-          pytest -v ./quetz/tests/ --cov=./
+          pytest -v ./quetz/tests/ --cov=./quetz
 
           echo "install and test plugins"
           pip install ./plugins/quetz_runexports
