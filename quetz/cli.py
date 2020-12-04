@@ -377,6 +377,9 @@ def create(
         False,
         help="Enable/disable creation of a default configuration file",
     ),
+    skip_if_exists: bool = typer.Option(
+        False, help="Skip the creation if deployment already exists."
+    ),
     dev: bool = typer.Option(
         False,
         help=(
@@ -394,6 +397,11 @@ def create(
     deployments = _get_deployments()
 
     if os.path.exists(path) and abs_path in deployments:
+        if skip_if_exists:
+            logger.info(
+                f'Quetz deployment already exists at {path}, skipping creation.'
+            )
+            return
         delete_ = typer.confirm(f'Quetz deployment exists at {path}.\nOverwrite it?')
         if delete_:
             delete(path, force=True)
@@ -498,6 +506,16 @@ def start(
 
     config_file = _get_config(path)
 
+    abs_path = os.path.abspath(path)
+    deployments = _get_deployments()
+    if abs_path not in deployments:
+        typer.echo(
+            'The specified directory is not a deployment.\n'
+            'Use the create or run command to create a deployment.',
+            err=True,
+        )
+        raise typer.Abort()
+
     os.environ[_env_prefix + _env_config_file] = config_file
     os.chdir(path)
 
@@ -528,6 +546,9 @@ def run(
         False,
         help="Enable/disable creation of a default configuration file",
     ),
+    skip_if_exists: bool = typer.Option(
+        False, help="Skip the creation if deployment already exists."
+    ),
     dev: bool = typer.Option(
         False,
         help=(
@@ -554,7 +575,7 @@ def run(
     It performs sequentially create and start operations."""
 
     abs_path = os.path.abspath(path)
-    create(abs_path, config_file_name, copy_conf, create_conf, dev)
+    create(abs_path, config_file_name, copy_conf, create_conf, skip_if_exists, dev)
     start(abs_path, port, host, proxy_headers, log_level, reload)
 
 
