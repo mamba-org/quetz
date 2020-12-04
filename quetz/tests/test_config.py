@@ -17,9 +17,12 @@ create_default_channel = true
 
 
 def test_config_without_file_path_set():
+    config_path = os.environ["QUETZ_CONFIG_FILE"]
     with pytest.raises(ValueError):
+        os.environ["QUETZ_CONFIG_FILE"] = ''
         config = Config()
         del config
+    os.environ["QUETZ_CONFIG_FILE"] = config_path
 
 
 def test_config_users(config):
