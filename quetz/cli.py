@@ -506,6 +506,16 @@ def start(
 
     config_file = _get_config(path)
 
+    abs_path = os.path.abspath(path)
+    deployments = _get_deployments()
+    if abs_path not in deployments:
+        typer.echo(
+            'The specified directory is not a deployment.\n'
+            'Use the create or run command to create a deployment.',
+            err=True,
+        )
+        raise typer.Abort()
+
     os.environ[_env_prefix + _env_config_file] = config_file
     os.chdir(path)
 
