@@ -398,7 +398,9 @@ def create(
 
     if os.path.exists(path) and abs_path in deployments:
         if skip_if_exists:
-            logger.info(f'Quetz deployment already exists at {path}, skipping creation.')
+            logger.info(
+                f'Quetz deployment already exists at {path}, skipping creation.'
+            )
             return
         delete_ = typer.confirm(f'Quetz deployment exists at {path}.\nOverwrite it?')
         if delete_:
