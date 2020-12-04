@@ -93,6 +93,7 @@ jobs:
           pytest -v ./plugins/quetz_current_repodata
 
       - uses: codecov/codecov-action@v1
-        verbose: true
-        file: ./coverage.xml
+        with:
+          verbose: true
+          file: ./coverage.xml
 
