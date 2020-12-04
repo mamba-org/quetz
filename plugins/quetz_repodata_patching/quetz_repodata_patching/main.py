@@ -106,11 +106,10 @@ def get_db_manager():
         db.close()
 
 
-@quetz.hookimpl
+@quetz.hookimpl(tryfirst=True)
 def post_package_indexing(
     pkgstore: "quetz.pkgstores.PackageStore", channel_name, subdirs, files, packages
 ):
-
     with get_db_manager() as db:
 
         query = (
