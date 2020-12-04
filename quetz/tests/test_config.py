@@ -16,6 +16,12 @@ create_default_channel = true
 """
 
 
+def test_config_without_file_path_set():
+    with pytest.raises(ValueError):
+        config = Config()
+        del config
+
+
 def test_config_users(config):
     assert config.users_default_role == "member"
     assert config.users_create_default_channel
