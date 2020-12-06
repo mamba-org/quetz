@@ -33,6 +33,18 @@ Some channels, such as ``conda-forge`` require that metadata from some packages 
 
 For more information about the repodata patching and patch format checkout the `docs <https://docs.conda.io/projects/conda-build/en/latest/concepts/generating-index.html#repodata-patching>`_ and conda-forge `feedstock <https://github.com/conda-forge/conda-forge-repodata-patches-feedstock/tree/master/recipe>`_.
 
+``quetz_conda_suggest``
+^^^^^^^^^^^^^^^^^^^^^^^
+
+``quetz_conda_suggest`` generates ``.map`` files specific to a particular channel and a subdir. These map files facilitate the functioning of ``conda-suggest``. More information can be seen `here <https://github.com/conda-incubator/conda-suggest>`_.
+The generated map file can be accessed from the endpoint ``/api/channels/{channel_name}/{subdir}/conda-suggest``.
+
+``quetz_current_repodata``
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``quetz_current_repodata`` plugin generates ``current_repodata.json`` file specific to a particular channel and a subdir. It is a trimmed version of ``repodata.json`` which contains the latest versions of each package.
+More information can be accessed on the `current repodata docs <https://docs.conda.io/projects/conda-build/en/latest/concepts/generating-index.html#trimming-to-current-repodata>`_.
+
 Creating a plugin
 -----------------
 
