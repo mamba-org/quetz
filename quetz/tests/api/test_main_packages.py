@@ -4,6 +4,7 @@ import pytest
 
 from quetz import hookimpl
 from quetz.authorization import MAINTAINER, MEMBER, OWNER
+from quetz.condainfo import CondaInfo
 from quetz.db_models import ChannelMember, Package, PackageMember, PackageVersion
 from quetz.errors import ValidationError
 from quetz.pkgstores import PackageStore
@@ -90,8 +91,8 @@ def test_get_package_version(auth_client, public_channel, package_version, dao):
     )
 
     assert response.status_code == 200
-    assert response.json()['filename'] == filename
-    assert response.json()['platform'] == platform
+    assert response.json()["filename"] == filename
+    assert response.json()["platform"] == platform
 
 
 @pytest.mark.parametrize("user_server_role", [OWNER, MAINTAINER])
@@ -262,7 +263,8 @@ def test_validate_package_names(auth_client, public_channel):
         "interesting-package",
         "valid.package.name",
         "valid-package-name",
-        "valid_package_name" "validpackage1234",
+        "valid_package_name",
+        "validpackage1234",
     ]
 
     for package_name in valid_package_names:
@@ -270,15 +272,15 @@ def test_validate_package_names(auth_client, public_channel):
             f"/api/channels/{public_channel.name}/packages", json={"name": package_name}
         )
 
-    assert response.status_code == 201
+        assert response.status_code == 201
 
     invalid_package_names = [
-        "InvalidPackage",
-        "invalid%20package",
-        "invalid package",
-        "invalid%package",
+        "InvalidPackage",  # no uppercase
+        "invalid%20package",  # no spaces
+        "invalid package",  # no spaces
+        "invalid%package",  # no special characters
         "**invalidpackage**",
-        "błędnypakiet",
+        "błędnypakiet",  # no unicode
     ]
 
     for package_name in invalid_package_names:
@@ -289,22 +291,44 @@ def test_validate_package_names(auth_client, public_channel):
         assert response.status_code == 422
 
 
-def test_validate_package_names_files_endpoint(auth_client, public_channel, mocker):
-
-    mocked_condainfo = mocker.patch("quetz.main.CondaInfo")
-    mocked_condainfo.return_value.info = {"name": "TestPackage"}
+@pytest.mark.parametrize(
+    "package_name,msg",
+    [
+        ("TestPackage", "string does not match"),
+        ("test-package", None),
+    ],
+)
+def test_validate_package_names_files_endpoint(
+    auth_client, public_channel, mocker, package_name, msg
+):
 
     package_filename = "test-package-0.1-0.tar.bz2"
+
     with open(package_filename, "rb") as fid:
-        files = {"files": (package_filename, fid)}
+        condainfo = CondaInfo(fid, package_filename)
+
+    # patch conda info
+    condainfo.info['name'] = package_name
+    condainfo.channeldata['packagename'] = package_name
+
+    mocked_cls = mocker.patch("quetz.main.CondaInfo")
+    mocked_cls.return_value = condainfo
+
+    with open(package_filename, "rb") as fid:
+        files = {"files": (f"{package_name}-0.1-0.tar.bz2", fid)}
         response = auth_client.post(
             f"/api/channels/{public_channel.name}/files/", files=files
         )
 
-    assert response.status_code == 400
+    if msg:
+        assert response.status_code == 422
+        assert msg in response.json()["detail"]
+    else:
+        assert response.status_code == 201
 
 
-def test_validation_hook(auth_client, public_channel):
+@pytest.fixture
+def plugin(app):
     from quetz.main import pm
 
     class Plugin:
@@ -312,14 +336,20 @@ def test_validation_hook(auth_client, public_channel):
         def validate_new_package_name(self, channel_name: str, package_name: str):
             raise ValidationError(f"name {package_name} not allowed")
 
-    pm.register(Plugin())
+    plugin = Plugin()
+    pm.register(plugin)
+    yield plugin
+    pm.unregister(plugin)
+
+
+def test_validation_hook(auth_client, public_channel, plugin):
 
     response = auth_client.post(
         f"/api/channels/{public_channel.name}/packages", json={"name": "package-name"}
     )
 
-    assert response.status_code == 400
-    assert "package-name not allowed" in response.json()['detail']
+    assert response.status_code == 422
+    assert "package-name not allowed" in response.json()["detail"]
 
     package_filename = "test-package-0.1-0.tar.bz2"
     with open(package_filename, "rb") as fid:
@@ -328,5 +358,5 @@ def test_validation_hook(auth_client, public_channel):
             f"/api/channels/{public_channel.name}/files/", files=files
         )
 
-    assert response.status_code == 400
-    assert "test-package not allowed" in response.json()['detail']
+    assert response.status_code == 422
+    assert "test-package not allowed" in response.json()["detail"]

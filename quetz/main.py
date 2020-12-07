@@ -11,6 +11,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional
 
+import pydantic
 import requests
 from fastapi import (
     APIRouter,
@@ -222,7 +223,7 @@ def logout(session):
 @app.exception_handler(errors.ValidationError)
 async def unicorn_exception_handler(request: Request, exc: errors.ValidationError):
     return responses.JSONResponse(
-        status_code=status.HTTP_400_BAD_REQUEST, content={"detail": str(exc)}
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content={"detail": str(exc)}
     )
 
 
@@ -969,13 +970,19 @@ def handle_package_files(
             pm.hook.validate_new_package_name(
                 channel_name=channel_name, package_name=package_name
             )
-            dao.create_package(
-                channel_name,
-                rest_models.Package(
+
+            try:
+                package_data = rest_models.Package(
                     name=package_name,
                     summary=condainfo.about.get("summary", "n/a"),
                     description=condainfo.about.get("description", "n/a"),
-                ),
+                )
+            except pydantic.main.ValidationError as err:
+                raise errors.ValidationError(str(err))
+
+            dao.create_package(
+                channel_name,
+                package_data,
                 user_id,
                 authorization.OWNER,
             )

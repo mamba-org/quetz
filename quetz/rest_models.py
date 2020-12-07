@@ -115,7 +115,7 @@ class Channel(ChannelBase):
 
 class Package(BaseModel):
     name: str = Field(
-        None, title='The name of package', max_length=1500, regex=r'^[a-z0-9-_]*$'
+        None, title='The name of package', max_length=1500, regex=r'^[a-z0-9-_\.]*$'
     )
     summary: str = Field(None, title='The summary of the package')
     description: str = Field(None, title='The description of the package')
