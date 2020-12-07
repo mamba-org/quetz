@@ -289,6 +289,21 @@ def test_validate_package_names(auth_client, public_channel):
         assert response.status_code == 422
 
 
+def test_validate_package_names_files_endpoint(auth_client, public_channel, mocker):
+
+    mocked_condainfo = mocker.patch("quetz.main.CondaInfo")
+    mocked_condainfo.return_value.info = {"name": "TestPackage"}
+
+    package_filename = "test-package-0.1-0.tar.bz2"
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/files/", files=files
+        )
+
+    assert response.status_code == 400
+
+
 def test_validation_hook(auth_client, public_channel):
     from quetz.main import pm
 
@@ -305,3 +320,13 @@ def test_validation_hook(auth_client, public_channel):
 
     assert response.status_code == 400
     assert "package-name not allowed" in response.json()['detail']
+
+    package_filename = "test-package-0.1-0.tar.bz2"
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/files/", files=files
+        )
+
+    assert response.status_code == 400
+    assert "test-package not allowed" in response.json()['detail']

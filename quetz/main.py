@@ -20,7 +20,9 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Request,
     UploadFile,
+    responses,
     status,
 )
 from fastapi.responses import StreamingResponse
@@ -214,6 +216,14 @@ def logout(session):
     session.pop("user_id", None)
     session.pop("identity_provider", None)
     session.pop("token", None)
+
+
+# custom exception handlers
+@app.exception_handler(errors.ValidationError)
+async def unicorn_exception_handler(request: Request, exc: errors.ValidationError):
+    return responses.JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST, content={"detail": str(exc)}
+    )
 
 
 # endpoints
@@ -572,14 +582,9 @@ def post_package(
 
     user_id = auth.assert_user()
     auth.assert_create_package(channel.name)
-    try:
-        pm.hook.validate_new_package_name(
-            channel_name=channel.name, package_name=new_package.name
-        )
-    except errors.ValidationError as err:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=f"validation error: {err}"
-        )
+    pm.hook.validate_new_package_name(
+        channel_name=channel.name, package_name=new_package.name
+    )
     package = dao.get_package(channel.name, new_package.name)
     if package:
         raise HTTPException(
