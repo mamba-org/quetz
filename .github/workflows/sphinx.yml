@@ -15,10 +15,14 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v2
+      - name: "install dependencies"
+        uses: mamba-org/provision-with-micromamba@main
       - uses: ammaraskar/sphinx-action@master
+        name: "build docs"
         with:
           docs-folder: docs/
       - uses: actions/upload-artifact@v1
+        name: "upload artifacts"
         with:
           name: DocumentationHTML
           path: docs/_build/html
