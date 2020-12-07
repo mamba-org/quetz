@@ -1,0 +1,30 @@
+name: "sphinx docs check"
+
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+    branches:
+    - master
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+      - name: "install dependencies"
+        uses: mamba-org/provision-with-micromamba@main
+      - name: "build docs"
+        shell: bash -l {0}
+        run: |
+          cd docs
+          make html SPHINXOPTS="-W"
+      - uses: actions/upload-artifact@v1
+        name: "upload artifacts"
+        with:
+          name: DocumentationHTML
+          path: docs/build/html
+
