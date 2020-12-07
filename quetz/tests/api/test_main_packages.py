@@ -237,3 +237,18 @@ def test_delete_package_version(
 
     with pytest.raises(Exception):
         pkgstore.serve_path(public_channel.name, str(Path(platform) / filename))
+
+
+def test_package_name_length_limit(auth_client, public_channel, db):
+
+    package_name = "package_" * 100
+
+    response = auth_client.post(
+        f"/api/channels/{public_channel.name}/packages", json={"name": package_name}
+    )
+
+    assert response.status_code == 201
+
+    pkg = db.query(Package).filter(Package.name == package_name).one_or_none()
+
+    assert pkg is not None
