@@ -114,7 +114,7 @@ class Channel(ChannelBase):
 
 
 class Package(BaseModel):
-    name: str = Field(None, title='The name of package', max_length=50)
+    name: str = Field(None, title='The name of package', max_length=1500)
     summary: str = Field(None, title='The summary of the package')
     description: str = Field(None, title='The description of the package')
 
@@ -123,7 +123,7 @@ class Package(BaseModel):
 
 
 class PackageSearch(BaseModel):
-    name: str = Field(None, title='The name of package', max_length=50)
+    name: str = Field(None, title='The name of package', max_length=1500)
     summary: str = Field(None, title='The summary of the package')
     description: str = Field(None, title='The description of the package')
     channel_name: str = Field(None, title='The channel this package belongs to')
