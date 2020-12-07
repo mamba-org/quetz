@@ -266,5 +266,7 @@ collation = DDL(
 )
 
 event.listen(
-    Channel.__table__, 'before_create', collation.execute_if(dialect='postgresql')
+    Channel.__table__,
+    'before_create',
+    collation.execute_if(dialect='postgresql'),  # type: ignore
 )
