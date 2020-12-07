@@ -68,8 +68,6 @@ def validate_new_package_name(
 ) -> None:
     """Validate new package name.
 
-    `test`_
-
     It should raise :class:``quetz.errors.ValidationError`` if
     ``package_name`` is not valid.
 

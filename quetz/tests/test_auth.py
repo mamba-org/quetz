@@ -46,8 +46,8 @@ class Data:
         self.channel1 = Channel(name="testchannel", private=False)
         self.channel2 = Channel(name="privatechannel", private=True)
 
-        self.package1 = Package(name="Package1", channel=self.channel1)
-        self.package2 = Package(name="Package2", channel=self.channel2)
+        self.package1 = Package(name="package1", channel=self.channel1)
+        self.package2 = Package(name="package2", channel=self.channel2)
 
         self.channel_member = ChannelMember(
             channel=self.channel2, user=self.usera, role='maintainer'
@@ -305,20 +305,20 @@ def test_private_channels(data, client):
 def test_private_channels_create_package(data, client):
     # public access to public channel
     response = client.post(
-        f'/api/channels/{data.channel1.name}/packages', '{"name": "NewPackage1"}'
+        f'/api/channels/{data.channel1.name}/packages', '{"name": "newpackage1"}'
     )
     assert response.status_code == 401
 
     # public access to private channel
     response = client.post(
-        f'/api/channels/{data.channel2.name}/packages', '{"name": "NewPackage1"}'
+        f'/api/channels/{data.channel2.name}/packages', '{"name": "newpackage1"}'
     )
     assert response.status_code == 401
 
     # channel member can not create packages in public channel
     response = client.post(
         f'/api/channels/{data.channel1.name}/packages',
-        '{"name": "NewPackage2"}',
+        '{"name": "newpackage2"}',
         headers={"X-Api-Key": data.keyb},
     )
     assert response.status_code == 403
@@ -326,7 +326,7 @@ def test_private_channels_create_package(data, client):
     # user with credentials to private channel
     response = client.post(
         f'/api/channels/{data.channel2.name}/packages',
-        '{"name": "NewPackage2"}',
+        '{"name": "newpackage2"}',
         headers={"X-Api-Key": data.keyb},
     )
     assert response.status_code == 403
@@ -334,7 +334,7 @@ def test_private_channels_create_package(data, client):
     # member credential access to private channel
     response = client.post(
         f'/api/channels/{data.channel2.name}/packages',
-        '{"name": "NewPackage2"}',
+        '{"name": "newpackage2"}',
         headers={"X-Api-Key": data.keya},
     )
     assert response.status_code == 201
