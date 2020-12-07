@@ -131,3 +131,27 @@ def test_get_channel_members(auth_client, public_channel, expected_code):
     response = auth_client.get(f"/api/channels/{public_channel.name}/members")
 
     assert response.status_code == expected_code
+
+
+def test_channel_names_are_case_insensitive(auth_client, user, db):
+
+    user.role = "maintainer"
+    db.commit()
+
+    channel_name = "MYCHANNEL"
+
+    response = auth_client.post(
+        "/api/channels", json={"name": channel_name, "private": False}
+    )
+
+    assert response.status_code == 201
+
+    response = auth_client.get(f"/api/channels/{channel_name}")
+
+    assert response.status_code == 200
+    assert response.json()["name"] == channel_name.lower()
+
+    response = auth_client.get(f"/api/channels/{channel_name.lower()}")
+
+    assert response.status_code == 200
+    assert response.json()["name"] == channel_name.lower()
