@@ -13,7 +13,7 @@ from .config import Config
 from .dao import Dao
 from .dao_google import get_user_by_google_identity
 
-router = APIRouter()
+router = APIRouter(prefix='/auth/google')
 oauth = OAuth()
 
 
@@ -35,19 +35,23 @@ async def validate_token(token):
     resp = await oauth.google.get(
         'https://openidconnect.googleapis.com/v1/userinfo', token=token
     )
-    if resp.status_code == 401:
-        return False
-    return True
+    return resp.status_code != 401
 
 
-@router.route('/auth/google/login')
-async def login_google(request: Request):
+@router.get('/login')
+async def login(request: Request):
     google = oauth.create_client('google')
     redirect_uri = request.url_for('authorize_google')
     return await google.authorize_redirect(request, redirect_uri)
 
 
-@router.get('/auth/google/authorize', name='authorize_google')
+@router.get('/enabled')
+async def enabled():
+    """Entrypoint used by frontend to show the login button."""
+    return True
+
+
+@router.get('/authorize', name='authorize_google')
 async def authorize(
     request: Request, dao: Dao = Depends(get_dao), config: Config = Depends(get_config)
 ):
@@ -64,6 +68,6 @@ async def authorize(
     return RedirectResponse('/')
 
 
-@router.route('/auth/google/revoke')
+@router.route('/revoke')
 async def revoke(request):
     return RedirectResponse('https://myaccount.google.com/permissions')

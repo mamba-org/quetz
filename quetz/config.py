@@ -71,6 +71,7 @@ class Config:
                 ConfigEntry("client_id", str),
                 ConfigEntry("client_secret", str),
             ],
+            required=False,
         ),
         ConfigSection("sqlalchemy", [ConfigEntry("database_url", str)]),
         ConfigSection(

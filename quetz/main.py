@@ -66,8 +66,6 @@ from .condainfo import CondaInfo
 app = FastAPI()
 
 config = Config()
-auth_github.register(config)
-
 
 configure_logger(config)
 
@@ -114,7 +112,9 @@ plugin_routers = pm.hook.register_router()
 pkgstore = config.get_package_store()
 pkgstore_support_url = hasattr(pkgstore, 'url')
 
-app.include_router(auth_github.router)
+if config.configured_section("github"):
+    auth_github.register(config)
+    app.include_router(auth_github.router)
 
 for router in plugin_routers:
     app.include_router(router)
