@@ -13,6 +13,7 @@ from pytest_mock.plugin import MockerFixture
 from typer.testing import CliRunner
 
 from quetz import cli
+from quetz.config import Config
 from quetz.db_models import Base, User
 
 runner = CliRunner()
@@ -423,7 +424,17 @@ def empty_deployment_dir() -> Path:
         shutil.rmtree(path, ignore_errors=True)
 
 
-def test_create_conf(empty_deployment_dir: Path):
+@pytest.fixture()
+def empty_config_on_exit() -> None:
+    yield
+    try:
+        del os.environ["QUETZ_CONFIG_FILE"]
+    except KeyError:
+        pass
+    Config._instances = {}
+
+
+def test_create_conf(empty_deployment_dir: Path, empty_config_on_exit: None):
     """Create command with create conf cretes the needed files and folder."""
     runner.invoke(cli.app, ['create', str(empty_deployment_dir), '--create-conf'])
     assert empty_deployment_dir.joinpath('config.toml').exists()
@@ -431,7 +442,7 @@ def test_create_conf(empty_deployment_dir: Path):
     assert empty_deployment_dir.joinpath('quetz.sqlite').exists()
 
 
-def test_create_exists_delete(empty_deployment_dir: Path):
+def test_create_exists_delete(empty_deployment_dir: Path, empty_config_on_exit: None):
     """Existing deployment is removed if delete arg is used."""
     runner.invoke(cli.app, ['create', str(empty_deployment_dir), '--create-conf'])
     creation_time = empty_deployment_dir.stat().st_mtime
@@ -444,14 +455,16 @@ def test_create_exists_delete(empty_deployment_dir: Path):
     assert empty_deployment_dir.joinpath('quetz.sqlite').exists()
 
 
-def test_create_no_config(empty_deployment_dir: Path):
+def test_create_no_config(empty_deployment_dir: Path, empty_config_on_exit: None):
     """Error on create command with empty deployment and no config."""
     res = runner.invoke(cli.app, ['create', str(empty_deployment_dir)])
     assert res.exit_code == 1
     assert "No configuration file provided." in res.output
 
 
-def test_create_extra_file_in_deployment(empty_deployment_dir: Path):
+def test_create_extra_file_in_deployment(
+    empty_deployment_dir: Path, empty_config_on_exit: None
+):
     """Error on create command with extra files in deployment."""
     empty_deployment_dir.joinpath('extra_file.txt').touch()
     res = runner.invoke(cli.app, ['create', str(empty_deployment_dir)])
@@ -459,7 +472,9 @@ def test_create_extra_file_in_deployment(empty_deployment_dir: Path):
     assert "Quetz deployment not allowed at" in res.output
 
 
-def test_create_missing_copy_conf(empty_deployment_dir: Path):
+def test_create_missing_copy_conf(
+    empty_deployment_dir: Path, empty_config_on_exit: None
+):
     """Error on create command with wrong copy-conf path."""
     res = runner.invoke(
         cli.app, ['create', str(empty_deployment_dir), "--copy-conf", "none.toml"]
