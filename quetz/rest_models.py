@@ -74,10 +74,6 @@ class ChannelBase(BaseModel):
     mirror_channel_url: Optional[str] = Field(None, regex="^(http|https)://.+")
     mirror_mode: Optional[MirrorMode] = None
 
-    @validator("name")
-    def channel_names_are_case_insensitive(cls, v):
-        return v.lower()
-
     class Config:
         orm_mode = True
 

@@ -73,7 +73,11 @@ class Profile(Base):
 class Channel(Base):
     __tablename__ = 'channels'
 
-    name = Column(String, primary_key=True, index=True)
+    name = Column(
+        String(collation="NOCASE"),
+        primary_key=True,
+        index=True,
+    )
     description = Column(String)
     private = Column(Boolean, default=False)
     mirror_channel_url = Column(String)

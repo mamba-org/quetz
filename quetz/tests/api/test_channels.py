@@ -138,7 +138,7 @@ def test_channel_names_are_case_insensitive(auth_client, user, db):
     user.role = "maintainer"
     db.commit()
 
-    channel_name = "MYCHANNEL"
+    channel_name = "MyChanneL"
 
     response = auth_client.post(
         "/api/channels", json={"name": channel_name, "private": False}
@@ -149,15 +149,51 @@ def test_channel_names_are_case_insensitive(auth_client, user, db):
     response = auth_client.get(f"/api/channels/{channel_name}")
 
     assert response.status_code == 200
-    assert response.json()["name"] == channel_name.lower()
+    assert response.json()["name"] == channel_name
 
     response = auth_client.get(f"/api/channels/{channel_name.lower()}")
 
     assert response.status_code == 200
-    assert response.json()["name"] == channel_name.lower()
+    assert response.json()["name"] == channel_name
 
     response = auth_client.get(f"/api/channels/{channel_name.lower()}/packages")
 
     assert response.status_code == 200
 
     assert response.json() == []
+    package_filename = "test-package-0.1-0.tar.bz2"
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = auth_client.post(f"/api/channels/{channel_name}/files/", files=files)
+
+    response = auth_client.get(f"/api/channels/{channel_name.lower()}/packages")
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+
+    response = auth_client.get(f"/api/channels/{channel_name}/packages")
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]['name'] == "test-package"
+
+    response = auth_client.get(
+        f"/api/channels/{channel_name}/packages/test-package/versions"
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+
+    response = auth_client.get(
+        f"/api/channels/{channel_name.lower()}/packages/test-package/versions"
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+
+    response = auth_client.get(
+        f"/channels/{channel_name.lower()}/linux-64/repodata.json"
+    )
+    assert response.status_code == 200
+    assert package_filename in response.json()['packages']
+
+    response = auth_client.get(
+        f"/channels/{channel_name.lower()}/linux-64/{package_filename}"
+    )
+    assert response.status_code == 200
