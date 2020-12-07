@@ -4,6 +4,7 @@
 import enum
 
 from sqlalchemy import (
+    DDL,
     Boolean,
     Column,
     DateTime,
@@ -15,6 +16,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    event,
     func,
 )
 from sqlalchemy.ext.declarative import declarative_base
@@ -74,7 +76,7 @@ class Channel(Base):
     __tablename__ = 'channels'
 
     name = Column(
-        String(collation="NOCASE"),
+        String(100, collation="nocase"),
         primary_key=True,
         index=True,
     )
@@ -253,4 +255,16 @@ UniqueConstraint(
     PackageVersion.build_string,
     PackageVersion.build_number,
     name='package_version_index',
+)
+
+
+collation = DDL(
+    "CREATE COLLATION IF NOT EXISTS nocase ("
+    "provider = icu, "
+    "locale = 'und-u-ks-level2', "
+    "deterministic = false);"
+)
+
+event.listen(
+    Channel.__table__, 'before_create', collation.execute_if(dialect='postgresql')
 )
