@@ -395,7 +395,7 @@ def create(
             f.write(conf)
 
     os.environ[_env_prefix + _env_config_file] = str(config_file.resolve())
-    config = Config(config_file)
+    config = Config(str(config_file))
 
     deployment_folder.joinpath('channels').mkdir(exist_ok=True)
     with working_directory(path):

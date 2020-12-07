@@ -86,9 +86,8 @@ def test_init_db_create_test_users(db, config, mocker, config_dir):
     with mock.patch("quetz.cli.get_session", get_db):
         cli.create(
             Path(config_dir) / "new-deployment",
-            config_file_name="config.toml",
             copy_conf="config.toml",
-            create_conf=None,
+            create_conf=False,
             dev=True,
         )
 
