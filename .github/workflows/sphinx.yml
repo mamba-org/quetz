@@ -17,10 +17,11 @@ jobs:
       - uses: actions/checkout@v2
       - name: "install dependencies"
         uses: mamba-org/provision-with-micromamba@main
-      - uses: ammaraskar/sphinx-action@master
-        name: "build docs"
-        with:
-          docs-folder: docs/
+      - name: "build docs"
+        shell: bash -l {0}
+        run: |
+          cd docs
+          make html
       - uses: actions/upload-artifact@v1
         name: "upload artifacts"
         with:
