@@ -4,6 +4,12 @@ from quetz import db_models
 from quetz.config import Config
 
 
+@pytest.fixture
+def maintainer(user, db):
+    user.role = "maintainer"
+    db.commit()
+
+
 @pytest.mark.parametrize(
     "user_role,expected_status",
     [("owner", 201), ("maintainer", 201), ("member", 201), (None, 403)],
@@ -133,10 +139,7 @@ def test_get_channel_members(auth_client, public_channel, expected_code):
     assert response.status_code == expected_code
 
 
-def test_channel_names_are_case_insensitive(auth_client, user, db):
-
-    user.role = "maintainer"
-    db.commit()
+def test_channel_names_are_case_insensitive(auth_client, maintainer):
 
     channel_name = "MyChanneL"
 
@@ -206,10 +209,7 @@ def test_channel_names_are_case_insensitive(auth_client, user, db):
     assert response.status_code == 200
 
 
-def test_unique_channel_names_are_case_insensitive(auth_client, user, db):
-
-    user.role = "maintainer"
-    db.commit()
+def test_unique_channel_names_are_case_insensitive(auth_client, maintainer):
 
     channel_name = "MyChanneL"
 
@@ -232,3 +232,42 @@ def test_unique_channel_names_are_case_insensitive(auth_client, user, db):
 
     assert response.status_code == 409
     assert f"{channel_name.upper()} exists" in response.json()['detail']
+
+
+def test_unicode_channel_names(auth_client, maintainer):
+
+    channel_name = "검은맘바"
+
+    response = auth_client.post(
+        "/api/channels", json={"name": channel_name, "private": False}
+    )
+
+    assert response.status_code == 201
+
+    response = auth_client.get("/api/channels")
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]['name'] == channel_name
+
+    response = auth_client.get(f"/api/channels/{channel_name}")
+
+    assert response.status_code == 200
+    assert response.json()['name'] == channel_name
+
+
+def test_accents_make_unique_channel_names(auth_client, maintainer):
+
+    channel_names = ["żmija", "zmija", "grün", "grun"]
+
+    for name in channel_names:
+        response = auth_client.post(
+            "/api/channels", json={"name": name, "private": False}
+        )
+        assert response.status_code == 201
+
+    response = auth_client.get("/api/channels")
+
+    assert response.status_code == 200
+
+    assert len(response.json()) == 4
