@@ -204,3 +204,31 @@ def test_channel_names_are_case_insensitive(auth_client, user, db):
 
     response = auth_client.get(f"/channels/{channel_name}/linux-64/{package_filename}")
     assert response.status_code == 200
+
+
+def test_unique_channel_names_are_case_insensitive(auth_client, user, db):
+
+    user.role = "maintainer"
+    db.commit()
+
+    channel_name = "MyChanneL"
+
+    response = auth_client.post(
+        "/api/channels", json={"name": channel_name, "private": False}
+    )
+
+    assert response.status_code == 201
+
+    response = auth_client.post(
+        "/api/channels", json={"name": channel_name.lower(), "private": False}
+    )
+
+    assert response.status_code == 409
+    assert f"{channel_name.lower()} exists" in response.json()['detail']
+
+    response = auth_client.post(
+        "/api/channels", json={"name": channel_name.upper(), "private": False}
+    )
+
+    assert response.status_code == 409
+    assert f"{channel_name.upper()} exists" in response.json()['detail']
