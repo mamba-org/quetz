@@ -1,7 +1,6 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
-
-import json
+import contextlib
 import logging
 import os
 import random
@@ -11,7 +10,7 @@ import uuid
 from distutils.spawn import find_executable
 from enum import Enum
 from pathlib import Path
-from typing import Dict, NoReturn, Optional
+from typing import NoReturn, Optional, Union
 
 import pkg_resources
 import typer
@@ -19,12 +18,12 @@ import uvicorn
 from alembic import command
 from alembic.config import Config as AlembicConfig
 from sqlalchemy.orm.session import Session
+from sqlalchemy_utils.functions import database_exists
 
 from quetz.config import (
     Config,
     _env_config_file,
     _env_prefix,
-    _user_dir,
     configure_logger,
     create_config,
 )
@@ -43,8 +42,6 @@ from quetz.db_models import (
 
 app = typer.Typer()
 
-_deployments_file = os.path.join(_user_dir, 'deployments.json')
-
 logger = logging.getLogger("quetz-cli")
 configure_logger(loggers=("quetz-cli", "alembic"))
 
@@ -56,6 +53,17 @@ class LogLevel(str, Enum):
     info = "info"
     debug = "debug"
     trace = "trace"
+
+
+@contextlib.contextmanager
+def working_directory(path):
+    """Change working directory and return to previous on exit."""
+    prev_cwd = Path.cwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(prev_cwd)
 
 
 def _alembic_config(db_url: str) -> AlembicConfig:
@@ -105,7 +113,7 @@ def _make_migrations(
         if entry_point.name == plugin_name:
             found = True
 
-    if not plugin_name == "quetz" and not found:
+    if plugin_name != "quetz" and not found:
         raise Exception(
             f"models entrypoint (quetz.models) for plugin {plugin_name} not registered"
         )
@@ -165,7 +173,7 @@ def _init_db(db: Session, config: Config):
 def _fill_test_database(db: Session) -> NoReturn:
     """Create dummy users and channels to allow further testing in dev mode."""
 
-    testUsers = []
+    test_users = []
     dao = Dao(db)
     try:
         for index, username in enumerate(['alice', 'bob', 'carol', 'dave']):
@@ -182,7 +190,7 @@ def _fill_test_database(db: Session) -> NoReturn:
             user.identities.append(identity)  # type: ignore
             user.profile = profile
             db.add(user)
-            testUsers.append(user)
+            test_users.append(user)
 
         for channel_index in range(3):
             channel = Channel(
@@ -199,18 +207,19 @@ def _fill_test_database(db: Session) -> NoReturn:
                 )
                 channel.packages.append(package)  # type: ignore
 
-                test_user = testUsers[random.randint(0, len(testUsers) - 1)]
+                test_user = test_users[random.randint(0, len(test_users) - 1)]
                 package_member = PackageMember(
                     package=package, channel=channel, user=test_user, role='owner'
                 )
 
                 db.add(package_member)
 
+            test_user = test_users[random.randint(0, len(test_users) - 1)]
+
             if channel_index == 0:
                 package = Package(name='xtensor', description='Description of xtensor')
                 channel.packages.append(package)  # type: ignore
 
-                test_user = testUsers[random.randint(0, len(testUsers) - 1)]
                 package_member = PackageMember(
                     package=package, channel=channel, user=test_user, role='owner'
                 )
@@ -249,76 +258,17 @@ def _fill_test_database(db: Session) -> NoReturn:
         db.close()
 
 
-def _get_deployments() -> Dict[str, str]:
-    """Get a mapping of the current Quetz deployments.
-
-    Returns
-    -------
-    deployments : Dict[str, str]
-        The mapping of deployments
-    """
-
-    if os.path.exists(_deployments_file):
-        return _get_cleaned_deployments()
-    else:
-        Path(_user_dir).mkdir(parents=True, exist_ok=True)
-        return {}
-
-
-def _store_deployment(path: str, config_file_name: str) -> NoReturn:
-    """Store a new Quetz deployment.
-
-    Parameters
-    ----------
-    path : str
-        The location of the deployment
-    config_file_name : str
-        The configuration file name, including its extension
-    """
-
-    json_ = {path: config_file_name}
-    deployments = _get_deployments()
-
-    deployments.update(json_)
-    with open(_deployments_file, 'w') as f:
-        json.dump(deployments, f)
-
-
-def _get_cleaned_deployments() -> Dict[str, str]:
-    """Get a cleaned version of deployments.
-
-    This could be necessary to clean-up if the user delete manually a deployment
-    directory without updating the deployments files in its profile.
-
-    Returns
-    -------
-    deployments : Dict[str, str]
-        The mapping of deployments
-    """
-
-    with open(_deployments_file, 'r') as fid:
-        deployments: Dict[str, str] = json.load(fid)
-
-    to_delete = []
-    for path, f in deployments.items():
-        config_file = os.path.join(path, f)
-        if not os.path.exists(config_file):  # User has deleted the instance without CLI
-            to_delete.append(path)
-
-    cleaned_deployments = {
-        path: f for path, f in deployments.items() if path not in to_delete
-    }
-
-    if len(to_delete) > 0:
-        with open(_deployments_file, 'w') as fid:
-            json.dump(cleaned_deployments, fid)
-
-    return cleaned_deployments
-
-
-def _clean_deployments():
-    """Clean the deployments without returning anything."""
-    _ = _get_cleaned_deployments()
+def _is_deployment(base_dir: Path):
+    config_file = base_dir.joinpath("config.toml")
+    if (
+        base_dir.exists()
+        and config_file.exists()
+        and base_dir.joinpath("channels").exists()
+    ):
+        config = Config(str(config_file.resolve()))
+        with working_directory(base_dir):
+            return database_exists(config.sqlalchemy_database_url)
+    return False
 
 
 @app.command()
@@ -332,11 +282,10 @@ def init_db(
     config_file = _get_config(path)
 
     config = Config(config_file)
-    os.chdir(path)
-    db = get_session(config.sqlalchemy_database_url)
-
-    _run_migrations(config.sqlalchemy_database_url)
-    _init_db(db, config)
+    with working_directory(path):
+        db = get_session(config.sqlalchemy_database_url)
+        _run_migrations(config.sqlalchemy_database_url)
+        _init_db(db, config)
 
 
 @app.command()
@@ -353,9 +302,8 @@ def make_migrations(
     config_file = _get_config(path)
 
     config = Config(config_file)
-    os.chdir(path)
-
-    _make_migrations(config.sqlalchemy_database_url, message, plugin, initialize)
+    with working_directory(path):
+        _make_migrations(config.sqlalchemy_database_url, message, plugin, initialize)
 
 
 @app.command()
@@ -367,9 +315,6 @@ def create(
             "(will be created if does not exist)"
         ),
     ),
-    config_file_name: str = typer.Option(
-        "config.toml", help="The configuration file name expected in the provided path"
-    ),
     copy_conf: str = typer.Option(
         None, help="The configuration to copy from (e.g. dev_config.toml)"
     ),
@@ -377,7 +322,12 @@ def create(
         False,
         help="Enable/disable creation of a default configuration file",
     ),
-    skip_if_exists: bool = typer.Option(
+    delete: bool = typer.Option(
+        False,
+        help="Delete the the deployment if it exists. "
+        "Must be specified with --copy-conf or --create-conf",
+    ),
+    exists_ok: bool = typer.Option(
         False, help="Skip the creation if deployment already exists."
     ),
     dev: bool = typer.Option(
@@ -391,30 +341,30 @@ def create(
     """Create a new Quetz deployment."""
 
     logger.info(f"creating new deployment in path {path}")
+    deployment_folder = Path(path).resolve()
+    config_file = deployment_folder / "config.toml"
 
-    abs_path = os.path.abspath(path)
-    config_file = os.path.join(path, config_file_name)
-    deployments = _get_deployments()
-
-    if os.path.exists(path) and abs_path in deployments:
-        if skip_if_exists:
+    if _is_deployment(deployment_folder):
+        if exists_ok:
             logger.info(
                 f'Quetz deployment already exists at {path}, skipping creation.'
             )
             return
-        delete_ = typer.confirm(f'Quetz deployment exists at {path}.\nOverwrite it?')
-        if delete_:
-            delete(path, force=True)
-            del deployments[abs_path]
+        if delete and copy_conf or create_conf:
+            shutil.rmtree(deployment_folder)
         else:
-            typer.echo('Use the start command to start a deployment.', err=True)
+            typer.echo(
+                'Use the start command to start a deployment '
+                'or specify --delete with --copy-conf or --create-conf.',
+                err=True,
+            )
             raise typer.Abort()
 
-    Path(path).mkdir(parents=True, exist_ok=True)
+    deployment_folder.mkdir(parents=True, exist_ok=True)
 
     # only authorize path with a config file to avoid deletion of unexpected files
     # when deleting Quetz instance
-    if any(f != config_file_name for f in os.listdir(path)):
+    if any(f != config_file for f in deployment_folder.iterdir()):
         typer.echo(
             f'Quetz deployment not allowed at {path}.\n'
             'The path should not contain more than the configuration file.',
@@ -422,7 +372,7 @@ def create(
         )
         raise typer.Abort()
 
-    if not os.path.exists(config_file) and not create_conf and not copy_conf:
+    if not config_file.exists() and not create_conf and not copy_conf:
         typer.echo(
             'No configuration file provided.\n'
             'Use --create-conf or --copy-conf to produce a config file.',
@@ -438,45 +388,32 @@ def create(
         typer.echo(f"Copying config file from {copy_conf} to {config_file}")
         shutil.copyfile(copy_conf, config_file)
 
-    if not os.path.exists(config_file) and create_conf:
+    if not config_file.exists() and create_conf:
         https = 'false' if dev else 'true'
         conf = create_config(https=https)
         with open(config_file, 'w') as f:
             f.write(conf)
 
-    os.environ[_env_prefix + _env_config_file] = config_file
+    os.environ[_env_prefix + _env_config_file] = str(config_file.resolve())
     config = Config(config_file)
 
-    os.chdir(path)
-    Path('channels').mkdir()
-    db = get_session(config.sqlalchemy_database_url)
-
-    _run_migrations(config.sqlalchemy_database_url)
-    _init_db(db, config)
-
-    if dev:
-        _fill_test_database(db)
-
-    _store_deployment(abs_path, config_file_name)
+    deployment_folder.joinpath('channels').mkdir(exist_ok=True)
+    with working_directory(path):
+        db = get_session(config.sqlalchemy_database_url)
+        _run_migrations(config.sqlalchemy_database_url)
+        _init_db(db, config)
+        if dev:
+            _fill_test_database(db)
 
 
-def _get_config(path: str) -> str:
+def _get_config(path: Union[Path, str]) -> str:
     """get config path"""
-
-    abs_path = os.path.abspath(path)
-    deployments = _get_deployments()
-
-    try:
-        config_file_name = deployments[abs_path]
-    except KeyError:
-        # we can also start the deployment if we find the config file
-        config_file_name = 'config.toml'
-
-    config_file = os.path.join(abs_path, config_file_name)
-    if not os.path.exists(config_file):
+    path = Path(path)
+    config_file = path / 'config.toml'
+    if not config_file.exists():
         typer.echo(f'Could not find config at {config_file}')
         raise typer.Abort()
-    return config_file
+    return str(config_file.resolve())
 
 
 @app.command()
@@ -504,11 +441,10 @@ def start(
 
     logger.info(f"deploying quetz from directory {path}")
 
-    config_file = _get_config(path)
+    deployment_folder = Path(path)
+    config_file = _get_config(deployment_folder)
 
-    abs_path = os.path.abspath(path)
-    deployments = _get_deployments()
-    if abs_path not in deployments:
+    if not _is_deployment(deployment_folder):
         typer.echo(
             'The specified directory is not a deployment.\n'
             'Use the create or run command to create a deployment.',
@@ -517,28 +453,24 @@ def start(
         raise typer.Abort()
 
     os.environ[_env_prefix + _env_config_file] = config_file
-    os.chdir(path)
+    with working_directory(path):
+        import quetz
 
-    import quetz
-
-    quetz_src = os.path.dirname(quetz.__file__)
-    uvicorn.run(
-        "quetz.main:app",
-        reload=reload,
-        reload_dirs=(quetz_src,),
-        port=port,
-        proxy_headers=proxy_headers,
-        host=host,
-        log_level=log_level,
-    )
+        quetz_src = os.path.dirname(quetz.__file__)
+        uvicorn.run(
+            "quetz.main:app",
+            reload=reload,
+            reload_dirs=(quetz_src,),
+            port=port,
+            proxy_headers=proxy_headers,
+            host=host,
+            log_level=log_level,
+        )
 
 
 @app.command()
 def run(
     path: str = typer.Argument(None, help="The path of the deployment"),
-    config_file_name: str = typer.Option(
-        "config.toml", help="The configuration file name expected in the provided path"
-    ),
     copy_conf: str = typer.Option(
         None, help="The configuration to copy from (e.g. dev_config.toml)"
     ),
@@ -575,7 +507,7 @@ def run(
     It performs sequentially create and start operations."""
 
     abs_path = os.path.abspath(path)
-    create(abs_path, config_file_name, copy_conf, create_conf, skip_if_exists, dev)
+    create(abs_path, copy_conf, create_conf, skip_if_exists, dev)
     start(abs_path, port, host, proxy_headers, log_level, reload)
 
 
@@ -588,31 +520,15 @@ def delete(
 ) -> NoReturn:
     """Delete a Quetz deployment."""
 
-    abs_path = os.path.abspath(path)
-    deployments = _get_deployments()
-
-    try:
-        _ = deployments[abs_path]
-    except KeyError:
+    deployment_dir = Path(path)
+    if not _is_deployment(deployment_dir):
         typer.echo(f'No Quetz deployment found at {path}.', err=True)
         raise typer.Abort()
 
-    delete = force or typer.confirm(f"Delete Quetz deployment at {path}?")
-    if not delete:
+    if not force and not typer.confirm(f"Delete Quetz deployment at {path}?"):
         raise typer.Abort()
 
-    shutil.rmtree(abs_path)
-    _clean_deployments()
-
-
-@app.command()
-def list() -> NoReturn:
-    """List Quetz deployments."""
-
-    deployments = _get_deployments()
-
-    if len(deployments) > 0:
-        typer.echo('\n'.join([p for p in deployments]))
+    shutil.rmtree(deployment_dir)
 
 
 @app.command()

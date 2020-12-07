@@ -10,6 +10,7 @@ dependencies:
   - psycopg2
   - httpx=0.16.0
   - sqlalchemy
+  - sqlalchemy-utils
   - sqlite
   - python-multipart
   - uvicorn
