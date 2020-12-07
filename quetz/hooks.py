@@ -59,3 +59,25 @@ def post_package_indexing(
         - used in updating the index
     """
     pass
+
+
+@hookspec
+def validate_new_package_name(
+    channel_name: str,
+    package_name: str,
+) -> None:
+    """Validate new package name.
+
+    `test`_
+
+    It should raise :class:``quetz.errors.ValidationError`` if
+    ``package_name`` is not valid.
+
+    :param str package_name:
+        name of the package
+
+    :param str channel_name:
+        name of channel with the package
+
+
+    """

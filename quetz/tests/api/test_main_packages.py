@@ -2,8 +2,10 @@ from pathlib import Path
 
 import pytest
 
+from quetz import hookimpl
 from quetz.authorization import MAINTAINER, MEMBER, OWNER
 from quetz.db_models import ChannelMember, Package, PackageMember, PackageVersion
+from quetz.errors import ValidationError
 from quetz.pkgstores import PackageStore
 
 
@@ -254,7 +256,7 @@ def test_package_name_length_limit(auth_client, public_channel, db):
     assert pkg is not None
 
 
-def test_validate_package_names(auth_client, public_channel, db):
+def test_validate_package_names(auth_client, public_channel):
 
     valid_package_names = [
         "interesting-package",
@@ -276,6 +278,7 @@ def test_validate_package_names(auth_client, public_channel, db):
         "invalid package",
         "invalid%package",
         "**invalidpackage**",
+        "błędnypakiet",
     ]
 
     for package_name in invalid_package_names:
@@ -284,3 +287,21 @@ def test_validate_package_names(auth_client, public_channel, db):
             f"/api/channels/{public_channel.name}/packages", json={"name": package_name}
         )
         assert response.status_code == 422
+
+
+def test_validation_hook(auth_client, public_channel):
+    from quetz.main import pm
+
+    class Plugin:
+        @hookimpl
+        def validate_new_package_name(self, channel_name: str, package_name: str):
+            raise ValidationError(f"name {package_name} not allowed")
+
+    pm.register(Plugin())
+
+    response = auth_client.post(
+        f"/api/channels/{public_channel.name}/packages", json={"name": "package-name"}
+    )
+
+    assert response.status_code == 400
+    assert "package-name not allowed" in response.json()['detail']

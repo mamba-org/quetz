@@ -36,6 +36,7 @@ from quetz import (
     auth_google,
     authorization,
     db_models,
+    errors,
     exceptions,
     rest_models,
 )
@@ -571,6 +572,14 @@ def post_package(
 
     user_id = auth.assert_user()
     auth.assert_create_package(channel.name)
+    try:
+        pm.hook.validate_new_package_name(
+            channel_name=channel.name, package_name=new_package.name
+        )
+    except errors.ValidationError as err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"validation error: {err}"
+        )
     package = dao.get_package(channel.name, new_package.name)
     if package:
         raise HTTPException(
@@ -952,6 +961,9 @@ def handle_package_files(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
         if not package and not dao.get_package(channel_name, package_name):
+            pm.hook.validate_new_package_name(
+                channel_name=channel_name, package_name=package_name
+            )
             dao.create_package(
                 channel_name,
                 rest_models.Package(
