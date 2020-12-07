@@ -10,9 +10,12 @@ import pytest
 import sqlalchemy as sa
 from alembic.script import ScriptDirectory
 from pytest_mock.plugin import MockerFixture
+from typer.testing import CliRunner
 
 from quetz import cli
 from quetz.db_models import Base, User
+
+runner = CliRunner()
 
 
 @pytest.fixture
@@ -87,7 +90,6 @@ def test_init_db_create_test_users(db, config, mocker, config_dir):
         cli.create(
             Path(config_dir) / "new-deployment",
             copy_conf="config.toml",
-            create_conf=False,
             dev=True,
         )
 
@@ -382,3 +384,85 @@ def test_multi_head(
         engine.execute("DROP TABLE alembic_version")
     except sa.exc.DatabaseError:
         pass
+
+
+def test_create_exists_ok():
+    """Nothing happens if --exists-ok is enabled."""
+    with mock.patch("quetz.cli._is_deployment", lambda x: True):
+        res = runner.invoke(cli.app, ["create", "test", "--exists-ok"])
+        assert res.exit_code == 0
+
+
+wrong_cli_args = [
+    ["create", "test"],
+    ["create", "test", "--copy-conf", "config.toml"],
+    ["create", "test", "--create-conf"],
+    ["create", "test", "--copy-conf", "config.toml", "--create-conf"],
+    ["create", "test", "--delete"],
+]
+
+
+@pytest.mark.parametrize('cli_args', wrong_cli_args)
+def test_create_exists_errors(cli_args):
+    """Create command raises if deployment exists and not force deleted."""
+    with mock.patch("quetz.cli._is_deployment", lambda x: True):
+        res = runner.invoke(cli.app, cli_args)
+        assert res.exit_code == 1
+        assert (
+            res.output == "Use the start command to start a deployment "
+            "or specify --delete with --copy-conf or --create-conf.\nAborted!\n"
+        )
+
+
+@pytest.fixture()
+def empty_deployment_dir() -> Path:
+    path = Path(tempfile.mkdtemp()).resolve()
+    try:
+        yield path
+    finally:
+        shutil.rmtree(path, ignore_errors=True)
+
+
+def test_create_conf(empty_deployment_dir: Path):
+    """Create command with create conf cretes the needed files and folder."""
+    runner.invoke(cli.app, ['create', str(empty_deployment_dir), '--create-conf'])
+    assert empty_deployment_dir.joinpath('config.toml').exists()
+    assert empty_deployment_dir.joinpath('channels').exists()
+    assert empty_deployment_dir.joinpath('quetz.sqlite').exists()
+
+
+def test_create_exists_delete(empty_deployment_dir: Path):
+    """Existing deployment is removed if delete arg is used."""
+    runner.invoke(cli.app, ['create', str(empty_deployment_dir), '--create-conf'])
+    creation_time = empty_deployment_dir.stat().st_mtime
+    runner.invoke(
+        cli.app, ['create', str(empty_deployment_dir), '--delete', '--create-conf']
+    )
+    assert empty_deployment_dir.stat().st_mtime > creation_time
+    assert empty_deployment_dir.joinpath('config.toml').exists()
+    assert empty_deployment_dir.joinpath('channels').exists()
+    assert empty_deployment_dir.joinpath('quetz.sqlite').exists()
+
+
+def test_create_no_config(empty_deployment_dir: Path):
+    """Error on create command with empty deployment and no config."""
+    res = runner.invoke(cli.app, ['create', str(empty_deployment_dir)])
+    assert res.exit_code == 1
+    assert "No configuration file provided." in res.output
+
+
+def test_create_extra_file_in_deployment(empty_deployment_dir: Path):
+    """Error on create command with extra files in deployment."""
+    empty_deployment_dir.joinpath('extra_file.txt').touch()
+    res = runner.invoke(cli.app, ['create', str(empty_deployment_dir)])
+    assert res.exit_code == 1
+    assert "Quetz deployment not allowed at" in res.output
+
+
+def test_create_missing_copy_conf(empty_deployment_dir: Path):
+    """Error on create command with wrong copy-conf path."""
+    res = runner.invoke(
+        cli.app, ['create', str(empty_deployment_dir), "--copy-conf", "none.toml"]
+    )
+    assert res.exit_code == 1
+    assert "Config file to copy does not exist" in res.output

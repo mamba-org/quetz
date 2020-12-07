@@ -347,10 +347,11 @@ def create(
     if _is_deployment(deployment_folder):
         if exists_ok:
             logger.info(
-                f'Quetz deployment already exists at {path}, skipping creation.'
+                f'Quetz deployment already exists at {deployment_folder}.\n'
+                f'Skipping creation.'
             )
             return
-        if delete and copy_conf or create_conf:
+        if delete and (copy_conf or create_conf):
             shutil.rmtree(deployment_folder)
         else:
             typer.echo(
@@ -408,8 +409,7 @@ def create(
 
 def _get_config(path: Union[Path, str]) -> str:
     """get config path"""
-    path = Path(path)
-    config_file = path / 'config.toml'
+    config_file = Path(path) / 'config.toml'
     if not config_file.exists():
         typer.echo(f'Could not find config at {config_file}')
         raise typer.Abort()
