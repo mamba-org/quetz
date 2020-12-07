@@ -252,3 +252,35 @@ def test_package_name_length_limit(auth_client, public_channel, db):
     pkg = db.query(Package).filter(Package.name == package_name).one_or_none()
 
     assert pkg is not None
+
+
+def test_validate_package_names(auth_client, public_channel, db):
+
+    valid_package_names = [
+        "interesting-package",
+        "valid.package.name",
+        "valid-package-name",
+        "valid_package_name" "validpackage1234",
+    ]
+
+    for package_name in valid_package_names:
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/packages", json={"name": package_name}
+        )
+
+    assert response.status_code == 201
+
+    invalid_package_names = [
+        "InvalidPackage",
+        "invalid%20package",
+        "invalid package",
+        "invalid%package",
+        "**invalidpackage**",
+    ]
+
+    for package_name in invalid_package_names:
+
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/packages", json={"name": package_name}
+        )
+        assert response.status_code == 422
