@@ -155,3 +155,9 @@ def test_channel_names_are_case_insensitive(auth_client, user, db):
 
     assert response.status_code == 200
     assert response.json()["name"] == channel_name.lower()
+
+    response = auth_client.get(f"/api/channels/{channel_name.lower()}/packages")
+
+    assert response.status_code == 200
+
+    assert response.json() == []

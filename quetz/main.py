@@ -134,7 +134,7 @@ class ChannelChecker:
         dao: Dao = Depends(get_dao),
         auth: authorization.Rules = Depends(get_rules),
     ) -> db_models.Channel:
-        channel = dao.get_channel(channel_name)
+        channel = dao.get_channel(channel_name.lower())
 
         if not channel:
             raise HTTPException(
@@ -179,7 +179,7 @@ def get_package_or_fail(
     auth: authorization.Rules = Depends(get_rules),
 ) -> db_models.Package:
 
-    package = dao.get_package(channel_name, package_name)
+    package = dao.get_package(channel_name.lower(), package_name)
 
     if not package:
         raise HTTPException(
