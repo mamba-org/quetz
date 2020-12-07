@@ -478,6 +478,11 @@ def run(
         False,
         help="Enable/disable creation of a default configuration file",
     ),
+    delete: bool = typer.Option(
+        False,
+        help="Delete the the deployment if it exists. "
+        "Must be specified with --copy-conf or --create-conf",
+    ),
     skip_if_exists: bool = typer.Option(
         False, help="Skip the creation if deployment already exists."
     ),
@@ -507,7 +512,7 @@ def run(
     It performs sequentially create and start operations."""
 
     abs_path = os.path.abspath(path)
-    create(abs_path, copy_conf, create_conf, skip_if_exists, dev)
+    create(abs_path, copy_conf, create_conf, delete, skip_if_exists, dev)
     start(abs_path, port, host, proxy_headers, log_level, reload)
 
 
