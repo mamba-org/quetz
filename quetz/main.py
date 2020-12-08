@@ -106,6 +106,7 @@ api_router = APIRouter()
 plugin_routers = pm.hook.register_router()
 
 pkgstore = config.get_package_store()
+pkgstore_support_url = hasattr(pkgstore, 'url')
 
 app.include_router(auth_github.router)
 
@@ -1017,6 +1018,9 @@ async def serve_path(
         return get_from_cache_or_download(repository, cache, path)
 
     chunk_size = 10_000
+
+    if pkgstore_support_url and (path.endswith('.tar.bz2') or path.endswith('.conda')):
+        return RedirectResponse(pkgstore.url(channel.name, path))
 
     def iter_chunks(fid):
         while True:

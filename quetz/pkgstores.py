@@ -197,3 +197,10 @@ class S3Store(PackageStore):
 
         with self._get_fs() as fs:
             return [remove_prefix(f, channel_bucket) for f in fs.find(channel_bucket)]
+
+    def url(self, channel: str, src: str, expires=3600):
+        # expires is in seconds, so the default is 60 minutes!
+        with self._get_fs() as fs:
+            return fs.url(
+                path.join(self._bucket_map(channel), src),
+            )
