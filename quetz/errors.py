@@ -2,9 +2,17 @@
 # Distributed under the terms of the Modified BSD License.
 
 
-class DBError(Exception):
+class QuetzError(Exception):
     pass
 
 
-class ConfigError(Exception):
+class DBError(QuetzError):
+    pass
+
+
+class ConfigError(QuetzError):
+    pass
+
+
+class ValidationError(QuetzError):
     pass

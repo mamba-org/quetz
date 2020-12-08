@@ -11,6 +11,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional
 
+import pydantic
 import requests
 from fastapi import (
     APIRouter,
@@ -20,7 +21,9 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Request,
     UploadFile,
+    responses,
     status,
 )
 from fastapi.responses import StreamingResponse
@@ -36,6 +39,7 @@ from quetz import (
     auth_google,
     authorization,
     db_models,
+    errors,
     exceptions,
     rest_models,
 )
@@ -213,6 +217,14 @@ def logout(session):
     session.pop("user_id", None)
     session.pop("identity_provider", None)
     session.pop("token", None)
+
+
+# custom exception handlers
+@app.exception_handler(errors.ValidationError)
+async def unicorn_exception_handler(request: Request, exc: errors.ValidationError):
+    return responses.JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content={"detail": str(exc)}
+    )
 
 
 # endpoints
@@ -571,6 +583,12 @@ def post_package(
 
     user_id = auth.assert_user()
     auth.assert_create_package(channel.name)
+    pm.hook.validate_new_package(
+        channel_name=channel.name,
+        package_name=new_package.name,
+        file_handler=None,
+        condainfo=None,
+    )
     package = dao.get_package(channel.name, new_package.name)
     if package:
         raise HTTPException(
@@ -952,13 +970,31 @@ def handle_package_files(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
         if not package and not dao.get_package(channel_name, package_name):
-            dao.create_package(
-                channel_name,
-                rest_models.Package(
+
+            try:
+                pm.hook.validate_new_package(
+                    channel_name=channel_name,
+                    package_name=package_name,
+                    file_handler=file.file,
+                    condainfo=condainfo,
+                )
+                package_data = rest_models.Package(
                     name=package_name,
                     summary=condainfo.about.get("summary", "n/a"),
                     description=condainfo.about.get("description", "n/a"),
-                ),
+                )
+            except pydantic.main.ValidationError as err:
+                dest = os.path.join(condainfo.info["subdir"], file.filename)
+                pkgstore.delete_file(channel_name, dest)
+                raise errors.ValidationError(str(err))
+            except errors.ValidationError as err:
+                dest = os.path.join(condainfo.info["subdir"], file.filename)
+                pkgstore.delete_file(channel_name, dest)
+                raise err
+
+            dao.create_package(
+                channel_name,
+                package_data,
                 user_id,
                 authorization.OWNER,
             )

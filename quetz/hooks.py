@@ -1,9 +1,10 @@
-from typing import List
+from typing import BinaryIO, List, Optional
 
 import fastapi
 import pluggy
 
 import quetz
+from quetz.condainfo import CondaInfo
 
 hookspec = pluggy.HookspecMarker("quetz")
 
@@ -59,3 +60,31 @@ def post_package_indexing(
         - used in updating the index
     """
     pass
+
+
+@hookspec
+def validate_new_package(
+    channel_name: str,
+    package_name: str,
+    file_handler: Optional[BinaryIO],
+    condainfo: Optional[CondaInfo],
+) -> None:
+    """Validate new package name.
+
+    It should raise :class:``quetz.errors.ValidationError`` if
+    a package is not valid.
+
+    :param str package_name:
+        name of the package
+
+    :param str channel_name:
+        name of channel with the package
+
+    :param BinaryIO file_handler:
+       handler to the package file, it can be None if a package is created but
+       no file was yet uploaded
+
+    :param CondaInfo condainfo:
+       CondaInfo instance with package metadata, it can be None if file was not
+       uploaded
+    """

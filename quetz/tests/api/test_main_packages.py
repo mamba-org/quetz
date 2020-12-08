@@ -1,9 +1,14 @@
 from pathlib import Path
+from typing import BinaryIO
 
 import pytest
 
+from quetz import hookimpl
 from quetz.authorization import MAINTAINER, MEMBER, OWNER
+from quetz.condainfo import CondaInfo
+from quetz.config import Config
 from quetz.db_models import ChannelMember, Package, PackageMember, PackageVersion
+from quetz.errors import ValidationError
 from quetz.pkgstores import PackageStore
 
 
@@ -88,8 +93,8 @@ def test_get_package_version(auth_client, public_channel, package_version, dao):
     )
 
     assert response.status_code == 200
-    assert response.json()['filename'] == filename
-    assert response.json()['platform'] == platform
+    assert response.json()["filename"] == filename
+    assert response.json()["platform"] == platform
 
 
 @pytest.mark.parametrize("user_server_role", [OWNER, MAINTAINER])
@@ -252,3 +257,128 @@ def test_package_name_length_limit(auth_client, public_channel, db):
     pkg = db.query(Package).filter(Package.name == package_name).one_or_none()
 
     assert pkg is not None
+
+
+def test_validate_package_names(auth_client, public_channel):
+
+    valid_package_names = [
+        "interesting-package",
+        "valid.package.name",
+        "valid-package-name",
+        "valid_package_name",
+        "validpackage1234",
+    ]
+
+    for package_name in valid_package_names:
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/packages", json={"name": package_name}
+        )
+
+        assert response.status_code == 201
+
+    invalid_package_names = [
+        "InvalidPackage",  # no uppercase
+        "invalid%20package",  # no spaces
+        "invalid package",  # no spaces
+        "invalid%package",  # no special characters
+        "**invalidpackage**",
+        "błędnypakiet",  # no unicode
+    ]
+
+    for package_name in invalid_package_names:
+
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/packages", json={"name": package_name}
+        )
+        assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "package_name,msg",
+    [
+        ("TestPackage", "string does not match"),
+        ("test-package", None),
+    ],
+)
+def test_validate_package_names_files_endpoint(
+    auth_client, public_channel, mocker, package_name, msg, config: Config
+):
+
+    pkgstore = config.get_package_store()
+
+    package_filename = "test-package-0.1-0.tar.bz2"
+
+    with open(package_filename, "rb") as fid:
+        condainfo = CondaInfo(fid, package_filename)
+
+    # patch conda info
+    condainfo.info['name'] = package_name
+    condainfo.channeldata['packagename'] = package_name
+
+    mocked_cls = mocker.patch("quetz.main.CondaInfo")
+    mocked_cls.return_value = condainfo
+
+    with open(package_filename, "rb") as fid:
+        files = {"files": (f"{package_name}-0.1-0.tar.bz2", fid)}
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/files/", files=files
+        )
+
+    if msg:
+        assert response.status_code == 422
+        assert msg in response.json()["detail"]
+
+        with pytest.raises(FileNotFoundError):
+            pkgstore.serve_path(
+                public_channel.name, f'linux-64/{package_name}-0.1-0.tar.bz2'
+            )
+    else:
+        assert response.status_code == 201
+        assert pkgstore.serve_path(
+            public_channel.name, f'linux-64/{package_name}-0.1-0.tar.bz2'
+        )
+
+
+@pytest.fixture
+def plugin(app):
+    from quetz.main import pm
+
+    class Plugin:
+        @hookimpl
+        def validate_new_package(
+            self,
+            channel_name: str,
+            package_name: str,
+            file_handler: BinaryIO,
+            condainfo: CondaInfo,
+        ):
+            raise ValidationError(f"name {package_name} not allowed")
+
+    plugin = Plugin()
+    pm.register(plugin)
+    yield plugin
+    pm.unregister(plugin)
+
+
+def test_validation_hook(auth_client, public_channel, plugin, config):
+
+    pkgstore = config.get_package_store()
+
+    response = auth_client.post(
+        f"/api/channels/{public_channel.name}/packages", json={"name": "package-name"}
+    )
+
+    assert response.status_code == 422
+    assert "package-name not allowed" in response.json()["detail"]
+
+    package_filename = "test-package-0.1-0.tar.bz2"
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/files/", files=files
+        )
+
+    assert response.status_code == 422
+    assert "test-package not allowed" in response.json()["detail"]
+    with pytest.raises(FileNotFoundError):
+        pkgstore.serve_path(public_channel.name, 'linux-64/test-package-0.1-0.tar.bz2')
