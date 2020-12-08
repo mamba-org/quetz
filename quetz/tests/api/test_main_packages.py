@@ -5,6 +5,7 @@ import pytest
 from quetz import hookimpl
 from quetz.authorization import MAINTAINER, MEMBER, OWNER
 from quetz.condainfo import CondaInfo
+from quetz.config import Config
 from quetz.db_models import ChannelMember, Package, PackageMember, PackageVersion
 from quetz.errors import ValidationError
 from quetz.pkgstores import PackageStore
@@ -299,8 +300,10 @@ def test_validate_package_names(auth_client, public_channel):
     ],
 )
 def test_validate_package_names_files_endpoint(
-    auth_client, public_channel, mocker, package_name, msg
+    auth_client, public_channel, mocker, package_name, msg, config: Config
 ):
+
+    pkgstore = config.get_package_store()
 
     package_filename = "test-package-0.1-0.tar.bz2"
 
@@ -323,8 +326,16 @@ def test_validate_package_names_files_endpoint(
     if msg:
         assert response.status_code == 422
         assert msg in response.json()["detail"]
+
+        with pytest.raises(FileNotFoundError):
+            pkgstore.serve_path(
+                public_channel.name, f'linux-64/{package_name}-0.1-0.tar.bz2'
+            )
     else:
         assert response.status_code == 201
+        assert pkgstore.serve_path(
+            public_channel.name, f'linux-64/{package_name}-0.1-0.tar.bz2'
+        )
 
 
 @pytest.fixture
@@ -342,7 +353,9 @@ def plugin(app):
     pm.unregister(plugin)
 
 
-def test_validation_hook(auth_client, public_channel, plugin):
+def test_validation_hook(auth_client, public_channel, plugin, config):
+
+    pkgstore = config.get_package_store()
 
     response = auth_client.post(
         f"/api/channels/{public_channel.name}/packages", json={"name": "package-name"}
@@ -360,3 +373,5 @@ def test_validation_hook(auth_client, public_channel, plugin):
 
     assert response.status_code == 422
     assert "test-package not allowed" in response.json()["detail"]
+    with pytest.raises(FileNotFoundError):
+        pkgstore.serve_path(public_channel.name, 'linux-64/test-package-0.1-0.tar.bz2')

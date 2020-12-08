@@ -967,18 +967,24 @@ def handle_package_files(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
         if not package and not dao.get_package(channel_name, package_name):
-            pm.hook.validate_new_package_name(
-                channel_name=channel_name, package_name=package_name
-            )
 
             try:
+                pm.hook.validate_new_package_name(
+                    channel_name=channel_name, package_name=package_name
+                )
                 package_data = rest_models.Package(
                     name=package_name,
                     summary=condainfo.about.get("summary", "n/a"),
                     description=condainfo.about.get("description", "n/a"),
                 )
             except pydantic.main.ValidationError as err:
+                dest = os.path.join(condainfo.info["subdir"], file.filename)
+                pkgstore.delete_file(channel_name, dest)
                 raise errors.ValidationError(str(err))
+            except errors.ValidationError as err:
+                dest = os.path.join(condainfo.info["subdir"], file.filename)
+                pkgstore.delete_file(channel_name, dest)
+                raise err
 
             dao.create_package(
                 channel_name,
