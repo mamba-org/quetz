@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, aliased, joinedload
 
@@ -392,6 +392,7 @@ class Dao:
         filename,
         info,
         uploader_id,
+        size,
         upsert: bool = False,
     ):
         # hold a lock on the package
@@ -463,6 +464,7 @@ class Dao:
                 info=info,
                 version_order=version_order,
                 uploader_id=uploader_id,
+                size=size,
             )
 
             self.db.add(package_version)
@@ -478,6 +480,7 @@ class Dao:
                     "info": info,
                     "uploader_id": uploader_id,
                     "time_modified": datetime.utcnow(),
+                    "size": size,
                 },
                 synchronize_session="evaluate",
             )
@@ -552,6 +555,16 @@ class Dao:
             self.db.query(Package.name, Package.channeldata)
             .filter(Package.channel_name == channel_name)
             .order_by(Package.name)
+        )
+
+    def update_channel_size(self, channel_name: str):
+
+        channel_size = self.db.query(func.sum(PackageVersion.size)).filter(
+            PackageVersion.channel_name == channel_name
+        )
+
+        self.db.query(Channel).filter(Channel.name == channel_name).update(
+            {"size": channel_size}
         )
 
     def create_user_with_role(self, user_name: str, role: Optional[str] = None):
