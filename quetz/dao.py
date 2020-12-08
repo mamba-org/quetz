@@ -565,6 +565,9 @@ class Dao:
             .scalar()
         )
 
+        if channel_size is None:
+            channel_size = 0
+
         self.update_channel(channel_name, {"size": channel_size})
 
     def create_user_with_role(self, user_name: str, role: Optional[str] = None):

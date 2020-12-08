@@ -59,9 +59,12 @@ def test_delete_package_non_member(
     assert package is not None
 
 
-def test_delete_package_versions(
+def test_delete_package_versions_with_package(
     auth_client, public_channel, public_package, package_version, dao, db, pkgstore
 ):
+
+    assert public_channel.size > 0
+    assert public_channel.size == package_version.size
 
     assert package_version.package_name == public_package.name
 
@@ -70,6 +73,9 @@ def test_delete_package_versions(
     )
 
     assert response.status_code == 200
+
+    db.refresh(public_channel)
+    assert public_channel.size == 0
 
     versions = (
         db.query(PackageVersion)
@@ -256,6 +262,9 @@ def test_upload_package_version(
 def test_delete_package_version(
     auth_client, public_channel, package_version, dao, pkgstore: PackageStore, db
 ):
+    assert public_channel.size > 0
+    assert public_channel.size == package_version.size
+
     filename = "test-package-0.1-0.tar.bz2"
     platform = "linux-64"
     response = auth_client.delete(
@@ -275,6 +284,9 @@ def test_delete_package_version(
 
     with pytest.raises(Exception):
         pkgstore.serve_path(public_channel.name, str(Path(platform) / filename))
+
+    db.refresh(public_channel)
+    assert public_channel.size == 0
 
 
 def test_package_name_length_limit(auth_client, public_channel, db):

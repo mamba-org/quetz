@@ -563,6 +563,7 @@ def delete_package(
     package: db_models.Package = Depends(get_package_or_fail),
     db=Depends(get_db),
     auth: authorization.Rules = Depends(get_rules),
+    dao: Dao = Depends(get_dao),
 ):
 
     auth.assert_package_delete(package)
@@ -578,6 +579,8 @@ def delete_package(
 
     for filename in filenames:
         pkgstore.delete_file(channel_name, filename)
+
+    dao.update_channel_size(channel_name)
 
 
 @api_router.post(
@@ -770,6 +773,8 @@ def delete_package_version(
 
     path = os.path.join(platform, filename)
     pkgstore.delete_file(channel_name, path)
+
+    dao.update_channel_size(channel_name)
 
 
 @api_router.get(
