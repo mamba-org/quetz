@@ -1,4 +1,3 @@
-import bz2
 import json
 import tarfile
 from contextlib import contextmanager
@@ -11,7 +10,7 @@ import quetz
 from quetz.config import Config
 from quetz.database import get_session
 from quetz.db_models import PackageFormatEnum, PackageVersion
-from quetz.utils import add_entry_for_index
+from quetz.utils import add_static_file
 
 
 def update_dict(packages, instructions):
@@ -132,21 +131,6 @@ def post_package_indexing(
         else:
             extract_ = extract_from_conda
 
-        def _addfile(content, path):
-
-            subdir_path = f"{subdir}/{path}"
-
-            if isinstance(content, str):
-                content = content.encode("utf-8")
-
-            compressed_content = bz2.compress(content)
-
-            pkgstore.add_file(content, channel_name, subdir_path)
-            pkgstore.add_file(compressed_content, channel_name, subdir_path + ".bz2")
-
-            add_entry_for_index(files, subdir, path, content)
-            add_entry_for_index(files, subdir, f"{path}.bz2", compressed_content)
-
         with extract_(fs) as tar:
 
             for subdir in subdirs:
@@ -161,7 +145,14 @@ def post_package_indexing(
                 repodata_str = fs.read()
                 repodata = json.loads(repodata_str)
 
-                _addfile(repodata_str, f"{fname}_from_packages.json")
+                add_static_file(
+                    repodata_str,
+                    channel_name,
+                    subdir,
+                    f"{fname}_from_packages.json",
+                    pkgstore,
+                    files,
+                )
 
                 patch_repodata(repodata, patch_instructions)
 
@@ -169,4 +160,11 @@ def post_package_indexing(
                 packages[subdir].update(repodata["packages.conda"])
 
                 patched_repodata_str = json.dumps(repodata)
-                _addfile(patched_repodata_str, f"{fname}.json")
+                add_static_file(
+                    patched_repodata_str,
+                    channel_name,
+                    subdir,
+                    f"{fname}.json",
+                    pkgstore,
+                    files,
+                )

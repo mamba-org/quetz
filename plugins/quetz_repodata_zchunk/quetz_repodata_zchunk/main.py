@@ -1,4 +1,3 @@
-import bz2
 import json
 import os
 import subprocess
@@ -45,13 +44,6 @@ def post_package_indexing(
 
         pkgstore.add_file(repodata_zck, channel_name, f'{subdir}/{fname}.json.zck')
         add_entry_for_index(files, subdir, f'{fname}.json.zck', repodata_zck)
-
-        pkgstore.add_file(repodata_str, channel_name, f'{subdir}/{fname}.json')
-        add_entry_for_index(files, subdir, f'{fname}.json', repodata_str)
-
-        repodata_bz2 = bz2.compress(repodata_str)
-        pkgstore.add_file(repodata_bz2, channel_name, f'{subdir}/{fname}.json.bz2')
-        add_entry_for_index(files, subdir, f'{fname}.json.bz2', repodata_bz2)
 
         packages[subdir] = repodata["packages"]
         packages[subdir].update(repodata["packages.conda"])

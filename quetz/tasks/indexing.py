@@ -1,7 +1,6 @@
 # Copyright 2020 Codethink Ltd
 # Distributed under the terms of the Modified BSD License.
 
-import bz2
 import json
 import logging
 import numbers
@@ -12,7 +11,7 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 import quetz.config
 from quetz import channel_data, repo_data
 from quetz.condainfo import MAX_CONDA_TIMESTAMP
-from quetz.utils import add_entry_for_index
+from quetz.utils import add_static_file
 
 _iec_prefixes = (
     # IEEE 1541 - IEEE Standard for Prefixes for Binary Multiples
@@ -89,46 +88,30 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
 
     # Generate channeldata.json and its compressed version
     chandata_json = json.dumps(channeldata, indent=2, sort_keys=True)
-    pkgstore.add_file(
-        bz2.compress(chandata_json.encode("utf-8")),
-        channel_name,
-        "channeldata.json.bz2",
-    )
-    pkgstore.add_file(chandata_json, channel_name, "channeldata.json")
+    add_static_file(chandata_json, channel_name, None, "channeldata.json", pkgstore)
 
     # Generate index.html for the "root" directory
-    channel_template = jinjaenv.get_template("channeldata-index.html.j2")
-    pkgstore.add_file(
-        channel_template.render(
-            title=channel_name,
-            packages=channeldata["packages"],
-            subdirs=subdirs,
-            current_time=datetime.now(timezone.utc),
-        ),
-        channel_name,
-        "index.html",
+    channel_index = jinjaenv.get_template("channeldata-index.html.j2").render(
+        title=channel_name,
+        packages=channeldata["packages"],
+        subdirs=subdirs,
+        current_time=datetime.now(timezone.utc),
     )
 
-    # NB. No rss.xml is being generated here
+    add_static_file(channel_index, channel_name, None, "index.html", pkgstore)
 
+    # NB. No rss.xml is being generated here
     files = {}
     packages = {}
     subdir_template = jinjaenv.get_template("subdir-index.html.j2")
-    for dir in subdirs:
-        logger.debug(f"creating indexes for subdir {dir} of channel {channel_name}")
-        raw_repodata = repo_data.export(dao, channel_name, dir)
+    for sdir in subdirs:
+        logger.debug(f"creating indexes for subdir {sdir} of channel {channel_name}")
+        raw_repodata = repo_data.export(dao, channel_name, sdir)
 
-        repodata = json.dumps(raw_repodata, indent=2, sort_keys=True).encode("utf-8")
-        compressed_repodata = bz2.compress(repodata)
-
-        files[dir] = []
-        packages[dir] = raw_repodata["packages"]
-        fname = "repodata.json"
-        pkgstore.add_file(compressed_repodata, channel_name, f"{dir}/{fname}.bz2")
-        pkgstore.add_file(repodata, channel_name, f"{dir}/{fname}")
-
-        add_entry_for_index(files, dir, fname, repodata)
-        add_entry_for_index(files, dir, f"{fname}.bz2", compressed_repodata)
+        files[sdir] = []
+        packages[sdir] = raw_repodata["packages"]
+        repodata = json.dumps(raw_repodata, indent=2, sort_keys=True)
+        add_static_file(repodata, channel_name, sdir, "repodata.json", pkgstore, files)
 
     pm = quetz.config.get_plugin_manager()
 
@@ -140,15 +123,14 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
         packages=packages,
     )
 
-    for dir in subdirs:
+    for sdir in subdirs:
         # Generate subdir index.html
-        pkgstore.add_file(
-            subdir_template.render(
-                title=f"{channel_name}/{dir}",
-                packages=packages[dir],
-                current_time=datetime.now(timezone.utc),
-                add_files=files[dir],
-            ),
-            channel_name,
-            f"{dir}/index.html",
+        subdir_index_html = subdir_template.render(
+            title=f"{channel_name}/{sdir}",
+            packages=packages[sdir],
+            current_time=datetime.now(timezone.utc),
+            add_files=files[sdir],
+        )
+        add_static_file(
+            subdir_index_html, channel_name, sdir, f"{sdir}/index.html", pkgstore
         )
