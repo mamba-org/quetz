@@ -220,6 +220,7 @@ def package_version(user, mirror_channel, db, dao):
         "test-package-0.1-0.tar.bz2",
         package_info,
         user.id,
+        size=0,
     )
     yield version
 

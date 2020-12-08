@@ -64,6 +64,7 @@ def private_package_version(dao, private_channel, private_package, other_user, c
         str(filename),
         package_info,
         other_user.id,
+        size=0,
     )
 
     return version
@@ -91,6 +92,7 @@ def package_version(
         str(filename),
         package_info,
         user.id,
+        size=0,
     )
 
     yield version
