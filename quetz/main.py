@@ -583,8 +583,11 @@ def post_package(
 
     user_id = auth.assert_user()
     auth.assert_create_package(channel.name)
-    pm.hook.validate_new_package_name(
-        channel_name=channel.name, package_name=new_package.name
+    pm.hook.validate_new_package(
+        channel_name=channel.name,
+        package_name=new_package.name,
+        file_handler=None,
+        condainfo=None,
     )
     package = dao.get_package(channel.name, new_package.name)
     if package:
@@ -969,8 +972,11 @@ def handle_package_files(
         if not package and not dao.get_package(channel_name, package_name):
 
             try:
-                pm.hook.validate_new_package_name(
-                    channel_name=channel_name, package_name=package_name
+                pm.hook.validate_new_package(
+                    channel_name=channel_name,
+                    package_name=package_name,
+                    file_handler=file.file,
+                    condainfo=condainfo,
                 )
                 package_data = rest_models.Package(
                     name=package_name,

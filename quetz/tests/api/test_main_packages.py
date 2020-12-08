@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import BinaryIO
 
 import pytest
 
@@ -344,7 +345,13 @@ def plugin(app):
 
     class Plugin:
         @hookimpl
-        def validate_new_package_name(self, channel_name: str, package_name: str):
+        def validate_new_package(
+            self,
+            channel_name: str,
+            package_name: str,
+            file_handler: BinaryIO,
+            condainfo: CondaInfo,
+        ):
             raise ValidationError(f"name {package_name} not allowed")
 
     plugin = Plugin()
