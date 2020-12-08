@@ -559,13 +559,13 @@ class Dao:
 
     def update_channel_size(self, channel_name: str):
 
-        channel_size = self.db.query(func.sum(PackageVersion.size)).filter(
-            PackageVersion.channel_name == channel_name
+        channel_size = (
+            self.db.query(func.sum(PackageVersion.size).label('size'))
+            .filter(PackageVersion.channel_name == channel_name)
+            .scalar()
         )
 
-        self.db.query(Channel).filter(Channel.name == channel_name).update(
-            {"size": channel_size}
-        )
+        self.update_channel(channel_name, {"size": channel_size})
 
     def create_user_with_role(self, user_name: str, role: Optional[str] = None):
         """create a user without a profile or return a user if already exists and replace
