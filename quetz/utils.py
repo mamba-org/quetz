@@ -9,7 +9,10 @@ from datetime import datetime, timezone
 
 
 def add_static_file(contents, channel_name, subdir, fname, pkgstore, file_index=None):
-    raw_file = contents.encode("utf-8")
+    if type(contents) is not bytes:
+        raw_file = contents.encode("utf-8")
+    else:
+        raw_file = contents
     bz2_file = bz2.compress(raw_file)
     gzp_file = gzip.compress(raw_file)
 
