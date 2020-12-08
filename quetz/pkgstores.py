@@ -3,6 +3,7 @@
 
 import abc
 import contextlib
+import hashlib
 import os
 import os.path as path
 import shutil
@@ -12,6 +13,13 @@ from os import PathLike
 from typing import IO, BinaryIO, List, NoReturn, Union
 
 import fsspec
+
+try:
+    import xattr
+
+    has_xattr = True
+except ImportError:
+    has_xattr = False
 
 from quetz.errors import ConfigError
 
@@ -97,12 +105,34 @@ class LocalStore(PackageStore):
         self.fs.delete(path.join(self.channels_dir, channel, destination))
 
     def serve_path(self, channel, src):
-
         return self.fs.open(path.join(self.channels_dir, channel, src)).f
 
     def list_files(self, channel: str):
         channel_dir = os.path.join(self.channels_dir, channel)
         return [os.path.relpath(f, channel_dir) for f in self.fs.find(channel_dir)]
+
+    def get_filemetadata(self, channel: str, src: str):
+        filepath = path.abspath(path.join(self.channels_dir, channel, src))
+        if not path.exists(filepath):
+            raise FileNotFoundError()
+
+        stat_res = os.stat(filepath)
+        mtime = stat_res.st_mtime
+        msize = stat_res.st_size
+        if has_xattr:
+            attrs = xattr.xattr(filepath)
+            try:
+                etag = attrs['user.etag'].decode('ascii')
+            except KeyError:
+                # calculate md5 sum
+                with self.fs.open(filepath, 'rb') as f:
+                    etag = hashlib.md5(f.read()).hexdigest()
+                attrs['user.etag'] = etag.encode('ascii')
+        else:
+            etag_base = str(mtime) + "-" + str(msize)
+            etag = hashlib.md5(etag_base.encode()).hexdigest()
+
+        return (msize, mtime, etag)
 
 
 class S3Store(PackageStore):
@@ -201,6 +231,17 @@ class S3Store(PackageStore):
     def url(self, channel: str, src: str, expires=3600):
         # expires is in seconds, so the default is 60 minutes!
         with self._get_fs() as fs:
-            return fs.url(
-                path.join(self._bucket_map(channel), src),
-            )
+            return fs.url(path.join(self._bucket_map(channel), src), expires)
+
+    def get_filemetadata(self, channel: str, src: str):
+        with self._get_fs() as fs:
+            filepath = path.join(self.channels_dir, channel, src)
+
+            metadata = fs.metadata(filepath)
+
+            print(metadata)
+
+            mtime = metadata['LastModified'].timestamp()
+            msize = metadata['ContentLength']
+            etag  = metadata['ETag']
+            return (msize, mtime, etag)
