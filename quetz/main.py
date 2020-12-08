@@ -68,7 +68,7 @@ from quetz.rest_models import ChannelActionEnum, CPRole
 from quetz.tasks import indexing
 from quetz.tasks.common import Task
 from quetz.tasks.mirror import LocalCache, RemoteRepository, get_from_cache_or_download
-from quetz.utils import TicToc, generate_random_key
+from quetz.utils import TicToc, generate_random_key, parse_query
 
 from .condainfo import CondaInfo
 
@@ -845,15 +845,16 @@ def delete_package_version(
 
 
 @api_router.get(
-    "/search/{query}", response_model=List[rest_models.PackageSearch], tags=["search"]
+    "/search/", response_model=List[rest_models.PackageSearch], tags=["search"]
 )
 def search(
-    query: str,
+    q: str,
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
     user_id = auth.get_user()
-    return dao.search_packages(query, user_id)
+    keywords, filters = parse_query(q)
+    return dao.search_packages(keywords, filters, user_id)
 
 
 @api_router.get("/api-keys", response_model=List[rest_models.ApiKey], tags=["API keys"])
