@@ -3,15 +3,23 @@
 
 import abc
 import contextlib
+import hashlib
 import os
 import os.path as path
 import shutil
 import tempfile
 from contextlib import contextmanager
 from os import PathLike
-from typing import IO, BinaryIO, List, NoReturn, Union
+from typing import IO, BinaryIO, List, NoReturn, Tuple, Union
 
 import fsspec
+
+try:
+    import xattr
+
+    has_xattr = True
+except ImportError:
+    has_xattr = False
 
 from quetz.errors import ConfigError
 
@@ -50,6 +58,10 @@ class PackageStore(abc.ABC):
     @abc.abstractmethod
     def delete_file(self, channel: str, destination: str):
         """remove file from package store"""
+
+    @abc.abstractmethod
+    def get_filemetadata(self, channel: str, src: str) -> Tuple[int, int, str]:
+        """get file metadata: returns (file size, last modified time, etag)"""
 
 
 class LocalStore(PackageStore):
@@ -97,12 +109,34 @@ class LocalStore(PackageStore):
         self.fs.delete(path.join(self.channels_dir, channel, destination))
 
     def serve_path(self, channel, src):
-
         return self.fs.open(path.join(self.channels_dir, channel, src)).f
 
     def list_files(self, channel: str):
         channel_dir = os.path.join(self.channels_dir, channel)
         return [os.path.relpath(f, channel_dir) for f in self.fs.find(channel_dir)]
+
+    def get_filemetadata(self, channel: str, src: str):
+        filepath = path.abspath(path.join(self.channels_dir, channel, src))
+        if not path.exists(filepath):
+            raise FileNotFoundError()
+
+        stat_res = os.stat(filepath)
+        mtime = stat_res.st_mtime
+        msize = stat_res.st_size
+        if has_xattr:
+            attrs = xattr.xattr(filepath)
+            try:
+                etag = attrs['user.etag'].decode('ascii')
+            except KeyError:
+                # calculate md5 sum
+                with self.fs.open(filepath, 'rb') as f:
+                    etag = hashlib.md5(f.read()).hexdigest()
+                attrs['user.etag'] = etag.encode('ascii')
+        else:
+            etag_base = str(mtime) + "-" + str(msize)
+            etag = hashlib.md5(etag_base.encode()).hexdigest()
+
+        return (msize, mtime, etag)
 
 
 class S3Store(PackageStore):
@@ -197,3 +231,19 @@ class S3Store(PackageStore):
 
         with self._get_fs() as fs:
             return [remove_prefix(f, channel_bucket) for f in fs.find(channel_bucket)]
+
+    def url(self, channel: str, src: str, expires=3600):
+        # expires is in seconds, so the default is 60 minutes!
+        with self._get_fs() as fs:
+            return fs.url(path.join(self._bucket_map(channel), src), expires)
+
+    def get_filemetadata(self, channel: str, src: str):
+        with self._get_fs() as fs:
+            filepath = path.join(self._bucket_map(channel), src)
+            infodata = fs.info(filepath)
+
+            mtime = infodata['LastModified'].timestamp()
+            msize = infodata['Size']
+            etag = infodata['ETag']
+
+            return (msize, mtime, etag)

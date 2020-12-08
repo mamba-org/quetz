@@ -9,6 +9,7 @@ import secrets
 import sys
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from email.utils import formatdate
 from typing import List, Optional
 
 import pydantic
@@ -20,6 +21,7 @@ from fastapi import (
     FastAPI,
     File,
     Form,
+    Header,
     HTTPException,
     Request,
     UploadFile,
@@ -110,6 +112,7 @@ api_router = APIRouter()
 plugin_routers = pm.hook.register_router()
 
 pkgstore = config.get_package_store()
+pkgstore_support_url = hasattr(pkgstore, 'url')
 
 app.include_router(auth_github.router)
 
@@ -894,6 +897,21 @@ def post_file_to_channel(
     background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel.name)
 
 
+@api_router.post(
+    "/channels/{channel_name}/trigger_indexing", status_code=201, tags=["files"]
+)
+def trigger_indexing(
+    background_tasks: BackgroundTasks,
+    channel: db_models.Channel = Depends(
+        ChannelChecker(allow_proxy=False, allow_mirror=False)
+    ),
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    # Background task to update indexes
+    background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel.name)
+
+
 def _upload_package(channel_name: str, file, pkgstore):
     condainfo = CondaInfo(file.file, file.filename)
     parts = file.filename.rsplit("-", 2)
@@ -1045,6 +1063,7 @@ def invalid_api():
 async def serve_path(
     path,
     channel: db_models.Channel = Depends(get_channel_allow_proxy),
+    accept_encoding: Optional[str] = Header(None),
     cache: LocalCache = Depends(LocalCache),
     session=Depends(get_remote_session),
 ):
@@ -1053,6 +1072,10 @@ async def serve_path(
         return get_from_cache_or_download(repository, cache, path)
 
     chunk_size = 10_000
+
+    if pkgstore_support_url and (path.endswith('.tar.bz2') or path.endswith('.conda')):
+        # we have to ignore type checking here right now, sorry
+        return RedirectResponse(pkgstore.url(channel.name, path))  # type: ignore
 
     def iter_chunks(fid):
         while True:
@@ -1065,10 +1088,23 @@ async def serve_path(
         path += "index.html"
     package_content_iter = None
 
-    while not package_content_iter:
+    headers = {}
+    if accept_encoding and 'gzip' in accept_encoding and path.endswith('.json'):
+        # return gzipped response
+        try:
+            package_content_iter = iter_chunks(
+                pkgstore.serve_path(channel.name, path + '.gz')
+            )
+            path += '.gz'
+            headers['Content-Encoding'] = 'gzip'
+            headers['Content-Type'] = 'application/json'
+        except FileNotFoundError:
+            pass
 
+    while not package_content_iter:
         try:
             package_content_iter = iter_chunks(pkgstore.serve_path(channel.name, path))
+
         except FileNotFoundError:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -1077,7 +1113,17 @@ async def serve_path(
         except IsADirectoryError:
             path += "/index.html"
 
-    return StreamingResponse(package_content_iter)
+    fsize, fmtime, fetag = pkgstore.get_filemetadata(channel.name, path)
+    headers.update(
+        {
+            'Cache-Control': 'max-age=' + str(60 * 60 * 10),  # 10 hours
+            'Content-Size': str(fsize),
+            'Last-Modified': formatdate(fmtime, usegmt=True),
+            'ETag': fetag,
+        }
+    )
+    logger.debug(f"File response headers: {headers}")
+    return StreamingResponse(package_content_iter, headers=headers)
 
 
 # mount frontend
