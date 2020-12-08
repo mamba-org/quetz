@@ -74,7 +74,7 @@ jobs:
 
           echo "testing server"
 
-          pytest -v ./quetz/tests/ --cov-config=.coveragerc --cov=./quetz --cov-report=xml
+          pytest -v ./quetz/tests/ --cov-config=.coveragerc --cov=. --cov-report=xml
 
           echo "install and test plugins"
 
