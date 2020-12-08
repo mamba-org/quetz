@@ -928,7 +928,7 @@ def trigger_indexing(
     background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel.name)
 
 
-def _extract_and_upload_package(file, channel_name, pkgstore):
+def _extract_and_upload_package(file, channel_name, pkgstore, dao):
     if file.file is None or (hasattr(file.file, '_file') and file.file._file is None):
         logger.error(f"File is NONE: {file.file}")
 
@@ -947,6 +947,9 @@ def _extract_and_upload_package(file, channel_name, pkgstore):
 
     dest = os.path.join(conda_info.info["subdir"], file.filename)
     parts = file.filename.rsplit("-", 2)
+
+    # check if quota limits
+    dao.assert_size_limits(channel_name, conda_info.info["size"])
 
     if parts[0] != conda_info.info["name"]:
         raise HTTPException(
@@ -1008,6 +1011,7 @@ def handle_package_files(
                         files,
                         (channel_name,) * len(files),
                         (pkgstore,) * len(files),
+                        (dao,) * len(files),
                     )
                 ]
             except exceptions.PackageError as e:
@@ -1038,6 +1042,10 @@ def handle_package_files(
                 ),
             )
 
+        def _delete_file(condainfo, filename):
+            dest = os.path.join(condainfo.info["subdir"], file.filename)
+            pkgstore.delete_file(channel_name, dest)
+
         if not package and not dao.get_package(channel_name, package_name):
 
             try:
@@ -1053,12 +1061,10 @@ def handle_package_files(
                     description=condainfo.about.get("description", "n/a"),
                 )
             except pydantic.main.ValidationError as err:
-                dest = os.path.join(condainfo.info["subdir"], file.filename)
-                pkgstore.delete_file(channel_name, dest)
+                _delete_file(condainfo, file.filename)
                 raise errors.ValidationError(str(err))
             except errors.ValidationError as err:
-                dest = os.path.join(condainfo.info["subdir"], file.filename)
-                pkgstore.delete_file(channel_name, dest)
+                _delete_file(condainfo, file.filename)
                 raise err
 
             dao.create_package(

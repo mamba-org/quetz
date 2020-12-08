@@ -557,6 +557,22 @@ class Dao:
             .order_by(Package.name)
         )
 
+    def assert_size_limits(self, channel_name: str, size: int):
+        channel_size, channel_size_limit = (
+            self.db.query(Channel.size, Channel.size_limit)
+            .filter(Channel.name == channel_name)
+            .one()
+        )
+
+        if channel_size_limit is not None:
+
+            allowed = (channel_size + size) <= channel_size_limit
+
+            if not allowed:
+                raise errors.QuotaError(
+                    "{channel_name} is above quota of {channel_size_limit} bytes"
+                )
+
     def update_channel_size(self, channel_name: str):
 
         channel_size = (

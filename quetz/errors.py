@@ -16,3 +16,7 @@ class ConfigError(QuetzError):
 
 class ValidationError(QuetzError):
     pass
+
+
+class QuotaError(ValidationError):
+    pass

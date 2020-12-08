@@ -259,6 +259,32 @@ def test_upload_package_version(
         )
 
 
+@pytest.mark.parametrize("package_name", ["test-package"])
+def test_check_channel_size_limits(
+    auth_client, public_channel, public_package, db, config
+):
+    public_channel.size_limit = 0
+    db.commit()
+    pkgstore = config.get_package_store()
+
+    package_filename = "test-package-0.1-0.tar.bz2"
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/packages/"
+            f"{public_package.name}/files/",
+            files=files,
+        )
+
+    assert response.status_code == 422
+    detail = response.json()['detail']
+    assert "quota" in detail
+    with pytest.raises(FileNotFoundError):
+        pkgstore.serve_path(
+            public_channel.name, str(Path("linux-64") / package_filename)
+        )
+
+
 def test_delete_package_version(
     auth_client, public_channel, package_version, dao, pkgstore: PackageStore, db
 ):
