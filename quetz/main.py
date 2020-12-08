@@ -897,13 +897,13 @@ def post_file_to_channel(
     background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel.name)
 
 
-@api_router.post(
-    "/channels/{channel_name}/trigger_indexing", status_code=201, tags=["files"]
+@api_router.put(
+    "/channels/{channel_name}/trigger_indexing", status_code=201, tags=["channels"]
 )
 def trigger_indexing(
     background_tasks: BackgroundTasks,
     channel: db_models.Channel = Depends(
-        ChannelChecker(allow_proxy=False, allow_mirror=False)
+        ChannelChecker(allow_proxy=False, allow_mirror=True)
     ),
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
