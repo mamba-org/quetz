@@ -131,6 +131,4 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
             current_time=datetime.now(timezone.utc),
             add_files=files[sdir],
         )
-        add_static_file(
-            subdir_index_html, channel_name, sdir, f"{sdir}/index.html", pkgstore
-        )
+        add_static_file(subdir_index_html, channel_name, sdir, "index.html", pkgstore)

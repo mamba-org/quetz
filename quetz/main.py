@@ -9,9 +9,8 @@ import secrets
 import sys
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Optional
-
 from email.utils import formatdate
+from typing import List, Optional
 
 import requests
 from fastapi import (
@@ -1039,7 +1038,8 @@ async def serve_path(
     chunk_size = 10_000
 
     if pkgstore_support_url and (path.endswith('.tar.bz2') or path.endswith('.conda')):
-        return RedirectResponse(pkgstore.url(channel.name, path))
+        # we have to ignore type checking here right now, sorry
+        return RedirectResponse(pkgstore.url(channel.name, path))  # type: ignore
 
     def iter_chunks(fid):
         while True:
@@ -1078,11 +1078,14 @@ async def serve_path(
             path += "/index.html"
 
     fsize, fmtime, fetag = pkgstore.get_filemetadata(channel.name, path)
-    headers.update({
-        'Content-Size': str(fsize),
-        'Last-Modified': formatdate(fmtime, usegmt=True),
-        'ETag': fetag,
-    })
+    headers.update(
+        {
+            'Cache-Control': 'max-age=' + str(60 * 60 * 10),  # 10 hours
+            'Content-Size': str(fsize),
+            'Last-Modified': formatdate(fmtime, usegmt=True),
+            'ETag': fetag,
+        }
+    )
     logger.debug(f"File response headers: {headers}")
     return StreamingResponse(package_content_iter, headers=headers)
 

@@ -10,7 +10,7 @@ import shutil
 import tempfile
 from contextlib import contextmanager
 from os import PathLike
-from typing import IO, BinaryIO, List, NoReturn, Union
+from typing import IO, BinaryIO, List, NoReturn, Tuple, Union
 
 import fsspec
 
@@ -58,6 +58,10 @@ class PackageStore(abc.ABC):
     @abc.abstractmethod
     def delete_file(self, channel: str, destination: str):
         """remove file from package store"""
+
+    @abc.abstractmethod
+    def get_filemetadata(self, channel: str, src: str) -> Tuple[int, int, str]:
+        """get file metadata: returns (file size, last modified time, etag)"""
 
 
 class LocalStore(PackageStore):
@@ -235,13 +239,11 @@ class S3Store(PackageStore):
 
     def get_filemetadata(self, channel: str, src: str):
         with self._get_fs() as fs:
-            filepath = path.join(self.channels_dir, channel, src)
+            filepath = path.join(self._bucket_map(channel), src)
+            infodata = fs.info(filepath)
 
-            metadata = fs.metadata(filepath)
+            mtime = infodata['LastModified'].timestamp()
+            msize = infodata['Size']
+            etag = infodata['ETag']
 
-            print(metadata)
-
-            mtime = metadata['LastModified'].timestamp()
-            msize = metadata['ContentLength']
-            etag  = metadata['ETag']
             return (msize, mtime, etag)

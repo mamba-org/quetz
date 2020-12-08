@@ -17,8 +17,10 @@ def post_package_indexing(
 
         current_repodata = _build_current_repodata(subdir, repodata, pins)
 
+        current_repodata_string = json.dumps(current_repodata, indent=2, sort_keys=True)
+
         add_static_file(
-            current_repodata,
+            current_repodata_string,
             channel_name,
             subdir,
             "current_repodata.json",
