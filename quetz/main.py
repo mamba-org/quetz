@@ -886,6 +886,7 @@ def post_file_to_package(
     ),
 ):
     handle_package_files(package.channel.name, files, dao, auth, force, package=package)
+    dao.update_channel_size(package.channel_name)
 
 
 @api_router.post("/channels/{channel_name}/files/", status_code=201, tags=["files"])
@@ -920,12 +921,6 @@ def trigger_indexing(
     background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel.name)
 
 
-@retry(
-    stop=stop_after_attempt(3),
-    retry=(retry_if_result(lambda x: x is None)),
-    wait=wait_exponential(multiplier=1, min=4, max=10),
-    after=after_log(logger, logging.WARNING),
-)
 def _extract_and_upload_package(file, channel_name, pkgstore):
     if file.file is None or (hasattr(file.file, '_file') and file.file._file is None):
         logger.error(f"File is NONE: {file.file}")
@@ -1023,9 +1018,18 @@ def handle_package_files(
         # check that the filename matches the package name
         # TODO also validate version and build string
         if parts[0] != condainfo.info["name"]:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="filename does not match package name",
+            )
         if package and (parts[0] != package.name or package_name != package.name):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"requested package endpoint '{package.name}'"
+                    f"does not match the uploaded package name '{parts[0]}'"
+                ),
+            )
 
         if not package and not dao.get_package(channel_name, package_name):
 

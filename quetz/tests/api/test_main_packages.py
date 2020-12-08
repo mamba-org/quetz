@@ -220,6 +220,39 @@ def test_get_non_existing_package_version(
     assert response.status_code == 404
 
 
+@pytest.mark.parametrize("package_name", ["test-package", "my-package"])
+def test_upload_package_version(
+    auth_client, public_channel, public_package, package_name, db, config
+):
+    pkgstore = config.get_package_store()
+
+    package_filename = "test-package-0.1-0.tar.bz2"
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/packages/"
+            f"{public_package.name}/files/",
+            files=files,
+        )
+
+    with open(package_filename, "rb") as fid:
+        condainfo = CondaInfo(fid, package_filename)
+
+    if package_name == "my-package":
+        assert response.status_code == 400
+        detail = response.json()['detail']
+        assert "does not match" in detail
+        assert "test-package" in detail
+        assert "my-package" in detail
+    else:
+        assert response.status_code == 201
+        db.refresh(public_channel)
+        assert public_channel.size == condainfo.info['size']
+        assert pkgstore.serve_path(
+            public_channel.name, str(Path(condainfo.info['subdir']) / package_filename)
+        )
+
+
 def test_delete_package_version(
     auth_client, public_channel, package_version, dao, pkgstore: PackageStore, db
 ):
