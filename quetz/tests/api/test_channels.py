@@ -1,6 +1,9 @@
+from pathlib import Path
+
 import pytest
 
 from quetz import db_models
+from quetz.condainfo import CondaInfo
 from quetz.config import Config
 
 
@@ -271,3 +274,29 @@ def test_accents_make_unique_channel_names(auth_client, maintainer):
     assert response.status_code == 200
 
     assert len(response.json()) == 4
+
+
+def test_upload_package_version_to_channel(
+    auth_client, public_channel, maintainer, db, config
+):
+    pkgstore = config.get_package_store()
+
+    assert public_channel.size == 0
+
+    package_filename = "test-package-0.1-0.tar.bz2"
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/files/",
+            files=files,
+        )
+
+    with open(package_filename, "rb") as fid:
+        condainfo = CondaInfo(fid, package_filename)
+
+    assert response.status_code == 201
+    db.refresh(public_channel)
+    assert public_channel.size == condainfo.info['size']
+    assert pkgstore.serve_path(
+        public_channel.name, str(Path(condainfo.info['subdir']) / package_filename)
+    )

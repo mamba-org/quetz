@@ -902,6 +902,8 @@ def post_file_to_channel(
 ):
     handle_package_files(channel.name, files, dao, auth, force)
 
+    dao.update_channel_size(channel.name)
+
     # Background task to update indexes
     background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel.name)
 
