@@ -410,6 +410,10 @@ def synchronize_packages(
     if subdirs is None:
         subdirs = KNOWN_SUBDIRS
 
+    if "noarch" in subdirs:
+        subdirs.remove("noarch")
+        subdirs.insert(1, "noarch")
+
     for arch in subdirs:
         initial_sync_mirror(
             new_channel.name,

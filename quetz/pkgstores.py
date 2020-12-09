@@ -190,12 +190,10 @@ class S3Store(PackageStore):
     def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
         with self._get_fs() as fs:
             bucket = self._bucket_map(channel)
-            with fs.transaction:
-                with fs.open(
-                    path.join(bucket, destination), "wb", acl="private"
-                ) as pkg:
-                    # use a chunk size of 10 Megabytes
-                    shutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
+            # with fs.transaction:
+            with fs.open(path.join(bucket, destination), "wb", acl="private") as pkg:
+                # use a chunk size of 10 Megabytes
+                shutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath

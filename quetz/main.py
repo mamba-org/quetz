@@ -962,28 +962,14 @@ def post_file_to_channel(
     background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel.name)
 
 
-@api_router.put(
-    "/channels/{channel_name}/trigger_indexing", status_code=201, tags=["channels"]
-)
-def trigger_indexing(
-    background_tasks: BackgroundTasks,
-    channel: db_models.Channel = Depends(
-        ChannelChecker(allow_proxy=False, allow_mirror=True)
-    ),
-    dao: Dao = Depends(get_dao),
-    auth: authorization.Rules = Depends(get_rules),
-):
-    # Background task to update indexes
-    background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel.name)
-
-
 @retry(
     stop=stop_after_attempt(3),
     retry=(retry_if_result(lambda x: x is None)),
     wait=wait_exponential(multiplier=1, min=4, max=10),
     after=after_log(logger, logging.WARNING),
 )
-def _extract_and_upload_package(file, channel_name, pkgstore, dao):
+
+def _extract_and_upload_package(file, channel_name):
     if file.file is None or (hasattr(file.file, '_file') and file.file._file is None):
         logger.error(f"File is NONE: {file.file}")
 
@@ -1062,11 +1048,7 @@ def handle_package_files(
                 conda_infos = [
                     ci
                     for ci in executor.map(
-                        _extract_and_upload_package,
-                        files,
-                        (channel_name,) * len(files),
-                        (pkgstore,) * len(files),
-                        (dao,) * len(files),
+                        _extract_and_upload_package, files, (channel_name,) * len(files)
                     )
                 ]
             except exceptions.PackageError as e:
@@ -1110,16 +1092,38 @@ def handle_package_files(
                     file_handler=file.file,
                     condainfo=condainfo,
                 )
+                # validate uploaded package size and existence
+                try:
+                    pkgsize, _, _ = pkgstore.get_filemetadata(
+                        channel_name, f"{condainfo.info['subdir']}/{file.filename}"
+                    )
+                    if pkgsize != condainfo.info['size']:
+                        raise errors.ValidationError(
+                            f"Uploaded package {file.filename} "
+                            "file size is wrong! Deleting"
+                        )
+                except FileNotFoundError:
+                    raise errors.ValidationError(
+                        f"Uploaded package {file.filename} "
+                        "file did not upload correctly!"
+                    )
+
                 package_data = rest_models.Package(
                     name=package_name,
-                    summary=condainfo.about.get("summary", "n/a"),
-                    description=condainfo.about.get("description", "n/a"),
+                    summary=str(condainfo.about.get("summary", "n/a")),
+                    description=str(condainfo.about.get("description", "n/a")),
                 )
             except pydantic.main.ValidationError as err:
                 _delete_file(condainfo, file.filename)
-                raise errors.ValidationError(str(err))
+                raise errors.ValidationError(
+                    "Validation Error for package: "
+                    + f"{channel_name}/{file.filename}: {str(err)}"
+                )
             except errors.ValidationError as err:
                 _delete_file(condainfo, file.filename)
+                logger.error(
+                    f"Validation error in: {channel_name}/{file.filename}: {str(err)}"
+                )
                 raise err
 
             dao.create_package(

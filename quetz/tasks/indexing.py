@@ -4,6 +4,7 @@
 import json
 import logging
 import numbers
+import os
 from datetime import datetime, timezone
 
 from jinja2 import Environment, PackageLoader, select_autoescape
@@ -11,6 +12,7 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 import quetz.config
 from quetz import channel_data, repo_data
 from quetz.condainfo import MAX_CONDA_TIMESTAMP
+from quetz.db_models import PackageVersion
 from quetz.utils import add_static_file
 
 _iec_prefixes = (
@@ -79,6 +81,106 @@ def _subdir_key(dir):
     return _subdir_order.get(dir, dir)
 
 
+def _get_metadata(pkgstore, channel_name, key):
+    try:
+        return pkgstore.get_filemetadata(channel_name, key)
+    except FileNotFoundError as e:
+        return e
+    except Exception as e:
+        logger.error(f"Got exception for retrieving file {str(e)}")
+        return None
+
+
+def validate_packages(dao, pkgstore, channel_name):
+    # for now we're just validating the size of the uploaded file
+    logger.info("Starting package validation")
+
+    if type(pkgstore).__name__ == "S3Store":
+        fs_chan = pkgstore._bucket_map(channel_name)
+    elif type(pkgstore).__name__ == "LocalStore":
+        fs_chan = os.path.join(pkgstore.channels_dir, channel_name)
+
+    ls_dirs = pkgstore.fs.ls(f"{fs_chan}/", detail=True)
+    dirs = [d['name'].rsplit('/')[1] for d in ls_dirs if d['type'] == 'directory']
+
+    for subdir in dirs:
+        ls_result = pkgstore.fs.ls(f"{fs_chan}/{subdir}", detail=True)
+
+        ls_result_set = set([(res["name"].rsplit('/', 1)[1]) for res in ls_result])
+        db_result = [
+            (res.filename, json.loads(res.info)["size"])
+            for res in dao.db.query(PackageVersion).filter(
+                PackageVersion.channel_name == channel_name,
+                PackageVersion.platform == subdir,
+            )
+        ]
+        db_result_set = set((res[0] for res in db_result))
+
+        difference = ls_result_set ^ db_result_set
+
+        logger.info(f"Differing files: {difference}")
+
+        in_ls_not_db = ls_result_set - db_result_set
+        in_db_not_ls = db_result_set - ls_result_set
+
+        valid, inexistant, wrong_size = 0, 0, 0
+
+        # remove all files that are in database and not uploaded
+        for f in in_db_not_ls:
+            logger.warning(f"Removing non-existent file from database {f}")
+            db_pkg_to_delete = (
+                dao.db.query(PackageVersion)
+                .filter(
+                    PackageVersion.channel_name == channel_name,
+                    PackageVersion.platform == subdir,
+                    PackageVersion.filename == f,
+                )
+                .one()
+            )
+            dao.db.delete(db_pkg_to_delete)
+            inexistant += 1
+
+        db_dict = dict(db_result)
+        for f in ls_result:
+            filename = f["name"].rsplit('/', 1)[1]
+            if filename in db_dict:
+                if db_dict[filename] != f["size"]:
+                    # size of file in db and on filesystem does not match!
+                    logger.error(
+                        f"File size differs for {filename}: "
+                        f"{f['size']} vs {db_dict[filename]}"
+                    )
+                    pkgstore.delete_file(
+                        channel_name,
+                        f"{subdir}/{filename}",
+                    )
+                    db_pkg_to_delete = (
+                        dao.db.query(PackageVersion)
+                        .filter(
+                            PackageVersion.channel_name == channel_name,
+                            PackageVersion.platform == subdir,
+                            PackageVersion.filename == filename,
+                        )
+                        .one()
+                    )
+                    dao.db.delete(db_pkg_to_delete)
+                    wrong_size += 1
+                else:
+                    valid += 1
+
+        dao.db.commit()
+
+        logger.info(f"\n\nSUBDIR: {subdir}")
+        logger.info(f"On filesystem: {in_ls_not_db}")
+        logger.info(f"In database, not uploaded: {in_db_not_ls}")
+
+        logger.info(f"Valid files: {valid}")
+        logger.info(f"Wrong size: {wrong_size}")
+        logger.info(f"Not uploaded: {inexistant}")
+
+    update_indexes(dao, pkgstore, channel_name)
+
+
 def update_indexes(dao, pkgstore, channel_name, subdirs=None):
     jinjaenv = _jinjaenv()
     channeldata = channel_data.export(dao, channel_name)
@@ -87,7 +189,7 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
         subdirs = sorted(channeldata["subdirs"], key=_subdir_key)
 
     # Generate channeldata.json and its compressed version
-    chandata_json = json.dumps(channeldata, indent=2, sort_keys=True)
+    chandata_json = json.dumps(channeldata, indent=2, sort_keys=False)
     add_static_file(chandata_json, channel_name, None, "channeldata.json", pkgstore)
 
     # Generate index.html for the "root" directory
@@ -110,7 +212,7 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
 
         files[sdir] = []
         packages[sdir] = raw_repodata["packages"]
-        repodata = json.dumps(raw_repodata, indent=2, sort_keys=True)
+        repodata = json.dumps(raw_repodata, indent=2, sort_keys=False)
         add_static_file(repodata, channel_name, sdir, "repodata.json", pkgstore, files)
 
     pm = quetz.config.get_plugin_manager()
