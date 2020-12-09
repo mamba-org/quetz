@@ -4,11 +4,13 @@ import logging
 import os
 import shutil
 from concurrent.futures import ThreadPoolExecutor
+from http.client import IncompleteRead
 from tempfile import SpooledTemporaryFile
 
 import requests
 from fastapi import HTTPException, status
 from fastapi.responses import FileResponse, StreamingResponse
+from tenacity import after_log, retry, stop_after_attempt, wait_exponential
 
 from quetz import authorization
 from quetz.config import Config
@@ -108,6 +110,13 @@ class RemoteFile:
         self.file = SpooledTemporaryFile()
         response.raw.decode_content = True  # for gzipped response content
         shutil.copyfileobj(response.raw, self.file)
+
+        # workaround for https://github.com/python/cpython/pull/3249
+        if not hasattr(self.file, "seekable"):
+            self.file.readable = self.file._file.readable  # type: ignore
+            self.file.writable = self.file._file.writable  # type: ignore
+            self.file.seekable = self.file._file.seekable  # type: ignore
+
         # rewind
         self.file.seek(0)
         _, self.filename = os.path.split(remote_url)
@@ -203,10 +212,10 @@ def _check_checksum(dao: Dao, channel_name: str, platform: str, keyname="sha256"
                 .all()
             )
 
-            logger.debug(
-                f"Got {len(package_versions)} existing packages for "
-                f"{channel_name} / {platform}"
-            )
+            # logger.debug(
+            #     f"Got {len(package_versions)} existing packages for "
+            #     f"{channel_name} / {platform}"
+            # )
             package_fingerprints = set()
             for v in package_versions:
                 info = json.loads(v.info)
@@ -225,12 +234,20 @@ def _check_checksum(dao: Dao, channel_name: str, platform: str, keyname="sha256"
     yield _func
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    after=after_log(logger, logging.WARNING),
+)
 def download_file(remote_repository, path):
     try:
         f = remote_repository.open(path)
-    except RemoteServerError:
+    except RemoteServerError as e:
         logger.error(f"remote server error when getting a file {path}")
-        return None
+        raise e
+    except IncompleteRead as e:
+        logger.error(f"Incomplete read for {path}")
+        raise e
 
     logger.debug(f"Fetched file {path}")
     return f
@@ -275,7 +292,6 @@ def initial_sync_mirror(
     config = Config()
     max_batch_length = config.mirroring_batch_length
     max_batch_size = config.mirroring_batch_size
-
     # version_methods are context managers (for example, to update the db
     # after all packages have been checked), so we need to enter the context
     # for each
@@ -290,6 +306,7 @@ def initial_sync_mirror(
         update_size = 0
 
         def handle_batch(update_batch):
+            # i_batch += 1
             logger.debug(f"Handling batch: {update_batch}")
             if not update_batch:
                 return False
@@ -341,9 +358,9 @@ def initial_sync_mirror(
 
             # if package is up-to-date skip uploading file
             if is_uptodate:
-                logger.debug(
-                    f"package {package_name} from {arch} up-to-date. Not updating"
-                )
+                # logger.debug(
+                #     f"package {package_name} from {arch} up-to-date. Not updating"
+                # )
                 continue
             else:
                 logger.debug(f"updating package {package_name} from {arch}")
@@ -356,7 +373,6 @@ def initial_sync_mirror(
                 any_updated |= handle_batch(update_batch)
                 update_batch = []
                 update_size = 0
-                indexing.update_indexes(dao, pkgstore, channel_name, subdirs=[arch])
 
         # handle final batch
         any_updated |= handle_batch(update_batch)

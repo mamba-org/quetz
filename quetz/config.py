@@ -66,6 +66,12 @@ class Config:
 
     _config_map = [
         ConfigSection(
+            "general",
+            [
+                ConfigEntry("package_unpack_threads", int, 1),
+            ],
+        ),
+        ConfigSection(
             "github",
             [
                 ConfigEntry("client_id", str),
