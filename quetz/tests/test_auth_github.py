@@ -131,8 +131,7 @@ def test_config_create_default_channel_exists(client, db, oauth_server, channel)
 
 @pytest.fixture
 def user(dao: Dao):
-    user = dao.create_user_with_role("existing_user", role=SERVER_OWNER)
-    return user
+    return dao.create_user_with_role("existing_user", role=SERVER_OWNER)
 
 
 @pytest.mark.parametrize("default_role", ["member", "maintainer", "owner", None])
@@ -157,7 +156,7 @@ def test_config_user_exists(
 
     assert new_user
     assert new_user.username == login
-    assert not login == "existing_user" or new_user.role == SERVER_OWNER
+    assert login != "existing_user" or new_user.role == SERVER_OWNER
     assert login == "existing_user" or new_user.role == default_role
     assert new_user.profile
     assert new_user.identities

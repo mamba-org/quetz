@@ -14,17 +14,17 @@
         <img class="avatar-img" :src="avatar_url"  />
       </template>
       <template v-else>
-        <cv-button v-on:click="signinGithub">
-          Sign In Via Github
-        </cv-button>
-<!--
-        <cv-button v-on:click="signinGoogle">
-          Sign In Via Google
-        </cv-button>
- -->
+        <template v-if="github_login">
+          <cv-button v-on:click="signinGithub">
+            Sign In Via Github
+          </cv-button>
+        </template>
+        <template v-if="google_login">
+          <cv-button v-on:click="signinGoogle">
+            Sign In Via Google
+          </cv-button>
+        </template>
         <cv-header-global-action aria-label="User avatar" aria-controls="user-panel">
-        <!-- <img :src="avatar_url" v-if="avatar_url" /> -->
-
         <UserAvatar20 />
       </cv-header-global-action>
       </template>
@@ -59,11 +59,16 @@
         yourName: '',
         visible: false,
         name: '',
-        avatar_url: undefined
+        avatar_url: undefined,
+        github_login: false,
+        google_login: false,
       };
     },
     created() {
       this.me();
+      this.check_github_login();
+      this.check_google_login();
+    //  TODO: get enabled login routes
     },
     methods: {
       signinGithub() {
@@ -89,7 +94,22 @@
             this.name = '';
             this.avatar_url = undefined;
           }
-
+        })
+      },
+      check_github_login() {
+        fetch("/auth/github/enabled").then((msg) => {
+          this.github_login = msg.status === 200;
+        }).catch((err) => {
+          console.log(err);
+          this.github_login = false;
+        })
+      },
+      check_google_login() {
+        fetch("/auth/google/enabled").then((msg) => {
+          this.google_login = msg.status === 200;
+        }).catch((err) => {
+          console.log(err);
+          this.google_login = false;
         })
       },
       onClick() {

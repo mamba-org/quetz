@@ -14,7 +14,7 @@ from .config import Config
 from .dao import Dao
 from .dao_github import get_user_by_github_identity
 
-router = APIRouter()
+router = APIRouter(prefix='/auth/github')
 oauth = OAuth()
 
 
@@ -40,19 +40,23 @@ def register(config, client_kwargs=None):
 async def validate_token(token):
     # identity = get_identity(db, identity_id)
     resp = await oauth.github.get('user', token=json.loads(token))
-    if resp.status_code == 401:
-        return False
-    return True
+    return resp.status_code != 401
 
 
-@router.route('/auth/github/login')
-async def login(request):
+@router.get('/login')
+async def login(request: Request):
     github = oauth.create_client('github')
     redirect_uri = request.url_for('authorize_github')
     return await github.authorize_redirect(request, redirect_uri)
 
 
-@router.get('/auth/github/authorize', name='authorize_github')
+@router.get('/enabled')
+async def enabled():
+    """Entrypoint used by frontend to show the login button."""
+    return True
+
+
+@router.get('/authorize', name='authorize_github')
 async def authorize(
     request: Request, dao: Dao = Depends(get_dao), config: Config = Depends(get_config)
 ):
@@ -72,7 +76,7 @@ async def authorize(
     return resp
 
 
-@router.route('/auth/github/revoke')
+@router.route('/revoke')
 async def revoke(request):
     client_id = oauth.github.client_id
     return RedirectResponse(
