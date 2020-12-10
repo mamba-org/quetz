@@ -5,7 +5,6 @@ import json
 import logging
 import os
 import re
-import secrets
 import sys
 import traceback
 import uuid
@@ -67,7 +66,7 @@ from quetz.rest_models import ChannelActionEnum, CPRole
 from quetz.tasks import indexing
 from quetz.tasks.common import Task
 from quetz.tasks.mirror import LocalCache, RemoteRepository, get_from_cache_or_download
-from quetz.utils import TicToc
+from quetz.utils import TicToc, generate_random_key
 
 from .condainfo import CondaInfo
 
@@ -840,7 +839,7 @@ def post_api_key(
 
     user_id = auth.assert_user()
 
-    key = secrets.token_urlsafe(32)
+    key = generate_random_key(32)
     dao.create_api_key(user_id, api_key, key)
 
     return rest_models.ApiKey(
