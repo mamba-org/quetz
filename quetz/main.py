@@ -971,6 +971,12 @@ def trigger_indexing(
     background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel.name)
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    retry=(retry_if_result(lambda x: x is None)),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    after=after_log(logger, logging.WARNING),
+)
 def _extract_and_upload_package(file, channel_name, pkgstore, dao):
     if file.file is None or (hasattr(file.file, '_file') and file.file._file is None):
         logger.error(f"File is NONE: {file.file}")
