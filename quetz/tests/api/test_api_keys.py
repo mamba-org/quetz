@@ -3,6 +3,7 @@ import pytest
 from quetz.dao import Dao
 from quetz.db_models import ApiKey, ChannelMember, PackageMember
 from quetz.rest_models import BaseApiKey
+from quetz.utils import generate_random_key
 
 
 @pytest.fixture
@@ -196,3 +197,17 @@ def test_unlist_delete_api_keys(auth_client, api_keys, db, private_channel, user
 
     returned_keys = {key["description"]: key["roles"] for key in response.json()}
     assert "key" not in returned_keys
+
+
+@pytest.mark.parametrize("loop", [i + 1 for i in range(100)])
+def test_generate_random_key(loop):
+    key = generate_random_key()
+    assert len(key) == 32
+    assert key.isalnum()
+
+
+@pytest.mark.parametrize("length", [i + 1 for i in range(100)])
+def test_generate_random_key_variable_length(length):
+    key = generate_random_key(length)
+    assert len(key) == length
+    assert key.isalnum()

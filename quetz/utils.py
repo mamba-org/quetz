@@ -4,6 +4,8 @@
 import bz2
 import gzip
 import hashlib
+import secrets
+import string
 import time
 from datetime import datetime, timezone
 
@@ -59,3 +61,8 @@ class TicToc:
     @property
     def elapsed(self):
         return self.stop - self.start
+
+
+def generate_random_key(length=32):
+    alphabet = string.ascii_letters + string.digits
+    return ''.join(secrets.choice(alphabet) for i in range(length))
