@@ -85,6 +85,8 @@ class Channel(Base):
     mirror_channel_url = Column(String)
     mirror_mode = Column(String)
     timestamp_mirror_sync = Column(Integer, default=0)
+    size = Column(Integer, default=0)
+    size_limit = Column(Integer, default=None)
 
     packages = relationship('Package', back_populates='channel', cascade="all,delete")
 
@@ -225,6 +227,7 @@ class PackageVersion(Base):
     version = Column(String)
     build_string = Column(String)
     build_number = Column(Integer)
+    size = Column(Integer)
 
     version_order = Column(Integer, default=0)
 

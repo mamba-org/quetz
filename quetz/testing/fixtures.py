@@ -24,9 +24,13 @@ def sqlite_in_memory():
 @fixture
 def sqlite_url(sqlite_in_memory):
     if sqlite_in_memory:
-        return "sqlite:///:memory:"
+        yield "sqlite:///:memory:"
     else:
-        return "sqlite:///./quetz.sqlite"
+        try:
+            sql_path = tempfile.TemporaryDirectory()
+            yield f"sqlite:///{sql_path.name}/test_quetz.sqlite"
+        finally:
+            sql_path.cleanup()
 
 
 @fixture

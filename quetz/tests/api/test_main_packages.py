@@ -59,9 +59,12 @@ def test_delete_package_non_member(
     assert package is not None
 
 
-def test_delete_package_versions(
+def test_delete_package_versions_with_package(
     auth_client, public_channel, public_package, package_version, dao, db, pkgstore
 ):
+
+    assert public_channel.size > 0
+    assert public_channel.size == package_version.size
 
     assert package_version.package_name == public_package.name
 
@@ -70,6 +73,9 @@ def test_delete_package_versions(
     )
 
     assert response.status_code == 200
+
+    db.refresh(public_channel)
+    assert public_channel.size == 0
 
     versions = (
         db.query(PackageVersion)
@@ -220,9 +226,71 @@ def test_get_non_existing_package_version(
     assert response.status_code == 404
 
 
+@pytest.mark.parametrize("package_name", ["test-package", "my-package"])
+def test_upload_package_version(
+    auth_client, public_channel, public_package, package_name, db, config
+):
+    pkgstore = config.get_package_store()
+
+    package_filename = "test-package-0.1-0.tar.bz2"
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/packages/"
+            f"{public_package.name}/files/",
+            files=files,
+        )
+
+    with open(package_filename, "rb") as fid:
+        condainfo = CondaInfo(fid, package_filename)
+
+    if package_name == "my-package":
+        assert response.status_code == 400
+        detail = response.json()['detail']
+        assert "does not match" in detail
+        assert "test-package" in detail
+        assert "my-package" in detail
+    else:
+        assert response.status_code == 201
+        db.refresh(public_channel)
+        assert public_channel.size == condainfo.info['size']
+        assert pkgstore.serve_path(
+            public_channel.name, str(Path(condainfo.info['subdir']) / package_filename)
+        )
+
+
+@pytest.mark.parametrize("package_name", ["test-package"])
+def test_check_channel_size_limits(
+    auth_client, public_channel, public_package, db, config
+):
+    public_channel.size_limit = 0
+    db.commit()
+    pkgstore = config.get_package_store()
+
+    package_filename = "test-package-0.1-0.tar.bz2"
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/packages/"
+            f"{public_package.name}/files/",
+            files=files,
+        )
+
+    assert response.status_code == 422
+    detail = response.json()['detail']
+    assert "quota" in detail
+    with pytest.raises(FileNotFoundError):
+        pkgstore.serve_path(
+            public_channel.name, str(Path("linux-64") / package_filename)
+        )
+
+
 def test_delete_package_version(
     auth_client, public_channel, package_version, dao, pkgstore: PackageStore, db
 ):
+    assert public_channel.size > 0
+    assert public_channel.size == package_version.size
+
     filename = "test-package-0.1-0.tar.bz2"
     platform = "linux-64"
     response = auth_client.delete(
@@ -242,6 +310,9 @@ def test_delete_package_version(
 
     with pytest.raises(Exception):
         pkgstore.serve_path(public_channel.name, str(Path(platform) / filename))
+
+    db.refresh(public_channel)
+    assert public_channel.size == 0
 
 
 def test_package_name_length_limit(auth_client, public_channel, db):

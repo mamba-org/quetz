@@ -46,6 +46,24 @@ def package(dao, channel, package_name, user, db):
     db.commit()
 
 
+@pytest.fixture
+def package_version(dao, package, user):
+    return dao.create_version(
+        channel_name=package.channel_name,
+        package_name=package.name,
+        package_format="tarbz2",
+        platform="noarch",
+        version="0.0.1",
+        build_number="0",
+        build_string="",
+        filename="filename.tar.bz2",
+        info="{}",
+        uploader_id=user.id,
+        size=101,
+        upsert=False,
+    )
+
+
 def test_create_version(dao, package, channel_name, package_name, db, user):
 
     assert (
@@ -65,6 +83,7 @@ def test_create_version(dao, package, channel_name, package_name, db, user):
         filename="filename.tar.bz2",
         info="{}",
         uploader_id=user.id,
+        size=0,
         upsert=False,
     )
 
@@ -93,6 +112,7 @@ def test_create_version(dao, package, channel_name, package_name, db, user):
             build_string="",
             filename="filename-2.tar.bz2",
             info="{}",
+            size=0,
             uploader_id=user.id,
             upsert=False,
         )
@@ -109,6 +129,7 @@ def test_create_version(dao, package, channel_name, package_name, db, user):
         filename="filename-2.tar.bz2",
         info='{"version": "x.y.z"}',
         uploader_id=user.id,
+        size=0,
         upsert=True,
     )
 
@@ -134,6 +155,15 @@ def test_update_channel(dao, channel, db):
     channel = db.query(Channel).filter(Channel.name == channel.name).one()
 
     assert channel.private
+
+
+def test_update_channel_size(dao, channel, db, package_version):
+
+    dao.update_channel_size(channel.name)
+
+    channel = db.query(Channel).filter(Channel.name == channel.name).one()
+
+    assert channel.size == package_version.size
 
 
 def test_create_user_with_profile(dao: Dao, user_without_profile):
@@ -183,7 +213,7 @@ def dao_extra(db_extra):
 
 
 @pytest.fixture
-def user_with_channel(dao, db):
+def user_with_channel(dao, db, use_migrations, sqlite_in_memory):
     channel_data = rest_models.Channel(name="new-test-channel", private=False)
 
     user = dao.create_user_with_role("new-user")
@@ -202,7 +232,9 @@ def user_with_channel(dao, db):
 # client concurrently
 @pytest.mark.parametrize("sqlite_in_memory", [False])
 @pytest.mark.parametrize("auto_rollback", [False])
-def test_rollback_on_collision(dao: Dao, db, dao_extra, user_with_channel):
+def test_rollback_on_collision(
+    dao: Dao, db, dao_extra, user_with_channel, use_migrations
+):
     """testing rollback on concurrent writes."""
 
     new_package = rest_models.Package(name=f"new-package-{uuid.uuid4()}")

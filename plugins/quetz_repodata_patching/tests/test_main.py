@@ -94,6 +94,7 @@ def package_version(
         package_file_name,
         package_info,
         user.id,
+        size=0,
     )
 
     yield version
@@ -237,6 +238,7 @@ def package_repodata_patches(
         repodata_file_name,
         package_info,
         user.id,
+        size=0,
     )
 
     pkgstore.add_package(repodata_archive, channel.name, f"noarch/{repodata_file_name}")

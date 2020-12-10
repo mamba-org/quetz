@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, aliased, joinedload
 
@@ -120,7 +120,11 @@ class Dao:
         return get_paginated_result(query, skip, limit)
 
     def create_channel(
-        self, data: rest_models.Channel, user_id: Optional[bytes], role: Optional[str]
+        self,
+        data: rest_models.Channel,
+        user_id: Optional[bytes],
+        role: Optional[str],
+        size_limit: Optional[int] = None,
     ):
         channel = Channel(
             name=data.name,
@@ -128,6 +132,7 @@ class Dao:
             mirror_channel_url=data.mirror_channel_url,
             mirror_mode=data.mirror_mode,
             private=data.private,
+            size_limit=size_limit,
         )
 
         self.db.add(channel)
@@ -392,6 +397,7 @@ class Dao:
         filename,
         info,
         uploader_id,
+        size,
         upsert: bool = False,
     ):
         # hold a lock on the package
@@ -463,6 +469,7 @@ class Dao:
                 info=info,
                 version_order=version_order,
                 uploader_id=uploader_id,
+                size=size,
             )
 
             self.db.add(package_version)
@@ -478,6 +485,7 @@ class Dao:
                     "info": info,
                     "uploader_id": uploader_id,
                     "time_modified": datetime.utcnow(),
+                    "size": size,
                 },
                 synchronize_session="evaluate",
             )
@@ -553,6 +561,35 @@ class Dao:
             .filter(Package.channel_name == channel_name)
             .order_by(Package.name)
         )
+
+    def assert_size_limits(self, channel_name: str, size: int):
+        channel_size, channel_size_limit = (
+            self.db.query(Channel.size, Channel.size_limit)
+            .filter(Channel.name == channel_name)
+            .one()
+        )
+
+        if channel_size_limit is not None:
+
+            allowed = (channel_size + size) <= channel_size_limit
+
+            if not allowed:
+                raise errors.QuotaError(
+                    f"{channel_name} is above quota of {channel_size_limit} bytes"
+                )
+
+    def update_channel_size(self, channel_name: str):
+
+        channel_size = (
+            self.db.query(func.sum(PackageVersion.size).label('size'))
+            .filter(PackageVersion.channel_name == channel_name)
+            .scalar()
+        )
+
+        if channel_size is None:
+            channel_size = 0
+
+        self.update_channel(channel_name, {"size": channel_size})
 
     def create_user_with_role(self, user_name: str, role: Optional[str] = None):
         """create a user without a profile or return a user if already exists and replace

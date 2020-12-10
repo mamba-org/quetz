@@ -55,6 +55,7 @@ def handle_file(
             version=condainfo.info["version"],
             build_number=condainfo.info["build_number"],
             build_string=condainfo.info["build"],
+            size=condainfo.info["size"],
             filename=filename,
             info=json.dumps(condainfo.info),
             uploader_id=user_id,

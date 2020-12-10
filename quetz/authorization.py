@@ -77,15 +77,14 @@ class Rules:
         if role == SERVER_MEMBER:
             self.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
-    def assert_server_roles(self, roles: list):
+    def assert_server_roles(self, roles: list, msg: Optional[str] = None):
         user_id = self.assert_user()
 
         if not self.has_server_roles(user_id, roles):
 
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="this operation requires" + " or ".join(roles) + " roles",
-            )
+            detail = (msg or "this operation requires" + " or ".join(roles) + " roles",)
+
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
 
     def has_server_roles(self, user_id, roles: list):
 
@@ -220,6 +219,10 @@ class Rules:
 
         self.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER, SERVER_MEMBER])
 
+    def assert_update_channel_info(self, channel_name: str):
+
+        self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])
+
     def assert_create_package(self, channel_name: str):
 
         self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])
@@ -249,6 +252,13 @@ class Rules:
     def assert_channel_read(self, channel):
         if channel.private:
             self.assert_channel_roles(channel.name, [OWNER, MAINTAINER, MEMBER])
+
+    def assert_set_channel_size_limit(self, channel):
+
+        self.assert_server_roles(
+            [SERVER_OWNER, SERVER_MAINTAINER],
+            msg="only server maintainer or owner can set channel size limit",
+        )
 
     def assert_package_read(self, package):
         if package.channel.private:

@@ -258,6 +258,7 @@ def test_package_version(db, dao: Dao, user, channel_name, package_name):
             "",
             package_info,
             user.id,
+            size=0,
         )
     res = dao.get_package_versions(package)
     res_versions = [(VersionOrder(x[0].version), x[0].build_number) for x in res]

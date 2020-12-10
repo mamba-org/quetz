@@ -55,6 +55,7 @@ from quetz import (
 from quetz.config import Config, configure_logger, get_plugin_manager
 from quetz.dao import Dao
 from quetz.deps import (
+    get_config,
     get_dao,
     get_db,
     get_remote_session,
@@ -468,6 +469,7 @@ def post_channel(
     auth: authorization.Rules = Depends(get_rules),
     task: Task = Depends(get_tasks_worker),
     remote_session: requests.Session = Depends(get_remote_session),
+    config=Depends(get_config),
 ):
 
     user_id = auth.assert_user()
@@ -501,10 +503,58 @@ def post_channel(
     else:
         actions = new_channel.metadata.actions
 
-    channel = dao.create_channel(new_channel, user_id, authorization.OWNER)
+    user_attrs = new_channel.dict(exclude_unset=True)
+
+    if "size_limit" in user_attrs:
+        auth.assert_set_channel_size_limit(channel)
+        size_limit = new_channel.size_limit
+    else:
+        if config.configured_section("quotas"):
+            size_limit = config.quotas_channel_quota
+        else:
+            size_limit = None
+
+    channel = dao.create_channel(new_channel, user_id, authorization.OWNER, size_limit)
 
     for action in actions:
         task.execute_channel_action(action, channel)
+
+
+@api_router.patch(
+    "/channels/{channel_name}",
+    status_code=200,
+    tags=["channels"],
+    response_model=rest_models.ChannelBase,
+)
+def patch_channel(
+    channel_data: rest_models.Channel,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+    channel: db_models.Channel = Depends(get_channel_or_fail),
+    db=Depends(get_db),
+):
+
+    auth.assert_update_channel_info(channel.name)
+
+    user_attrs = channel_data.dict(exclude_unset=True)
+
+    if "size_limit" in user_attrs:
+        auth.assert_set_channel_size_limit(channel)
+
+    changeable_attrs = ["private", "size_limit"]
+
+    for attr_ in user_attrs.keys():
+        if attr_ not in changeable_attrs:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"attribute '{attr_}' of channel can not be changed",
+            )
+
+    for attr_, value_ in user_attrs.items():
+        setattr(channel, attr_, value_)
+    db.commit()
+
+    return channel
 
 
 @api_router.get(
@@ -562,6 +612,7 @@ def delete_package(
     package: db_models.Package = Depends(get_package_or_fail),
     db=Depends(get_db),
     auth: authorization.Rules = Depends(get_rules),
+    dao: Dao = Depends(get_dao),
 ):
 
     auth.assert_package_delete(package)
@@ -577,6 +628,8 @@ def delete_package(
 
     for filename in filenames:
         pkgstore.delete_file(channel_name, filename)
+
+    dao.update_channel_size(channel_name)
 
 
 @api_router.post(
@@ -770,6 +823,8 @@ def delete_package_version(
     path = os.path.join(platform, filename)
     pkgstore.delete_file(channel_name, path)
 
+    dao.update_channel_size(channel_name)
+
 
 @api_router.get(
     "/search/{query}", response_model=List[rest_models.PackageSearch], tags=["search"]
@@ -885,6 +940,7 @@ def post_file_to_package(
     ),
 ):
     handle_package_files(package.channel.name, files, dao, auth, force, package=package)
+    dao.update_channel_size(package.channel_name)
 
 
 @api_router.post("/channels/{channel_name}/files/", status_code=201, tags=["files"])
@@ -899,6 +955,8 @@ def post_file_to_channel(
     auth: authorization.Rules = Depends(get_rules),
 ):
     handle_package_files(channel.name, files, dao, auth, force)
+
+    dao.update_channel_size(channel.name)
 
     # Background task to update indexes
     background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel.name)
@@ -925,7 +983,7 @@ def trigger_indexing(
     wait=wait_exponential(multiplier=1, min=4, max=10),
     after=after_log(logger, logging.WARNING),
 )
-def _extract_and_upload_package(file, channel_name, pkgstore):
+def _extract_and_upload_package(file, channel_name, pkgstore, dao):
     if file.file is None or (hasattr(file.file, '_file') and file.file._file is None):
         logger.error(f"File is NONE: {file.file}")
 
@@ -944,6 +1002,9 @@ def _extract_and_upload_package(file, channel_name, pkgstore):
 
     dest = os.path.join(conda_info.info["subdir"], file.filename)
     parts = file.filename.rsplit("-", 2)
+
+    # check if quota limits
+    dao.assert_size_limits(channel_name, conda_info.info["size"])
 
     if parts[0] != conda_info.info["name"]:
         raise HTTPException(
@@ -1005,6 +1066,7 @@ def handle_package_files(
                         files,
                         (channel_name,) * len(files),
                         (pkgstore,) * len(files),
+                        (dao,) * len(files),
                     )
                 ]
             except exceptions.PackageError as e:
@@ -1022,9 +1084,22 @@ def handle_package_files(
         # check that the filename matches the package name
         # TODO also validate version and build string
         if parts[0] != condainfo.info["name"]:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="filename does not match package name",
+            )
         if package and (parts[0] != package.name or package_name != package.name):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"requested package endpoint '{package.name}'"
+                    f"does not match the uploaded package name '{parts[0]}'"
+                ),
+            )
+
+        def _delete_file(condainfo, filename):
+            dest = os.path.join(condainfo.info["subdir"], file.filename)
+            pkgstore.delete_file(channel_name, dest)
 
         if not package and not dao.get_package(channel_name, package_name):
 
@@ -1041,12 +1116,10 @@ def handle_package_files(
                     description=condainfo.about.get("description", "n/a"),
                 )
             except pydantic.main.ValidationError as err:
-                dest = os.path.join(condainfo.info["subdir"], file.filename)
-                pkgstore.delete_file(channel_name, dest)
+                _delete_file(condainfo, file.filename)
                 raise errors.ValidationError(str(err))
             except errors.ValidationError as err:
-                dest = os.path.join(condainfo.info["subdir"], file.filename)
-                pkgstore.delete_file(channel_name, dest)
+                _delete_file(condainfo, file.filename)
                 raise err
 
             dao.create_package(
@@ -1070,6 +1143,7 @@ def handle_package_files(
                 version=condainfo.info["version"],
                 build_number=condainfo.info["build_number"],
                 build_string=condainfo.info["build"],
+                size=condainfo.info["size"],
                 filename=file.filename,
                 info=json.dumps(condainfo.info),
                 uploader_id=user_id,

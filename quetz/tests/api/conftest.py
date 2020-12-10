@@ -64,6 +64,7 @@ def private_package_version(dao, private_channel, private_package, other_user, c
         str(filename),
         package_info,
         other_user.id,
+        size=0,
     )
 
     return version
@@ -71,7 +72,14 @@ def private_package_version(dao, private_channel, private_package, other_user, c
 
 @pytest.fixture
 def package_version(
-    db, user, channel_name, package_name, public_package, dao: Dao, config: Config
+    db,
+    user,
+    public_channel,
+    channel_name,
+    package_name,
+    public_package,
+    dao: Dao,
+    config: Config,
 ):
 
     pkgstore = config.get_package_store()
@@ -91,7 +99,11 @@ def package_version(
         str(filename),
         package_info,
         user.id,
+        size=11,
     )
+
+    dao.update_channel_size(channel_name)
+    db.refresh(public_channel)
 
     yield version
 

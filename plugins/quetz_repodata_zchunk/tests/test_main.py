@@ -88,6 +88,7 @@ def package_version(
         package_file_name,
         package_info,
         user.id,
+        size=0,
     )
 
     yield version
