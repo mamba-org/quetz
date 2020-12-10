@@ -125,7 +125,7 @@ Quetz can store package in object cloud storage compatible with S3 interface. To
 .. _worker_config:
 
 ``worker`` section
-^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^
 
 Quetz can use parallel processing to speed up computation. This is achieved through invoking functions asynchronously with workers.
 Different worker backends can be used. Quetz currently offers 3 types of them -- Threads, Subprocesses, and Redis-Queue workers.
@@ -148,6 +148,13 @@ the ``redis-server``.
 :redis_db: The database index in redis-server to connect to.
 
 For more information, see :ref:`task_workers`.
+
+``quotas`` section
+^^^^^^^^^^^^^^^^^^
+
+You can configure the limits (quota) on the size of uploaded packages for each channel:
+
+:channel_quota: maximum total size (in bytes) of packages uploaded to the channel
 
 Environment
 -----------
