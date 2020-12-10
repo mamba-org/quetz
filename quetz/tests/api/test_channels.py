@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from quetz import db_models
+from quetz.authorization import SERVER_MAINTAINER, SERVER_MEMBER, SERVER_OWNER
 from quetz.condainfo import CondaInfo
 from quetz.config import Config
 
@@ -326,3 +327,30 @@ def test_create_channel_default_quotas(auth_client, expected_size_limit, db, con
         assert channel.size_limit is None
     else:
         assert channel.size_limit == expected_size_limit
+
+
+@pytest.mark.parametrize("user_role", [SERVER_MAINTAINER, SERVER_OWNER, SERVER_MEMBER])
+@pytest.mark.parametrize(
+    "config_extra",
+    [
+        pytest.param("", id="no-config"),
+        pytest.param("[quotas]\nchannel_quota=10\n", id="with-config"),
+    ],
+)
+def test_create_channel_with_limits(auth_client, db, user_role):
+    name = "test_create_channel_with_quotas"
+    response = auth_client.post(
+        "/api/channels",
+        json={"name": name, "private": False, "size_limit": 101},
+    )
+
+    channel = (
+        db.query(db_models.Channel).filter(db_models.Channel.name == name).one_or_none()
+    )
+    if user_role in [SERVER_MAINTAINER, SERVER_OWNER]:
+        assert response.status_code == 201
+        assert channel.size_limit == 101
+    else:
+        assert response.status_code == 403
+        assert channel is None
+        assert "set channel size limit" in response.json()['detail'][0]

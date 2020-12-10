@@ -504,10 +504,16 @@ def post_channel(
     else:
         actions = new_channel.metadata.actions
 
-    if config.configured_section("quotas"):
-        size_limit = config.quotas_channel_quota
+    user_attrs = new_channel.dict(exclude_unset=True)
+
+    if "size_limit" in user_attrs:
+        auth.assert_set_channel_size_limit(channel)
+        size_limit = new_channel.size_limit
     else:
-        size_limit = None
+        if config.configured_section("quotas"):
+            size_limit = config.quotas_channel_quota
+        else:
+            size_limit = None
 
     channel = dao.create_channel(new_channel, user_id, authorization.OWNER, size_limit)
 
