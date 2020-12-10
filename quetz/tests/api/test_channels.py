@@ -179,7 +179,7 @@ def test_channel_names_are_case_insensitive(auth_client, maintainer):
     response = auth_client.get(f"/api/channels/{channel_name}/packages")
     assert response.status_code == 200
     assert len(response.json()) == 1
-    assert response.json()[0]['name'] == "test-package"
+    assert response.json()[0]["name"] == "test-package"
 
     response = auth_client.get(
         f"/api/channels/{channel_name}/packages/test-package/versions"
@@ -197,11 +197,11 @@ def test_channel_names_are_case_insensitive(auth_client, maintainer):
         f"/channels/{channel_name.lower()}/linux-64/repodata.json"
     )
     assert response.status_code == 200
-    assert package_filename in response.json()['packages']
+    assert package_filename in response.json()["packages"]
 
     response = auth_client.get(f"/channels/{channel_name}/linux-64/repodata.json")
     assert response.status_code == 200
-    assert package_filename in response.json()['packages']
+    assert package_filename in response.json()["packages"]
 
     response = auth_client.get(
         f"/channels/{channel_name.lower()}/linux-64/{package_filename}"
@@ -227,14 +227,14 @@ def test_unique_channel_names_are_case_insensitive(auth_client, maintainer):
     )
 
     assert response.status_code == 409
-    assert f"{channel_name.lower()} exists" in response.json()['detail']
+    assert f"{channel_name.lower()} exists" in response.json()["detail"]
 
     response = auth_client.post(
         "/api/channels", json={"name": channel_name.upper(), "private": False}
     )
 
     assert response.status_code == 409
-    assert f"{channel_name.upper()} exists" in response.json()['detail']
+    assert f"{channel_name.upper()} exists" in response.json()["detail"]
 
 
 def test_unicode_channel_names(auth_client, maintainer):
@@ -251,12 +251,12 @@ def test_unicode_channel_names(auth_client, maintainer):
 
     assert response.status_code == 200
     assert len(response.json()) == 1
-    assert response.json()[0]['name'] == channel_name
+    assert response.json()[0]["name"] == channel_name
 
     response = auth_client.get(f"/api/channels/{channel_name}")
 
     assert response.status_code == 200
-    assert response.json()['name'] == channel_name
+    assert response.json()["name"] == channel_name
 
 
 def test_accents_make_unique_channel_names(auth_client, maintainer):
@@ -296,7 +296,33 @@ def test_upload_package_version_to_channel(
 
     assert response.status_code == 201
     db.refresh(public_channel)
-    assert public_channel.size == condainfo.info['size']
+    assert public_channel.size == condainfo.info["size"]
     assert pkgstore.serve_path(
-        public_channel.name, str(Path(condainfo.info['subdir']) / package_filename)
+        public_channel.name, str(Path(condainfo.info["subdir"]) / package_filename)
     )
+
+
+@pytest.mark.parametrize("user_role", ["maintainer"])
+@pytest.mark.parametrize(
+    "config_extra,expected_size_limit",
+    [("", None), ("[quotas]\nchannel_quota=100\n", 100), ("[quotas]\n", None)],
+)
+def test_create_channel_default_quotas(auth_client, expected_size_limit, db, config):
+
+    name = "test_create_channel_with_quotas"
+    response = auth_client.post(
+        "/api/channels",
+        json={
+            "name": name,
+            "private": False,
+        },
+    )
+
+    assert response.status_code == 201
+
+    channel = db.query(db_models.Channel).filter(db_models.Channel.name == name).one()
+
+    if expected_size_limit is None:
+        assert channel.size_limit is None
+    else:
+        assert channel.size_limit == expected_size_limit

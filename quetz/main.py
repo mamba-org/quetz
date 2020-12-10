@@ -56,6 +56,7 @@ from quetz import (
 from quetz.config import Config, configure_logger, get_plugin_manager
 from quetz.dao import Dao
 from quetz.deps import (
+    get_config,
     get_dao,
     get_db,
     get_remote_session,
@@ -469,6 +470,7 @@ def post_channel(
     auth: authorization.Rules = Depends(get_rules),
     task: Task = Depends(get_tasks_worker),
     remote_session: requests.Session = Depends(get_remote_session),
+    config=Depends(get_config),
 ):
 
     user_id = auth.assert_user()
@@ -502,7 +504,12 @@ def post_channel(
     else:
         actions = new_channel.metadata.actions
 
-    channel = dao.create_channel(new_channel, user_id, authorization.OWNER)
+    if config.configured_section("quotas"):
+        size_limit = config.quotas_channel_quota
+    else:
+        size_limit = None
+
+    channel = dao.create_channel(new_channel, user_id, authorization.OWNER, size_limit)
 
     for action in actions:
         task.execute_channel_action(action, channel)
