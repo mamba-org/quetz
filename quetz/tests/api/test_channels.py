@@ -375,6 +375,10 @@ def test_set_channel_size_limit(auth_client, db, public_channel):
 
     assert response.status_code == 200
 
+    data = response.json()
+    assert data["name"] == public_channel.name
+    assert data["size_limit"] == 101
+
     db.refresh(public_channel)
 
     assert public_channel.size_limit == 101
@@ -414,6 +418,10 @@ def test_update_channel_attributes(auth_client, db, public_channel, name, value)
     )
 
     assert response.status_code == 200
+
+    data = response.json()
+    assert data["name"] == public_channel.name
+    assert data[name] == value
 
     db.refresh(public_channel)
 

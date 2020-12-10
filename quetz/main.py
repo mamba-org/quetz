@@ -521,7 +521,12 @@ def post_channel(
         task.execute_channel_action(action, channel)
 
 
-@api_router.patch("/channels/{channel_name}", status_code=200, tags=["channels"])
+@api_router.patch(
+    "/channels/{channel_name}",
+    status_code=200,
+    tags=["channels"],
+    response_model=rest_models.ChannelBase,
+)
 def patch_channel(
     channel_data: rest_models.Channel,
     dao: Dao = Depends(get_dao),
@@ -543,12 +548,14 @@ def patch_channel(
         if attr_ not in changeable_attrs:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"attribute {attr_} of channel can not be changed",
+                detail=f"attribute '{attr_}' of channel can not be changed",
             )
 
     for attr_, value_ in user_attrs.items():
         setattr(channel, attr_, value_)
     db.commit()
+
+    return channel
 
 
 @api_router.get(

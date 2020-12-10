@@ -575,7 +575,7 @@ class Dao:
 
             if not allowed:
                 raise errors.QuotaError(
-                    "{channel_name} is above quota of {channel_size_limit} bytes"
+                    f"{channel_name} is above quota of {channel_size_limit} bytes"
                 )
 
     def update_channel_size(self, channel_name: str):
