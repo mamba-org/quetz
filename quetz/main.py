@@ -537,6 +537,15 @@ def patch_channel(
     if "size_limit" in user_attrs:
         auth.assert_set_channel_size_limit(channel)
 
+    changeable_attrs = ["private", "size_limit"]
+
+    for attr_ in user_attrs.keys():
+        if attr_ not in changeable_attrs:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"attribute {attr_} of channel can not be changed",
+            )
+
     for attr_, value_ in user_attrs.items():
         setattr(channel, attr_, value_)
     db.commit()

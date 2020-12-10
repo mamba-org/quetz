@@ -3,7 +3,14 @@ from pathlib import Path
 import pytest
 
 from quetz import db_models
-from quetz.authorization import SERVER_MAINTAINER, SERVER_MEMBER, SERVER_OWNER
+from quetz.authorization import (
+    MAINTAINER,
+    MEMBER,
+    OWNER,
+    SERVER_MAINTAINER,
+    SERVER_MEMBER,
+    SERVER_OWNER,
+)
 from quetz.condainfo import CondaInfo
 from quetz.config import Config
 
@@ -353,7 +360,7 @@ def test_create_channel_with_limits(auth_client, db, user_role):
     else:
         assert response.status_code == 403
         assert channel is None
-        assert "set channel size limit" in response.json()['detail'][0]
+        assert "set channel size limit" in response.json()["detail"][0]
 
 
 @pytest.mark.parametrize("user_role", [SERVER_MAINTAINER, SERVER_OWNER])
@@ -371,3 +378,64 @@ def test_set_channel_size_limit(auth_client, db, public_channel):
     db.refresh(public_channel)
 
     assert public_channel.size_limit == 101
+
+
+@pytest.mark.parametrize("user_role", [SERVER_OWNER])
+@pytest.mark.parametrize(
+    "attr_dict",
+    [
+        {"name": "new-name"},
+        {"mirror_channel_url": "http://test", "mirror_mode": "proxy"},
+    ],
+)
+def test_update_channel_forbidden_attributes(
+    auth_client,
+    db,
+    public_channel,
+    attr_dict,
+):
+
+    response = auth_client.patch(
+        f"/api/channels/{public_channel.name}",
+        json=attr_dict,
+    )
+
+    assert response.status_code == 422
+    assert "can not be changed" in response.json()["detail"]
+
+
+@pytest.mark.parametrize("user_role", [SERVER_OWNER])
+@pytest.mark.parametrize("name,value", [("private", True)])
+def test_update_channel_attributes(auth_client, db, public_channel, name, value):
+
+    response = auth_client.patch(
+        f"/api/channels/{public_channel.name}",
+        json={name: value},
+    )
+
+    assert response.status_code == 200
+
+    db.refresh(public_channel)
+
+    assert getattr(public_channel, name) == value
+
+
+@pytest.mark.parametrize(
+    "user_role", [SERVER_OWNER, SERVER_MEMBER, SERVER_MAINTAINER, None]
+)
+@pytest.mark.parametrize("channel_role", [OWNER, MAINTAINER, MEMBER])
+def test_update_channel_permissions(
+    auth_client, db, public_channel, user_role, channel_role
+):
+
+    response = auth_client.patch(
+        f"/api/channels/{public_channel.name}",
+        json={"private": False},
+    )
+
+    if user_role in [SERVER_OWNER, SERVER_MAINTAINER]:
+        assert response.status_code == 200
+    elif channel_role in [OWNER, MAINTAINER]:
+        assert response.status_code == 200
+    else:
+        assert response.status_code == 403
