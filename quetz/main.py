@@ -521,6 +521,27 @@ def post_channel(
         task.execute_channel_action(action, channel)
 
 
+@api_router.patch("/channels/{channel_name}", status_code=200, tags=["channels"])
+def patch_channel(
+    channel_data: rest_models.Channel,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+    channel: db_models.Channel = Depends(get_channel_or_fail),
+    db=Depends(get_db),
+):
+
+    auth.assert_update_channel_info(channel.name)
+
+    user_attrs = channel_data.dict(exclude_unset=True)
+
+    if "size_limit" in user_attrs:
+        auth.assert_set_channel_size_limit(channel)
+
+    for attr_, value_ in user_attrs.items():
+        setattr(channel, attr_, value_)
+    db.commit()
+
+
 @api_router.get(
     "/channels/{channel_name}/packages",
     response_model=List[rest_models.Package],

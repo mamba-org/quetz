@@ -354,3 +354,20 @@ def test_create_channel_with_limits(auth_client, db, user_role):
         assert response.status_code == 403
         assert channel is None
         assert "set channel size limit" in response.json()['detail'][0]
+
+
+@pytest.mark.parametrize("user_role", [SERVER_MAINTAINER, SERVER_OWNER])
+def test_set_channel_size_limit(auth_client, db, public_channel):
+
+    assert public_channel.size_limit is None
+
+    response = auth_client.patch(
+        f"/api/channels/{public_channel.name}",
+        json={"size_limit": 101},
+    )
+
+    assert response.status_code == 200
+
+    db.refresh(public_channel)
+
+    assert public_channel.size_limit == 101

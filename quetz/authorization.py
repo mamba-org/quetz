@@ -219,6 +219,10 @@ class Rules:
 
         self.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER, SERVER_MEMBER])
 
+    def assert_update_channel_info(self, channel_name: str):
+
+        self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])
+
     def assert_create_package(self, channel_name: str):
 
         self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])
