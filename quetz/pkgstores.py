@@ -123,16 +123,24 @@ class LocalStore(PackageStore):
         stat_res = os.stat(filepath)
         mtime = stat_res.st_mtime
         msize = stat_res.st_size
+
+        xattr_failed = False
         if has_xattr:
-            attrs = xattr.xattr(filepath)
             try:
-                etag = attrs['user.etag'].decode('ascii')
-            except KeyError:
-                # calculate md5 sum
-                with self.fs.open(filepath, 'rb') as f:
-                    etag = hashlib.md5(f.read()).hexdigest()
-                attrs['user.etag'] = etag.encode('ascii')
-        else:
+                # xattr will fail here if executing on e.g. the tmp filesystem
+                attrs = xattr.xattr(filepath)
+                attrs['user.testifpermissionok'] = b''
+                try:
+                    etag = attrs['user.etag'].decode('ascii')
+                except KeyError:
+                    # calculate md5 sum
+                    with self.fs.open(filepath, 'rb') as f:
+                        etag = hashlib.md5(f.read()).hexdigest()
+                    attrs['user.etag'] = etag.encode('ascii')
+            except OSError:
+                xattr_failed = True
+
+        if not has_xattr or xattr_failed:
             etag_base = str(mtime) + "-" + str(msize)
             etag = hashlib.md5(etag_base.encode()).hexdigest()
 
@@ -190,12 +198,9 @@ class S3Store(PackageStore):
     def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
         with self._get_fs() as fs:
             bucket = self._bucket_map(channel)
-            with fs.transaction:
-                with fs.open(
-                    path.join(bucket, destination), "wb", acl="private"
-                ) as pkg:
-                    # use a chunk size of 10 Megabytes
-                    shutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
+            with fs.open(path.join(bucket, destination), "wb", acl="private") as pkg:
+                # use a chunk size of 10 Megabytes
+                shutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath

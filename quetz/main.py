@@ -6,10 +6,10 @@ import logging
 import os
 import re
 import sys
-import traceback
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from email.utils import formatdate
+from tempfile import SpooledTemporaryFile
 from typing import List, Optional
 
 import pydantic
@@ -962,38 +962,15 @@ def post_file_to_channel(
     background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel.name)
 
 
-@api_router.put(
-    "/channels/{channel_name}/trigger_indexing", status_code=201, tags=["channels"]
-)
-def trigger_indexing(
-    background_tasks: BackgroundTasks,
-    channel: db_models.Channel = Depends(
-        ChannelChecker(allow_proxy=False, allow_mirror=True)
-    ),
-    dao: Dao = Depends(get_dao),
-    auth: authorization.Rules = Depends(get_rules),
-):
-    # Background task to update indexes
-    background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel.name)
-
-
 @retry(
     stop=stop_after_attempt(3),
     retry=(retry_if_result(lambda x: x is None)),
     wait=wait_exponential(multiplier=1, min=4, max=10),
     after=after_log(logger, logging.WARNING),
 )
-def _extract_and_upload_package(file, channel_name, pkgstore, dao):
-    if file.file is None or (hasattr(file.file, '_file') and file.file._file is None):
-        logger.error(f"File is NONE: {file.file}")
-
+def _extract_and_upload_package(file, channel_name):
     try:
         conda_info = CondaInfo(file.file, file.filename)
-    except exceptions.PackageError as e:
-        logger.error(
-            f"Could not extract conda-info from package {file.filename}\n{str(e)}"
-        )
-        raise e
     except Exception as e:
         logger.error(
             f"Could not extract conda-info from package {file.filename}\n{str(e)}"
@@ -1003,9 +980,6 @@ def _extract_and_upload_package(file, channel_name, pkgstore, dao):
     dest = os.path.join(conda_info.info["subdir"], file.filename)
     parts = file.filename.rsplit("-", 2)
 
-    # check if quota limits
-    dao.assert_size_limits(channel_name, conda_info.info["size"])
-
     if parts[0] != conda_info.info["name"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1013,17 +987,15 @@ def _extract_and_upload_package(file, channel_name, pkgstore, dao):
         )
 
     try:
-        file.file._file.seek(0)
+        file.file.seek(0)
         logger.debug(
             f"uploading file {dest} from channel {channel_name} to package store"
         )
         pkgstore.add_package(file.file, channel_name, dest)
     except AttributeError as e:
         logger.error(f"Could not upload {file}, {file.filename}. {str(e)}")
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        logger.error(repr(traceback.format_tb(exc_traceback)))
-        # TODO FIX THIS!?
         return None
+
     return conda_info
 
 
@@ -1039,6 +1011,7 @@ def handle_package_files(
 
     # quick fail if not allowed to upload
     # note: we're checking later that `parts[0] == conda_info.package_name`
+    total_size = 0
     for file in files:
         parts = file.filename.rsplit("-", 2)
         if len(parts) != 3:
@@ -1052,7 +1025,16 @@ def handle_package_files(
         if force:
             auth.assert_overwrite_package_version(channel_name, package_name)
 
-        logger.debug(f"adding file '{file.filename}' to channel '{channel_name}'")
+        # workaround for https://github.com/python/cpython/pull/3249
+        if type(file.file) is SpooledTemporaryFile and not hasattr(file, "seekable"):
+            file.file.seekable = file.file._file.seekable
+
+        file.file.seek(0, os.SEEK_END)
+        size = file.file.tell()
+        total_size += size
+        file.file.seek(0)
+
+    dao.assert_size_limits(channel_name, total_size)
 
     with TicToc("extract conda-info and upload file"):
         pkgstore.create_channel(channel_name)
@@ -1062,11 +1044,7 @@ def handle_package_files(
                 conda_infos = [
                     ci
                     for ci in executor.map(
-                        _extract_and_upload_package,
-                        files,
-                        (channel_name,) * len(files),
-                        (pkgstore,) * len(files),
-                        (dao,) * len(files),
+                        _extract_and_upload_package, files, (channel_name,) * len(files)
                     )
                 ]
             except exceptions.PackageError as e:
@@ -1110,16 +1088,38 @@ def handle_package_files(
                     file_handler=file.file,
                     condainfo=condainfo,
                 )
+                # validate uploaded package size and existence
+                try:
+                    pkgsize, _, _ = pkgstore.get_filemetadata(
+                        channel_name, f"{condainfo.info['subdir']}/{file.filename}"
+                    )
+                    if pkgsize != condainfo.info['size']:
+                        raise errors.ValidationError(
+                            f"Uploaded package {file.filename} "
+                            "file size is wrong! Deleting"
+                        )
+                except FileNotFoundError:
+                    raise errors.ValidationError(
+                        f"Uploaded package {file.filename} "
+                        "file did not upload correctly!"
+                    )
+
                 package_data = rest_models.Package(
                     name=package_name,
-                    summary=condainfo.about.get("summary", "n/a"),
-                    description=condainfo.about.get("description", "n/a"),
+                    summary=str(condainfo.about.get("summary", "n/a")),
+                    description=str(condainfo.about.get("description", "n/a")),
                 )
             except pydantic.main.ValidationError as err:
                 _delete_file(condainfo, file.filename)
-                raise errors.ValidationError(str(err))
+                raise errors.ValidationError(
+                    "Validation Error for package: "
+                    + f"{channel_name}/{file.filename}: {str(err)}"
+                )
             except errors.ValidationError as err:
                 _delete_file(condainfo, file.filename)
+                logger.error(
+                    f"Validation error in: {channel_name}/{file.filename}: {str(err)}"
+                )
                 raise err
 
             dao.create_package(

@@ -4,6 +4,7 @@ import pytest
 
 from quetz.db_models import Channel
 from quetz.pkgstores import PackageStore
+from quetz.tasks.indexing import validate_packages
 from quetz.tasks.reindexing import reindex_packages_from_store
 
 
@@ -66,3 +67,60 @@ def test_reindex_package_files(
     assert repodata
     assert len(repodata['packages']) == 2
     assert set(repodata["packages"].keys()) == set(package_filenames)
+
+
+def test_validate_packages(
+    config,
+    user,
+    package_files,
+    channel,
+    channel_name,
+    db,
+    dao,
+    pkgstore: PackageStore,
+    package_filenames,
+):
+    user_id = user.id
+    reindex_packages_from_store(dao, config, channel.name, user_id)
+    db.refresh(channel)
+
+    assert channel.packages
+    assert channel.packages[0].name == "test-package"
+    assert channel.packages[0].members[0].user.username == user.username
+    assert channel.packages[0].package_versions[0].version == '0.1'
+    assert channel.packages[0].package_versions[1].version == '0.2'
+
+    repodata = pkgstore.serve_path(channel.name, "linux-64/repodata.json")
+    repodata = json.load(repodata)
+    assert repodata
+    assert len(repodata['packages']) == 2
+    assert set(repodata["packages"].keys()) == set(package_filenames)
+
+    remaining_pkg = channel.packages[0].package_versions[1].filename
+    pkgstore.delete_file(
+        channel.name, f'linux-64/{channel.packages[0].package_versions[0].filename}'
+    )
+
+    validate_packages(dao, pkgstore, channel_name)
+
+    db.refresh(channel)
+
+    repodata = pkgstore.serve_path(channel.name, "linux-64/repodata.json")
+    repodata = json.load(repodata)
+    assert repodata
+    assert len(repodata['packages']) == 1
+    assert set(repodata["packages"].keys()) == set([remaining_pkg])
+    assert len(channel.packages[0].package_versions) == 1
+
+    pkgstore.add_file(b"wrong_size", channel_name, f"linux-64/{remaining_pkg}")
+
+    validate_packages(dao, pkgstore, channel_name)
+
+    db.refresh(channel)
+
+    repodata = pkgstore.serve_path(channel.name, "linux-64/repodata.json")
+    repodata = json.load(repodata)
+    assert repodata
+    assert len(repodata['packages']) == 0
+    assert set(repodata["packages"].keys()) == set([])
+    assert len(channel.packages[0].package_versions) == 0

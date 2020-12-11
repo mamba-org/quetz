@@ -550,7 +550,7 @@ class Dao:
                 PackageVersion.time_modified,
             )
             .filter(PackageVersion.channel_name == channel_name)
-            .filter(PackageVersion.platform.in_([subdir, "noarch"]))
+            .filter(PackageVersion.platform == subdir)
             .order_by(PackageVersion.filename)
         )
 

@@ -358,9 +358,6 @@ def initial_sync_mirror(
 
             # if package is up-to-date skip uploading file
             if is_uptodate:
-                # logger.debug(
-                #     f"package {package_name} from {arch} up-to-date. Not updating"
-                # )
                 continue
             else:
                 logger.debug(f"updating package {package_name} from {arch}")
