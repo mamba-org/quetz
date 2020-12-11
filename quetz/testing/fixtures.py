@@ -13,6 +13,7 @@ from quetz.config import Config
 from quetz.dao import Dao
 from quetz.database import get_engine, get_session_maker
 from quetz.db_models import Base
+from quetz.jobs.models import Job, Task
 
 
 @fixture
