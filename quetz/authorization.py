@@ -241,6 +241,9 @@ class Rules:
     def assert_reindex_channel(self, channel_name):
         self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])
 
+    def assert_validate_package_cache(self, channel_name):
+        self.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
+
     def assert_overwrite_package_version(self, channel_name, package_name):
         self.assert_channel_or_package_roles(
             channel_name, [OWNER], package_name, [OWNER]

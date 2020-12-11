@@ -32,3 +32,4 @@ dependencies:
   - sphinx
   - sphinx-book-theme
   - tenacity
+  - xattr

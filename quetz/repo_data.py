@@ -8,13 +8,13 @@ from quetz import db_models
 
 def export(dao, channel_name, subdir):
 
+    repodata = {
+        "info": {"subdir": subdir},
+        "packages": {},
+        "packages.conda": {},
+        "repodata_version": 1,
+    }
     if dao.is_active_platform(channel_name, subdir):
-        repodata = {
-            "info": {"subdir": subdir},
-            "packages": {},
-            "packages.conda": {},
-            "repodata_version": 1,
-        }
         packages = repodata["packages"]
         packages_conda = repodata["packages.conda"]
 
@@ -30,4 +30,4 @@ def export(dao, channel_name, subdir):
 
         return repodata
     else:
-        return None
+        return repodata

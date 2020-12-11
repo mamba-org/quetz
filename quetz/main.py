@@ -6,10 +6,10 @@ import logging
 import os
 import re
 import sys
-import traceback
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from email.utils import formatdate
+from tempfile import SpooledTemporaryFile
 from typing import List, Optional
 
 import pydantic
@@ -968,18 +968,9 @@ def post_file_to_channel(
     wait=wait_exponential(multiplier=1, min=4, max=10),
     after=after_log(logger, logging.WARNING),
 )
-
 def _extract_and_upload_package(file, channel_name):
-    if file.file is None or (hasattr(file.file, '_file') and file.file._file is None):
-        logger.error(f"File is NONE: {file.file}")
-
     try:
         conda_info = CondaInfo(file.file, file.filename)
-    except exceptions.PackageError as e:
-        logger.error(
-            f"Could not extract conda-info from package {file.filename}\n{str(e)}"
-        )
-        raise e
     except Exception as e:
         logger.error(
             f"Could not extract conda-info from package {file.filename}\n{str(e)}"
@@ -989,9 +980,6 @@ def _extract_and_upload_package(file, channel_name):
     dest = os.path.join(conda_info.info["subdir"], file.filename)
     parts = file.filename.rsplit("-", 2)
 
-    # check if quota limits
-    dao.assert_size_limits(channel_name, conda_info.info["size"])
-
     if parts[0] != conda_info.info["name"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -999,17 +987,15 @@ def _extract_and_upload_package(file, channel_name):
         )
 
     try:
-        file.file._file.seek(0)
+        file.file.seek(0)
         logger.debug(
             f"uploading file {dest} from channel {channel_name} to package store"
         )
         pkgstore.add_package(file.file, channel_name, dest)
     except AttributeError as e:
         logger.error(f"Could not upload {file}, {file.filename}. {str(e)}")
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        logger.error(repr(traceback.format_tb(exc_traceback)))
-        # TODO FIX THIS!?
         return None
+
     return conda_info
 
 
@@ -1025,6 +1011,7 @@ def handle_package_files(
 
     # quick fail if not allowed to upload
     # note: we're checking later that `parts[0] == conda_info.package_name`
+    total_size = 0
     for file in files:
         parts = file.filename.rsplit("-", 2)
         if len(parts) != 3:
@@ -1038,7 +1025,16 @@ def handle_package_files(
         if force:
             auth.assert_overwrite_package_version(channel_name, package_name)
 
-        logger.debug(f"adding file '{file.filename}' to channel '{channel_name}'")
+        # workaround for https://github.com/python/cpython/pull/3249
+        if type(file.file) is SpooledTemporaryFile and not hasattr(file, "seekable"):
+            file.file.seekable = file.file._file.seekable
+
+        file.file.seek(0, os.SEEK_END)
+        size = file.file.tell()
+        total_size += size
+        file.file.seek(0)
+
+    dao.assert_size_limits(channel_name, total_size)
 
     with TicToc("extract conda-info and upload file"):
         pkgstore.create_channel(channel_name)

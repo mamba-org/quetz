@@ -15,10 +15,9 @@ def assert_channel_action(action, channel):
     if action == ChannelActionEnum.synchronize:
         action_allowed = assertions.can_channel_synchronize(channel)
     elif action == ChannelActionEnum.validate_packages:
-        # TODO!!!
-        action_allowed = True
+        action_allowed = assertions.can_channel_validate_package_cache(channel)
     elif action == ChannelActionEnum.generate_indexes:
-        action_allowed = True
+        action_allowed = assertions.can_channel_reindex(channel)
     elif action == ChannelActionEnum.reindex:
         action_allowed = assertions.can_channel_reindex(channel)
     else:
@@ -53,12 +52,12 @@ class Task:
             auth.assert_synchronize_mirror(channel_name)
 
             self.worker.execute(mirror.synchronize_packages, channel_name=channel_name)
+        elif action == ChannelActionEnum.validate_packages:
+            auth.assert_validate_package_cache(channel_name)
+            self.worker.execute(indexing.validate_packages, channel_name=channel.name)
         elif action == ChannelActionEnum.generate_indexes:
             auth.assert_reindex_channel(channel_name)
             self.worker.execute(indexing.update_indexes, channel_name=channel.name)
-        elif action == ChannelActionEnum.validate_packages:
-            auth.assert_reindex_channel(channel_name)
-            self.worker.execute(indexing.validate_packages, channel_name=channel.name)
         elif action == ChannelActionEnum.reindex:
             auth.assert_reindex_channel(channel_name)
             self.worker.execute(

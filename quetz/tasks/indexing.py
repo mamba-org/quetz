@@ -81,16 +81,6 @@ def _subdir_key(dir):
     return _subdir_order.get(dir, dir)
 
 
-def _get_metadata(pkgstore, channel_name, key):
-    try:
-        return pkgstore.get_filemetadata(channel_name, key)
-    except FileNotFoundError as e:
-        return e
-    except Exception as e:
-        logger.error(f"Got exception for retrieving file {str(e)}")
-        return None
-
-
 def validate_packages(dao, pkgstore, channel_name):
     # for now we're just validating the size of the uploaded file
     logger.info("Starting package validation")
@@ -98,10 +88,10 @@ def validate_packages(dao, pkgstore, channel_name):
     if type(pkgstore).__name__ == "S3Store":
         fs_chan = pkgstore._bucket_map(channel_name)
     elif type(pkgstore).__name__ == "LocalStore":
+        print(pkgstore.channels_dir)
         fs_chan = os.path.join(pkgstore.channels_dir, channel_name)
-
-    ls_dirs = pkgstore.fs.ls(f"{fs_chan}/", detail=True)
-    dirs = [d['name'].rsplit('/')[1] for d in ls_dirs if d['type'] == 'directory']
+    ls_dirs = pkgstore.fs.ls(f"./{fs_chan}/", detail=True)
+    dirs = [d['name'].rsplit('/', 1)[1] for d in ls_dirs if d['type'] == 'directory']
 
     for subdir in dirs:
         ls_result = pkgstore.fs.ls(f"{fs_chan}/{subdir}", detail=True)
@@ -212,6 +202,7 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
 
         files[sdir] = []
         packages[sdir] = raw_repodata["packages"]
+
         repodata = json.dumps(raw_repodata, indent=2, sort_keys=False)
         add_static_file(repodata, channel_name, sdir, "repodata.json", pkgstore, files)
 

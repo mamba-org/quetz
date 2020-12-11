@@ -1,10 +1,12 @@
+import hashlib
 import os
-import tempfile
+import shutil
+import time
 import uuid
 
 import pytest
 
-from quetz.pkgstores import LocalStore, S3Store
+from quetz.pkgstores import LocalStore, S3Store, has_xattr
 
 s3_config = {
     'key': os.environ.get("S3_ACCESS_KEY"),
@@ -15,14 +17,18 @@ s3_config = {
     'bucket_suffix': "",
 }
 
+test_dir = os.path.dirname(__file__)
+
 
 def test_local_store():
 
-    pkgdir = tempfile.mkdtemp()
-    pkg_store = LocalStore({'channels_dir': pkgdir})
+    temp_dir = os.path.join(test_dir, "test_pkg_store_" + str(int(time.time())))
+    os.makedirs(temp_dir, exist_ok=False)
+
+    pkg_store = LocalStore({'channels_dir': temp_dir})
 
     pkg_store.add_file("content", "my-channel", "test.txt")
-    pkg_store.add_file("content", "my-channel", "test_2.txt")
+    pkg_store.add_file("content".encode('ascii'), "my-channel", "test_2.txt")
 
     files = pkg_store.list_files("my-channel")
 
@@ -32,6 +38,22 @@ def test_local_store():
 
     files = pkg_store.list_files("my-channel")
     assert files == ["test_2.txt"]
+
+    with pkg_store.serve_path("my-channel", "test_2.txt") as f:
+        assert f.read().decode('utf-8') == "content"
+
+    metadata = pkg_store.get_filemetadata("my-channel", "test_2.txt")
+
+    assert metadata[0] > 0
+    assert type(metadata[1]) is float
+
+    if has_xattr:
+        md5 = hashlib.md5("content".encode('ascii')).hexdigest()
+        assert metadata[2] == md5
+    else:
+        assert type(metadata[2]) is str
+
+    shutil.rmtree(temp_dir)
 
 
 @pytest.fixture
@@ -69,3 +91,8 @@ def test_s3_store(s3_store, channel_name):
 
     files = pkg_store.list_files(channel_name)
     assert files == ["test_2.txt"]
+
+    metadata = pkg_store.get_filemetadata(channel_name, "test_2.txt")
+    assert metadata[0] > 0
+    assert type(metadata[1]) is float
+    assert type(metadata[2]) is str
