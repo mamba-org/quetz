@@ -1,3 +1,5 @@
+from typing import Optional
+
 import quetz.database
 from quetz.config import Config
 from quetz.db_models import PackageVersion
@@ -21,16 +23,22 @@ def run_jobs(db):
     db.commit()
 
 
-def function(package_version: dict):
-    pass
+def function(manifest: str = "", package_version: Optional[dict] = None):
+    import pickle
+
+    func = pickle.loads(manifest)
+    func(package_version)
 
 
-def run_tasks(db, manager):
+async def run_tasks(db, manager):
 
     tasks = db.query(Task).filter(Task.status == TaskStatus.pending)
     for task in tasks:
         version_dict = {"filename": task.package_version.filename}
-        manager.execute(function, version_dict)
+        manager.execute(
+            function, manifest=task.job.manifest, package_version=version_dict
+        )
+        await manager.wait()
 
 
 if __name__ == "__main__":

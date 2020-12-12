@@ -9,6 +9,8 @@ from quetz.jobs.runner import run_jobs, run_tasks
 from quetz.rest_models import Channel, Package
 from quetz.tasks.workers import SubprocessWorker
 
+pytest_plugins = ("pytest_asyncio",)
+
 
 @pytest.fixture
 def package_name():
@@ -151,13 +153,21 @@ def test_create_task(config, db, user, package_version):
     db.commit()
 
 
-def test_create_job(config, db, user, package_version):
-    job = Job(owner_id=user.id, manifest="")
+def func(package_version: dict):
+    pass
+
+
+@pytest.mark.asyncio
+async def test_create_job(config, db, user, package_version):
+    import pickle
+
+    func_serialized = pickle.dumps(func)
+    job = Job(owner_id=user.id, manifest=func_serialized)
     manager = SubprocessWorker("", {}, config)
     db.add(job)
     db.commit()
     run_jobs(db)
-    run_tasks(db, manager)
+    await run_tasks(db, manager)
     jobs = db.query(Job).all()
     tasks = db.query(Task).all()
 
