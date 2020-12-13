@@ -5,8 +5,8 @@ import bz2
 import gzip
 import hashlib
 import secrets
-import string
 import shlex
+import string
 import time
 from datetime import datetime, timezone
 from pathlib import Path

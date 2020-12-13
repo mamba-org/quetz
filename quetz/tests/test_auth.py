@@ -283,18 +283,18 @@ def test_private_channels(data, client):
     assert len(response.json()) == 0
 
     # Search #
-    response = client.get('/api/search/package')
+    response = client.get('/api/search/?q=package')
     assert response.status_code == 200
     print(f'serach: {response.json()}')
     assert len(response.json()) == 1
     assert response.json()[0]['name'] == data.package1.name
 
-    response = client.get('/api/search/package', headers={"X-Api-Key": data.keyb})
+    response = client.get('/api/search/?q=package', headers={"X-Api-Key": data.keyb})
     assert response.status_code == 200
     assert len(response.json()) == 1
     assert response.json()[0]['name'] == data.package1.name
 
-    response = client.get('/api/search/package', headers={"X-Api-Key": data.keya})
+    response = client.get('/api/search/?q=package', headers={"X-Api-Key": data.keya})
     assert response.status_code == 200
     assert len(response.json()) == 2
     assert {c['name'] for c in response.json()} == {
