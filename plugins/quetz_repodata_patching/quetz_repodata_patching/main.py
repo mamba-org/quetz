@@ -16,7 +16,14 @@ from quetz.utils import add_static_file
 def update_dict(packages, instructions):
     for pkg, info in instructions.items():
         if pkg in packages:
-            packages[pkg].update(info)
+            pgk_dict = packages[pkg]
+            pgk_dict.update(info)
+
+            # delete all info - keys that are None now
+            info_keys = list(pgk_dict.keys())
+            for k in info_keys:
+                if pgk_dict[k] is None:
+                    del pgk_dict[k]
 
 
 def patch_repodata(repodata, patches):
