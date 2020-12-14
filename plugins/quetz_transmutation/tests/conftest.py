@@ -1,0 +1,153 @@
+import uuid
+from pathlib import Path
+
+import pytest
+
+from quetz.authorization import SERVER_OWNER
+from quetz.config import Config
+from quetz.dao import Dao
+from quetz.db_models import Profile, User
+from quetz.rest_models import Channel, Package
+from quetz.tasks.workers import SubprocessWorker
+
+pytest_plugins = "quetz.testing.fixtures"
+
+
+@pytest.fixture
+def plugins():
+    # defines plugins to enable for testing
+    return ['quetz-transmutation']
+
+
+@pytest.fixture
+def user_role():
+    return SERVER_OWNER
+
+
+@pytest.fixture
+def user(db, user_role):
+
+    new_user = User(id=uuid.uuid4().bytes, username="bartosz", role=user_role)
+    profile = Profile(name="Bartosz", avatar_url="http:///avatar", user=new_user)
+    db.add(profile)
+    db.add(new_user)
+    db.commit()
+
+    yield new_user
+
+    db.delete(new_user)
+    db.commit()
+
+
+@pytest.fixture
+def auth_client(client, user):
+    """authenticated client"""
+    response = client.get(f"/api/dummylogin/{user.username}")
+    assert response.status_code == 200
+    return client
+
+
+@pytest.fixture
+def work_manager(config):
+    manager = SubprocessWorker("", {}, config)
+    return manager
+
+
+@pytest.fixture
+def package_name():
+    return "my-package"
+
+
+@pytest.fixture
+def channel_name():
+    return "my-channel"
+
+
+@pytest.fixture
+def package_version(
+    db,
+    user,
+    public_channel,
+    channel_name,
+    package_name,
+    public_package,
+    dao: Dao,
+    config: Config,
+):
+
+    pkgstore = config.get_package_store()
+    filename = Path("test-package-0.1-0.tar.bz2")
+    with open(filename, "rb") as fid:
+        pkgstore.add_file(fid.read(), channel_name, "linux-64" / filename)
+    package_format = "tarbz2"
+    package_info = "{}"
+    version = dao.create_version(
+        channel_name,
+        package_name,
+        package_format,
+        "linux-64",
+        "0.1",
+        0,
+        "",
+        str(filename),
+        package_info,
+        user.id,
+        size=11,
+    )
+
+    dao.update_channel_size(channel_name)
+    db.refresh(public_channel)
+
+    yield version
+
+    db.delete(version)
+    db.commit()
+
+
+@pytest.fixture
+def channel_role():
+    return "owner"
+
+
+@pytest.fixture
+def package_role():
+    return "owner"
+
+
+@pytest.fixture
+def public_channel(dao: Dao, user, channel_role, channel_name, db):
+
+    channel_data = Channel(name=channel_name, private=False)
+    channel = dao.create_channel(channel_data, user.id, channel_role)
+
+    yield channel
+    db.delete(channel)
+    db.commit()
+
+
+@pytest.fixture
+def public_package(db, user, public_channel, dao, package_role, package_name):
+
+    package_data = Package(name=package_name)
+
+    package = dao.create_package(
+        public_channel.name, package_data, user.id, package_role
+    )
+
+    yield package
+
+    db.delete(package)
+    db.commit()
+
+
+@pytest.fixture
+def auto_rollback():
+    # we are comparing database content across processes, so need to
+    # disable the rollback mechanism
+    return False
+
+
+@pytest.fixture
+def sqlite_in_memory():
+    # use sqlite on disk so that we can modify it in a different process
+    return False

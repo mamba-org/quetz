@@ -39,6 +39,9 @@ def run_tasks(db, manager):
             "build_string": task.package_version.build_string,
             "build_number": task.package_version.build_number,
             "size": task.package_version.size,
+            "package_name": task.package_version.package_name,
+            "info": task.package_version.info,
+            "uploader_id": task.package_version.uploader_id,
         }
         job = manager.execute(task.job.manifest, package_version=version_dict)
         _job_cache[task.id] = job

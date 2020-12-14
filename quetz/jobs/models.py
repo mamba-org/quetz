@@ -4,7 +4,7 @@ from enum import Enum
 import sqlalchemy as sa
 import sqlalchemy_utils as sau
 
-from quetz.db_models import UUID, Base, PackageVersion
+from quetz.db_models import UUID, Base
 
 
 class JobStatus(Enum):
@@ -39,7 +39,7 @@ class Job(Base):
     created = sa.Column(sa.DateTime, nullable=False, default=datetime.utcnow)
     updated = sa.Column(sa.DateTime, nullable=False, default=datetime.utcnow)
     manifest = sa.Column(sa.Unicode(16384), nullable=False)
-    owner_id = sa.Column(sa.Integer, sa.ForeignKey('users.id'), nullable=False)
+    owner_id = sa.Column(sa.Integer, sa.ForeignKey('users.id'), nullable=True)
     owner = sa.orm.relationship('User', backref=sa.orm.backref('jobs'))
     items = sa.Column(
         sau.ChoiceType(ItemsSelection, impl=sa.String()),
