@@ -1,8 +1,5 @@
-import quetz.database
-from quetz.config import Config
 from quetz.db_models import PackageVersion
 from quetz.jobs.models import ItemsSelection, Job, JobStatus, Task, TaskStatus
-from quetz.tasks.workers import SubprocessWorker
 
 # manager = RQManager("127.0.0.1", 6379, 0, "", {}, config)
 
@@ -63,6 +60,7 @@ def check_status(db):
                 )
                 _job_cache.pop(task.id)
 
+        # update jobs with all tasks finished
         (
             db.query(Job)
             .filter(Job.status == JobStatus.running)
@@ -71,16 +69,3 @@ def check_status(db):
         )
     finally:
         db.commit()
-
-
-if __name__ == "__main__":
-    import time
-
-    config = Config()
-    db = quetz.database.get_session(config.sqlalchemy_database_url)
-    manager = SubprocessWorker("", {}, config)
-    while True:
-        run_jobs(db)
-        run_tasks(db, manager)
-        check_status(db)
-        time.sleep(5)
