@@ -265,17 +265,28 @@ def initial_sync_mirror(
 
     force = True  # needed for updating packages
 
-    try:
-        repo_file = remote_repository.open(os.path.join(arch, "repodata.json"))
-        repodata = json.load(repo_file.file)
-    except RemoteServerError:
-        logger.error(f"can not get repodata.json for channel {channel_name}")
-        return
-    except json.JSONDecodeError:
-        logger.error(
-            f"repodata.json badly formatted for arch {arch} in channel {channel_name}"
-        )
-        return
+    for repodata_fn in ["repodata_from_packages.json", "repodata.json"]:
+        try:
+            repo_file = remote_repository.open(os.path.join(arch, repodata_fn))
+            repodata = json.load(repo_file.file)
+            break
+        except RemoteServerError:
+            logger.error(
+                f"can not get {repodata_fn} for channel {arch}/{channel_name}."
+            )
+            if repodata_fn == "repodata.json":
+                logger.error(f"Giving up for {channel_name}/{arch}.")
+                return
+            else:
+                logger.error("Trying next filename.")
+                continue
+        except json.JSONDecodeError:
+            logger.error(
+                f"repodata.json badly formatted for arch {arch}"
+                f"in channel {channel_name}"
+            )
+            if repodata_fn == "repodata.json":
+                return
 
     channel = dao.get_channel(channel_name)
 

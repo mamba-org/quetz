@@ -27,10 +27,11 @@ def update_dict(packages, instructions):
 
 
 def patch_repodata(repodata, patches):
+    remove_set = set(patches.get("remove", ()))
+    revoke_set = set(patches.get("revoke", ()))
+
     for key in ("packages", "packages.conda"):
         packages = repodata.get(key, {})
-        remove_set = set(patches.get("remove", ()))
-        revoke_set = set(patches.get("revoke", ()))
 
         # patch packages
         update_dict(packages, patches.get(key, {}))

@@ -598,12 +598,12 @@ def test_api_methods_for_mirror_channels(client, mirror_channel):
         # linux-64 subdir without packages
         (
             [b'{"subdirs": ["linux-64"]}', b'{"packages": {}}'],
-            ["channeldata.json", "linux-64/repodata.json"],
+            ["channeldata.json", "linux-64/repodata_from_packages.json"],
         ),
         # empty repodata
         (
             [b'{"subdirs": ["linux-64"]}', b"{}"],
-            ["channeldata.json", "linux-64/repodata.json"],
+            ["channeldata.json", "linux-64/repodata_from_packages.json"],
         ),
         # no subodirs
         ([b'{"subdirs": []}'], ["channeldata.json"]),
@@ -612,8 +612,8 @@ def test_api_methods_for_mirror_channels(client, mirror_channel):
             [b'{"subdirs": ["some-arch-1", "some-arch-2"]}', b"{}", b"{}"],
             [
                 "channeldata.json",
-                "some-arch-1/repodata.json",
-                "some-arch-2/repodata.json",
+                "some-arch-1/repodata_from_packages.json",
+                "some-arch-2/repodata_from_packages.json",
             ],
         ),
     ],
@@ -694,7 +694,7 @@ def test_wrong_package_format(client, dummy_repo, owner):
 
     assert dummy_repo == [
         "http://mirror3_host/channeldata.json",
-        "http://mirror3_host/linux-64/repodata.json",
+        "http://mirror3_host/linux-64/repodata_from_packages.json",
         "http://mirror3_host/linux-64/my_package-0.1.tar.bz",
     ]
 
@@ -815,8 +815,14 @@ def test_repo_without_channeldata(owner, client, dummy_repo, expected_archs):
 
     assert dummy_repo[0] == "http://mirror3_host/channeldata.json"
     for arch in expected_archs:
-        assert "http://mirror3_host/{}/repodata.json".format(arch) in dummy_repo
-    assert len(dummy_repo) == len(expected_archs) + 1
+        assert (
+            "http://mirror3_host/{}/repodata_from_packages.json".format(arch)
+            in dummy_repo
+        )
+    if expected_archs is KNOWN_SUBDIRS:
+        assert len(dummy_repo) == len(expected_archs) * 2 + 1
+    else:
+        assert len(dummy_repo) == len(expected_archs) * 1 + 1
 
     assert response.status_code == 201
 
