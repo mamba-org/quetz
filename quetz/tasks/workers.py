@@ -4,7 +4,7 @@ import inspect
 import logging
 import time
 from abc import abstractmethod
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 import requests
 from fastapi import BackgroundTasks
@@ -35,7 +35,9 @@ def prepare_arguments(func: Callable, **resources):
     return kwargs
 
 
-def job_wrapper(func, api_key, browser_session, config, **kwargs):
+def job_wrapper(
+    func: Union[Callable, bytes], api_key, browser_session, config, **kwargs
+):
 
     # database connections etc. are not serializable
     # so we need to recreate them in the process.
@@ -44,6 +46,7 @@ def job_wrapper(func, api_key, browser_session, config, **kwargs):
 
     import logging
     import os
+    import pickle
 
     from quetz.authorization import Rules
     from quetz.config import configure_logger
@@ -59,13 +62,15 @@ def job_wrapper(func, api_key, browser_session, config, **kwargs):
 
     configure_logger(config)
 
+    callable_f: Callable = pickle.loads(func) if isinstance(func, bytes) else func
+
     logger = logging.getLogger("quetz")
     logger.debug(
-        f"evaluating function {func} in a subprocess task with pid {os.getpid()}"
+        f"evaluating function {callable_f} in a subprocess task with pid {os.getpid()}"
     )
 
     extra_kwargs = prepare_arguments(
-        func,
+        callable_f,
         dao=dao,
         auth=auth,
         session=session,
@@ -75,7 +80,7 @@ def job_wrapper(func, api_key, browser_session, config, **kwargs):
 
     kwargs.update(extra_kwargs)
 
-    func(**kwargs)
+    callable_f(**kwargs)
 
 
 class AbstractWorker:
@@ -86,6 +91,15 @@ class AbstractWorker:
     @abstractmethod
     def wait(self):
         """wait for all jobs to finish"""
+
+
+class AbstractJob:
+    """Single job (function call)"""
+
+    @property
+    @abstractmethod
+    def done(self):
+        """job status"""
 
 
 class ThreadingWorker(AbstractWorker):
@@ -125,6 +139,28 @@ class ThreadingWorker(AbstractWorker):
         await self.background_tasks()
 
 
+class FutureJob(AbstractJob):
+    def __init__(self, future: concurrent.futures.Future):
+        self._future = future
+        self.status = "running"
+
+    @property
+    def done(self):
+        completed = self._future.done()
+        if completed:
+            if self._future.exception():
+                self.status = "failed"
+            else:
+                self.status = "success"
+        return completed
+
+    async def wait(self, waittime=0.1):
+        while not self.done:
+            asyncio.sleep(waittime)
+        if self.status == "failed":
+            raise self._future.exception()
+
+
 class SubprocessWorker(AbstractWorker):
 
     _executor: Optional[concurrent.futures.Executor] = None
@@ -149,6 +185,7 @@ class SubprocessWorker(AbstractWorker):
             *args,
             **kwargs,
         )
+        return FutureJob(self.future)
 
     async def wait(self):
         loop = asyncio.get_event_loop()

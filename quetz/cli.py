@@ -107,6 +107,11 @@ def _make_migrations(
         raise ValueError("provide either alembic_config or db_url")
 
     found = False
+
+    # import the extra models here to register them with sqlalchemy mapper
+    # so that it can create the tables
+    from quetz.jobs.models import Job, Task  # noqa
+
     for entry_point in pkg_resources.iter_entry_points('quetz.models'):
         logger.debug("loading plugin %r", entry_point.name)
         entry_point.load()
@@ -573,6 +578,31 @@ def plugin(
             exit(1)
     else:
         print(f"Command '{cmd}' not yet understood.")
+
+
+@app.command()
+def watch_job_queue(
+    path: str = typer.Argument(None, help="Path to the plugin folder")
+) -> NoReturn:
+    import time
+
+    from quetz.jobs.runner import check_status, run_jobs, run_tasks
+    from quetz.tasks.workers import SubprocessWorker
+
+    config_file = _get_config(path)
+
+    config = Config(config_file)
+    manager = SubprocessWorker("", {}, config)
+    with working_directory(path):
+        try:
+            db = get_session(config.sqlalchemy_database_url)
+            while True:
+                run_jobs(db)
+                run_tasks(db, manager)
+                check_status(db)
+                time.sleep(5)
+        finally:
+            db.close()
 
 
 if __name__ == "__main__":
