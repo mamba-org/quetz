@@ -14,7 +14,7 @@ async def test_transmutation_endpoint(
 ):
 
     async with AsyncClient(app=app, base_url="http://test") as ac:
-        response = await ac.get("/api/transmutation")
+        response = await ac.put("/api/transmutation", json={})
 
     assert response.status_code == 200
     run_jobs(db)
@@ -41,4 +41,30 @@ async def test_transmutation_endpoint(
         .filter(PackageVersion.package_format == 'conda')
         .one_or_none()
     )
+
     assert conda_version
+
+
+@pytest.mark.parametrize(
+    "spec,n_tasks",
+    [
+        ("my-package==0.1", 1),
+        ("my-package==0.2", 0),
+        ("my-package==0.1,my-package==0.2", 1),
+    ],
+)
+def test_package_specs(
+    auth_client, db, config, work_manager, package_version, spec, n_tasks
+):
+
+    response = auth_client.put("/api/transmutation", json={"package_spec": spec})
+
+    assert response.status_code == 200
+    run_jobs(db)
+    run_tasks(db, work_manager)
+
+    check_status(db)
+
+    n_created_task = db.query(Task).count()
+
+    assert n_created_task == n_tasks

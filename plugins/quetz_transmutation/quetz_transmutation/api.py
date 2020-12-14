@@ -12,6 +12,8 @@ from quetz.deps import get_db, get_rules
 from quetz.jobs.models import Job
 from quetz.pkgstores import PackageStore
 
+from .rest_models import PackageSpec
+
 router = APIRouter()
 
 
@@ -59,11 +61,17 @@ def transmutation(package_version: dict, config, pkgstore: PackageStore, dao: Da
 transmutation_serialized = pickle.dumps(transmutation)
 
 
-@router.get("/api/transmutation")
+@router.put("/api/transmutation")
 def put_transmutation(
-    db=Depends(get_db), auth: authorization.Rules = Depends(get_rules)
+    package_spec: PackageSpec,
+    db=Depends(get_db),
+    auth: authorization.Rules = Depends(get_rules),
 ):
     user = auth.get_user()
-    job = Job(owner_id=user, manifest=transmutation_serialized)
+    job = Job(
+        owner_id=user,
+        manifest=transmutation_serialized,
+        items_spec=package_spec.package_spec,
+    )
     db.add(job)
     db.commit()
