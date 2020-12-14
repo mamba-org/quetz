@@ -160,6 +160,10 @@ def func(package_version: dict, config: Config):
         fid.write("ok")
 
 
+def failed_func(package_version: dict):
+    raise Exception("some exception")
+
+
 @pytest.mark.asyncio
 async def test_create_job(config, db, user, package_version):
 
@@ -185,6 +189,28 @@ async def test_create_job(config, db, user, package_version):
     db.refresh(task)
     assert task.status == TaskStatus.success
     assert os.path.isfile("test-output.txt")
+
+    db.refresh(job)
+    assert job.status == JobStatus.success
+
+
+@pytest.mark.asyncio
+async def test_failed_task(config, db, user, package_version):
+
+    func_serialized = pickle.dumps(func)
+    job = Job(owner_id=user.id, manifest=func_serialized)
+    manager = SubprocessWorker("", {}, config)
+    db.add(job)
+    db.commit()
+    run_jobs(db)
+    new_jobs = run_tasks(db, manager)
+    task = db.query(Task).one()
+    await new_jobs[0].wait()
+
+    check_status(db)
+
+    db.refresh(task)
+    assert task.status == TaskStatus.failed
 
     db.refresh(job)
     assert job.status == JobStatus.success
