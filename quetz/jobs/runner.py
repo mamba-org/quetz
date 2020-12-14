@@ -17,31 +17,31 @@ def build_queue(job):
 
 
 def parse_conda_spec(conda_spec: str):
-    exprs_list = conda_spec.split(',')
+    pattern = r'(\w[^ =<>!~]+)([><!=~,\.0-9]+[0-9])?'
+    exprs_list = re.findall(pattern, conda_spec)
 
     package_specs = []
-    for package_spec in exprs_list:
-        # https://github.com/conda/conda/blob/aed799b56d9ee16a3653928527e2af6e41394e85/conda/models/match_spec.py#L681
-        m3 = re.match(r'([^ =<>!~]+)?([><!=~ ].+)?', package_spec)
-        if m3:
-            name, spec_str = m3.groups()
-        else:
-            raise ValueError("can not parse package version spec")
+    for name, versions in exprs_list:
+        version_spec = None
+        for spec_str in versions.split(','):
+            if spec_str.startswith("=="):
+                condition = ("eq", spec_str[2:])
+            elif spec_str.startswith(">="):
+                condition = ("gte", spec_str[2:])
+            elif spec_str.startswith("<="):
+                condition = ("lte", spec_str[2:])
+            elif spec_str.startswith(">"):
+                condition = ("gt", spec_str[1:])
+            elif spec_str.startswith("<"):
+                condition = ("lt", spec_str[1:])
+            else:
+                raise NotImplementedError("version operator not implemented")
+            if version_spec:
+                version_spec = ("and", version_spec, condition)
+            else:
+                version_spec = condition
 
-        if spec_str.startswith("=="):
-            condition = ("eq", spec_str[2:])
-        elif spec_str.startswith(">="):
-            condition = ("gte", spec_str[2:])
-        elif spec_str.startswith("<="):
-            condition = ("lte", spec_str[2:])
-        elif spec_str.startswith(">"):
-            condition = ("gt", spec_str[1:])
-        elif spec_str.startswith("<"):
-            condition = ("lt", spec_str[1:])
-        else:
-            raise NotImplementedError("version operator not implemented")
-
-        package_specs.append({"version": condition, "package_name": ("eq", name)})
+        package_specs.append({"version": version_spec, "package_name": ("eq", name)})
     return package_specs
 
 

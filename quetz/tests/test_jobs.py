@@ -261,6 +261,31 @@ def test_parse_conda_spec():
         {"version": ("gte", "0.1.2"), "package_name": ("eq", "my-package")},
     ]
 
+    dict_spec = parse_conda_spec("my-package-v2==0.1")
+    assert dict_spec == [
+        {"version": ("eq", "0.1"), "package_name": ("eq", "my-package-v2")},
+    ]
+
+    dict_spec = parse_conda_spec("my-package>=0.1.2,<0.2")
+    assert dict_spec == [
+        {
+            "version": ("and", ("gte", "0.1.2"), ("lt", "0.2")),
+            "package_name": ("eq", "my-package"),
+        },
+    ]
+
+    dict_spec = parse_conda_spec("my-package>=0.1.2,<0.2,other-package==1.1")
+    assert dict_spec == [
+        {
+            "version": ("and", ("gte", "0.1.2"), ("lt", "0.2")),
+            "package_name": ("eq", "my-package"),
+        },
+        {
+            "version": ("eq", "1.1"),
+            "package_name": ("eq", "other-package"),
+        },
+    ]
+
 
 @pytest.mark.parametrize(
     "spec,n_tasks",
