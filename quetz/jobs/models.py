@@ -2,7 +2,6 @@ from datetime import datetime
 from enum import Enum
 
 import sqlalchemy as sa
-import sqlalchemy_utils as sau
 
 from quetz.db_models import UUID, Base
 
@@ -42,7 +41,7 @@ class Job(Base):
     owner_id = sa.Column(sa.Integer, sa.ForeignKey('users.id'), nullable=True)
     owner = sa.orm.relationship('User', backref=sa.orm.backref('jobs'))
     items = sa.Column(
-        sau.ChoiceType(ItemsSelection, impl=sa.String()),
+        sa.Enum(ItemsSelection),
         nullable=False,
         default=ItemsSelection.all,
     )
@@ -53,7 +52,7 @@ class Job(Base):
     # tags = sa.Column(sa.String())
     # runner = sa.Column(sa.String)
     status = sa.Column(
-        sau.ChoiceType(JobStatus, impl=sa.String()),
+        sa.Enum(JobStatus),
         nullable=False,
         default=JobStatus.pending,
     )
@@ -67,7 +66,7 @@ class Task(Base):
     updated = sa.Column(sa.DateTime, nullable=False, default=datetime.utcnow)
     # name = sa.Column(sa.Unicode(256), nullable=False)
     status = sa.Column(
-        sau.ChoiceType(TaskStatus, impl=sa.String()),
+        sa.Enum(TaskStatus),
         nullable=False,
         default=TaskStatus.pending,
     )

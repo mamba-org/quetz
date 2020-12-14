@@ -154,7 +154,8 @@ async def test_failed_task(config, db, user, package_version):
     run_jobs(db)
     new_jobs = run_tasks(db, manager)
     task = db.query(Task).one()
-    await new_jobs[0].wait()
+    with pytest.raises(Exception, match="some exception"):
+        await new_jobs[0].wait()
 
     check_status(db)
 
