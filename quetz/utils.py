@@ -2,6 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import bz2
+import distutils
 import gzip
 import hashlib
 import secrets
@@ -92,8 +93,11 @@ def add_entry_for_index(files, subdir, fname, data_bytes):
     )
 
 
-def parse_query(query):
-    accepted_filters = ['channel', 'description', 'summary']
+def parse_query(search_type, query):
+    if search_type == 'package':
+        accepted_filters = ['channel', 'description', 'summary']
+    elif search_type == 'channel':
+        accepted_filters = ['description', 'private']
     query = unquote(query.strip())
 
     args = shlex.split(query)
@@ -122,14 +126,14 @@ def apply_custom_query(search_type, db, keywords, filters):
             negation_argument = keywords[i + 1]
             if search_type == 'package':
                 each_keyword_condition = Package.name.notlike(f'%{negation_argument}%')
-            elif search_type == '???':
-                pass
+            elif search_type == 'channel':
+                each_keyword_condition = Channel.name.notlike(f'%{negation_argument}%')
         else:
             if each_keyword != negation_argument:
                 if search_type == 'package':
                     each_keyword_condition = Package.name.ilike(f'%{each_keyword}%')
-                elif search_type == '???':
-                    pass
+                elif search_type == 'channel':
+                    each_keyword_condition = Channel.name.ilike(f'%{each_keyword}%')
         keyword_conditions.append(each_keyword_condition)
     query = db.filter(and_(*keyword_conditions))
 
@@ -149,9 +153,14 @@ def apply_custom_query(search_type, db, keywords, filters):
                     each_val_condition = Package.description.contains(each_val)
                 elif key == 'summary':
                     each_val_condition = Package.summary.contains(each_val)
-                each_filter_conditions.append(each_val_condition)
-            elif search_type == '???':
-                pass
+            elif search_type == 'channel':
+                if key == 'description':
+                    each_val_condition = Channel.description.contains(each_val)
+                elif key == 'private':
+                    each_val_condition = Channel.private.is_(
+                        bool(distutils.util.strtobool(each_val))
+                    )
+            each_filter_conditions.append(each_val_condition)
         if negate:
             query = query.filter(not_(or_(*each_filter_conditions)))
         else:

@@ -853,8 +853,21 @@ def search(
     auth: authorization.Rules = Depends(get_rules),
 ):
     user_id = auth.get_user()
-    keywords, filters = parse_query(q)
+    keywords, filters = parse_query('package', q)
     return dao.search_packages(keywords, filters, user_id)
+
+
+@api_router.get(
+    "/channels/search/", response_model=List[rest_models.ChannelSearch], tags=["search"]
+)
+def channel_search(
+    q: str,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    user_id = auth.get_user()
+    keywords, filters = parse_query('channel', q)
+    return dao.search_channels(keywords, filters, user_id)
 
 
 @api_router.get("/api-keys", response_model=List[rest_models.ApiKey], tags=["API keys"])

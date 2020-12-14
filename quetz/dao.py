@@ -191,6 +191,26 @@ class Dao:
 
         return query.all()
 
+    def search_channels(
+        self,
+        keywords: List[str],
+        filters: Optional[List[tuple]],
+        user_id: Optional[bytes],
+    ):
+        db = self.db.query(Channel)
+        query = apply_custom_query('channel', db, keywords, filters)
+        if user_id:
+            query = query.filter(
+                or_(
+                    Channel.private == False,  # noqa
+                    Channel.members.any(ChannelMember.user_id == user_id),
+                )
+            )
+        else:
+            query = query.filter(Channel.private == False)  # noqa
+
+        return query.all()
+
     def get_channel(self, channel_name: str):
         return self.db.query(Channel).filter(Channel.name == channel_name).one_or_none()
 
