@@ -7,7 +7,13 @@ import pytest
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.jobs.models import Job, JobStatus, Task, TaskStatus
-from quetz.jobs.runner import check_status, run_jobs, run_tasks
+from quetz.jobs.runner import (
+    check_status,
+    mk_sql_expr,
+    parse_conda_spec,
+    run_jobs,
+    run_tasks,
+)
 from quetz.rest_models import Channel, Package
 from quetz.tasks.workers import SubprocessWorker
 
@@ -164,3 +170,48 @@ async def test_failed_task(config, db, user, package_version):
 
     db.refresh(job)
     assert job.status == JobStatus.success
+
+
+def test_mk_query():
+    def compile(dict_spec):
+        s = mk_sql_expr(dict_spec)
+        sql_expr = str(s.compile(compile_kwargs={"literal_binds": True}))
+        return sql_expr
+
+    spec = [{"version": ("eq", "0.1"), "package_name": ("in", ["my-package"])}]
+    sql_expr = compile(spec)
+
+    assert sql_expr == (
+        "package_versions.version = '0.1' "
+        "AND package_versions.package_name IN ('my-package')"
+    )
+
+    spec = [{"version": ("lt", "0.2")}]
+    sql_expr = compile(spec)
+
+    assert sql_expr == "package_versions.version < '0.2'"
+
+    spec = [
+        {"version": ("lt", "0.2"), "package_name": ("eq", "my-package")},
+        {"version": ("gt", "0.3"), "package_name": ("eq", "other-package")},
+    ]
+    sql_expr = compile(spec)
+
+    assert sql_expr == (
+        "package_versions.version < '0.2' "
+        "AND package_versions.package_name = 'my-package' "
+        "OR package_versions.version > '0.3' "
+        "AND package_versions.package_name = 'other-package'"
+    )
+
+
+def test_parse_conda_spec():
+
+    dict_spec = parse_conda_spec("my-package==0.1.1")
+    assert dict_spec == [{"version": "0.1.1", "package_name": "my-package"}]
+
+    dict_spec = parse_conda_spec("my-package==0.1.2,other-package==0.5.1")
+    assert dict_spec == [
+        {"version": "0.1.2", "package_name": "my-package"},
+        {"version": "0.5.1", "package_name": "other-package"},
+    ]

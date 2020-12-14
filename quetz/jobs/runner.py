@@ -1,3 +1,5 @@
+import sqlalchemy as sa
+
 from quetz.db_models import PackageVersion
 from quetz.jobs.models import ItemsSelection, Job, JobStatus, Task, TaskStatus
 
@@ -9,6 +11,38 @@ _job_cache = {}
 
 def build_queue(job):
     job.status = JobStatus.queued
+
+
+def parse_conda_spec(conda_spec):
+    exprs_list = conda_spec.split(',')
+
+    package_specs = []
+    for package_spec in exprs_list:
+        package_name, version = package_spec.split("==")
+        package_specs.append({"version": version, "package_name": package_name})
+    return package_specs
+
+
+def mk_sql_expr(dict_spec):
+    or_elements = []
+    for el in dict_spec:
+        and_elements = []
+        for k, (op, v) in el.items():
+            column = getattr(PackageVersion, k)
+            if op == 'eq':
+                and_elements.append(column == v)
+            elif op == 'in':
+                and_elements.append(column.in_(v))
+            elif op == 'lt':
+                and_elements.append(column < v)
+            elif op == 'gt':
+                and_elements.append(column > v)
+            else:
+                raise NotImplementedError(f"operator '{op}' not known")
+        expr = sa.and_(*and_elements)
+        or_elements.append(expr)
+    sql_expr = sa.or_(*or_elements)
+    return sql_expr
 
 
 def run_jobs(db):
