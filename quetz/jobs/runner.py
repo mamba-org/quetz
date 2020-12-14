@@ -1,3 +1,4 @@
+import re
 from typing import Dict, List
 
 import sqlalchemy as sa
@@ -20,29 +21,64 @@ def parse_conda_spec(conda_spec: str):
 
     package_specs = []
     for package_spec in exprs_list:
-        package_name, version = package_spec.split("==")
-        package_specs.append(
-            {"version": ("eq", version), "package_name": ("eq", package_name)}
-        )
+        # https://github.com/conda/conda/blob/aed799b56d9ee16a3653928527e2af6e41394e85/conda/models/match_spec.py#L681
+        m3 = re.match(r'([^ =<>!~]+)?([><!=~ ].+)?', package_spec)
+        if m3:
+            name, spec_str = m3.groups()
+        else:
+            raise ValueError("can not parse package version spec")
+
+        if spec_str.startswith("=="):
+            condition = ("eq", spec_str[2:])
+        elif spec_str.startswith(">="):
+            condition = ("gte", spec_str[2:])
+        elif spec_str.startswith("<="):
+            condition = ("lte", spec_str[2:])
+        elif spec_str.startswith(">"):
+            condition = ("gt", spec_str[1:])
+        elif spec_str.startswith("<"):
+            condition = ("lt", spec_str[1:])
+        else:
+            raise NotImplementedError("version operator not implemented")
+
+        package_specs.append({"version": condition, "package_name": ("eq", name)})
     return package_specs
 
 
 def mk_sql_expr(dict_spec: List[Dict]):
+    def _make_op(column, expr):
+        op = expr[0]
+        v = expr[1:]
+        if op == 'eq':
+            return column == v[0]
+        elif op == 'in':
+            return column.in_(v[0])
+        elif op == 'lt':
+            return column < v[0]
+        elif op == 'gt':
+            return column > v[0]
+        elif op == 'gte':
+            return column >= v[0]
+        elif op == 'lte':
+            return column <= v[0]
+        elif op == "and":
+            left = _make_op(column, v[0])
+            right = _make_op(column, v[1])
+            return sa.and_(left, right)
+        elif op == "or":
+            left = _make_op(column, v[0])
+            right = _make_op(column, v[1])
+            return sa.or_(left, right)
+        else:
+            raise NotImplementedError(f"operator '{op}' not known")
+
     or_elements = []
     for el in dict_spec:
         and_elements = []
-        for k, (op, v) in el.items():
+        for k, expr in el.items():
             column = getattr(PackageVersion, k)
-            if op == 'eq':
-                and_elements.append(column == v)
-            elif op == 'in':
-                and_elements.append(column.in_(v))
-            elif op == 'lt':
-                and_elements.append(column < v)
-            elif op == 'gt':
-                and_elements.append(column > v)
-            else:
-                raise NotImplementedError(f"operator '{op}' not known")
+            and_elements.append(_make_op(column, expr))
+
         expr = sa.and_(*and_elements)
         or_elements.append(expr)
     sql_expr = sa.or_(*or_elements)

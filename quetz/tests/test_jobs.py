@@ -191,6 +191,16 @@ def test_mk_query():
 
     assert sql_expr == "package_versions.version < '0.2'"
 
+    spec = [{"version": ("lte", "0.2")}]
+    sql_expr = compile(spec)
+
+    assert sql_expr == "package_versions.version <= '0.2'"
+
+    spec = [{"version": ("gte", "0.3")}]
+    sql_expr = compile(spec)
+
+    assert sql_expr == "package_versions.version >= '0.3'"
+
     spec = [
         {"version": ("lt", "0.2"), "package_name": ("eq", "my-package")},
         {"version": ("gt", "0.3"), "package_name": ("eq", "other-package")},
@@ -202,6 +212,25 @@ def test_mk_query():
         "AND package_versions.package_name = 'my-package' "
         "OR package_versions.version > '0.3' "
         "AND package_versions.package_name = 'other-package'"
+    )
+
+    spec = [
+        {"version": ("and", ("lt", "0.2"), ("gt", "0.1"))},
+    ]
+    sql_expr = compile(spec)
+
+    assert sql_expr == (
+        "package_versions.version < '0.2'" " AND package_versions.version > '0.1'"
+    )
+
+    spec = [
+        {"version": ("or", ("and", ("lt", "0.2"), ("gt", "0.1")), ("gt", "0.3"))},
+    ]
+    sql_expr = compile(spec)
+    assert sql_expr == (
+        "package_versions.version < '0.2'"
+        " AND package_versions.version > '0.1'"
+        " OR package_versions.version > '0.3'"
     )
 
 
@@ -216,6 +245,20 @@ def test_parse_conda_spec():
     assert dict_spec == [
         {"version": ("eq", "0.1.2"), "package_name": ("eq", "my-package")},
         {"version": ("eq", "0.5.1"), "package_name": ("eq", "other-package")},
+    ]
+    dict_spec = parse_conda_spec("my-package>0.1.2")
+    assert dict_spec == [
+        {"version": ("gt", "0.1.2"), "package_name": ("eq", "my-package")},
+    ]
+
+    dict_spec = parse_conda_spec("my-package<0.1.2")
+    assert dict_spec == [
+        {"version": ("lt", "0.1.2"), "package_name": ("eq", "my-package")},
+    ]
+
+    dict_spec = parse_conda_spec("my-package>=0.1.2")
+    assert dict_spec == [
+        {"version": ("gte", "0.1.2"), "package_name": ("eq", "my-package")},
     ]
 
 
