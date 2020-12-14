@@ -40,6 +40,7 @@ class Job(Base):
     manifest = sa.Column(sa.Binary(), nullable=False)
     owner_id = sa.Column(UUID, sa.ForeignKey('users.id'), nullable=True)
     owner = sa.orm.relationship('User', backref=sa.orm.backref('jobs'))
+    items_spec = sa.Column(sa.String(), nullable=True)
     items = sa.Column(
         sa.Enum(ItemsSelection),
         nullable=False,

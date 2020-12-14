@@ -7,7 +7,13 @@ import pytest
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.jobs.models import Job, JobStatus, Task, TaskStatus
-from quetz.jobs.runner import check_status, run_jobs, run_tasks
+from quetz.jobs.runner import (
+    check_status,
+    mk_sql_expr,
+    parse_conda_spec,
+    run_jobs,
+    run_tasks,
+)
 from quetz.rest_models import Channel, Package
 from quetz.tasks.workers import SubprocessWorker
 
@@ -164,3 +170,145 @@ async def test_failed_task(config, db, user, package_version):
 
     db.refresh(job)
     assert job.status == JobStatus.success
+
+
+def test_mk_query():
+    def compile(dict_spec):
+        s = mk_sql_expr(dict_spec)
+        sql_expr = str(s.compile(compile_kwargs={"literal_binds": True}))
+        return sql_expr
+
+    spec = [{"version": ("eq", "0.1"), "package_name": ("in", ["my-package"])}]
+    sql_expr = compile(spec)
+
+    assert sql_expr == (
+        "package_versions.version = '0.1' "
+        "AND package_versions.package_name IN ('my-package')"
+    )
+
+    spec = [{"version": ("lt", "0.2")}]
+    sql_expr = compile(spec)
+
+    assert sql_expr == "package_versions.version < '0.2'"
+
+    spec = [{"version": ("lte", "0.2")}]
+    sql_expr = compile(spec)
+
+    assert sql_expr == "package_versions.version <= '0.2'"
+
+    spec = [{"version": ("gte", "0.3")}]
+    sql_expr = compile(spec)
+
+    assert sql_expr == "package_versions.version >= '0.3'"
+
+    spec = [
+        {"version": ("lt", "0.2"), "package_name": ("eq", "my-package")},
+        {"version": ("gt", "0.3"), "package_name": ("eq", "other-package")},
+    ]
+    sql_expr = compile(spec)
+
+    assert sql_expr == (
+        "package_versions.version < '0.2' "
+        "AND package_versions.package_name = 'my-package' "
+        "OR package_versions.version > '0.3' "
+        "AND package_versions.package_name = 'other-package'"
+    )
+
+    spec = [
+        {"version": ("and", ("lt", "0.2"), ("gt", "0.1"))},
+    ]
+    sql_expr = compile(spec)
+
+    assert sql_expr == (
+        "package_versions.version < '0.2'" " AND package_versions.version > '0.1'"
+    )
+
+    spec = [
+        {"version": ("or", ("and", ("lt", "0.2"), ("gt", "0.1")), ("gt", "0.3"))},
+    ]
+    sql_expr = compile(spec)
+    assert sql_expr == (
+        "package_versions.version < '0.2'"
+        " AND package_versions.version > '0.1'"
+        " OR package_versions.version > '0.3'"
+    )
+
+
+def test_parse_conda_spec():
+
+    dict_spec = parse_conda_spec("my-package==0.1.1")
+    assert dict_spec == [
+        {"version": ("eq", "0.1.1"), "package_name": ("eq", "my-package")}
+    ]
+
+    dict_spec = parse_conda_spec("my-package==0.1.2,other-package==0.5.1")
+    assert dict_spec == [
+        {"version": ("eq", "0.1.2"), "package_name": ("eq", "my-package")},
+        {"version": ("eq", "0.5.1"), "package_name": ("eq", "other-package")},
+    ]
+    dict_spec = parse_conda_spec("my-package>0.1.2")
+    assert dict_spec == [
+        {"version": ("gt", "0.1.2"), "package_name": ("eq", "my-package")},
+    ]
+
+    dict_spec = parse_conda_spec("my-package<0.1.2")
+    assert dict_spec == [
+        {"version": ("lt", "0.1.2"), "package_name": ("eq", "my-package")},
+    ]
+
+    dict_spec = parse_conda_spec("my-package>=0.1.2")
+    assert dict_spec == [
+        {"version": ("gte", "0.1.2"), "package_name": ("eq", "my-package")},
+    ]
+
+    dict_spec = parse_conda_spec("my-package-v2==0.1")
+    assert dict_spec == [
+        {"version": ("eq", "0.1"), "package_name": ("eq", "my-package-v2")},
+    ]
+
+    dict_spec = parse_conda_spec("my-package>=0.1.2,<0.2")
+    assert dict_spec == [
+        {
+            "version": ("and", ("gte", "0.1.2"), ("lt", "0.2")),
+            "package_name": ("eq", "my-package"),
+        },
+    ]
+
+    dict_spec = parse_conda_spec("my-package>=0.1.2,<0.2,other-package==1.1")
+    assert dict_spec == [
+        {
+            "version": ("and", ("gte", "0.1.2"), ("lt", "0.2")),
+            "package_name": ("eq", "my-package"),
+        },
+        {
+            "version": ("eq", "1.1"),
+            "package_name": ("eq", "other-package"),
+        },
+    ]
+
+
+@pytest.mark.parametrize(
+    "spec,n_tasks",
+    [
+        ("my-package==0.1", 1),
+        ("my-package==0.2", 0),
+        ("my-package==0.1,my-package==0.2", 1),
+    ],
+)
+def test_filter_versions(config, db, user, package_version, spec, n_tasks):
+
+    func_serialized = pickle.dumps(func)
+    job = Job(
+        owner_id=user.id,
+        manifest=func_serialized,
+        items_spec=spec,
+    )
+    manager = SubprocessWorker("", {}, config)
+    db.add(job)
+    db.commit()
+    run_jobs(db)
+    run_tasks(db, manager)
+    db.refresh(job)
+    n_created_tasks = db.query(Task).count()
+
+    assert n_created_tasks == n_tasks

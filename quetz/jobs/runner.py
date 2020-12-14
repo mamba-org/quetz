@@ -1,3 +1,8 @@
+import re
+from typing import Dict, List
+
+import sqlalchemy as sa
+
 from quetz.db_models import PackageVersion
 from quetz.jobs.models import ItemsSelection, Job, JobStatus, Task, TaskStatus
 
@@ -11,11 +16,90 @@ def build_queue(job):
     job.status = JobStatus.queued
 
 
+def parse_conda_spec(conda_spec: str):
+    pattern = r'(\w[^ =<>!~]+)([><!=~,\.0-9]+[0-9])?'
+    exprs_list = re.findall(pattern, conda_spec)
+
+    package_specs = []
+    for name, versions in exprs_list:
+        version_spec = None
+        for spec_str in versions.split(','):
+            if spec_str.startswith("=="):
+                condition = ("eq", spec_str[2:])
+            elif spec_str.startswith(">="):
+                condition = ("gte", spec_str[2:])
+            elif spec_str.startswith("<="):
+                condition = ("lte", spec_str[2:])
+            elif spec_str.startswith(">"):
+                condition = ("gt", spec_str[1:])
+            elif spec_str.startswith("<"):
+                condition = ("lt", spec_str[1:])
+            else:
+                raise NotImplementedError("version operator not implemented")
+            if version_spec:
+                version_spec = ("and", version_spec, condition)
+            else:
+                version_spec = condition
+
+        package_specs.append({"version": version_spec, "package_name": ("eq", name)})
+    return package_specs
+
+
+def mk_sql_expr(dict_spec: List[Dict]):
+    def _make_op(column, expr):
+        op = expr[0]
+        v = expr[1:]
+        if op == 'eq':
+            return column == v[0]
+        elif op == 'in':
+            return column.in_(v[0])
+        elif op == 'lt':
+            return column < v[0]
+        elif op == 'gt':
+            return column > v[0]
+        elif op == 'gte':
+            return column >= v[0]
+        elif op == 'lte':
+            return column <= v[0]
+        elif op == "and":
+            left = _make_op(column, v[0])
+            right = _make_op(column, v[1])
+            return sa.and_(left, right)
+        elif op == "or":
+            left = _make_op(column, v[0])
+            right = _make_op(column, v[1])
+            return sa.or_(left, right)
+        else:
+            raise NotImplementedError(f"operator '{op}' not known")
+
+    or_elements = []
+    for el in dict_spec:
+        and_elements = []
+        for k, expr in el.items():
+            column = getattr(PackageVersion, k)
+            and_elements.append(_make_op(column, expr))
+
+        expr = sa.and_(*and_elements)
+        or_elements.append(expr)
+    sql_expr = sa.or_(*or_elements)
+    return sql_expr
+
+
+def build_sql_from_package_spec(selector: str):
+    dict_spec = parse_conda_spec(selector)
+    sql_expr = mk_sql_expr(dict_spec)
+    return sql_expr
+
+
 def run_jobs(db):
     for job in db.query(Job).filter(Job.status == JobStatus.pending):
         job.status = JobStatus.running
         if job.items == ItemsSelection.all:
-            for version in db.query(PackageVersion):
+            q = db.query(PackageVersion)
+            if job.items_spec:
+                filter_expr = build_sql_from_package_spec(job.items_spec)
+                q = q.filter(filter_expr)
+            for version in q:
                 task = Task(job=job, package_version=version)
                 db.add(task)
     db.commit()

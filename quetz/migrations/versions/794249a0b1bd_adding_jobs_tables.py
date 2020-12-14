@@ -24,6 +24,7 @@ def upgrade():
         sa.Column('updated', sa.DateTime(), nullable=False),
         sa.Column('manifest', sa.Binary(), nullable=False),
         sa.Column('owner_id', sa.LargeBinary(length=16), nullable=True),
+        sa.Column("items_spec", sa.String(), nullable=True),
         sa.Column(
             'items',
             sa.Enum('watch', 'watch_for', 'all', 'list', name='itemsselection'),
