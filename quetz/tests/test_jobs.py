@@ -208,10 +208,39 @@ def test_mk_query():
 def test_parse_conda_spec():
 
     dict_spec = parse_conda_spec("my-package==0.1.1")
-    assert dict_spec == [{"version": "0.1.1", "package_name": "my-package"}]
+    assert dict_spec == [
+        {"version": ("eq", "0.1.1"), "package_name": ("eq", "my-package")}
+    ]
 
     dict_spec = parse_conda_spec("my-package==0.1.2,other-package==0.5.1")
     assert dict_spec == [
-        {"version": "0.1.2", "package_name": "my-package"},
-        {"version": "0.5.1", "package_name": "other-package"},
+        {"version": ("eq", "0.1.2"), "package_name": ("eq", "my-package")},
+        {"version": ("eq", "0.5.1"), "package_name": ("eq", "other-package")},
     ]
+
+
+@pytest.mark.parametrize(
+    "spec,n_tasks",
+    [
+        ("my-package==0.1", 1),
+        ("my-package==0.2", 0),
+        ("my-package==0.1,my-package==0.2", 1),
+    ],
+)
+def test_filter_versions(config, db, user, package_version, spec, n_tasks):
+
+    func_serialized = pickle.dumps(func)
+    job = Job(
+        owner_id=user.id,
+        manifest=func_serialized,
+        items_spec=spec,
+    )
+    manager = SubprocessWorker("", {}, config)
+    db.add(job)
+    db.commit()
+    run_jobs(db)
+    run_tasks(db, manager)
+    db.refresh(job)
+    n_created_tasks = db.query(Task).count()
+
+    assert n_created_tasks == n_tasks

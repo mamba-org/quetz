@@ -1,3 +1,5 @@
+from typing import Dict, List
+
 import sqlalchemy as sa
 
 from quetz.db_models import PackageVersion
@@ -13,17 +15,19 @@ def build_queue(job):
     job.status = JobStatus.queued
 
 
-def parse_conda_spec(conda_spec):
+def parse_conda_spec(conda_spec: str):
     exprs_list = conda_spec.split(',')
 
     package_specs = []
     for package_spec in exprs_list:
         package_name, version = package_spec.split("==")
-        package_specs.append({"version": version, "package_name": package_name})
+        package_specs.append(
+            {"version": ("eq", version), "package_name": ("eq", package_name)}
+        )
     return package_specs
 
 
-def mk_sql_expr(dict_spec):
+def mk_sql_expr(dict_spec: List[Dict]):
     or_elements = []
     for el in dict_spec:
         and_elements = []
@@ -45,11 +49,21 @@ def mk_sql_expr(dict_spec):
     return sql_expr
 
 
+def build_sql_from_package_spec(selector: str):
+    dict_spec = parse_conda_spec(selector)
+    sql_expr = mk_sql_expr(dict_spec)
+    return sql_expr
+
+
 def run_jobs(db):
     for job in db.query(Job).filter(Job.status == JobStatus.pending):
         job.status = JobStatus.running
         if job.items == ItemsSelection.all:
-            for version in db.query(PackageVersion):
+            q = db.query(PackageVersion)
+            if job.items_spec:
+                filter_expr = build_sql_from_package_spec(job.items_spec)
+                q = q.filter(filter_expr)
+            for version in q:
                 task = Task(job=job, package_version=version)
                 db.add(task)
     db.commit()
