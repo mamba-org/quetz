@@ -62,16 +62,15 @@ def job_wrapper(
 
     configure_logger(config)
 
+    callable_f: Callable = pickle.loads(func) if isinstance(func, bytes) else func
+
     logger = logging.getLogger("quetz")
     logger.debug(
-        f"evaluating function {func} in a subprocess task with pid {os.getpid()}"
+        f"evaluating function {callable_f} in a subprocess task with pid {os.getpid()}"
     )
 
-    if isinstance(func, bytes):
-        func = pickle.loads(func)
-
     extra_kwargs = prepare_arguments(
-        func,
+        callable_f,
         dao=dao,
         auth=auth,
         session=session,
@@ -81,7 +80,7 @@ def job_wrapper(
 
     kwargs.update(extra_kwargs)
 
-    func(**kwargs)
+    callable_f(**kwargs)
 
 
 class AbstractWorker:
@@ -158,7 +157,7 @@ class FutureJob(AbstractJob):
     async def wait(self, waittime=0.1):
         while not self.done:
             asyncio.sleep(waittime)
-        if self.status == 'failed':
+        if self.status == "failed":
             raise self._future.exception()
 
 
