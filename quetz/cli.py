@@ -107,6 +107,11 @@ def _make_migrations(
         raise ValueError("provide either alembic_config or db_url")
 
     found = False
+
+    # import the extra models here to register them with sqlalchemy mapper
+    # so that it can create the tables
+    from quetz.jobs.models import Job, Task  # noqa
+
     for entry_point in pkg_resources.iter_entry_points('quetz.models'):
         logger.debug("loading plugin %r", entry_point.name)
         entry_point.load()
