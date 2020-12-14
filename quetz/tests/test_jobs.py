@@ -1,3 +1,5 @@
+import os
+import pickle
 from pathlib import Path
 
 import pytest
@@ -153,13 +155,13 @@ def test_create_task(config, db, user, package_version):
     db.commit()
 
 
-def func(package_version: dict):
-    pass
+def func(package_version: dict, config: Config):
+    with open("test-output.txt", "w") as fid:
+        fid.write("ok")
 
 
 @pytest.mark.asyncio
 async def test_create_job(config, db, user, package_version):
-    import pickle
 
     func_serialized = pickle.dumps(func)
     job = Job(owner_id=user.id, manifest=func_serialized)
@@ -168,19 +170,21 @@ async def test_create_job(config, db, user, package_version):
     db.commit()
     run_jobs(db)
     new_jobs = run_tasks(db, manager)
-    jobs = db.query(Job).all()
-    tasks = db.query(Task).all()
+    db.refresh(job)
+    task = db.query(Task).one()
 
-    assert len(jobs) == 1
-    assert jobs[0].status == JobStatus.running
+    assert job.status == JobStatus.running
 
-    assert len(tasks) == 1
-    assert tasks[0].status == TaskStatus.running
+    assert task.status == TaskStatus.running
 
     # wait for job to finish
     await new_jobs[0].wait()
 
     check_status(db)
 
-    tasks = db.query(Task).all()
-    assert tasks[0].status == TaskStatus.success
+    db.refresh(task)
+    assert task.status == TaskStatus.success
+    assert os.path.isfile("test-output.txt")
+
+    db.refresh(job)
+    assert job.status == JobStatus.success

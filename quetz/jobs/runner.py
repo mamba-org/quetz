@@ -1,5 +1,3 @@
-from typing import Optional
-
 import quetz.database
 from quetz.config import Config
 from quetz.db_models import PackageVersion
@@ -26,26 +24,27 @@ def run_jobs(db):
     db.commit()
 
 
-def function(manifest: str = "", package_version: Optional[dict] = None):
-    import pickle
-
-    func = pickle.loads(manifest)
-    func(package_version)
-
-
 def run_tasks(db, manager):
 
     tasks = db.query(Task).filter(Task.status == TaskStatus.pending)
     task: Task
     jobs = []
     for task in tasks:
-        version_dict = {"filename": task.package_version.filename}
-        job = manager.execute(
-            function, manifest=task.job.manifest, package_version=version_dict
-        )
+        version_dict = {
+            "filename": task.package_version.filename,
+            "channel_name": task.package_version.channel_name,
+            "package_format": task.package_version.package_format,
+            "platform": task.package_version.platform,
+            "version": task.package_version.version,
+            "build_string": task.package_version.build_string,
+            "build_number": task.package_version.build_number,
+            "size": task.package_version.size,
+        }
+        job = manager.execute(task.job.manifest, package_version=version_dict)
         _job_cache[task.id] = job
         jobs.append(job)
         task.status = TaskStatus.running
+        task.job.status = JobStatus.running
     db.commit()
     return jobs
 
@@ -58,6 +57,13 @@ def check_status(db):
             if job.done:
                 task.status = TaskStatus.success
                 _job_cache.pop(task.id)
+
+        (
+            db.query(Job)
+            .filter(Job.status == JobStatus.running)
+            .filter(~Job.tasks.any(Task.status == TaskStatus.running))
+            .update({"status": JobStatus.success}, synchronize_session=False)
+        )
     finally:
         db.commit()
 

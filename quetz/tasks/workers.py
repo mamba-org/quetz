@@ -4,7 +4,7 @@ import inspect
 import logging
 import time
 from abc import abstractmethod
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 import requests
 from fastapi import BackgroundTasks
@@ -35,7 +35,9 @@ def prepare_arguments(func: Callable, **resources):
     return kwargs
 
 
-def job_wrapper(func, api_key, browser_session, config, **kwargs):
+def job_wrapper(
+    func: Union[Callable, bytes], api_key, browser_session, config, **kwargs
+):
 
     # database connections etc. are not serializable
     # so we need to recreate them in the process.
@@ -44,6 +46,7 @@ def job_wrapper(func, api_key, browser_session, config, **kwargs):
 
     import logging
     import os
+    import pickle
 
     from quetz.authorization import Rules
     from quetz.config import configure_logger
@@ -63,6 +66,9 @@ def job_wrapper(func, api_key, browser_session, config, **kwargs):
     logger.debug(
         f"evaluating function {func} in a subprocess task with pid {os.getpid()}"
     )
+
+    if isinstance(func, bytes):
+        func = pickle.loads(func)
 
     extra_kwargs = prepare_arguments(
         func,
