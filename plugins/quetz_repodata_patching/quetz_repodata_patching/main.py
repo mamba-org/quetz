@@ -116,6 +116,7 @@ def post_package_indexing(
             .filter(
                 PackageVersion.channel_name == channel_name,
                 PackageVersion.package_name == f"{channel_name}-repodata-patches",
+                PackageVersion.version_order == 0,  # newest patch package
             )
             .order_by(PackageVersion.version.desc())
         )
