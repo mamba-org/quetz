@@ -15,7 +15,7 @@ from urllib.parse import unquote
 
 from sqlalchemy import and_, not_, or_
 
-from .db_models import Channel, Package
+from .db_models import Channel, Package, PackageVersion
 
 
 def add_static_file(contents, channel_name, subdir, fname, pkgstore, file_index=None):
@@ -95,7 +95,14 @@ def add_entry_for_index(files, subdir, fname, data_bytes):
 
 def parse_query(search_type, query):
     if search_type == 'package':
-        accepted_filters = ['channel', 'description', 'summary']
+        accepted_filters = [
+            'channel',
+            'description',
+            'summary',
+            'format',
+            'platform',
+            'version',
+        ]
     elif search_type == 'channel':
         accepted_filters = ['description', 'private']
     query = unquote(query.strip())
@@ -153,6 +160,14 @@ def apply_custom_query(search_type, db, keywords, filters):
                     each_val_condition = Package.description.contains(each_val)
                 elif key == 'summary':
                     each_val_condition = Package.summary.contains(each_val)
+                elif key == 'format':
+                    each_val_condition = PackageVersion.package_format.ilike(
+                        f'%{each_val}%'
+                    )
+                elif key == 'platform':
+                    each_val_condition = PackageVersion.platform.ilike(f'%{each_val}%')
+                elif key == 'version':
+                    each_val_condition = PackageVersion.version.ilike(f'%{each_val}%')
             elif search_type == 'channel':
                 if key == 'description':
                     each_val_condition = Channel.description.contains(each_val)
