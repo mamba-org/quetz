@@ -55,7 +55,9 @@ def check_status(db):
         for task in tasks:
             job = _job_cache[task.id]
             if job.done:
-                task.status = TaskStatus.success
+                task.status = (
+                    TaskStatus.success if job.status == 'success' else TaskStatus.failed
+                )
                 _job_cache.pop(task.id)
 
         (

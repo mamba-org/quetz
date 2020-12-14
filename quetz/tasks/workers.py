@@ -143,14 +143,21 @@ class ThreadingWorker(AbstractWorker):
 class FutureJob(AbstractJob):
     def __init__(self, future: concurrent.futures.Future):
         self._future = future
+        self.status = "running"
 
     @property
     def done(self):
-        return self._future.done()
+        completed = self._future.done()
+        if completed:
+            if self._future.exception():
+                self.status = "failed"
+            else:
+                self.status = "success"
+        return completed
 
-    async def wait(self):
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self._future.result)
+    async def wait(self, waittime=0.1):
+        while not self.done:
+            asyncio.sleep(waittime)
 
 
 class SubprocessWorker(AbstractWorker):

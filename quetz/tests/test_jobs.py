@@ -197,7 +197,7 @@ async def test_create_job(config, db, user, package_version):
 @pytest.mark.asyncio
 async def test_failed_task(config, db, user, package_version):
 
-    func_serialized = pickle.dumps(func)
+    func_serialized = pickle.dumps(failed_func)
     job = Job(owner_id=user.id, manifest=func_serialized)
     manager = SubprocessWorker("", {}, config)
     db.add(job)
