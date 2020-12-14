@@ -37,8 +37,8 @@ class Job(Base):
     id = sa.Column(sa.Integer, primary_key=True)
     created = sa.Column(sa.DateTime, nullable=False, default=datetime.utcnow)
     updated = sa.Column(sa.DateTime, nullable=False, default=datetime.utcnow)
-    manifest = sa.Column(sa.Unicode(16384), nullable=False)
-    owner_id = sa.Column(sa.Integer, sa.ForeignKey('users.id'), nullable=True)
+    manifest = sa.Column(sa.Binary(), nullable=False)
+    owner_id = sa.Column(UUID, sa.ForeignKey('users.id'), nullable=True)
     owner = sa.orm.relationship('User', backref=sa.orm.backref('jobs'))
     items = sa.Column(
         sa.Enum(ItemsSelection),

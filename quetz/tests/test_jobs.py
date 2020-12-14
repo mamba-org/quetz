@@ -97,7 +97,7 @@ def public_package(db, user, public_channel, dao, package_role, package_name):
 
 
 def test_create_task(config, db, user, package_version):
-    job = Job(owner_id=user.id, manifest="")
+    job = Job(owner_id=user.id, manifest=b"")
     task = Task(job=job)
     db.add(job)
     db.add(task)
