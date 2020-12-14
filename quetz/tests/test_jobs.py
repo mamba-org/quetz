@@ -4,8 +4,8 @@ import pytest
 
 from quetz.config import Config
 from quetz.dao import Dao
-from quetz.jobs.models import Job, JobStatus, Task
-from quetz.jobs.runner import run_jobs, run_tasks
+from quetz.jobs.models import Job, JobStatus, Task, TaskStatus
+from quetz.jobs.runner import check_status, run_jobs, run_tasks
 from quetz.rest_models import Channel, Package
 from quetz.tasks.workers import SubprocessWorker
 
@@ -167,7 +167,7 @@ async def test_create_job(config, db, user, package_version):
     db.add(job)
     db.commit()
     run_jobs(db)
-    await run_tasks(db, manager)
+    new_jobs = run_tasks(db, manager)
     jobs = db.query(Job).all()
     tasks = db.query(Task).all()
 
@@ -175,3 +175,12 @@ async def test_create_job(config, db, user, package_version):
     assert jobs[0].status == JobStatus.running
 
     assert len(tasks) == 1
+    assert tasks[0].status == TaskStatus.running
+
+    # wait for job to finish
+    await new_jobs[0].wait()
+
+    check_status(db)
+
+    tasks = db.query(Task).all()
+    assert tasks[0].status == TaskStatus.success

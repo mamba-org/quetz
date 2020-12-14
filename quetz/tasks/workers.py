@@ -88,6 +88,15 @@ class AbstractWorker:
         """wait for all jobs to finish"""
 
 
+class AbstractJob:
+    """Single job (function call)"""
+
+    @property
+    @abstractmethod
+    def done(self):
+        """job status"""
+
+
 class ThreadingWorker(AbstractWorker):
     def __init__(
         self,
@@ -125,6 +134,19 @@ class ThreadingWorker(AbstractWorker):
         await self.background_tasks()
 
 
+class FutureJob(AbstractJob):
+    def __init__(self, future: concurrent.futures.Future):
+        self._future = future
+
+    @property
+    def done(self):
+        return self._future.done()
+
+    async def wait(self):
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self._future.result)
+
+
 class SubprocessWorker(AbstractWorker):
 
     _executor: Optional[concurrent.futures.Executor] = None
@@ -149,6 +171,7 @@ class SubprocessWorker(AbstractWorker):
             *args,
             **kwargs,
         )
+        return FutureJob(self.future)
 
     async def wait(self):
         loop = asyncio.get_event_loop()

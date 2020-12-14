@@ -9,6 +9,9 @@ from quetz.tasks.workers import SubprocessWorker
 # manager = RQManager("127.0.0.1", 6379, 0, "", {}, config)
 
 
+_job_cache = {}
+
+
 def build_queue(job):
     job.status = JobStatus.queued
 
@@ -30,15 +33,33 @@ def function(manifest: str = "", package_version: Optional[dict] = None):
     func(package_version)
 
 
-async def run_tasks(db, manager):
+def run_tasks(db, manager):
 
     tasks = db.query(Task).filter(Task.status == TaskStatus.pending)
+    task: Task
+    jobs = []
     for task in tasks:
         version_dict = {"filename": task.package_version.filename}
-        manager.execute(
+        job = manager.execute(
             function, manifest=task.job.manifest, package_version=version_dict
         )
-        await manager.wait()
+        _job_cache[task.id] = job
+        jobs.append(job)
+        task.status = TaskStatus.running
+    db.commit()
+    return jobs
+
+
+def check_status(db):
+    tasks = db.query(Task).filter(Task.status == TaskStatus.running)
+    try:
+        for task in tasks:
+            job = _job_cache[task.id]
+            if job.done:
+                task.status = TaskStatus.success
+                _job_cache.pop(task.id)
+    finally:
+        db.commit()
 
 
 if __name__ == "__main__":
@@ -50,4 +71,5 @@ if __name__ == "__main__":
     while True:
         run_jobs(db)
         run_tasks(db, manager)
+        check_status(db)
         time.sleep(5)
