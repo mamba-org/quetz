@@ -1253,4 +1253,4 @@ async def serve_path(
     return StreamingResponse(package_content_iter, headers=headers)
 
 
-frontend.register(app, api_router)
+frontend.register(app)
