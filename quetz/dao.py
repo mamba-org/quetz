@@ -177,7 +177,7 @@ class Dao:
         filters: Optional[List[tuple]],
         user_id: Optional[bytes],
     ):
-        db = self.db.query(Package).join(Channel).join(PackageVersion)
+        db = self.db.query(Package).join(Channel).join(PackageVersion).join(User)
         query = apply_custom_query('package', db, keywords, filters)
         if user_id:
             query = query.filter(
