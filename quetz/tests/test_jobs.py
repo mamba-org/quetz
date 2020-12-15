@@ -102,6 +102,13 @@ def public_package(db, user, public_channel, dao, package_role, package_name):
     return package
 
 
+@pytest.fixture
+def manager(config):
+
+    manager = SubprocessWorker("", {}, config)
+    return manager
+
+
 def test_create_task(config, db, user, package_version):
     job = Job(owner_id=user.id, manifest=b"")
     task = Task(job=job)
@@ -123,7 +130,7 @@ def failed_func(package_version: dict):
 async def test_create_job(config, db, user, package_version):
 
     func_serialized = pickle.dumps(func)
-    job = Job(owner_id=user.id, manifest=func_serialized)
+    job = Job(owner_id=user.id, manifest=func_serialized, items_spec="*")
     manager = SubprocessWorker("", {}, config)
     db.add(job)
     db.commit()
@@ -150,11 +157,10 @@ async def test_create_job(config, db, user, package_version):
 
 
 @pytest.mark.asyncio
-async def test_failed_task(config, db, user, package_version):
+async def test_failed_task(config, db, user, package_version, manager):
 
     func_serialized = pickle.dumps(failed_func)
-    job = Job(owner_id=user.id, manifest=func_serialized)
-    manager = SubprocessWorker("", {}, config)
+    job = Job(owner_id=user.id, manifest=func_serialized, items_spec="*")
     db.add(job)
     db.commit()
     run_jobs(db)
@@ -170,6 +176,23 @@ async def test_failed_task(config, db, user, package_version):
 
     db.refresh(job)
     assert job.status == JobStatus.success
+
+
+@pytest.mark.parametrize("items_spec", ["", None])
+def test_empty_package_spec(db, user, package_version, caplog, items_spec):
+
+    func_serialized = pickle.dumps(func)
+    job = Job(owner_id=user.id, manifest=func_serialized, items_spec=items_spec)
+    db.add(job)
+    db.commit()
+    run_jobs(db)
+    db.refresh(job)
+    task = db.query(Task).one_or_none()
+
+    assert "empty" in caplog.text
+    assert "skipping" in caplog.text
+    assert job.status == JobStatus.success
+    assert task is None
 
 
 def test_mk_query():
