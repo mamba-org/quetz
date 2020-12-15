@@ -47,6 +47,7 @@ def upgrade():
         sa.ForeignKeyConstraint(
             ['owner_id'],
             ['users.id'],
+            ondelete="cascade",
         ),
         sa.PrimaryKeyConstraint('id'),
     )
@@ -67,10 +68,12 @@ def upgrade():
         sa.ForeignKeyConstraint(
             ['job_id'],
             ['jobs.id'],
+            ondelete="cascade",
         ),
         sa.ForeignKeyConstraint(
             ['package_version_id'],
             ['package_versions.id'],
+            ondelete="cascade",
         ),
         sa.PrimaryKeyConstraint('id'),
     )
