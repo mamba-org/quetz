@@ -582,7 +582,10 @@ def plugin(
 
 @app.command()
 def watch_job_queue(
-    path: str = typer.Argument(None, help="Path to the plugin folder")
+    path: str = typer.Argument(None, help="Path to the plugin folder"),
+    num_procs: Optional[int] = typer.Option(
+        None, help="Number of processes to use. Default: number of CPU cores"
+    ),
 ) -> NoReturn:
     import time
 
@@ -591,8 +594,11 @@ def watch_job_queue(
 
     config_file = _get_config(path)
 
+    if not os.environ.get('QUETZ_CONFIG_FILE'):
+        os.environ['QUETZ_CONFIG_FILE'] = config_file
+
     config = Config(config_file)
-    manager = SubprocessWorker("", {}, config)
+    manager = SubprocessWorker("", {}, config, {'max_workers': num_procs})
     with working_directory(path):
         try:
             db = get_session(config.sqlalchemy_database_url)

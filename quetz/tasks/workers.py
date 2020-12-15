@@ -44,8 +44,7 @@ def job_wrapper(
     # This allows us to manage database connectivity prior
     # to running a job.
 
-    import logging
-    import os
+    # import logging
     import pickle
 
     from quetz.authorization import Rules
@@ -64,10 +63,12 @@ def job_wrapper(
 
     callable_f: Callable = pickle.loads(func) if isinstance(func, bytes) else func
 
-    logger = logging.getLogger("quetz")
-    logger.debug(
-        f"evaluating function {callable_f} in a subprocess task with pid {os.getpid()}"
-    )
+    # import os
+    # logger = logging.getLogger("quetz")
+    # logger.debug(
+    #     f"evaluating function {callable_f.__name__} in a subprocess "
+    #     f"task with pid {os.getpid()}"
+    # )
 
     extra_kwargs = prepare_arguments(
         callable_f,
@@ -165,11 +166,19 @@ class SubprocessWorker(AbstractWorker):
 
     _executor: Optional[concurrent.futures.Executor] = None
 
-    def __init__(self, api_key: str, browser_session: dict, config: Config):
+    def __init__(
+        self,
+        api_key: str,
+        browser_session: dict,
+        config: Config,
+        executor_args: dict = {},
+    ):
 
         if SubprocessWorker._executor is None:
             logger.debug("creating a new subprocess executor")
-            SubprocessWorker._executor = concurrent.futures.ProcessPoolExecutor()
+            SubprocessWorker._executor = concurrent.futures.ProcessPoolExecutor(
+                **executor_args
+            )
         self.api_key = api_key
         self.browser_session = browser_session
         self.config = config

@@ -44,6 +44,25 @@ ABOUT_MAP_FIELDS = ("keywords", "identifiers", "tags")
 MAX_CONDA_TIMESTAMP = 253402300799
 
 
+def calculate_file_hashes_and_size(info, file):
+    BLOCK_SIZE = 1024 * 1024  # 1MiB
+    md5 = hashlib.md5()
+    sha = hashlib.sha256()
+    file.seek(0)
+    size = 0
+    while True:
+        b = file.read(BLOCK_SIZE)
+        if len(b) > 0:
+            size += len(b)
+            md5.update(b)
+            sha.update(b)
+        else:
+            break
+    info["size"] = size
+    info["md5"] = md5.hexdigest()
+    info["sha256"] = sha.hexdigest()
+
+
 class CondaInfo:
     def __init__(self, file, filename):
         self.channeldata = {}
@@ -138,22 +157,7 @@ class CondaInfo:
         self._map_channeldata()
 
     def _calculate_file_hashes(self, file):
-        BLOCK_SIZE = 1024 * 1024  # 1MiB
-        md5 = hashlib.md5()
-        sha = hashlib.sha256()
-        file.seek(0)
-        size = 0
-        while True:
-            b = file.read(BLOCK_SIZE)
-            if len(b) > 0:
-                size += len(b)
-                md5.update(b)
-                sha.update(b)
-            else:
-                break
-        self.info["size"] = size
-        self.info["md5"] = md5.hexdigest()
-        self.info["sha256"] = sha.hexdigest()
+        calculate_file_hashes_and_size(self.info, file)
 
     def _parse_conda(self, file, filename):
 
