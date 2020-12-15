@@ -109,7 +109,7 @@ def manager(config):
     return manager
 
 
-def test_create_task(config, db, user, package_version):
+def test_create_task(db, user, package_version):
     job = Job(owner_id=user.id, manifest=b"")
     task = Task(job=job)
     db.add(job)
@@ -127,11 +127,10 @@ def failed_func(package_version: dict):
 
 
 @pytest.mark.asyncio
-async def test_create_job(config, db, user, package_version):
+async def test_create_job(db, user, package_version, manager):
 
     func_serialized = pickle.dumps(func)
     job = Job(owner_id=user.id, manifest=func_serialized, items_spec="*")
-    manager = SubprocessWorker("", {}, config)
     db.add(job)
     db.commit()
     run_jobs(db)
@@ -157,7 +156,7 @@ async def test_create_job(config, db, user, package_version):
 
 
 @pytest.mark.asyncio
-async def test_failed_task(config, db, user, package_version, manager):
+async def test_failed_task(db, user, package_version, manager):
 
     func_serialized = pickle.dumps(failed_func)
     job = Job(owner_id=user.id, manifest=func_serialized, items_spec="*")
@@ -331,7 +330,7 @@ def test_parse_conda_spec():
         ("*", 1),
     ],
 )
-def test_filter_versions(config, db, user, package_version, spec, n_tasks):
+def test_filter_versions(db, user, package_version, spec, n_tasks, manager):
 
     func_serialized = pickle.dumps(func)
     job = Job(
@@ -339,7 +338,6 @@ def test_filter_versions(config, db, user, package_version, spec, n_tasks):
         manifest=func_serialized,
         items_spec=spec,
     )
-    manager = SubprocessWorker("", {}, config)
     db.add(job)
     db.commit()
     run_jobs(db)
