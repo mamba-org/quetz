@@ -12,6 +12,7 @@ from quetz.db_models import (
     ChannelMember,
     Package,
     PackageMember,
+    PackageVersion,
     Profile,
     User,
 )
@@ -49,6 +50,35 @@ class Data:
         self.package1 = Package(name="package1", channel=self.channel1)
         self.package2 = Package(name="package2", channel=self.channel2)
 
+        self.package_version_1 = PackageVersion(
+            id=uuid.uuid4().bytes,
+            channel_name=self.channel1.name,
+            package_name=self.package1.name,
+            package_format='tarbz2',
+            platform='noarch',
+            version="0.0.1",
+            build_number="0",
+            build_string="",
+            filename="filename.tar.bz2",
+            info="{}",
+            uploader_id=self.usera.id,
+            size=101,
+        )
+        self.package_version_2 = PackageVersion(
+            id=uuid.uuid4().bytes,
+            channel_name=self.channel2.name,
+            package_name=self.package2.name,
+            package_format='tarbz2',
+            platform='noarch',
+            version="0.0.1",
+            build_number="0",
+            build_string="",
+            filename="filename2.tar.bz2",
+            info="{}",
+            uploader_id=self.usera.id,
+            size=101,
+        )
+
         self.channel_member = ChannelMember(
             channel=self.channel2, user=self.usera, role='maintainer'
         )
@@ -67,6 +97,8 @@ class Data:
             self.channel_member_userc,
             self.package1,
             self.package2,
+            self.package_version_1,
+            self.package_version_2,
             self.package_member,
         ]:
             db.add(el)
@@ -259,7 +291,7 @@ def test_private_channels(data, client):
         f'/api/channels/{data.channel1.name}/packages/{data.package1.name}/versions'
     )
     assert response.status_code == 200
-    assert len(response.json()) == 0
+    assert len(response.json()) == 1
 
     # public access to private channel
     response = client.get(
@@ -280,12 +312,11 @@ def test_private_channels(data, client):
         headers={"X-Api-Key": data.keya},
     )
     assert response.status_code == 200
-    assert len(response.json()) == 0
+    assert len(response.json()) == 1
 
     # Search #
     response = client.get('/api/search/?q=package')
     assert response.status_code == 200
-    print(f'serach: {response.json()}')
     assert len(response.json()) == 1
     assert response.json()[0]['name'] == data.package1.name
 
