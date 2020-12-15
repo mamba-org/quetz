@@ -4,7 +4,7 @@ import pytest
 from httpx import AsyncClient
 
 from quetz.db_models import PackageVersion
-from quetz.jobs.models import Task, TaskStatus
+from quetz.jobs.models import Job, Task, TaskStatus
 from quetz.jobs.runner import check_status, run_jobs, run_tasks
 
 
@@ -44,6 +44,14 @@ async def test_transmutation_endpoint(
 
     assert conda_version
 
+    # cleanup
+    try:
+        db.query(PackageVersion).delete()
+        db.query(Job).delete()
+        db.query(Task).delete()
+    finally:
+        db.commit()
+
 
 @pytest.mark.parametrize(
     "spec,n_tasks",
@@ -68,3 +76,11 @@ def test_package_specs(
     n_created_task = db.query(Task).count()
 
     assert n_created_task == n_tasks
+
+    # cleanup
+    try:
+        db.query(PackageVersion).delete()
+        db.query(Job).delete()
+        db.query(Task).delete()
+    finally:
+        db.commit()

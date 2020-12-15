@@ -7,21 +7,21 @@ from quetz.db_models import UUID, Base
 
 
 class JobStatus(Enum):
-    pending = 'pending'
-    queued = 'queued'
-    running = 'running'
-    success = 'success'
-    failed = 'failed'
-    timeout = 'timeout'
-    cancelled = 'cancelled'
+    pending = "pending"
+    queued = "queued"
+    running = "running"
+    success = "success"
+    failed = "failed"
+    timeout = "timeout"
+    cancelled = "cancelled"
 
 
 class TaskStatus(Enum):
-    pending = 'pending'
-    running = 'running'
-    success = 'success'
-    failed = 'failed'
-    skipped = 'skipped'
+    pending = "pending"
+    running = "running"
+    success = "success"
+    failed = "failed"
+    skipped = "skipped"
 
 
 class ItemsSelection(Enum):
@@ -38,8 +38,12 @@ class Job(Base):
     created = sa.Column(sa.DateTime, nullable=False, default=datetime.utcnow)
     updated = sa.Column(sa.DateTime, nullable=False, default=datetime.utcnow)
     manifest = sa.Column(sa.Binary(), nullable=False)
-    owner_id = sa.Column(UUID, sa.ForeignKey('users.id'), nullable=True)
-    owner = sa.orm.relationship('User', backref=sa.orm.backref('jobs'))
+    owner_id = sa.Column(
+        UUID, sa.ForeignKey("users.id", ondelete="cascade"), nullable=True
+    )
+    owner = sa.orm.relationship(
+        "User", backref=sa.orm.backref("jobs", cascade="all,delete")
+    )
     items_spec = sa.Column(sa.String(), nullable=True)
     items = sa.Column(
         sa.Enum(ItemsSelection),
@@ -60,7 +64,7 @@ class Job(Base):
 
 
 class Task(Base):
-    __tablename__ = 'tasks'
+    __tablename__ = "tasks"
 
     id = sa.Column(sa.Integer, primary_key=True)
     created = sa.Column(sa.DateTime, nullable=False, default=datetime.utcnow)
@@ -71,11 +75,16 @@ class Task(Base):
         nullable=False,
         default=TaskStatus.pending,
     )
-    job_id = sa.Column(sa.Integer, sa.ForeignKey("jobs.id"), nullable=False)
-    job = sa.orm.relationship("Job", backref=sa.orm.backref("tasks"))
+    job_id = sa.Column(
+        sa.Integer, sa.ForeignKey("jobs.id", ondelete="cascade"), nullable=False
+    )
+    job = sa.orm.relationship(
+        "Job", backref=sa.orm.backref("tasks", cascade="all,delete-orphan")
+    )
     package_version_id = sa.Column(
-        UUID, sa.ForeignKey("package_versions.id"), nullable=True
+        UUID, sa.ForeignKey("package_versions.id", ondelete="cascade"), nullable=True
     )
     package_version = sa.orm.relationship(
-        "PackageVersion", backref=sa.orm.backref("tasks")
+        "PackageVersion",
+        backref=sa.orm.backref("tasks", cascade="all,delete-orphan"),
     )

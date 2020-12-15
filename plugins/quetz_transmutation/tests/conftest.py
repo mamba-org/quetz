@@ -100,8 +100,11 @@ def package_version(
 
     yield version
 
-    db.delete(version)
-    db.commit()
+    try:
+        db.delete(version)
+        db.commit()
+    except Exception:
+        pass
 
 
 @pytest.fixture

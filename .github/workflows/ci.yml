@@ -77,21 +77,13 @@ jobs:
           pytest -v ./quetz/tests/ --cov-config=.coveragerc --cov=./quetz --cov-report=xml
 
           echo "install and test plugins"
-          pip install ./plugins/quetz_runexports
-          pytest -v ./plugins/quetz_runexports/tests
 
-          pip install ./plugins/quetz_repodata_patching
-          pytest -v ./plugins/quetz_repodata_patching
-
-          pip install ./plugins/quetz_repodata_zchunk
-          pytest -v ./plugins/quetz_repodata_zchunk
-
-          pip install ./plugins/quetz_conda_suggest
-          pytest -v ./plugins/quetz_conda_suggest
-
-          pip install ./plugins/quetz_current_repodata
-          pytest -v ./plugins/quetz_current_repodata
-
+          for f in ./plugins/quetz_*
+          do
+            echo "Testing plugin" $f
+            pip install $f
+            pytest -v $f
+          done
       - uses: codecov/codecov-action@v1
         with:
           verbose: true
