@@ -44,7 +44,10 @@ def parse_conda_spec(conda_spec: str):
                 version_spec = ("and", version_spec, condition)
             else:
                 version_spec = condition
-        dict_spec = {"package_name": ("eq", name)}
+        if "*" in name:
+            dict_spec = {"package_name": ("like", name)}
+        else:
+            dict_spec = {"package_name": ("eq", name)}
         if version_spec:
             dict_spec["version"] = version_spec
         package_specs.append(dict_spec)
@@ -67,6 +70,8 @@ def mk_sql_expr(dict_spec: List[Dict]):
             return column >= v[0]
         elif op == 'lte':
             return column <= v[0]
+        elif op == "like":
+            return column.ilike(v[0].replace("*", "%"))
         elif op == "and":
             left = _make_op(column, v[0])
             right = _make_op(column, v[1])
@@ -102,17 +107,26 @@ def run_jobs(db):
         job.status = JobStatus.running
         if job.items == ItemsSelection.all:
             q = db.query(PackageVersion)
-            try:
-                if job.items_spec:
+            if job.items_spec:
+                try:
                     filter_expr = build_sql_from_package_spec(job.items_spec)
-                    q = q.filter(filter_expr)
-            except Exception as e:
-                job.status = JobStatus.failed
-                logger.error(f"got error when handling a job: {e}")
-                continue
+                except Exception as e:
+                    logger.error(f"got error when parsing package spec: {e}")
+                    job.status = JobStatus.failed
+                    continue
+                q = q.filter(filter_expr)
+            else:
+                logger.warning("empty package spec returns no results")
+                q = []
+            task = None
             for version in q:
                 task = Task(job=job, package_version=version)
                 db.add(task)
+            if not task:
+                logger.warning(
+                    f"no versions matching the package spec {job.items_spec}. skipping."
+                )
+                job.status = JobStatus.success
     db.commit()
 
 

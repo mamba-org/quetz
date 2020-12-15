@@ -14,7 +14,7 @@ async def test_transmutation_endpoint(
 ):
 
     async with AsyncClient(app=app, base_url="http://test") as ac:
-        response = await ac.put("/api/transmutation", json={})
+        response = await ac.put("/api/transmutation", json={"package_spec": "*"})
 
     assert response.status_code == 200
     run_jobs(db)
@@ -59,6 +59,9 @@ async def test_transmutation_endpoint(
         ("my-package==0.1", 1),
         ("my-package==0.2", 0),
         ("my-package==0.1,my-package==0.2", 1),
+        ("", 0),
+        (None, 0),
+        ("*", 1),
     ],
 )
 def test_package_specs(
