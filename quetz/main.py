@@ -28,6 +28,7 @@ from fastapi import (
     responses,
     status,
 )
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -84,6 +85,21 @@ app.add_middleware(
     secret_key=config.session_secret,
     https_only=config.session_https_only,
 )
+
+
+if config.configured_section("cors"):
+    logger.info("Configuring CORS with ")
+    logger.info(f"allow_origins     = {config.cors_allow_origins}")
+    logger.info(f"allow_credentials = {config.cors_allow_credentials}")
+    logger.info(f"allow_methods     = {config.cors_allow_methods}")
+    logger.info(f"allow_headers     = {config.cors_allow_headers}")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=config.cors_allow_origins,
+        allow_credentials=config.cors_allow_credentials,
+        allow_methods=config.cors_allow_methods,
+        allow_headers=config.cors_allow_headers,
+    )
 
 
 class CondaTokenMiddleware(BaseHTTPMiddleware):
