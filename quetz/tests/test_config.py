@@ -1,9 +1,10 @@
+import logging
 import os
 import tempfile
 
 import pytest
 
-from quetz.config import Config, ConfigEntry, ConfigSection
+from quetz.config import Config, ConfigEntry, ConfigSection, configure_logger
 from quetz.dao import Dao
 from quetz.errors import ConfigError
 
@@ -138,3 +139,30 @@ def test_config_extend(config):
     assert config.extra_plugin_has_default == 'iamdefault'
 
     config._config_map.pop()
+
+
+def test_configure_logger(capsys):
+    "configure_logger should be idempotent"
+
+    configure_logger()
+    logger = logging.getLogger("quetz")
+    logger.error("my test")
+
+    captured = capsys.readouterr()
+    assert "[quetz]" in captured.err
+    assert "ERROR" in captured.err
+    assert "my test" in captured.err
+    assert len(captured.err.splitlines()) == 1
+
+    captured = capsys.readouterr()
+    assert not captured.err
+
+    configure_logger()
+    logger.info("second")
+    captured = capsys.readouterr()
+    assert "[quetz]" in captured.err
+    assert "INFO" in captured.err
+    assert "second" in captured.err
+    assert captured.err.count("second") == 1
+    assert "my test" not in captured.err
+    assert len(captured.err.splitlines()) == 1

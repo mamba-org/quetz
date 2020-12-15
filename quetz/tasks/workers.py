@@ -44,11 +44,9 @@ def job_wrapper(
     # This allows us to manage database connectivity prior
     # to running a job.
 
-    # import logging
     import pickle
 
     from quetz.authorization import Rules
-    from quetz.config import configure_logger
     from quetz.dao import Dao
     from quetz.database import get_session
     from quetz.deps import get_remote_session
@@ -59,16 +57,7 @@ def job_wrapper(
     auth = Rules(api_key, browser_session, db)
     session = get_remote_session()
 
-    configure_logger(config)
-
     callable_f: Callable = pickle.loads(func) if isinstance(func, bytes) else func
-
-    # import os
-    # logger = logging.getLogger("quetz")
-    # logger.debug(
-    #     f"evaluating function {callable_f.__name__} in a subprocess "
-    #     f"task with pid {os.getpid()}"
-    # )
 
     extra_kwargs = prepare_arguments(
         callable_f,

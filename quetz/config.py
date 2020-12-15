@@ -2,6 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import logging
+import logging.config
 import os
 from base64 import b64encode
 from distutils.util import strtobool
@@ -385,8 +386,16 @@ def create_config(
     return config.format(client_id, client_secret, database_url, secret, https)
 
 
-def configure_logger(config=None, loggers=("quetz", "urllib3.util.retry", "alembic")):
-    """Get quetz logger"""
+def colourized_formatter(fmt="", use_colors=True):
+    try:
+        from uvicorn.logging import ColourizedFormatter
+
+        return ColourizedFormatter(fmt, use_colors=use_colors)
+    except ImportError:
+        return logging.Formatter(fmt)
+
+
+def get_logger_config(config, loggers):
 
     if hasattr(config, "logging_level"):
         log_level = config.logging_level
@@ -400,39 +409,56 @@ def configure_logger(config=None, loggers=("quetz", "urllib3.util.retry", "alemb
 
     log_level = os.environ.get("QUETZ_LOG_LEVEL", log_level)
 
-    level = getattr(logging, log_level.upper())
+    log_level = log_level.upper()
 
-    try:
-        from uvicorn.logging import ColourizedFormatter
-
-        formatter = ColourizedFormatter(
-            fmt="%(levelprefix)s [%(name)s] %(message)s", use_colors=True
-        )
-    except ImportError:
-        formatter = logging.Formatter('%(levelname)s [%(name)s] %(message)s')
-
-    ch = logging.StreamHandler()
-    ch.setFormatter(formatter)
-
+    handlers = ["console"]
     if filename:
-        fh = logging.FileHandler(filename)
-        file_formatter = logging.Formatter(
-            '%(asctime)s %(levelname)s %(name)s  %(message)s'
-        )
-        fh.setFormatter(file_formatter)
-    else:
-        fh = None
+        handlers.append("file")
 
-    # configure selected loggers
-    for logger_name in loggers:
-        logger = logging.getLogger(logger_name)
-        logger.setLevel(level)
+    LOG_FORMATTERS = {
+        "colour": {
+            "()": "quetz.config.colourized_formatter",
+            "fmt": "%(levelprefix)s [%(name)s] %(message)s",
+            "use_colors": True,
+        },
+        "basic": {"format": "%(levelprefix)s [%(name)s] %(message)s"},
+        "timestamp": {"format": '%(asctime)s %(levelname)s %(name)s  %(message)s'},
+    }
 
-        # add the handlers to the logger
-        logger.addHandler(ch)
+    LOG_HANDLERS = {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "colour",
+            "level": log_level,
+            "stream": "ext://sys.stderr",
+        },
+        "file": {
+            "class": "logging.FileHandler",
+            "formatter": "timestamp",
+            "filename": filename or "quetz.log",
+            "level": log_level,
+        },
+    }
 
-        if fh:
-            logger.addHandler(fh)
+    LOGGERS = {k: {"level": log_level, "handlers": handlers} for k in loggers}
+
+    LOG_CONFIG = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": LOG_FORMATTERS,
+        "handlers": LOG_HANDLERS,
+        "loggers": LOGGERS,
+    }
+
+    return LOG_CONFIG
+
+
+def configure_logger(config=None, loggers=("quetz", "urllib3.util.retry", "alembic")):
+    """Get quetz logger"""
+
+    log_config = get_logger_config(config, loggers)
+
+    logging.config.dictConfig(log_config)
 
 
 def get_plugin_manager(config=None) -> pluggy.PluginManager:
