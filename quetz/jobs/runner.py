@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import Dict, List
 
@@ -6,6 +7,7 @@ import sqlalchemy as sa
 from quetz.db_models import PackageVersion
 from quetz.jobs.models import ItemsSelection, Job, JobStatus, Task, TaskStatus
 
+logger = logging.getLogger('quetz-cli')
 # manager = RQManager("127.0.0.1", 6379, 0, "", {}, config)
 
 
@@ -109,6 +111,7 @@ def run_tasks(db, manager):
 
     tasks = db.query(Task).filter(Task.status == TaskStatus.pending)
     task: Task
+    logger.info(f"Got pending tasks: {tasks.count()}")
     jobs = []
     for task in tasks:
         version_dict = {
