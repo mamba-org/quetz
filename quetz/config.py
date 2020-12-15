@@ -72,6 +72,16 @@ class Config:
             ],
         ),
         ConfigSection(
+            "cors",
+            [
+                ConfigEntry("allow_origins", list, []),
+                ConfigEntry("allow_credentials", bool, True),
+                ConfigEntry("allow_methods", bool, ["*"]),
+                ConfigEntry("allow_headers", bool, ["*"]),
+            ],
+            required=False,
+        ),
+        ConfigSection(
             "github",
             [
                 ConfigEntry("client_id", str),
