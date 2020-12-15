@@ -44,7 +44,10 @@ def parse_conda_spec(conda_spec: str):
                 version_spec = ("and", version_spec, condition)
             else:
                 version_spec = condition
-        dict_spec = {"package_name": ("eq", name)}
+        if "*" in name:
+            dict_spec = {"package_name": ("like", name)}
+        else:
+            dict_spec = {"package_name": ("eq", name)}
         if version_spec:
             dict_spec["version"] = version_spec
         package_specs.append(dict_spec)
@@ -67,6 +70,8 @@ def mk_sql_expr(dict_spec: List[Dict]):
             return column >= v[0]
         elif op == 'lte':
             return column <= v[0]
+        elif op == "like":
+            return column.ilike(v[0].replace("*", "%"))
         elif op == "and":
             left = _make_op(column, v[0])
             right = _make_op(column, v[1])

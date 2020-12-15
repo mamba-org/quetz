@@ -233,6 +233,11 @@ def test_mk_query():
         " OR package_versions.version > '0.3'"
     )
 
+    spec = [{"package_name": ("like", "my-*")}]
+    sql_expr = compile(spec)
+
+    assert sql_expr == ("lower(package_versions.package_name) LIKE lower('my-%')")
+
 
 def test_parse_conda_spec():
 
@@ -289,6 +294,9 @@ def test_parse_conda_spec():
     dict_spec = parse_conda_spec("my-package")
     assert dict_spec == [{"package_name": ("eq", "my-package")}]
 
+    dict_spec = parse_conda_spec("my-*")
+    assert dict_spec == [{"package_name": ("like", "my-*")}]
+
 
 @pytest.mark.parametrize(
     "spec,n_tasks",
@@ -297,6 +305,7 @@ def test_parse_conda_spec():
         ("my-package==0.2", 0),
         ("my-package==0.1,my-package==0.2", 1),
         ("my-package", 1),
+        ("*", 1),
     ],
 )
 def test_filter_versions(config, db, user, package_version, spec, n_tasks):
