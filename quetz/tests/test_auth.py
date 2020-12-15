@@ -2,6 +2,7 @@ import os
 import shutil
 import uuid
 from unittest import mock
+from urllib.parse import quote
 
 from pytest import fixture
 
@@ -314,23 +315,64 @@ def test_private_channels(data, client):
     assert response.status_code == 200
     assert len(response.json()) == 1
 
-    # Search #
-    response = client.get('/api/search/?q=package')
+    # Package Search #
+    query = f"channel:test -format:conda uploader:{data.usera.username}"
+    query = quote(query)
+    response = client.get(f'/api/packages/search/?q={query}')
     assert response.status_code == 200
     assert len(response.json()) == 1
     assert response.json()[0]['name'] == data.package1.name
 
-    response = client.get('/api/search/?q=package', headers={"X-Api-Key": data.keyb})
+    query = f"format:conda platform:linux-64,noarch uploader:{data.userb.username}"
+    query = quote(query)
+    response = client.get(
+        f'/api/packages/search/?q={query}', headers={"X-Api-Key": data.keyb}
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 0
+
+    query = f"-channel:{data.channel2.name} format:tarbz2,conda -platform:osx-64"
+    query = quote(query)
+    response = client.get(
+        f'/api/packages/search/?q={query}', headers={"X-Api-Key": data.keyb}
+    )
     assert response.status_code == 200
     assert len(response.json()) == 1
     assert response.json()[0]['name'] == data.package1.name
 
-    response = client.get('/api/search/?q=package', headers={"X-Api-Key": data.keya})
+    query = f"package NOT frame channel:{data.channel1.name},private"
+    query = quote(query)
+    response = client.get(
+        f'/api/packages/search/?q={query}', headers={"X-Api-Key": data.keya}
+    )
     assert response.status_code == 200
     assert len(response.json()) == 2
     assert {c['name'] for c in response.json()} == {
         c.name for c in [data.package1, data.package2]
     }
+
+    # Channel Search #
+    query = "test private:no"
+    query = quote(query)
+    response = client.get(f'/api/channels/search/?q={query}')
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]['name'] == data.channel1.name
+
+    query = "private:y"
+    query = quote(query)
+    response = client.get(f'/api/channels/search/?q={query}')
+    assert response.status_code == 200
+    assert len(response.json()) == 0
+
+    query = "-private:false"
+    query = quote(query)
+    response = client.get(
+        f'/api/channels/search/?q={query}', headers={"X-Api-Key": data.keya}
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]['name'] == data.channel2.name
 
 
 def test_private_channels_create_package(data, client):

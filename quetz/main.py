@@ -845,7 +845,7 @@ def delete_package_version(
 
 
 @api_router.get(
-    "/search/", response_model=List[rest_models.PackageSearch], tags=["search"]
+    "/packages/search/", response_model=List[rest_models.PackageSearch], tags=["search"]
 )
 def search(
     q: str,
