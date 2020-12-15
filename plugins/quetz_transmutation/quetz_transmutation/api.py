@@ -79,7 +79,7 @@ def transmutation(package_version: dict, config, pkgstore: PackageStore, dao: Da
 transmutation_serialized = pickle.dumps(transmutation)
 
 
-@router.put("/api/transmutation")
+@router.put("/api/transmutation", tags=["plugins"])
 def put_transmutation(
     package_spec: PackageSpec,
     db=Depends(get_db),
