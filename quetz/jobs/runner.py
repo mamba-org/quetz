@@ -98,9 +98,14 @@ def run_jobs(db):
         job.status = JobStatus.running
         if job.items == ItemsSelection.all:
             q = db.query(PackageVersion)
-            if job.items_spec:
-                filter_expr = build_sql_from_package_spec(job.items_spec)
-                q = q.filter(filter_expr)
+            try:
+                if job.items_spec:
+                    filter_expr = build_sql_from_package_spec(job.items_spec)
+                    q = q.filter(filter_expr)
+            except Exception as e:
+                job.status = JobStatus.failed
+                logger.error(f"got error when handling a job: {e}")
+                continue
             for version in q:
                 task = Task(job=job, package_version=version)
                 db.add(task)
