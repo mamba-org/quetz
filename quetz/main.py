@@ -5,7 +5,6 @@ import json
 import logging
 import os
 import re
-import sys
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from email.utils import formatdate
@@ -35,7 +34,6 @@ from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse
-from starlette.staticfiles import StaticFiles
 from tenacity import (
     after_log,
     retry,
@@ -51,6 +49,7 @@ from quetz import (
     db_models,
     errors,
     exceptions,
+    frontend,
     rest_models,
 )
 from quetz.config import Config, configure_logger, get_plugin_manager
@@ -1254,25 +1253,4 @@ async def serve_path(
     return StreamingResponse(package_content_iter, headers=headers)
 
 
-# mount frontend
-
-if os.path.isfile("../quetz_frontend/dist/index.html"):
-    logger.info("dev frontend found")
-    app.mount(
-        "/", StaticFiles(directory="../quetz_frontend/dist", html=True), name="frontend"
-    )
-elif os.path.isfile(f"{sys.prefix}/share/quetz/frontend/index.html"):
-    logger.info("installed frontend found")
-    app.mount(
-        "/",
-        StaticFiles(directory=f"{sys.prefix}/share/quetz/frontend/", html=True),
-        name="frontend",
-    )
-else:
-    logger.info("basic frontend")
-    basic_frontend_dir = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), "basic_frontend"
-    )
-    app.mount(
-        "/", StaticFiles(directory=basic_frontend_dir, html=True), name="frontend"
-    )
+frontend.register(app)
