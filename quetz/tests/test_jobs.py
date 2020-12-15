@@ -286,6 +286,9 @@ def test_parse_conda_spec():
         },
     ]
 
+    dict_spec = parse_conda_spec("my-package")
+    assert dict_spec == [{"package_name": ("eq", "my-package")}]
+
 
 @pytest.mark.parametrize(
     "spec,n_tasks",
@@ -293,6 +296,7 @@ def test_parse_conda_spec():
         ("my-package==0.1", 1),
         ("my-package==0.2", 0),
         ("my-package==0.1,my-package==0.2", 1),
+        ("my-package", 1),
     ],
 )
 def test_filter_versions(config, db, user, package_version, spec, n_tasks):

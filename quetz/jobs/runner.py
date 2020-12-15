@@ -36,14 +36,18 @@ def parse_conda_spec(conda_spec: str):
                 condition = ("gt", spec_str[1:])
             elif spec_str.startswith("<"):
                 condition = ("lt", spec_str[1:])
+            elif not spec_str:
+                continue
             else:
                 raise NotImplementedError("version operator not implemented")
             if version_spec:
                 version_spec = ("and", version_spec, condition)
             else:
                 version_spec = condition
-
-        package_specs.append({"version": version_spec, "package_name": ("eq", name)})
+        dict_spec = {"package_name": ("eq", name)}
+        if version_spec:
+            dict_spec["version"] = version_spec
+        package_specs.append(dict_spec)
     return package_specs
 
 
