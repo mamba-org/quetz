@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends
+from libcflib.harvester import harvest
 from pydantic import BaseModel, Field
-from quetz_harvester.harvest import harvest
 
 from quetz import authorization
 from quetz.dao import Dao
