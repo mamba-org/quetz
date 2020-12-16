@@ -23,8 +23,7 @@ from sqlalchemy import (
     sql,
 )
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import backref, composite, relationship
-from sqlalchemy.orm.properties import CompositeProperty
+from sqlalchemy.orm import CompositeProperty, backref, composite, relationship
 from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.types import TypeDecorator
 
@@ -227,16 +226,26 @@ class VersionType(TypeDecorator):
             return op(version_numbers(self.expr), version_numbers(other))
 
 
+from sqlalchemy.ext.hybrid import hybrid_method, hybrid_property
+
+
+def parse_version(other):
+    if isinstance(other, str):
+        temp = other.split('.')
+        temp = tuple(map(int, temp))
+        return Version(*temp)
+    elif isinstance(other, Version):
+        return other
+    else:
+        raise Exception("unknown class")
+
+
 class VersionComparator(CompositeProperty.Comparator):
     def __lt__(self, other):
         """redefine the 'greater than' operation"""
         v = self.__clause_element__().clauses
-        if isinstance(other, str):
-            temp = other.split('.')
-            temp = temp + ['0'] * (3 - len(other))
-            o = tuple(map(int, temp))
-        else:
-            o = other.__composite_values__()
+        other = parse_version(other)
+        o = other.__composite_values__()
 
         return sql.or_(
             v[0] < o[0],
@@ -250,7 +259,7 @@ class VersionComparator(CompositeProperty.Comparator):
 
 
 class Version:
-    def __init__(self, major, minor, patch):
+    def __init__(self, major, minor=0, patch=0):
         self.major = major
         self.minor = minor
         self.patch = patch
@@ -259,7 +268,7 @@ class Version:
         return self.major, self.minor, self.patch
 
     def __repr__(self):
-        return ".".join([self.major, self.minor, self.patch])
+        return f"{self.major}.{self.minor}.{self.patch}"
 
     def __eq__(self, other):
         return (
@@ -282,6 +291,10 @@ def default_ver(i):
             return 0
 
     return _default
+
+
+from sqlalchemy.event import listen
+from sqlalchemy.orm import validates
 
 
 class PackageVersion(Base):
@@ -327,6 +340,12 @@ class PackageVersion(Base):
         comparator_factory=VersionComparator,
     )
 
+
+def handler(target, value, old_value, initiator):
+    return parse_version(value)
+
+
+listen(PackageVersion.smart_version, 'set', handler, retval=True)
 
 Index(
     'package_version_name_index',

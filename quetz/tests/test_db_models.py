@@ -84,10 +84,20 @@ def test_package_version_comparison(
     version_factory, db, versions, query, expected_versions
 ):
     for version in versions:
-        version_factory(version)
+        pver = version_factory(version)
 
     packages = db.query(PackageVersion).filter(query).all()
 
     obtained_versions = {p.version for p in packages}
 
     assert expected_versions == obtained_versions
+
+
+def test_setting_version(version_factory, db):
+    pver = version_factory("0.24")
+
+    pver.smart_version = "0.25"
+
+    db.commit()
+
+    assert pver.version_minor == 25
