@@ -67,7 +67,7 @@ def version_factory(
     return factory
 
 
-v = PackageVersion.smart_version
+v = PackageVersion.version
 
 
 @pytest.mark.parametrize(

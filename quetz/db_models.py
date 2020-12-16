@@ -22,8 +22,9 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import backref, column_property, relationship
+from sqlalchemy.orm import backref, relationship
 from sqlalchemy.schema import ForeignKeyConstraint
+from sqlalchemy.types import TypeDecorator
 
 Base = declarative_base()
 
@@ -216,17 +217,12 @@ def version_numbers(version):
     return cast(func.string_to_array(version, '.'), ARRAY(Integer))
 
 
-from sqlalchemy.ext.hybrid import Comparator, hybrid_property
-from sqlalchemy.orm.properties import (
-    ColumnProperty,
-    CompositeProperty,
-    RelationshipProperty,
-)
+class VersionType(TypeDecorator):
+    impl = String
 
-
-class VersionComparator(Comparator):
-    def operate(self, op, other):
-        return op(version_numbers(self.__clause_element__()), version_numbers(other))
+    class comparator_factory(TypeDecorator.Comparator):
+        def operate(self, op, other):
+            return op(version_numbers(self.expr), version_numbers(other))
 
 
 class PackageVersion(Base):
@@ -243,7 +239,7 @@ class PackageVersion(Base):
     package_name = Column(String)
     package_format = Column(Enum(PackageFormatEnum))
     platform = Column(String)
-    version = Column(String)
+    version = Column(VersionType)
     build_string = Column(String)
     build_number = Column(Integer)
     size = Column(Integer)
@@ -260,14 +256,6 @@ class PackageVersion(Base):
     )
 
     uploader = relationship('User')
-
-    @hybrid_property
-    def smart_version(self):
-        return self.version
-
-    @smart_version.comparator
-    def smart_version(cls):
-        return VersionComparator(cls.version)
 
 
 Index(
