@@ -3,14 +3,11 @@
 # Distributed under the terms of the Modified BSD License.
 
 import uuid
-from pathlib import Path
 
 import pytest
 
 from quetz.config import Config
-from quetz.dao import Dao
-from quetz.db_models import PackageVersion, User
-from quetz.rest_models import Channel, Package
+from quetz.db_models import Channel, Package, PackageVersion, User
 
 
 def test_user(db):
@@ -33,36 +30,39 @@ def test_user(db):
 def version_factory(
     db,
     user,
-    dao: Dao,
     config: Config,
 ):
     channel_name = "test-channel"
     package_name = "test-package"
-    dao.create_channel(
-        Channel(name=channel_name, private=False), user_id=user.id, role="owner"
-    )
-    dao.create_package(
-        channel_name, Package(name=package_name), user_id=user.id, role="owner"
-    )
+
+    channel = Channel(name=channel_name, private=False)
+    package = Package(channel=channel, name=package_name)
+    db.add(channel)
+    db.add(package)
+    db.commit()
 
     def factory(version):
-        filename = Path(f"test-package-{version}-0.tar.bz2")
+        filename = f"test-package-{version}-0.tar.bz2"
         package_format = "tarbz2"
         package_info = "{}"
-        package_version = dao.create_version(
-            channel_name,
-            package_name,
-            package_format,
-            "linux-64",
-            str(version),
-            0,
-            "",
-            str(filename),
-            package_info,
-            user.id,
+        pver = PackageVersion(
+            id=uuid.uuid4().bytes,
+            channel_name=channel_name,
+            package_name=package_name,
+            package_format=package_format,
+            platform="linux-64",
+            version=str(version),
+            build_number=0,
+            build_string="0",
+            filename=str(filename),
+            info=package_info,
+            uploader_id=user.id,
             size=11,
         )
-        return package_version
+        db.add(pver)
+        db.commit()
+
+        return pver
 
     return factory
 
