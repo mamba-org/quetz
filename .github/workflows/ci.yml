@@ -78,7 +78,7 @@ jobs:
 
           echo "install and test plugins"
 
-          pip install --no-deps git+ssh://git@github.com/regro/libcflib@master
+          pip install --no-deps git+https://git@github.com/regro/libcflib@master
           for f in ./plugins/quetz_*
           do
             echo "Testing plugin" $f

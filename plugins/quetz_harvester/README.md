@@ -9,7 +9,7 @@ To install use:
 
 ```
 # no other libcflib deps necessary for the harvester itself
-pip install git+ssh://git@github.com/regro/libcflib@master --no-deps
+pip install git+https://git@github.com/regro/libcflib@master --no-deps
 mamba install ruamel.yaml -c conda-forge
 pip install .
 ```
