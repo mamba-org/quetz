@@ -52,7 +52,6 @@ class Task(BaseModel):
 
     @validator("package_version", pre=True)
     def convert_package_version(cls, v):
-        print(v.id)
         return {'filename': v.filename, 'id': uuid.UUID(bytes=v.id).hex}
 
     class Config:
