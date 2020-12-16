@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import unquote
 
-from sqlalchemy import String, and_, cast, not_, or_
+from sqlalchemy import String, and_, cast, collate, not_, or_
 
 from .db_models import Channel, Package, PackageVersion, User
 
@@ -137,9 +137,9 @@ def apply_custom_query(search_type, db, keywords, filters):
                     Package.name, String(None, collation=None)
                 ).notlike(f'%{negation_argument}%')
             elif search_type == 'channel':
-                each_keyword_condition = cast(
-                    Channel.name, String(None, collation=None)
-                ).notlike(f'%{negation_argument}%')
+                each_keyword_condition = collate(Channel.name, "und-x-icu").notlike(
+                    f'%{negation_argument}%'
+                )
         else:
             if each_keyword != negation_argument:
                 if search_type == 'package':
@@ -147,9 +147,9 @@ def apply_custom_query(search_type, db, keywords, filters):
                         Package.name, String(None, collation=None)
                     ).ilike(f'%{each_keyword}%')
                 elif search_type == 'channel':
-                    each_keyword_condition = cast(
-                        Channel.name, String(None, collation=None)
-                    ).ilike(f'%{each_keyword}%')
+                    each_keyword_condition = collate(Channel.name, "und-x-icu").ilike(
+                        f'%{each_keyword}%'
+                    )
         keyword_conditions.append(each_keyword_condition)
     query = db.filter(and_(*keyword_conditions))
 
@@ -165,8 +165,9 @@ def apply_custom_query(search_type, db, keywords, filters):
             if search_type == 'package':
                 if key == 'channel':
                     each_val_condition = cast(
-                        Channel.name, String(None, collation=None)
-                    ).ilike(f'%{str(each_val)}%')
+                        collate(Channel.name, "und-x-icu"), String(255, collation=None)
+                    ).like(f'%{str(each_val)}%')
+                    # each_val_condition = Channel.name == str(each_val)
                 elif key == 'description':
                     each_val_condition = cast(
                         Package.description, String(None, collation=None)
