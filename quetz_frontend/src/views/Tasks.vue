@@ -55,9 +55,6 @@ export default {
         });
       });
     },
-    attachEvents: function() {
-      let router = this.$router;
-    },
   },
   created: function() {
     this.load()
