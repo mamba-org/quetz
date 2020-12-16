@@ -2,6 +2,7 @@ import json
 import tarfile
 from contextlib import contextmanager
 from io import BytesIO
+from pathlib import Path
 from zipfile import ZipFile
 
 import zstandard
@@ -10,7 +11,10 @@ import quetz
 from quetz.config import Config
 from quetz.database import get_session
 from quetz.db_models import PackageFormatEnum, PackageVersion
-from quetz.utils import add_static_file
+from quetz.utils import add_temp_static_file
+
+config = Config()
+pkgstore = config.get_package_store()
 
 
 def update_dict(packages, instructions):
@@ -103,7 +107,6 @@ def _load_instructions(tar, path):
 
 @contextmanager
 def get_db_manager():
-    config = Config()
 
     db = get_session(config.sqlalchemy_database_url)
 
@@ -114,9 +117,7 @@ def get_db_manager():
 
 
 @quetz.hookimpl(tryfirst=True)
-def post_package_indexing(
-    pkgstore: "quetz.pkgstores.PackageStore", channel_name, subdirs, files, packages
-):
+def post_package_indexing(tempdir: Path, channel_name, subdirs, files, packages):
     with get_db_manager() as db:
 
         query = (
@@ -148,18 +149,16 @@ def post_package_indexing(
 
                 patch_instructions = _load_instructions(tar, path)
 
-                fname = "repodata"
-                fs = pkgstore.serve_path(channel_name, f"{subdir}/{fname}.json")
+                with open(tempdir / channel_name / subdir / "repodata.json") as fs:
+                    repodata_str = fs.read()
+                    repodata = json.loads(repodata_str)
 
-                repodata_str = fs.read()
-                repodata = json.loads(repodata_str)
-
-                add_static_file(
+                add_temp_static_file(
                     repodata_str,
                     channel_name,
                     subdir,
-                    f"{fname}_from_packages.json",
-                    pkgstore,
+                    "repodata_from_packages.json",
+                    tempdir,
                     files,
                 )
 
@@ -169,11 +168,11 @@ def post_package_indexing(
                 packages[subdir].update(repodata["packages.conda"])
 
                 patched_repodata_str = json.dumps(repodata)
-                add_static_file(
+                add_temp_static_file(
                     patched_repodata_str,
                     channel_name,
                     subdir,
-                    f"{fname}.json",
-                    pkgstore,
+                    "repodata.json",
+                    tempdir,
                     files,
                 )

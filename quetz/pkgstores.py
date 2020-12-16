@@ -60,6 +60,10 @@ class PackageStore(abc.ABC):
         """remove file from package store"""
 
     @abc.abstractmethod
+    def move_file(self, channel: str, source: str, destination: str):
+        """move file from source to destination in package store"""
+
+    @abc.abstractmethod
     def get_filemetadata(self, channel: str, src: str) -> Tuple[int, int, str]:
         """get file metadata: returns (file size, last modified time, etag)"""
 
@@ -107,6 +111,12 @@ class LocalStore(PackageStore):
 
     def delete_file(self, channel: str, destination: str):
         self.fs.delete(path.join(self.channels_dir, channel, destination))
+
+    def move_file(self, channel: str, source: str, destination: str):
+        self.fs.move(
+            path.join(self.channels_dir, channel, source),
+            path.join(self.channels_dir, channel, destination),
+        )
 
     def serve_path(self, channel, src):
         return self.fs.open(path.join(self.channels_dir, channel, src)).f
@@ -225,6 +235,15 @@ class S3Store(PackageStore):
 
         with self._get_fs() as fs:
             fs.delete(path.join(channel_bucket, dest))
+
+    def move_file(self, channel: str, source: str, destination: str):
+        channel_bucket = self._bucket_map(channel)
+
+        with self._get_fs() as fs:
+            fs.move(
+                path.join(channel_bucket, source),
+                path.join(channel_bucket, destination),
+            )
 
     def list_files(self, channel: str):
         def remove_prefix(text, prefix):
