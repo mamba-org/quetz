@@ -35,7 +35,7 @@ You should have [mamba](https://github.com/mamba-org/mamba) or conda installed.
 Then create an environment:
 
 ```
-mamba env create -c conda-forge -f environment.yml
+mamba env create -f environment.yml
 
 conda activate quetz
 ```
