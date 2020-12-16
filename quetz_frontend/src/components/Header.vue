@@ -40,6 +40,9 @@
         <cv-side-nav-link href="/#/api-keys">
           Api Keys
         </cv-side-nav-link>
+        <cv-side-nav-link href="/#/jobs">
+          Jobs
+        </cv-side-nav-link>
       </cv-side-nav-items>
     </cv-side-nav>
   </cv-header>

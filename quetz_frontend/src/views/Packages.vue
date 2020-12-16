@@ -81,11 +81,9 @@ export default {
 
 <style>
 html {
-   height: 100%;
+  height: 100%;
 }
-
 #app {
-   min-height: 100%;
+  min-height: 100%;
 }
-
 </style>
