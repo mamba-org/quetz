@@ -3,6 +3,8 @@ import pickle
 from pathlib import Path
 
 import pytest
+import sqlalchemy as sa
+from sqlalchemy.ext.declarative import declarative_base
 
 from quetz.config import Config
 from quetz.dao import Dao
@@ -172,9 +174,20 @@ async def test_failed_task(config, db, user, package_version):
     assert job.status == JobStatus.success
 
 
+Base = declarative_base()
+
+
 def test_mk_query():
+    class Table(Base):
+        __tablename__ = "package_versions"
+
+        id = sa.Column(sa.Integer, primary_key=True)
+
+        version = sa.Column(sa.String)
+        package_name = sa.Column(sa.String)
+
     def compile(dict_spec):
-        s = mk_sql_expr(dict_spec)
+        s = mk_sql_expr(dict_spec, model=Table)
         sql_expr = str(s.compile(compile_kwargs={"literal_binds": True}))
         return sql_expr
 

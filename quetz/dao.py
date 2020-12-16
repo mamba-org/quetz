@@ -487,7 +487,7 @@ class Dao:
                     "time_modified": datetime.utcnow(),
                     "size": size,
                 },
-                synchronize_session="evaluate",
+                synchronize_session=False,
             )
         else:
             raise IntegrityError("duplicate package version", "", "")

@@ -51,7 +51,7 @@ def parse_conda_spec(conda_spec: str):
     return package_specs
 
 
-def mk_sql_expr(dict_spec: List[Dict]):
+def mk_sql_expr(dict_spec: List[Dict], model=PackageVersion):
     def _make_op(column, expr):
         op = expr[0]
         v = expr[1:]
@@ -82,7 +82,7 @@ def mk_sql_expr(dict_spec: List[Dict]):
     for el in dict_spec:
         and_elements = []
         for k, expr in el.items():
-            column = getattr(PackageVersion, k)
+            column = getattr(model, k)
             and_elements.append(_make_op(column, expr))
 
         expr = sa.and_(*and_elements)
