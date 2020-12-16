@@ -20,9 +20,11 @@ from sqlalchemy import (
     cast,
     event,
     func,
+    sql,
 )
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import backref, relationship
+from sqlalchemy.orm import backref, composite, relationship
+from sqlalchemy.orm.properties import CompositeProperty
 from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.types import TypeDecorator
 
@@ -225,6 +227,63 @@ class VersionType(TypeDecorator):
             return op(version_numbers(self.expr), version_numbers(other))
 
 
+class VersionComparator(CompositeProperty.Comparator):
+    def __lt__(self, other):
+        """redefine the 'greater than' operation"""
+        v = self.__clause_element__().clauses
+        if isinstance(other, str):
+            temp = other.split('.')
+            temp = temp + ['0'] * (3 - len(other))
+            o = tuple(map(int, temp))
+        else:
+            o = other.__composite_values__()
+
+        return sql.or_(
+            v[0] < o[0],
+            sql.and_(v[0] == o[0], v[1] < o[1]),
+            sql.and_(v[0] == o[0], v[1] == o[1], v[2] < v[2]),
+        )
+
+        # return sql.and_(*[a>b for a, b in
+        #                  zip(self.__clause_element__().clauses,
+        #                      other.__composite_values__())])
+
+
+class Version:
+    def __init__(self, major, minor, patch):
+        self.major = major
+        self.minor = minor
+        self.patch = patch
+
+    def __composite_values__(self):
+        return self.major, self.minor, self.patch
+
+    def __repr__(self):
+        return ".".join([self.major, self.minor, self.patch])
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, Version)
+            and other.major == self.major
+            and other.minor == self.minor
+            and other.patch == self.patch
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+def default_ver(i):
+    def _default(context):
+        version = context.get_current_parameters()['version']
+        try:
+            return int(version.split('.')[i])
+        except IndexError:
+            return 0
+
+    return _default
+
+
 class PackageVersion(Base):
     __tablename__ = 'package_versions'
     __table_args__ = (
@@ -256,6 +315,17 @@ class PackageVersion(Base):
     )
 
     uploader = relationship('User')
+
+    version_major = Column(Integer, default=default_ver(0))
+    version_minor = Column(Integer, default=default_ver(1))
+    version_patch = Column(Integer, default=default_ver(2))
+    smart_version = composite(
+        Version,
+        version_major,
+        version_minor,
+        version_patch,
+        comparator_factory=VersionComparator,
+    )
 
 
 Index(
