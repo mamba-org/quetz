@@ -4,6 +4,7 @@
 import enum
 
 from sqlalchemy import (
+    ARRAY,
     DDL,
     Boolean,
     Column,
@@ -16,11 +17,12 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    cast,
     event,
     func,
 )
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import backref, relationship
+from sqlalchemy.orm import backref, column_property, relationship
 from sqlalchemy.schema import ForeignKeyConstraint
 
 Base = declarative_base()
@@ -241,6 +243,13 @@ class PackageVersion(Base):
     )
 
     uploader = relationship('User')
+
+    # @hybrid_property
+    # def smart_version(self):
+    #    return map(int, self.version.split("."))
+    smart_version = column_property(
+        cast(func.string_to_array(version, '.'), ARRAY(Integer))
+    )
 
 
 Index(
