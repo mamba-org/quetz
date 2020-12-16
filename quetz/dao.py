@@ -24,6 +24,7 @@ from .db_models import (
     Profile,
     User,
 )
+from .jobs.models import Job
 
 logger = logging.getLogger("quetz")
 
@@ -643,3 +644,11 @@ class Dao:
         self.db.refresh(user)
 
         return user
+
+    def get_jobs(self):
+        jobs = self.db.query(Job).all()
+        return jobs
+
+    def get_job(self, job_id: int):
+        job = self.db.query(Job).filter(Job.id == job_id).one_or_none()
+        return job

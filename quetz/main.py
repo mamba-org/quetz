@@ -63,6 +63,7 @@ from quetz.deps import (
     get_session,
     get_tasks_worker,
 )
+from quetz.jobs import api as jobs_api
 from quetz.rest_models import ChannelActionEnum, CPRole
 from quetz.tasks import indexing
 from quetz.tasks.common import Task
@@ -141,6 +142,8 @@ if config.configured_section("github"):
 
 for router in plugin_routers:
     app.include_router(router)
+
+app.include_router(jobs_api.get_router())
 
 if config.configured_section("google"):
     auth_google.register(config)

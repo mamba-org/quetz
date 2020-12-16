@@ -1,3 +1,6 @@
+# Copyright 2020 QuantStack
+# Distributed under the terms of the Modified BSD License.
+
 from datetime import datetime
 from enum import Enum
 
@@ -62,6 +65,8 @@ class Job(Base):
         default=JobStatus.pending,
     )
 
+    tasks = sa.orm.relationship('Task', cascade="all,delete-orphan")
+
 
 class Task(Base):
     __tablename__ = "tasks"
@@ -78,9 +83,7 @@ class Task(Base):
     job_id = sa.Column(
         sa.Integer, sa.ForeignKey("jobs.id", ondelete="cascade"), nullable=False
     )
-    job = sa.orm.relationship(
-        "Job", backref=sa.orm.backref("tasks", cascade="all,delete-orphan")
-    )
+    job = sa.orm.relationship("Job")
     package_version_id = sa.Column(
         UUID, sa.ForeignKey("package_versions.id", ondelete="cascade"), nullable=True
     )
