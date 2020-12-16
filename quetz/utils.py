@@ -133,9 +133,7 @@ def apply_custom_query(search_type, db, keywords, filters):
         if each_keyword == 'NOT':
             negation_argument = keywords[i + 1]
             if search_type == 'package':
-                each_keyword_condition = cast(
-                    Package.name, String(None, collation=None)
-                ).notlike(f'%{negation_argument}%')
+                each_keyword_condition = Package.name.notlike(f'%{negation_argument}%')
             elif search_type == 'channel':
                 each_keyword_condition = collate(Channel.name, "und-x-icu").notlike(
                     f'%{negation_argument}%'
@@ -143,9 +141,7 @@ def apply_custom_query(search_type, db, keywords, filters):
         else:
             if each_keyword != negation_argument:
                 if search_type == 'package':
-                    each_keyword_condition = cast(
-                        Package.name, String(None, collation=None)
-                    ).ilike(f'%{each_keyword}%')
+                    each_keyword_condition = Package.name.ilike(f'%{each_keyword}%')
                 elif search_type == 'channel':
                     each_keyword_condition = collate(Channel.name, "und-x-icu").ilike(
                         f'%{each_keyword}%'
@@ -164,39 +160,28 @@ def apply_custom_query(search_type, db, keywords, filters):
             each_val = each_val.strip('"').strip("'")
             if search_type == 'package':
                 if key == 'channel':
-                    each_val_condition = cast(
-                        collate(Channel.name, "und-x-icu"), String(255, collation=None)
-                    ).like(f'%{str(each_val)}%')
-                    # each_val_condition = Channel.name == str(each_val)
+                    each_val_condition = collate(Channel.name, "und-x-icu").ilike(
+                        f'%{(each_val)}%'
+                    )
                 elif key == 'description':
-                    each_val_condition = cast(
-                        Package.description, String(None, collation=None)
-                    ).contains(each_val)
+                    each_val_condition = Package.description.contains(each_val)
                 elif key == 'summary':
-                    each_val_condition = cast(
-                        Package.summary, String(None, collation=None)
-                    ).contains(each_val)
+                    each_val_condition = Package.summary.contains(each_val)
                 elif key == 'format':
                     each_val_condition = cast(
-                        PackageVersion.package_format, String(None, collation=None)
-                    ).ilike(f'%{str(each_val)}%')
+                        PackageVersion.package_format, String
+                    ).ilike(f'%{(each_val)}%')
                 elif key == 'platform':
-                    each_val_condition = cast(
-                        PackageVersion.platform, String(None, collation=None)
-                    ).ilike(f'%{str(each_val)}%')
+                    each_val_condition = PackageVersion.platform.ilike(
+                        f'%{(each_val)}%'
+                    )
                 elif key == 'version':
-                    each_val_condition = cast(
-                        PackageVersion.version, String(None, collation=None)
-                    ).ilike(f'%{str(each_val)}%')
+                    each_val_condition = PackageVersion.version.ilike(f'%{(each_val)}%')
                 elif key == 'uploader':
-                    each_val_condition = cast(
-                        User.username, String(None, collation=None)
-                    ).ilike(f'%{str(each_val)}%')
+                    each_val_condition = User.username.ilike(f'%{(each_val)}%')
             elif search_type == 'channel':
                 if key == 'description':
-                    each_val_condition = cast(
-                        Channel.description, String(None, collation=None)
-                    ).contains(each_val)
+                    each_val_condition = Channel.description.contains(each_val)
                 elif key == 'private':
                     each_val_condition = Channel.private.is_(
                         bool(distutils.util.strtobool(each_val))
