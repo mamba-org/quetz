@@ -41,7 +41,7 @@ def database_url(sqlite_url):
 
 @fixture
 def engine(database_url):
-    engine = get_engine(database_url, echo=False)
+    engine = get_engine(database_url, echo=True)
     yield engine
     engine.dispose()
 

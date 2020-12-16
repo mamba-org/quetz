@@ -77,6 +77,7 @@ v = PackageVersion.smart_version
         (["0.11", "0.2"], v < "0.2", set()),
         (["0.2.0", "0.12.0", "1.0.0"], v < "0.2", set()),
         (["0.2.0", "0.12.0", "1.0.0"], v < "0.12", {"0.2.0"}),
+        # (["0.2.0.alpha"], v < "0.2.0", {"0.2.0.alpha"}),
     ],
 )
 def test_package_version_comparison(

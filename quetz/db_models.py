@@ -212,6 +212,23 @@ class PackageFormatEnum(enum.Enum):
     conda = 2
 
 
+def version_numbers(version):
+    return cast(func.string_to_array(version, '.'), ARRAY(Integer))
+
+
+from sqlalchemy.ext.hybrid import Comparator, hybrid_property
+from sqlalchemy.orm.properties import (
+    ColumnProperty,
+    CompositeProperty,
+    RelationshipProperty,
+)
+
+
+class VersionComparator(Comparator):
+    def operate(self, op, other):
+        return op(version_numbers(self.__clause_element__()), version_numbers(other))
+
+
 class PackageVersion(Base):
     __tablename__ = 'package_versions'
     __table_args__ = (
@@ -244,12 +261,13 @@ class PackageVersion(Base):
 
     uploader = relationship('User')
 
-    # @hybrid_property
-    # def smart_version(self):
-    #    return map(int, self.version.split("."))
-    smart_version = column_property(
-        cast(func.string_to_array(version, '.'), ARRAY(Integer))
-    )
+    @hybrid_property
+    def smart_version(self):
+        return self.version
+
+    @smart_version.comparator
+    def smart_version(cls):
+        return VersionComparator(cls.version)
 
 
 Index(
