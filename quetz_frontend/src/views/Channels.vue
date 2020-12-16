@@ -5,13 +5,13 @@
         <h3 class="bx--data-table-header">Channels</h3>
         <cv-data-table
           :columns="columns"
-          :data="data"
+          :data="table_data"
           :pagination="pagination"
           @search="onFilter" searchLabel="Filter" searchPlaceholder="Filter" searchClearLabel="Clear filter"
           @pagination="loadPagination"
           ref="table">
           <template slot="data">
-            <cv-data-table-row v-for="(row, rowIndex) in data" :key="`${rowIndex}`" :value="`${rowIndex}`">
+            <cv-data-table-row v-for="(row, rowIndex) in table_data" :key="`${rowIndex}`" :value="`${rowIndex}`">
                <cv-data-table-cell>{{ row[0] }}</cv-data-table-cell>
                <cv-data-table-cell>{{ row[1] }}</cv-data-table-cell>
                <cv-data-table-cell><Password16 v-if="row[2]" class="white-svg"/></cv-data-table-cell>
@@ -33,7 +33,7 @@
     data: function () {
       return {
         columns: [],
-        data: [],
+        table_data: [],
         loading: true,
         rowSelects: []
       }
@@ -41,11 +41,14 @@
     methods: {
       loadPagination: function(args, searchquery) {
         let url = "/api/paginated/channels?"
-        this.selected_pagesize = args['length'];
-        url += new URLSearchParams({
-          limit: args['length'],
-          skip: args['start'] - 1
-        });
+        if (args)
+        {
+          this.selected_pagesize = args['length'];
+          url += new URLSearchParams({
+            limit: args['length'],
+            skip: args['start'] - 1
+          });
+        }
         if (searchquery)
         {
           url += "&" + new URLSearchParams({
@@ -60,7 +63,7 @@
                 pageSizes: [25, 50, 100, 1000]
               };
               this.numberOfItems = decoded.pagination.all_records_count;
-              this.data = decoded.result.map((el) => [el.name, el.description, el.private]);
+              this.table_data = decoded.result.map((el) => [el.name, el.description, el.private]);
           });
         });
       },
@@ -71,7 +74,7 @@
         let router = this.$router;
         this.$el.querySelectorAll('tr').forEach((el) => {
           el.addEventListener('click', () => {
-            router.push({ path: "/channel/" + this.data[el.getAttribute('value')][0] + "/packages"});
+            router.push({ path: "/channel/" + this.table_data[el.getAttribute('value')][0] + "/packages"});
           });
         });
       },
