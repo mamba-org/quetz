@@ -3,6 +3,8 @@ from unittest.mock import ANY
 
 import pytest
 
+from quetz.metrics.db_models import Interval, PackageVersionMetric
+
 
 def test_get_package_list(package_version, package_name, channel_name, client):
 
@@ -86,3 +88,36 @@ def test_upload_wrong_file_type(auth_client, public_channel):
     )
     assert response.status_code == 400
     assert "not a bzip2 file" in response.json()['detail']
+
+
+def test_increment_download_count(auth_client, public_channel, package_version, db):
+
+    response = auth_client.get(
+        f"/channels/{public_channel.name}/linux-64/test-package-0.1-0.tar.bz2"
+    )
+
+    assert response.status_code == 200
+
+    metrics = (
+        db.query(PackageVersionMetric)
+        .filter(PackageVersionMetric.package_version_id == package_version.id)
+        .all()
+    )
+
+    assert len(metrics) > 1
+    assert metrics[0].count == 1
+
+    response = auth_client.get(
+        f"/channels/{public_channel.name}/linux-64/test-package-0.1-0.tar.bz2"
+    )
+
+    assert response.status_code == 200
+
+    metric = (
+        db.query(PackageVersionMetric)
+        .filter(PackageVersionMetric.package_version_id == package_version.id)
+        .filter(PackageVersionMetric.interval_type == Interval.total)
+        .one()
+    )
+
+    assert metric.count == 2

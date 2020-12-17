@@ -1210,6 +1210,7 @@ async def serve_path(
     accept_encoding: Optional[str] = Header(None),
     cache: LocalCache = Depends(LocalCache),
     session=Depends(get_remote_session),
+    dao: Dao = Depends(get_dao),
 ):
     if channel.mirror_channel_url and channel.mirror_mode == "proxy":
         repository = RemoteRepository(channel.mirror_channel_url, session)
@@ -1220,6 +1221,13 @@ async def serve_path(
     if pkgstore_support_url and (path.endswith('.tar.bz2') or path.endswith('.conda')):
         # we have to ignore type checking here right now, sorry
         return RedirectResponse(pkgstore.url(channel.name, path))  # type: ignore
+
+    if path.endswith(".tar.bz2") or path.endswith(".conda"):
+        try:
+            platform, filename = os.path.split(path)
+            dao.incr_download_count(channel.name, filename, platform)
+        except ValueError:
+            pass
 
     def iter_chunks(fid):
         while True:
