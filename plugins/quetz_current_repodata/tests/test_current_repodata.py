@@ -1,4 +1,7 @@
 import json
+import shutil
+import tempfile
+from pathlib import Path
 
 
 def test_current_repodata_hook(
@@ -40,7 +43,22 @@ def test_current_repodata_hook(
 
     from quetz_current_repodata import main
 
-    main.post_package_indexing(pkgstore, channel.name, subdirs, files, packages)
+    # this is emulating how we move repodata to the filestore now
+    with tempfile.TemporaryDirectory() as tempdir:
+        tempdir_path = Path(tempdir)
+
+        f = pkgstore.serve_path(channel.name, "linux-64/repodata.json")
+
+        stubdir = tempdir_path / channel.name / "linux-64"
+        stubdir.mkdir(parents=True)
+
+        with open(stubdir / "repodata.json", "wb") as ftemp:
+            shutil.copyfileobj(f, ftemp)
+
+        main.post_package_indexing(tempdir_path, channel.name, subdirs, files, packages)
+
+        with open(stubdir / "current_repodata.json", "rb") as fo:
+            pkgstore.add_file(fo.read(), channel.name, "linux-64/current_repodata.json")
 
     f = pkgstore.serve_path(channel.name, "linux-64/current_repodata.json")
     current_repodata = json.load(f)

@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import BinaryIO, List, Optional
 
 import fastapi
@@ -34,7 +35,7 @@ def post_add_package_version(
 
 @hookspec
 def post_package_indexing(
-    pkgstore: "quetz.pkgstores.PackageStore",
+    tempdir: Path,
     channel_name: str,
     subdirs: List[str],
     files: dict,

@@ -8,6 +8,7 @@ import secrets
 import string
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 
 
 def add_static_file(contents, channel_name, subdir, fname, pkgstore, file_index=None):
@@ -22,6 +23,44 @@ def add_static_file(contents, channel_name, subdir, fname, pkgstore, file_index=
     pkgstore.add_file(bz2_file, channel_name, f"{path}.bz2")
     pkgstore.add_file(gzp_file, channel_name, f"{path}.gz")
     pkgstore.add_file(raw_file, channel_name, f"{path}")
+
+    if file_index:
+        add_entry_for_index(file_index, subdir, fname, raw_file)
+        add_entry_for_index(file_index, subdir, f"{fname}.bz2", bz2_file)
+        add_entry_for_index(file_index, subdir, f"{fname}.gz", gzp_file)
+
+
+def add_temp_static_file(
+    contents, channel_name, subdir, fname, temp_dir, file_index=None
+):
+    if type(contents) is not bytes:
+        raw_file = contents.encode("utf-8")
+    else:
+        raw_file = contents
+
+    temp_dir = Path(temp_dir)
+
+    if subdir:
+        path = temp_dir / channel_name / subdir
+    else:
+        path = temp_dir / channel_name
+
+    if not path.exists():
+        path.mkdir(exist_ok=True, parents=True)
+
+    file_path = path / fname
+
+    with open(file_path, 'wb') as fo:
+        fo.write(raw_file)
+
+    bz2_file = bz2.compress(raw_file)
+    gzp_file = gzip.compress(raw_file)
+
+    with open(f"{file_path}.bz2", 'wb') as fo:
+        fo.write(bz2_file)
+
+    with open(f"{file_path}.gz", 'wb') as fo:
+        fo.write(gzp_file)
 
     if file_index:
         add_entry_for_index(file_index, subdir, fname, raw_file)

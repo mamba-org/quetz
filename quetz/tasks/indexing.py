@@ -5,7 +5,10 @@ import json
 import logging
 import numbers
 import os
+import tempfile
+import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
@@ -13,7 +16,7 @@ import quetz.config
 from quetz import channel_data, repo_data
 from quetz.condainfo import MAX_CONDA_TIMESTAMP
 from quetz.db_models import PackageVersion
-from quetz.utils import add_static_file
+from quetz.utils import add_static_file, add_temp_static_file
 
 _iec_prefixes = (
     # IEEE 1541 - IEEE Standard for Prefixes for Binary Multiples
@@ -196,6 +199,10 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
     files = {}
     packages = {}
     subdir_template = jinjaenv.get_template("subdir-index.html.j2")
+
+    tempdir = tempfile.TemporaryDirectory()
+    tempdir_path = Path(tempdir.name)
+
     for sdir in subdirs:
         logger.debug(f"creating indexes for subdir {sdir} of channel {channel_name}")
         raw_repodata = repo_data.export(dao, channel_name, sdir)
@@ -204,12 +211,14 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
         packages[sdir] = raw_repodata["packages"]
 
         repodata = json.dumps(raw_repodata, indent=2, sort_keys=False)
-        add_static_file(repodata, channel_name, sdir, "repodata.json", pkgstore, files)
+        add_temp_static_file(
+            repodata, channel_name, sdir, "repodata.json", tempdir_path, files
+        )
 
     pm = quetz.config.get_plugin_manager()
 
     pm.hook.post_package_indexing(
-        pkgstore=pkgstore,
+        tempdir=tempdir_path,
         channel_name=channel_name,
         subdirs=subdirs,
         files=files,
@@ -225,3 +234,27 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
             add_files=files[sdir],
         )
         add_static_file(subdir_index_html, channel_name, sdir, "index.html", pkgstore)
+
+    # recursively walk through the tree
+    tmp_suffix = uuid.uuid4().hex
+    after_upload_move = []
+    for path in tempdir_path.rglob('*.*'):
+        rel_path = path.relative_to(tempdir_path)
+        if len(rel_path.parts) != 3:
+            raise NotImplementedError("We can only handle channel_name/subdir/file.xyz")
+
+        channel_name, sdir, filename = rel_path.parts
+        with open(path, 'rb') as to_upload:
+            add_static_file(
+                to_upload.read(), channel_name, sdir, filename + tmp_suffix, pkgstore
+            )
+            after_upload_move.append(f"{sdir}/{filename}{tmp_suffix}")
+
+    for f_to_move in after_upload_move:
+        logger.info(
+            "Moving to final destination: "
+            f"{f_to_move} -> {f_to_move[:-len(tmp_suffix)]}"
+        )
+        pkgstore.move_file(channel_name, f_to_move, f_to_move[: -len(tmp_suffix)])
+
+    tempdir.cleanup()
