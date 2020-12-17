@@ -5,13 +5,14 @@ import json
 import logging
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, aliased, joinedload
 
 from quetz import channel_data, errors, rest_models, versionorder
+from quetz.utils import apply_custom_query
 
 from .db_models import (
     ApiKey,
@@ -170,10 +171,34 @@ class Dao:
 
         return get_paginated_result(query, skip, limit)
 
-    def search_packages(self, q: str, user_id: Optional[bytes]):
-        query = (
-            self.db.query(Package).join(Channel).filter(Package.name.ilike(f'%{q}%'))
-        )
+    def search_packages(
+        self,
+        keywords: List[str],
+        filters: Optional[List[tuple]],
+        user_id: Optional[bytes],
+    ):
+        db = self.db.query(Package).join(Channel).join(PackageVersion).join(User)
+        query = apply_custom_query('package', db, keywords, filters)
+        if user_id:
+            query = query.filter(
+                or_(
+                    Channel.private == False,  # noqa
+                    Channel.members.any(ChannelMember.user_id == user_id),
+                )
+            )
+        else:
+            query = query.filter(Channel.private == False)  # noqa
+
+        return query.all()
+
+    def search_channels(
+        self,
+        keywords: List[str],
+        filters: Optional[List[tuple]],
+        user_id: Optional[bytes],
+    ):
+        db = self.db.query(Channel)
+        query = apply_custom_query('channel', db, keywords, filters)
         if user_id:
             query = query.filter(
                 or_(

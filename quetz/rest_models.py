@@ -143,6 +143,15 @@ class PackageSearch(BaseModel):
         orm_mode = True
 
 
+class ChannelSearch(BaseModel):
+    name: str = Field(None, title='The name of the channel', max_length=1500)
+    description: str = Field(None, title='The description of the channel')
+    private: bool = Field(None, title='The visibility of the channel')
+
+    class Config:
+        orm_mode = True
+
+
 class PaginatedResponse(GenericModel, Generic[T]):
     pagination: Pagination = Field(None, title="Pagination object")
     result: List[T] = Field([], title="Result objects")

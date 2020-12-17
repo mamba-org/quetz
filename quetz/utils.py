@@ -2,13 +2,20 @@
 # Distributed under the terms of the Modified BSD License.
 
 import bz2
+import distutils
 import gzip
 import hashlib
 import secrets
+import shlex
 import string
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import unquote
+
+from sqlalchemy import String, and_, cast, collate, not_, or_
+
+from .db_models import Channel, Package, PackageVersion, User
 
 
 def add_static_file(contents, channel_name, subdir, fname, pkgstore, file_index=None):
@@ -84,6 +91,107 @@ def add_entry_for_index(files, subdir, fname, data_bytes):
             "sha256": sha.hexdigest(),
         }
     )
+
+
+def parse_query(search_type, query):
+    if search_type == 'package':
+        accepted_filters = [
+            'channel',
+            'description',
+            'summary',
+            'format',
+            'platform',
+            'version',
+            'uploader',
+        ]
+    elif search_type == 'channel':
+        accepted_filters = ['description', 'private']
+    query = unquote(query.strip())
+
+    args = shlex.split(query)
+    keywords = []
+    filters = []
+
+    for arg in args:
+        if ':' in arg:
+            key, val = arg.split(':', 1)
+            if (
+                key.startswith('-') and key[1:] in accepted_filters
+            ) or key in accepted_filters:
+                filters.append((key, val.split(',')))
+        else:
+            arg = arg.strip('"').strip("'")
+            keywords.append(arg)
+
+    return keywords, filters
+
+
+def apply_custom_query(search_type, db, keywords, filters):
+    keyword_conditions = []
+    negation_argument = None
+    for i, each_keyword in enumerate(keywords):
+        if each_keyword == 'NOT':
+            negation_argument = keywords[i + 1]
+            if search_type == 'package':
+                each_keyword_condition = Package.name.notlike(f'%{negation_argument}%')
+            elif search_type == 'channel':
+                each_keyword_condition = collate(Channel.name, "und-x-icu").notlike(
+                    f'%{negation_argument}%'
+                )
+        else:
+            if each_keyword != negation_argument:
+                if search_type == 'package':
+                    each_keyword_condition = Package.name.ilike(f'%{each_keyword}%')
+                elif search_type == 'channel':
+                    each_keyword_condition = collate(Channel.name, "und-x-icu").ilike(
+                        f'%{each_keyword}%'
+                    )
+        keyword_conditions.append(each_keyword_condition)
+    query = db.filter(and_(*keyword_conditions))
+
+    for each_filter in filters:
+        key, values = each_filter
+        negate = False
+        if key.startswith('-'):
+            key = key[1:]
+            negate = True
+        each_filter_conditions = []
+        for each_val in values:
+            each_val = each_val.strip('"').strip("'")
+            if search_type == 'package':
+                if key == 'channel':
+                    each_val_condition = collate(Channel.name, "und-x-icu").ilike(
+                        f'%{(each_val)}%'
+                    )
+                elif key == 'description':
+                    each_val_condition = Package.description.contains(each_val)
+                elif key == 'summary':
+                    each_val_condition = Package.summary.contains(each_val)
+                elif key == 'format':
+                    each_val_condition = cast(
+                        PackageVersion.package_format, String
+                    ).ilike(f'%{(each_val)}%')
+                elif key == 'platform':
+                    each_val_condition = PackageVersion.platform.ilike(
+                        f'%{(each_val)}%'
+                    )
+                elif key == 'version':
+                    each_val_condition = PackageVersion.version.ilike(f'%{(each_val)}%')
+                elif key == 'uploader':
+                    each_val_condition = User.username.ilike(f'%{(each_val)}%')
+            elif search_type == 'channel':
+                if key == 'description':
+                    each_val_condition = Channel.description.contains(each_val)
+                elif key == 'private':
+                    each_val_condition = Channel.private.is_(
+                        bool(distutils.util.strtobool(each_val))
+                    )
+            each_filter_conditions.append(each_val_condition)
+        if negate:
+            query = query.filter(not_(or_(*each_filter_conditions)))
+        else:
+            query = query.filter(or_(*each_filter_conditions))
+    return query
 
 
 class TicToc:
