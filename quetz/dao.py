@@ -26,6 +26,7 @@ from .db_models import (
     User,
 )
 from .jobs.models import Job
+from .metrics.db_models import Interval, PackageVersionMetric
 
 logger = logging.getLogger("quetz")
 
@@ -677,3 +678,53 @@ class Dao:
     def get_job(self, job_id: int):
         job = self.db.query(Job).filter(Job.id == job_id).one_or_none()
         return job
+
+    def incr_download_count(
+        self, channel: str, filename: str, platform: str, now: Optional[datetime] = None
+    ):
+
+        metric_name = "download"
+
+        q = (
+            self.db.query(PackageVersionMetric)
+            .join(PackageVersion)
+            .filter(PackageVersionMetric.type == metric_name)
+            .filter(PackageVersion.channel_name == channel)
+            .filter(PackageVersion.filename == filename)
+            .filter(PackageVersion.platform == platform)
+        )
+
+        if now is None:
+            now = datetime.utcnow()
+
+        for interval in Interval:
+            now_interval = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            if interval == Interval.month:
+                now_interval = now_interval.replace(day=1)
+            if interval == Interval.year:
+                now_interval = now_interval.replace(month=1)
+            m = (
+                q.filter(PackageVersionMetric.interval == interval)
+                .filter(PackageVersionMetric.date == now_interval)
+                .one_or_none()
+            )
+
+            if m is None:
+                package_version = (
+                    self.db.query(PackageVersion)
+                    .filter(PackageVersion.channel_name == channel)
+                    .filter(PackageVersion.filename == filename)
+                    .filter(PackageVersion.platform == platform)
+                ).one()
+                m = PackageVersionMetric(
+                    package_version=package_version,
+                    type=metric_name,
+                    interval=interval,
+                    date=now_interval,
+                )
+                self.db.add(m)
+                self.db.flush()
+
+            m.count += 1
+
+            self.db.commit()

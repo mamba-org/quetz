@@ -8,6 +8,7 @@ from quetz import errors, rest_models
 from quetz.dao import Dao
 from quetz.database import get_session
 from quetz.db_models import Channel, Package, PackageVersion
+from quetz.metrics.db_models import Interval, PackageVersionMetric
 
 
 @pytest.fixture
@@ -164,6 +165,31 @@ def test_update_channel_size(dao, channel, db, package_version):
     channel = db.query(Channel).filter(Channel.name == channel.name).one()
 
     assert channel.size == package_version.size
+
+
+def test_increment_download_count(dao: Dao, channel, db, package_version):
+
+    dao.incr_download_count(
+        channel.name, package_version.filename, package_version.platform
+    )
+
+    download_counts = (
+        db.query(PackageVersionMetric)
+        .filter(PackageVersionMetric.type == "download")
+        .all()
+    )
+    for m in download_counts:
+        assert m.count == 1
+
+    assert len(download_counts) == len(Interval)
+
+    dao.incr_download_count(
+        channel.name, package_version.filename, package_version.platform
+    )
+    for m in download_counts:
+        assert m.count == 2
+
+    assert len(download_counts) == len(Interval)
 
 
 def test_create_user_with_profile(dao: Dao, user_without_profile):
