@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2019, SUSE LLC
  *
- * This program is licensed under the BSD license, read LICENSE.BSD
+ * This program is licensed under the BSD license, read LIBSOLV_LICENSE.txt
  * for further information
  */
 
@@ -9,6 +9,8 @@
  * conda.c
  *
  * evr comparison and package matching for conda
+ *
+ * THIS IS A MODIFIED VERSION FOR USE IN quetz_db_ext
  */
 
 #include <regex.h>
@@ -38,11 +40,6 @@
 #define REL_WITHOUT 28
 #define REL_UNLESS 29 /* AND_NOT */
 #define REL_CONDA 30
-
-// #include "pool.h"
-// #include "repo.h"
-// #include "util.h"
-// #include "conda.h"
 
 #ifdef _WIN32
 #include "strfncs.h"
@@ -223,15 +220,6 @@ pool_evrcmp_conda_int(const char* evr1, const char* evr1e, const char* evr2, con
         return 1;
     return solv_vercmp_conda(r1 + 1, s1, r2 + 1, s2, startswith);
 }
-
-// int
-// pool_evrcmp_conda(const Pool *pool, const char *evr1, const char *evr2, int mode)
-// {
-//   if (evr1 == evr2)
-//     return 0;
-//   return pool_evrcmp_conda_int(evr1, evr1 + strlen(evr1), evr2, evr2 + strlen(evr2), 0);
-//   return pool_evrcmp_conda_int(evr1, evr1 + strlen(evr1), evr2, evr2 + strlen(evr2), 0);
-// }
 
 static int
 regexmatch(const char* evr, const char* version, size_t versionlen, int icase)
@@ -462,195 +450,3 @@ int solvable_conda_matchversion(const char* evr, const char* version)
     //     return 0;
     return r;
 }
-
-// static Id
-// pool_addrelproviders_conda_slow(Pool *pool, const char *namestr, Id evr, Queue *plist, int mode)
-// {
-//   size_t namestrlen = strlen(namestr);
-//   const char *evrstr = evr == 0 || evr == 1 ? 0 : pool_id2str(pool, evr);
-//   Id p;
-
-//   FOR_POOL_SOLVABLES(p)
-//     {
-//       Solvable *s = pool->solvables + p;
-//       if (!pool_installable(pool, s))
-// 	continue;
-//       if (mode == 1 && !globmatch(pool_id2str(pool, s->name), namestr, namestrlen, 1))
-// 	continue;
-//       if (mode == 2 && !regexmatch(pool_id2str(pool, s->name), namestr, namestrlen, 1))
-// 	continue;
-//       if (!evrstr || solvable_conda_matchversion(s, evrstr))
-// 	queue_push(plist, p);
-//     }
-//   return 0;
-// }
-
-// /* called from pool_addrelproviders, plist is an empty queue
-//  * it can either return an offset into the whatprovides array
-//  * or fill the plist queue and return zero */
-// Id
-// pool_addrelproviders_conda(Pool *pool, Id name, Id evr, Queue *plist)
-// {
-//   const char *namestr = pool_id2str(pool, name), *np;
-//   size_t l, nuc = 0;
-//   Id wp, p, *pp;
-
-//   /* is this a regex? */
-//   if (*namestr && *namestr == '^')
-//     {
-//       l = strlen(namestr);
-//       if (namestr[l - 1] == '$')
-// 	return pool_addrelproviders_conda_slow(pool, namestr, evr, plist, 2);
-//     }
-//   /* is this '*'? */
-//   if (*namestr && *namestr == '*' && namestr[1] == 0)
-//     return pool_addrelproviders_conda_slow(pool, namestr, evr, plist, 0);
-//   /* does the string contain '*' or uppercase? */
-//   for (np = namestr; *np; np++)
-//     {
-//       if (*np == '*')
-// 	return pool_addrelproviders_conda_slow(pool, namestr, evr, plist, 1);
-//       else if (*np >= 'A' && *np <= 'Z')
-//         nuc++;
-//     }
-//   if (nuc)
-//     {
-//       char *nbuf = solv_strdup(namestr), *nbufp;
-//       for (nbufp = nbuf; *nbufp; nbufp++)
-// 	*nbufp = *nbufp >= 'A' && *nbufp <= 'Z' ? *nbufp + ('a' - 'A') : *nbufp;
-//       name = pool_str2id(pool, nbuf, 0);
-//       wp = name ? pool_whatprovides(pool, name) : 0;
-//       solv_free(nbuf);
-//     }
-//   else
-//     wp = pool_whatprovides(pool, name);
-//   if (wp && evr && evr != 1)
-//     {
-//       const char *evrstr = pool_id2str(pool, evr);
-//       pp = pool->whatprovidesdata + wp;
-//       while ((p = *pp++) != 0)
-// 	{
-// 	  if (solvable_conda_matchversion(pool->solvables + p, evrstr))
-// 	    queue_push(plist, p);
-// 	  else
-// 	    wp = 0;
-// 	}
-//     }
-//   return wp;
-// }
-
-// /* create a CONDA_REL relation from a matchspec */
-// Id
-// pool_conda_matchspec(Pool *pool, const char *name)
-// {
-//   const char *p2;
-//   char *name2;
-//   char *p, *pp;
-//   char *build, *buildend, *version, *versionend;
-//   Id nameid, evrid;
-//   int haveglob = 0;
-
-//   /* ignore channel and namespace for now */
-//   if ((p2 = strrchr(name, ':')))
-//     name = p2 + 1;
-//   name2 = solv_strdup(name);
-//   /* find end of name */
-//   for (p = name2; *p && *p != ' ' && *p != '=' && *p != '<' && *p != '>' && *p != '!' && *p != '~'; p++)
-//     {
-//       if (*p >= 'A' && *p <= 'Z')
-//         *(char *)p += 'a' - 'A';		/* lower case the name */
-//       else if (*p == '*')
-// 	haveglob = 1;
-//     }
-//   if (p == name2)
-//     {
-//       solv_free(name2);
-//       return 0;	/* error: empty package name */
-//     }
-//   nameid = pool_strn2id(pool, name2, p - name2, 1);
-//   while (*p == ' ')
-//     p++;
-//   if (!*p)
-//     {
-//       if (*name2 != '^' && !haveglob)
-// 	{
-// 	  solv_free(name2);
-// 	  return nameid;		/* return a simple dependency if no glob/regex */
-// 	}
-//       evrid = pool_str2id(pool, "*", 1);
-//       solv_free(name2);
-//       return pool_rel2id(pool, nameid, evrid, REL_CONDA, 1);
-//     }
-//   /* have version */
-//   version = p;
-//   versionend = p + strlen(p);
-//   while (versionend > version && versionend[-1] == ' ')
-//     versionend--;
-//   build = buildend = 0;
-//   /* split of build */
-//   p = versionend;
-//   for (;;)
-//     {
-//       while (p > version && p[-1] != ' ' && p[-1] != '-' && p[-1] != '=' && p[-1] != ',' && p[-1] != '|' && p[-1] != '<' && p[-1] != '>' && p[-1] != '~')
-// 	p--;
-//       if (p <= version + 1 || (p[-1] != ' ' && p[-1] != '='))
-// 	break;		/* no build */
-//       /* check char before delimiter */
-//       if (p[-2] == '=' || p[-2] == '!' || p[-2] == '|' || p[-2] == ',' || p[-2] == '<' || p[-2] == '>' || p[-2] == '~')
-// 	{
-// 	  /* illegal combination */
-// 	  if (p[-1] == ' ')
-// 	    {
-// 	      p--;
-// 	      continue;	/* special case space: it may be in the build */
-// 	    }
-// 	  break;	/* no build */
-// 	}
-//       if (p < versionend)
-// 	{
-// 	  build = p;
-// 	  buildend = versionend;
-// 	  versionend = p - 1;
-// 	}
-//       break;
-//     }
-//   /* do weird version translation */
-//   if (versionend > version && version[0] == '=')
-//     {
-//       if (versionend - version >= 2 && version[1] == '=')
-// 	{
-// 	  if (!build)
-// 	    version += 2;
-// 	}
-//       else if (build)
-// 	version += 1;
-//       else
-// 	{
-// 	  for (p = version + 1; p < versionend; p++)
-// 	    if (*p == '=' || *p == ',' || *p == '|')
-// 	      break;
-// 	  if (p == versionend)
-// 	    {
-// 	      memmove(version, version + 1, versionend - version - 1);
-// 	      versionend[-1] = '*';
-// 	    }
-// 	}
-//     }
-// #if 0
-//   printf("version: >%.*s<\n", (int)(versionend - version), version);
-//   if (build) printf("build: >%.*s<\n", (int)(buildend - build), build);
-// #endif
-//   /* strip spaces from version */
-//   for (p = pp = version; pp < versionend; pp++)
-//     if (*pp != ' ')
-//       *p++ = *pp;
-//   if (build)
-//     {
-//       *p++ = ' ';
-//       memcpy(p, build, buildend - build);
-//       p += buildend - build;
-//     }
-//   evrid = pool_strn2id(pool, version, p - version, 1);
-//   solv_free(name2);
-//   return pool_rel2id(pool, nameid, evrid, REL_CONDA, 1);
-// }
