@@ -1,3 +1,4 @@
+import datetime
 import uuid
 
 import pytest
@@ -169,27 +170,35 @@ def test_update_channel_size(dao, channel, db, package_version):
 
 def test_increment_download_count(dao: Dao, channel, db, package_version):
 
+    now = datetime.datetime(2020, 10, 1, 10, 1, 10)
     dao.incr_download_count(
-        channel.name, package_version.filename, package_version.platform
+        channel.name, package_version.filename, package_version.platform, now=now
     )
 
-    download_counts = (
-        db.query(PackageVersionMetric)
-        .filter(PackageVersionMetric.type == "download")
-        .all()
-    )
+    download_counts = db.query(PackageVersionMetric).all()
     for m in download_counts:
         assert m.count == 1
 
     assert len(download_counts) == len(Interval)
 
     dao.incr_download_count(
-        channel.name, package_version.filename, package_version.platform
+        channel.name, package_version.filename, package_version.platform, now=now
     )
+    download_counts = db.query(PackageVersionMetric).all()
     for m in download_counts:
         assert m.count == 2
 
     assert len(download_counts) == len(Interval)
+
+    dao.incr_download_count(
+        channel.name,
+        package_version.filename,
+        package_version.platform,
+        now=now + datetime.timedelta(days=1),
+    )
+
+    download_counts = db.query(PackageVersionMetric).all()
+    assert len(download_counts) == len(Interval) + 1
 
 
 def test_create_user_with_profile(dao: Dao, user_without_profile):

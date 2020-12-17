@@ -688,7 +688,7 @@ class Dao:
         q = (
             self.db.query(PackageVersionMetric)
             .join(PackageVersion)
-            .filter(PackageVersionMetric.type == metric_name)
+            .filter(PackageVersionMetric.metric_name == metric_name)
             .filter(PackageVersion.channel_name == channel)
             .filter(PackageVersion.filename == filename)
             .filter(PackageVersion.platform == platform)
@@ -699,13 +699,15 @@ class Dao:
 
         for interval in Interval:
             now_interval = now.replace(hour=0, minute=0, second=0, microsecond=0)
-            if interval == Interval.month:
+            if interval in [Interval.month, Interval.year]:
                 now_interval = now_interval.replace(day=1)
             if interval == Interval.year:
                 now_interval = now_interval.replace(month=1)
+            if interval == Interval.total:
+                now_interval = datetime(1900, 1, 1)
             m = (
-                q.filter(PackageVersionMetric.interval == interval)
-                .filter(PackageVersionMetric.date == now_interval)
+                q.filter(PackageVersionMetric.interval_type == interval)
+                .filter(PackageVersionMetric.timestamp == now_interval)
                 .one_or_none()
             )
 
@@ -718,13 +720,13 @@ class Dao:
                 ).one()
                 m = PackageVersionMetric(
                     package_version=package_version,
-                    type=metric_name,
-                    interval=interval,
-                    date=now_interval,
+                    metric_name=metric_name,
+                    interval_type=interval,
+                    timestamp=now_interval,
                 )
                 self.db.add(m)
                 self.db.flush()
 
             m.count += 1
 
-            self.db.commit()
+        self.db.commit()
