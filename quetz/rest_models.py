@@ -213,5 +213,13 @@ class PackageVersion(BaseModel):
             return v
 
 
+class PackageVersionMetricItem(BaseModel):
+    timestamp: datetime
+    count: int
+
+    class Config:
+        orm_mode = True
+
+
 class ChannelAction(BaseModel):
     action: ChannelActionEnum

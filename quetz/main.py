@@ -64,6 +64,7 @@ from quetz.deps import (
     get_tasks_worker,
 )
 from quetz.jobs import api as jobs_api
+from quetz.metrics.db_models import IntervalType
 from quetz.rest_models import ChannelActionEnum, CPRole
 from quetz.tasks import indexing
 from quetz.tasks.common import Task
@@ -806,6 +807,36 @@ def get_package_version(
         )
 
     return version
+
+
+@api_router.get(
+    "/channels/{channel_name}/packages/{package_name}/versions/{platform}/{filename}/metrics",  # noqa
+    response_model=List[rest_models.PackageVersionMetricItem],
+    tags=["metrics"],
+)
+def get_package_version_metrics(
+    platform: str,
+    filename: str,
+    package_name: str,
+    channel_name: str,
+    period: IntervalType = IntervalType.day,
+    metric_name: str = "download",
+    package: db_models.Package = Depends(get_package_or_fail),
+    dao: Dao = Depends(get_dao),
+):
+    version = dao.get_package_version_by_filename(
+        channel_name, package_name, filename, platform
+    )
+
+    if not version:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"package version {platform}/{filename} not found",
+        )
+
+    metrics = dao.get_package_version_metrics(version.id, period, metric_name)
+
+    return metrics
 
 
 @api_router.delete(

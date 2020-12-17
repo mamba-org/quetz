@@ -730,3 +730,18 @@ class Dao:
             m.count += 1
 
         self.db.commit()
+
+    def get_package_version_metrics(self, package_version_id, period, metric_name):
+
+        m = PackageVersionMetric
+
+        metrics = (
+            self.db.query(m)
+            .filter(m.package_version_id == package_version_id)
+            .filter(m.interval_type == period)
+            .filter(m.metric_name == metric_name)
+            .order_by(m.timestamp)
+            .all()
+        )
+
+        return metrics

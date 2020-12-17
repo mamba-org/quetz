@@ -121,3 +121,21 @@ def test_increment_download_count(auth_client, public_channel, package_version, 
     )
 
     assert metric.count == 2
+
+
+def test_get_download_count(auth_client, public_channel, package_version, db):
+
+    response = auth_client.get(
+        f"/channels/{public_channel.name}/linux-64/test-package-0.1-0.tar.bz2"
+    )
+
+    assert response.status_code == 200
+
+    response = auth_client.get(
+        f"/api/channels/{public_channel.name}/packages/{package_version.package_name}/"
+        f"versions/{package_version.platform}/{package_version.filename}/metrics"
+    )
+
+    assert response.status_code == 200
+
+    assert response.json() == [{"timestamp": ANY, "count": 1}]
