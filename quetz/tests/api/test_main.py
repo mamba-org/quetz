@@ -3,7 +3,7 @@ from unittest.mock import ANY
 
 import pytest
 
-from quetz.metrics.db_models import Interval, PackageVersionMetric
+from quetz.metrics.db_models import IntervalType, PackageVersionMetric
 
 
 def test_get_package_list(package_version, package_name, channel_name, client):
@@ -116,7 +116,7 @@ def test_increment_download_count(auth_client, public_channel, package_version, 
     metric = (
         db.query(PackageVersionMetric)
         .filter(PackageVersionMetric.package_version_id == package_version.id)
-        .filter(PackageVersionMetric.interval_type == Interval.total)
+        .filter(PackageVersionMetric.interval_type == IntervalType.total)
         .one()
     )
 

@@ -9,7 +9,7 @@ from quetz import errors, rest_models
 from quetz.dao import Dao
 from quetz.database import get_session
 from quetz.db_models import Channel, Package, PackageVersion
-from quetz.metrics.db_models import Interval, PackageVersionMetric
+from quetz.metrics.db_models import IntervalType, PackageVersionMetric
 
 
 @pytest.fixture
@@ -179,7 +179,7 @@ def test_increment_download_count(dao: Dao, channel, db, package_version):
     for m in download_counts:
         assert m.count == 1
 
-    assert len(download_counts) == len(Interval)
+    assert len(download_counts) == len(IntervalType)
 
     dao.incr_download_count(
         channel.name, package_version.filename, package_version.platform, now=now
@@ -188,7 +188,7 @@ def test_increment_download_count(dao: Dao, channel, db, package_version):
     for m in download_counts:
         assert m.count == 2
 
-    assert len(download_counts) == len(Interval)
+    assert len(download_counts) == len(IntervalType)
 
     dao.incr_download_count(
         channel.name,
@@ -198,7 +198,7 @@ def test_increment_download_count(dao: Dao, channel, db, package_version):
     )
 
     download_counts = db.query(PackageVersionMetric).all()
-    assert len(download_counts) == len(Interval) + 1
+    assert len(download_counts) == len(IntervalType) + 1
 
 
 def test_create_user_with_profile(dao: Dao, user_without_profile):
