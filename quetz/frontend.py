@@ -1,10 +1,11 @@
+import json
 import logging
 import os
 import sys
 from pathlib import Path
 
 import jinja2
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from starlette.staticfiles import StaticFiles
 
@@ -17,40 +18,71 @@ logger = logging.getLogger('quetz')
 mock_router = APIRouter()
 catchall_router = APIRouter()
 
+mock_settings_dict = {}
+frontend_dir = ""
 
-@mock_router.get('/sessions', include_in_schema=False)
+
+@mock_router.get('/api/sessions', include_in_schema=False)
 def mock_sessions():
     return []
 
 
-@mock_router.get('/kernels', include_in_schema=False)
+@mock_router.get('/api/kernels', include_in_schema=False)
 def mock_kernels():
     return []
 
 
-@mock_router.get('/kernelspecs', include_in_schema=False)
+@mock_router.get('/api/kernelspecs', include_in_schema=False)
 def mock_kernelspecs():
     return []
 
 
+@mock_router.get('/api/settings', include_in_schema=False)
+def mock_settings():
+    return mock_settings_dict
+
+
+@mock_router.get('/quetz-themes/{resource:path}', include_in_schema=False)
+def get_theme(resource: str):
+    final_path = os.path.join(frontend_dir, resource)
+    logger.info(f"Getting file from {frontend_dir}")
+    logger.info(final_path)
+    if os.path.exists(final_path):
+        return FileResponse(path=final_path)
+    else:
+        raise HTTPException(status_code=404)
+
+
 def render_index(static_dir):
+    global mock_settings_dict
     config_data = {
         "appName": "Quetz – the fast conda package server!",
         "baseUrl": "/jlabmock/",
     }
-
     logger.info("Rendering index.html!")
     static_dir = Path(static_dir)
     if (static_dir / ".." / "templates").exists():
         with open(static_dir / ".." / "templates" / "index.html") as fi:
             index_template = jinja2.Template(fi.read())
+
+        with open(static_dir / ".." / "templates" / "settings.json") as fi:
+            settings_template = json.load(fi)
+
+        with open(static_dir / ".." / "templates" / "default_settings.json") as fi:
+            default_settings = fi.read()
+
         logger.info(f"Page config: {config_data}")
         index_rendered = index_template.render(page_config=config_data)
         with open(static_dir / "index.html", "w") as fo:
             fo.write(index_rendered)
 
+        for setting in settings_template["settings"]:
+            if setting["id"] == '@jupyterlab/apputils-extension:themes':
+                setting["raw"] = default_settings
 
-frontend_dir = ""
+        mock_settings_dict = settings_template
+        with open(static_dir / "settings.json", "w") as fo:
+            fo.write(json.dumps(settings_template))
 
 
 @catchall_router.get('/{resource}', include_in_schema=False)
@@ -67,7 +99,7 @@ def register(app):
     # have any 404 requests.
     global frontend_dir
 
-    app.include_router(mock_router, prefix="/jlabmock/api")
+    app.include_router(mock_router, prefix="/jlabmock")
 
     # TODO do not add this in the final env, use nginx to route
     #      to static files
