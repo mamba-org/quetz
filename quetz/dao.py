@@ -710,7 +710,7 @@ class Dao:
             if interval == IntervalType.total:
                 now_interval = datetime(1900, 1, 1)
             m = (
-                q.filter(PackageVersionMetric.interval_type == interval)
+                q.filter(PackageVersionMetric.period == interval)
                 .filter(PackageVersionMetric.timestamp == now_interval)
                 .one_or_none()
             )
@@ -725,7 +725,7 @@ class Dao:
                 m = PackageVersionMetric(
                     package_version=package_version,
                     metric_name=metric_name,
-                    interval_type=interval,
+                    period=interval,
                     timestamp=now_interval,
                 )
                 self.db.add(m)
@@ -749,7 +749,7 @@ class Dao:
         q = (
             self.db.query(m)
             .filter(m.package_version_id == package_version_id)
-            .filter(m.interval_type == period)
+            .filter(m.period == period)
             .filter(m.metric_name == metric_name)
             .order_by(m.timestamp)
         )

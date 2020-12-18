@@ -117,7 +117,7 @@ def test_increment_download_count(auth_client, public_channel, package_version, 
     metric = (
         db.query(PackageVersionMetric)
         .filter(PackageVersionMetric.package_version_id == package_version.id)
-        .filter(PackageVersionMetric.interval_type == IntervalType.total)
+        .filter(PackageVersionMetric.period == IntervalType.total)
         .one()
     )
 

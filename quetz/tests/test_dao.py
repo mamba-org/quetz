@@ -172,7 +172,7 @@ def test_increment_download_count(dao: Dao, channel, db, package_version):
 
     now = datetime.datetime(2020, 10, 1, 10, 1, 10)
     dao.incr_download_count(
-        channel.name, package_version.filename, package_version.platform, now=now
+        channel.name, package_version.filename, package_version.platform, timestamp=now
     )
 
     download_counts = db.query(PackageVersionMetric).all()
@@ -182,7 +182,7 @@ def test_increment_download_count(dao: Dao, channel, db, package_version):
     assert len(download_counts) == len(IntervalType)
 
     dao.incr_download_count(
-        channel.name, package_version.filename, package_version.platform, now=now
+        channel.name, package_version.filename, package_version.platform, timestamp=now
     )
     download_counts = db.query(PackageVersionMetric).all()
     for m in download_counts:
@@ -194,7 +194,7 @@ def test_increment_download_count(dao: Dao, channel, db, package_version):
         channel.name,
         package_version.filename,
         package_version.platform,
-        now=now + datetime.timedelta(days=1),
+        timestamp=now + datetime.timedelta(days=1),
     )
 
     download_counts = db.query(PackageVersionMetric).all()
