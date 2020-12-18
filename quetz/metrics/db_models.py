@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 
 import sqlalchemy as sa
@@ -6,10 +7,25 @@ from quetz.db_models import UUID, Base
 
 
 class IntervalType(Enum):
+    hour = "H"
+    day = "D"
     month = "M"
     year = "Y"
-    day = "D"
     total = "T"
+
+
+def round_timestamp(timestamp, period):
+    """round timestamp to nearest period"""
+    if period == IntervalType.total:
+        return datetime(1900, 1, 1)
+    now_interval = timestamp.replace(minute=0, second=0, microsecond=0)
+    if period in [IntervalType.day, IntervalType.month, IntervalType.year]:
+        now_interval = now_interval.replace(hour=0)
+    if period in [IntervalType.month, IntervalType.year]:
+        now_interval = now_interval.replace(day=1)
+    if period == IntervalType.year:
+        now_interval = now_interval.replace(month=1)
+    return now_interval
 
 
 class PackageVersionMetric(Base):

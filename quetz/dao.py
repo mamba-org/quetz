@@ -26,7 +26,7 @@ from .db_models import (
     User,
 )
 from .jobs.models import Job
-from .metrics.db_models import IntervalType, PackageVersionMetric
+from .metrics.db_models import IntervalType, PackageVersionMetric, round_timestamp
 
 logger = logging.getLogger("quetz")
 
@@ -702,13 +702,7 @@ class Dao:
             timestamp = datetime.utcnow()
 
         for interval in IntervalType:
-            now_interval = timestamp.replace(hour=0, minute=0, second=0, microsecond=0)
-            if interval in [IntervalType.month, IntervalType.year]:
-                now_interval = now_interval.replace(day=1)
-            if interval == IntervalType.year:
-                now_interval = now_interval.replace(month=1)
-            if interval == IntervalType.total:
-                now_interval = datetime(1900, 1, 1)
+            now_interval = round_timestamp(timestamp, interval)
             m = (
                 q.filter(PackageVersionMetric.period == interval)
                 .filter(PackageVersionMetric.timestamp == now_interval)
