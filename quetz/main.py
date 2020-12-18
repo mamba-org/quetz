@@ -458,9 +458,9 @@ def get_channel(channel: db_models.Channel = Depends(get_channel_allow_proxy)):
     tags=["channels"],
 )
 def post_channel_mirror(
-    mirror: rest_models.ChannelMirror,
+    mirror: rest_models.ChannelMirrorBase,
     channel_name: str,
-    channel: db_models.Channel = Depends(get_channel_allow_proxy),
+    channel: db_models.Channel = Depends(get_channel_or_fail),
     auth: authorization.Rules = Depends(get_rules),
     dao: Dao = Depends(get_dao),
 ):
@@ -468,6 +468,20 @@ def post_channel_mirror(
     auth.assert_register_mirror(channel_name)
 
     dao.create_channel_mirror(channel_name, mirror.url)
+
+
+@api_router.get(
+    "/channels/{channel_name}/mirrors",
+    response_model=List[rest_models.ChannelMirror],
+    tags=["channels"],
+)
+def get_channel_mirrors(
+    channel_name: str,
+    channel: db_models.Channel = Depends(get_channel_or_fail),
+    auth: authorization.Rules = Depends(get_rules),
+    dao: Dao = Depends(get_dao),
+):
+    return channel.mirrors
 
 
 @api_router.delete(

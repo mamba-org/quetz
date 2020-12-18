@@ -124,11 +124,15 @@ class Channel(ChannelBase):
         return values
 
 
-class ChannelMirror(BaseModel):
+class ChannelMirrorBase(BaseModel):
     url: str = Field(None, regex="^(http|https)://.+")
 
     class Config:
         orm_mode = True
+
+
+class ChannelMirror(ChannelMirrorBase):
+    id: uuid.UUID
 
 
 class Package(BaseModel):

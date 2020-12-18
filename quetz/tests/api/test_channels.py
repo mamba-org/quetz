@@ -1,4 +1,5 @@
 from pathlib import Path
+from unittest.mock import ANY
 
 import pytest
 
@@ -462,3 +463,11 @@ def test_register_mirror(auth_client, public_channel, db):
     assert response.status_code == 201
     assert m
     assert m.last_synchronised is None
+
+    response = auth_client.get(
+        f"/api/channels/{public_channel.name}/mirrors", json={"url": mirror_url}
+    )
+
+    assert response.status_code == 200
+
+    assert response.json() == [{"url": mirror_url, "id": ANY}]
