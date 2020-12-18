@@ -231,6 +231,8 @@ class PackageVersion(Base):
 
     version_order = Column(Integer, default=0)
 
+    download_count = Column(Integer, default=0)
+
     filename = Column(String)
     info = Column(String)
     uploader_id = Column(UUID, ForeignKey('users.id'))

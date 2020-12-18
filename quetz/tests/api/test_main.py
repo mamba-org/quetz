@@ -4,7 +4,7 @@ from unittest.mock import ANY
 import pytest
 
 from quetz.dao import Dao
-from quetz.metrics.db_models import IntervalType, PackageVersionMetric
+from quetz.metrics.db_models import PackageVersionMetric
 
 
 def test_get_package_list(package_version, package_name, channel_name, client):
@@ -28,6 +28,7 @@ def test_get_package_list(package_version, package_name, channel_name, client):
             "info": {},
             "uploader": {"name": "Bartosz", "avatar_url": "http:///avatar"},
             "time_created": ANY,
+            "download_count": 0,
         }
     ]
 
@@ -107,6 +108,8 @@ def test_increment_download_count(auth_client, public_channel, package_version, 
 
     assert len(metrics) > 1
     assert metrics[0].count == 1
+    db.refresh(package_version)
+    assert package_version.download_count == 1
 
     response = auth_client.get(
         f"/channels/{public_channel.name}/linux-64/test-package-0.1-0.tar.bz2"
@@ -114,14 +117,10 @@ def test_increment_download_count(auth_client, public_channel, package_version, 
 
     assert response.status_code == 200
 
-    metric = (
-        db.query(PackageVersionMetric)
-        .filter(PackageVersionMetric.package_version_id == package_version.id)
-        .filter(PackageVersionMetric.period == IntervalType.total)
-        .one()
-    )
-
-    assert metric.count == 2
+    db.refresh(metrics[0])
+    assert metrics[0].count == 2
+    db.refresh(package_version)
+    assert package_version.download_count == 2
 
 
 def test_get_download_count(auth_client, public_channel, package_version, db, dao: Dao):
@@ -154,6 +153,7 @@ def test_get_download_count(auth_client, public_channel, package_version, db, da
     assert response.json() == {
         "period": "D",
         "metric_name": "download",
+        "total": 3,
         "series": [
             {"timestamp": f"2020-{m:02}-{d:02}T00:00:00", "count": 1}
             for m, d in month_day
@@ -166,6 +166,7 @@ def test_get_download_count(auth_client, public_channel, package_version, db, da
     assert response.json() == {
         "period": "D",
         "metric_name": "download",
+        "total": 2,
         "series": [
             {"timestamp": f"2020-{m:02}-{d:02}T00:00:00", "count": 1}
             for m, d in month_day[1:]
@@ -178,6 +179,7 @@ def test_get_download_count(auth_client, public_channel, package_version, db, da
     assert response.json() == {
         "period": "M",
         "metric_name": "download",
+        "total": 3,
         "series": [
             {"timestamp": f"2020-{m:02}-01T00:00:00", "count": c}
             for m, c in [(1, 2), (2, 1)]

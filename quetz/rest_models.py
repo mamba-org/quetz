@@ -196,6 +196,7 @@ class PackageVersion(BaseModel):
     info: dict
     uploader: BaseProfile
     time_created: datetime
+    download_count: int
 
     class Config:
         orm_mode = True
@@ -227,6 +228,7 @@ class PackageVersionMetricSeries(BaseModel):
 
     period: IntervalType
     metric_name: str
+    total: int
     series: List[PackageVersionMetricItem]
 
 

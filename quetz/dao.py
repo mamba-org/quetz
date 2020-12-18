@@ -689,13 +689,19 @@ class Dao:
 
         metric_name = "download"
 
-        q = (
-            self.db.query(PackageVersionMetric)
-            .join(PackageVersion)
-            .filter(PackageVersionMetric.metric_name == metric_name)
+        package_version = (
+            self.db.query(PackageVersion)
             .filter(PackageVersion.channel_name == channel)
             .filter(PackageVersion.filename == filename)
             .filter(PackageVersion.platform == platform)
+        ).one()
+
+        package_version.download_count += 1
+
+        q = (
+            self.db.query(PackageVersionMetric)
+            .filter(PackageVersionMetric.package_version == package_version)
+            .filter(PackageVersionMetric.metric_name == metric_name)
         )
 
         if timestamp is None:

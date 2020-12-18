@@ -1,4 +1,3 @@
-from datetime import datetime
 from enum import Enum
 
 import sqlalchemy as sa
@@ -11,13 +10,10 @@ class IntervalType(Enum):
     day = "D"
     month = "M"
     year = "Y"
-    total = "T"
 
 
 def round_timestamp(timestamp, period):
     """round timestamp to nearest period"""
-    if period == IntervalType.total:
-        return datetime(1900, 1, 1)
     now_interval = timestamp.replace(minute=0, second=0, microsecond=0)
     if period in [IntervalType.day, IntervalType.month, IntervalType.year]:
         now_interval = now_interval.replace(hour=0)
@@ -47,6 +43,6 @@ class PackageVersionMetric(Base):
     def __repr__(self):
         return (
             f"PackageVersionMetric(metric_name={self.metric_name}, "
-            f"interval_type={self.interval_type}, "
+            f"period={self.period.value}, "
             f"timestamp={self.timestamp},count={self.count})"
         )

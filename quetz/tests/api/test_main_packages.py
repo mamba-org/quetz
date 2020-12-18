@@ -101,6 +101,7 @@ def test_get_package_version(auth_client, public_channel, package_version, dao):
     assert response.status_code == 200
     assert response.json()["filename"] == filename
     assert response.json()["platform"] == platform
+    assert response.json()["download_count"] == 0
 
 
 @pytest.mark.parametrize("user_server_role", [OWNER, MAINTAINER])

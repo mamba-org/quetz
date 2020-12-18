@@ -840,7 +840,14 @@ def get_package_version_metrics(
         version.id, period, metric_name, start=start, end=end
     )
 
-    return {"period": period, "metric_name": metric_name, "series": series}
+    total = sum(s.count for s in series)
+
+    return {
+        "period": period,
+        "metric_name": metric_name,
+        "total": total,
+        "series": series,
+    }
 
 
 @api_router.delete(

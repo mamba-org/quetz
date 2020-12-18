@@ -170,6 +170,7 @@ def test_update_channel_size(dao, channel, db, package_version):
 
 def test_increment_download_count(dao: Dao, channel, db, package_version):
 
+    assert package_version.download_count == 0
     now = datetime.datetime(2020, 10, 1, 10, 1, 10)
     dao.incr_download_count(
         channel.name, package_version.filename, package_version.platform, timestamp=now
@@ -181,6 +182,9 @@ def test_increment_download_count(dao: Dao, channel, db, package_version):
 
     assert len(download_counts) == len(IntervalType)
 
+    db.refresh(package_version)
+    assert package_version.download_count == 1
+
     dao.incr_download_count(
         channel.name, package_version.filename, package_version.platform, timestamp=now
     )
@@ -190,6 +194,9 @@ def test_increment_download_count(dao: Dao, channel, db, package_version):
 
     assert len(download_counts) == len(IntervalType)
 
+    db.refresh(package_version)
+    assert package_version.download_count == 2
+
     dao.incr_download_count(
         channel.name,
         package_version.filename,
@@ -198,7 +205,10 @@ def test_increment_download_count(dao: Dao, channel, db, package_version):
     )
 
     download_counts = db.query(PackageVersionMetric).all()
-    assert len(download_counts) == len(IntervalType) + 1
+    assert len(download_counts) == len(IntervalType) + 2
+
+    db.refresh(package_version)
+    assert package_version.download_count == 3
 
 
 def test_create_user_with_profile(dao: Dao, user_without_profile):
