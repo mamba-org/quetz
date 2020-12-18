@@ -18,7 +18,7 @@ logger = logging.getLogger('quetz')
 mock_router = APIRouter()
 catchall_router = APIRouter()
 
-mock_settings_dict = {}
+mock_settings_dict = None
 frontend_dir = ""
 
 
