@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 import jinja2
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from starlette.staticfiles import StaticFiles
 
@@ -18,19 +18,96 @@ mock_router = APIRouter()
 catchall_router = APIRouter()
 
 
-@mock_router.get('/sessions', include_in_schema=False)
+@mock_router.get('/api/sessions', include_in_schema=False)
 def mock_sessions():
     return []
 
 
-@mock_router.get('/kernels', include_in_schema=False)
+@mock_router.get('/api/kernels', include_in_schema=False)
 def mock_kernels():
     return []
 
 
-@mock_router.get('/kernelspecs', include_in_schema=False)
+@mock_router.get('/api/kernelspecs', include_in_schema=False)
 def mock_kernelspecs():
     return []
+
+
+@mock_router.get('/api/settings', include_in_schema=False)
+def mock_settings():
+    return {
+        "settings": [
+            {
+                "id": "@jupyterlab/apputils-extension:themes",
+                "raw": "{\n    // Theme\n    // @jupyterlab/apputils-extension:themes\n    // Theme manager settings.\n    // *************************************\n\n    // Selected Theme\n    // Application-level visual styling theme\n    \"theme\": \"JupyterLab Dark\",\n\n    // Scrollbar Theming\n    // Enable/disable styling of the application scrollbars\n    \"theme-scrollbars\": true\n}",
+                "schema": {
+                    "title": "Theme",
+                    "jupyter.lab.setting-icon-label": "Theme Manager",
+                    "description": "Theme manager settings.",
+                    "type": "object",
+                    "additionalProperties": False,
+                    "definitions": {
+                        "cssOverrides": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "description": "The description field of each item is the CSS property that will be used to validate an override's value",
+                            "properties": {
+                                "code-font-size": {
+                                    "type": ["string", "null"],
+                                    "description": "font-size",
+                                },
+                                "content-font-size1": {
+                                    "type": ["string", "null"],
+                                    "description": "font-size",
+                                },
+                                "ui-font-size1": {
+                                    "type": ["string", "null"],
+                                    "description": "font-size",
+                                },
+                            },
+                        }
+                    },
+                    "properties": {
+                        "theme": {
+                            "type": "string",
+                            "title": "Selected Theme",
+                            "description": "Application-level visual styling theme",
+                            "default": "JupyterLab Dark",
+                        },
+                        "theme-scrollbars": {
+                            "type": "boolean",
+                            "title": "Scrollbar Theming",
+                            "description": "Enable/disable styling of the application scrollbars",
+                            "default": False,
+                        },
+                        "overrides": {
+                            "title": "Theme CSS Overrides",
+                            "description": "Override theme CSS variables by setting key-value pairs here",
+                            "$ref": "#/definitions/cssOverrides",
+                            "default": {
+                                "code-font-size": None,
+                                "content-font-size1": None,
+                                "ui-font-size1": None,
+                            },
+                        },
+                    },
+                },
+                "settings": {"theme": "JupyterLab Dark", "theme-scrollbars": True},
+                "version": "2.2.6",
+            },
+        ]
+    }
+
+
+@mock_router.get('/quetz-themes/{resource:path}', include_in_schema=False)
+def get_theme(resource: str):
+    final_path = os.path.join(frontend_dir, resource)
+    logger.info(f"Getting file from {frontend_dir}")
+    logger.info(final_path)
+    if os.path.exists(final_path):
+        return FileResponse(path=final_path)
+    else:
+        raise HTTPException(status_code=404)
 
 
 def render_index(static_dir):
@@ -67,7 +144,7 @@ def register(app):
     # have any 404 requests.
     global frontend_dir
 
-    app.include_router(mock_router, prefix="/jlabmock/api")
+    app.include_router(mock_router, prefix="/jlabmock")
 
     # TODO do not add this in the final env, use nginx to route
     #      to static files
