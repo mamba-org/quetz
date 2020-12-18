@@ -227,6 +227,10 @@ class Rules:
 
         self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])
 
+    def assert_unregister_mirror(self, channel_name: str):
+
+        self.assert_register_mirror(channel_name)
+
     def assert_create_package(self, channel_name: str):
 
         self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])

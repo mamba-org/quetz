@@ -464,10 +464,21 @@ def test_register_mirror(auth_client, public_channel, db):
     assert m
     assert m.last_synchronised is None
 
-    response = auth_client.get(
-        f"/api/channels/{public_channel.name}/mirrors", json={"url": mirror_url}
-    )
+    response = auth_client.get(f"/api/channels/{public_channel.name}/mirrors")
 
     assert response.status_code == 200
 
     assert response.json() == [{"url": mirror_url, "id": ANY}]
+
+    mirror_id = response.json()[0]["id"]
+    response = auth_client.delete(
+        f"/api/channels/{public_channel.name}/mirrors/{mirror_id}"
+    )
+
+    assert response.status_code == 200
+
+    response = auth_client.get(f"/api/channels/{public_channel.name}/mirrors")
+
+    assert response.status_code == 200
+
+    assert response.json() == []

@@ -485,6 +485,22 @@ def get_channel_mirrors(
 
 
 @api_router.delete(
+    "/channels/{channel_name}/mirrors/{mirror_id}",
+    response_model=List[rest_models.ChannelMirror],
+    tags=["channels"],
+)
+def delete_channel_mirror(
+    channel_name: str,
+    mirror_id: str,
+    channel: db_models.Channel = Depends(get_channel_or_fail),
+    auth: authorization.Rules = Depends(get_rules),
+    dao: Dao = Depends(get_dao),
+):
+    auth.assert_unregister_mirror(channel_name)
+    dao.delete_channel_mirror(channel_name, mirror_id)
+
+
+@api_router.delete(
     "/channels/{channel_name}",
     tags=["channels"],
 )

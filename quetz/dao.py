@@ -157,6 +157,13 @@ class Dao:
 
         return channel_mirror
 
+    def delete_channel_mirror(self, channel_name: str, mirror_id: str):
+        mirror_uuid = uuid.UUID(mirror_id).bytes
+        self.db.query(ChannelMirror).filter(ChannelMirror.id == mirror_uuid).filter(
+            ChannelMirror.channel_name == channel_name
+        ).delete()
+        self.db.commit()
+
     def update_channel(self, channel_name, data: dict):
 
         self.db.query(Channel).filter(Channel.name == channel_name).update(
