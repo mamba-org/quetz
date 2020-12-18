@@ -2,6 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import enum
+import uuid
 
 from sqlalchemy import (
     DDL,
@@ -91,6 +92,8 @@ class Channel(Base):
     packages = relationship('Package', back_populates='channel', cascade="all,delete")
 
     members = relationship('ChannelMember', cascade="all,delete")
+
+    mirrors = relationship("ChannelMirror", cascade="all, delete")
 
     def __repr__(self):
         return (
@@ -243,6 +246,15 @@ class PackageVersion(Base):
     )
 
     uploader = relationship('User')
+
+
+class ChannelMirror(Base):
+    __tablename__ = "channel_mirrors"
+
+    id = Column(UUID, primary_key=True, default=lambda: uuid.uuid4().bytes)
+    channel_name = Column(String, ForeignKey("channels.name"))
+    url = Column(String, nullable=False, unique=True)
+    last_synchronised = Column(DateTime, default=None)
 
 
 Index(

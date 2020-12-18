@@ -18,6 +18,7 @@ from .db_models import (
     ApiKey,
     Channel,
     ChannelMember,
+    ChannelMirror,
     Identity,
     Package,
     PackageMember,
@@ -147,6 +148,14 @@ class Dao:
         self.db.commit()
 
         return channel
+
+    def create_channel_mirror(self, channel_name: str, url: str):
+
+        channel_mirror = ChannelMirror(channel_name=channel_name, url=url)
+        self.db.add(channel_mirror)
+        self.db.commit()
+
+        return channel_mirror
 
     def update_channel(self, channel_name, data: dict):
 

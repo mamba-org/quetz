@@ -447,3 +447,18 @@ def test_update_channel_permissions(
         assert response.status_code == 200
     else:
         assert response.status_code == 403
+
+
+def test_register_mirror(auth_client, public_channel, db):
+
+    mirror_url = "http://mirror_url"
+
+    response = auth_client.post(
+        f"/api/channels/{public_channel.name}/mirrors", json={"url": mirror_url}
+    )
+
+    m = db.query(db_models.ChannelMirror).filter_by(url=mirror_url).one_or_none()
+
+    assert response.status_code == 201
+    assert m
+    assert m.last_synchronised is None
