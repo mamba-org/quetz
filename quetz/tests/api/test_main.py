@@ -138,4 +138,20 @@ def test_get_download_count(auth_client, public_channel, package_version, db):
 
     assert response.status_code == 200
 
-    assert response.json() == [{"timestamp": ANY, "count": 1}]
+    assert response.json() == {
+        "period": "D",
+        "metric_name": "download",
+        "series": [{"timestamp": ANY, "count": 1}],
+    }
+
+    response = auth_client.get(
+        f"/api/channels/{public_channel.name}/packages/{package_version.package_name}/"
+        f"versions/{package_version.platform}/{package_version.filename}/metrics"
+        "?period=M"
+    )
+
+    assert response.json() == {
+        "period": "M",
+        "metric_name": "download",
+        "series": [{"timestamp": ANY, "count": 1}],
+    }

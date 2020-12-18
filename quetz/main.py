@@ -811,7 +811,7 @@ def get_package_version(
 
 @api_router.get(
     "/channels/{channel_name}/packages/{package_name}/versions/{platform}/{filename}/metrics",  # noqa
-    response_model=List[rest_models.PackageVersionMetricItem],
+    response_model=rest_models.PackageVersionMetricSeries,
     tags=["metrics"],
 )
 def get_package_version_metrics(
@@ -821,6 +821,8 @@ def get_package_version_metrics(
     channel_name: str,
     period: IntervalType = IntervalType.day,
     metric_name: str = "download",
+    start: Optional[datetime.datetime] = None,
+    end: Optional[datetime.datetime] = None,
     package: db_models.Package = Depends(get_package_or_fail),
     dao: Dao = Depends(get_dao),
 ):
@@ -834,9 +836,11 @@ def get_package_version_metrics(
             detail=f"package version {platform}/{filename} not found",
         )
 
-    metrics = dao.get_package_version_metrics(version.id, period, metric_name)
+    series = dao.get_package_version_metrics(
+        version.id, period, metric_name, start=start, end=end
+    )
 
-    return metrics
+    return {"period": period, "metric_name": metric_name, "series": series}
 
 
 @api_router.delete(
