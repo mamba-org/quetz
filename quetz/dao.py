@@ -680,7 +680,11 @@ class Dao:
         return job
 
     def incr_download_count(
-        self, channel: str, filename: str, platform: str, now: Optional[datetime] = None
+        self,
+        channel: str,
+        filename: str,
+        platform: str,
+        timestamp: Optional[datetime] = None,
     ):
 
         metric_name = "download"
@@ -694,11 +698,11 @@ class Dao:
             .filter(PackageVersion.platform == platform)
         )
 
-        if now is None:
-            now = datetime.utcnow()
+        if timestamp is None:
+            timestamp = datetime.utcnow()
 
         for interval in IntervalType:
-            now_interval = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            now_interval = timestamp.replace(hour=0, minute=0, second=0, microsecond=0)
             if interval in [IntervalType.month, IntervalType.year]:
                 now_interval = now_interval.replace(day=1)
             if interval == IntervalType.year:

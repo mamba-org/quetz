@@ -3,6 +3,7 @@ from unittest.mock import ANY
 
 import pytest
 
+from quetz.dao import Dao
 from quetz.metrics.db_models import IntervalType, PackageVersionMetric
 
 
@@ -123,35 +124,62 @@ def test_increment_download_count(auth_client, public_channel, package_version, 
     assert metric.count == 2
 
 
-def test_get_download_count(auth_client, public_channel, package_version, db):
+def test_get_download_count(auth_client, public_channel, package_version, db, dao: Dao):
 
-    response = auth_client.get(
-        f"/channels/{public_channel.name}/linux-64/test-package-0.1-0.tar.bz2"
-    )
+    timestamps = [
+        "2020-01-05T21:01",
+        "2020-01-06T22:10",
+        "2020-02-18T10:10",
+    ]
 
-    assert response.status_code == 200
+    month_day = []
+    for t in timestamps:
+        dt = datetime.datetime.fromisoformat(t)
+        dao.incr_download_count(
+            public_channel.name,
+            package_version.filename,
+            package_version.platform,
+            timestamp=dt,
+        )
+        month_day.append((dt.month, dt.day))
 
-    response = auth_client.get(
+    endpoint_url = (
         f"/api/channels/{public_channel.name}/packages/{package_version.package_name}/"
         f"versions/{package_version.platform}/{package_version.filename}/metrics"
     )
 
+    response = auth_client.get(endpoint_url)
     assert response.status_code == 200
 
     assert response.json() == {
         "period": "D",
         "metric_name": "download",
-        "series": [{"timestamp": ANY, "count": 1}],
+        "series": [
+            {"timestamp": f"2020-{m:02}-{d:02}T00:00:00", "count": 1}
+            for m, d in month_day
+        ],
     }
 
-    response = auth_client.get(
-        f"/api/channels/{public_channel.name}/packages/{package_version.package_name}/"
-        f"versions/{package_version.platform}/{package_version.filename}/metrics"
-        "?period=M"
-    )
+    response = auth_client.get(endpoint_url + "?start=2020-01-05T10:00")
+    assert response.status_code == 200
+
+    assert response.json() == {
+        "period": "D",
+        "metric_name": "download",
+        "series": [
+            {"timestamp": f"2020-{m:02}-{d:02}T00:00:00", "count": 1}
+            for m, d in month_day[1:]
+        ],
+    }
+
+    response = auth_client.get(endpoint_url + "?period=M")
+    assert response.status_code == 200
 
     assert response.json() == {
         "period": "M",
         "metric_name": "download",
-        "series": [{"timestamp": ANY, "count": 1}],
+        "series": [
+            {"timestamp": f"2020-{m:02}-01T00:00:00", "count": c}
+            for m, c in [(1, 2), (2, 1)]
+        ],
     }
