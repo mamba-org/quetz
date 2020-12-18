@@ -26,6 +26,7 @@ from .db_models import (
     User,
 )
 from .jobs.models import Job
+from .metrics.db_models import IntervalType, PackageVersionMetric, round_timestamp
 
 logger = logging.getLogger("quetz")
 
@@ -677,3 +678,86 @@ class Dao:
     def get_job(self, job_id: int):
         job = self.db.query(Job).filter(Job.id == job_id).one_or_none()
         return job
+
+    def incr_download_count(
+        self,
+        channel: str,
+        filename: str,
+        platform: str,
+        timestamp: Optional[datetime] = None,
+    ):
+
+        metric_name = "download"
+
+        package_version = (
+            self.db.query(PackageVersion)
+            .filter(PackageVersion.channel_name == channel)
+            .filter(PackageVersion.filename == filename)
+            .filter(PackageVersion.platform == platform)
+        ).one()
+
+        package_version.download_count += 1
+
+        q = (
+            self.db.query(PackageVersionMetric)
+            .filter(PackageVersionMetric.package_version == package_version)
+            .filter(PackageVersionMetric.metric_name == metric_name)
+        )
+
+        if timestamp is None:
+            timestamp = datetime.utcnow()
+
+        for interval in IntervalType:
+            now_interval = round_timestamp(timestamp, interval)
+            m = (
+                q.filter(PackageVersionMetric.period == interval)
+                .filter(PackageVersionMetric.timestamp == now_interval)
+                .one_or_none()
+            )
+
+            if m is None:
+                package_version = (
+                    self.db.query(PackageVersion)
+                    .filter(PackageVersion.channel_name == channel)
+                    .filter(PackageVersion.filename == filename)
+                    .filter(PackageVersion.platform == platform)
+                ).one()
+                m = PackageVersionMetric(
+                    package_version=package_version,
+                    metric_name=metric_name,
+                    period=interval,
+                    timestamp=now_interval,
+                )
+                self.db.add(m)
+                self.db.flush()
+
+            m.count += 1
+
+        self.db.commit()
+
+    def get_package_version_metrics(
+        self,
+        package_version_id,
+        period,
+        metric_name,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+    ):
+
+        m = PackageVersionMetric
+
+        q = (
+            self.db.query(m)
+            .filter(m.package_version_id == package_version_id)
+            .filter(m.period == period)
+            .filter(m.metric_name == metric_name)
+            .order_by(m.timestamp)
+        )
+
+        if start:
+            q = q.filter(m.timestamp >= start)
+
+        if end:
+            q = q.filter(m.timestamp < end)
+
+        return q.all()
