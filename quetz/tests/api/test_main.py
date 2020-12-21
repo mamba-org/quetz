@@ -95,7 +95,7 @@ def test_upload_wrong_file_type(auth_client, public_channel):
 def test_increment_download_count(auth_client, public_channel, package_version, db):
 
     response = auth_client.get(
-        f"/channels/{public_channel.name}/linux-64/test-package-0.1-0.tar.bz2"
+        f"/get/{public_channel.name}/linux-64/test-package-0.1-0.tar.bz2"
     )
 
     assert response.status_code == 200
@@ -112,7 +112,7 @@ def test_increment_download_count(auth_client, public_channel, package_version, 
     assert package_version.download_count == 1
 
     response = auth_client.get(
-        f"/channels/{public_channel.name}/linux-64/test-package-0.1-0.tar.bz2"
+        f"/get/{public_channel.name}/linux-64/test-package-0.1-0.tar.bz2"
     )
 
     assert response.status_code == 200

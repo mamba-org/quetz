@@ -80,7 +80,7 @@ quetz-client http://localhost:8000/api/channels/channel0 xtensor/linux-64/xtenso
 Install the test package with conda:
 
 ```
-mamba install --strict-channel-priority -c http://localhost:8000/channels/channel0 -c conda-forge xtensor
+mamba install --strict-channel-priority -c http://localhost:8000/get/channel0 -c conda-forge xtensor
 ```
 
 Output:
@@ -92,7 +92,7 @@ Output:
   Install:
 ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
-  xtensor   0.16.1  0              http://localhost:8000/channels/channel0/osx-64            109 KB
+  xtensor   0.16.1  0              http://localhost:8000/get/channel0/osx-64                 109 KB
   xtl       0.4.16  h04f5b5a_1000  conda-forge/osx-64                                         47 KB
 
   Summary:
@@ -108,7 +108,7 @@ Output:
 Browse channels:
 
 ```
-http://localhost:8000/channels/channel0/
+http://localhost:8000/get/channel0/
 ```
 
 ## S3 Backend
@@ -307,7 +307,7 @@ where the value of `QUETZ_API_KEY` variable should be the API key that was print
 Then you can install packages from the channel the standard way using `conda` or `mamba`:
 
 ```
-mamba install --strict-channel-priority -c http://localhost:8000/channels/proxy-channel nrnpython
+mamba install --strict-channel-priority -c http://localhost:8000/get/proxy-channel nrnpython
 ```
 
 ### Create a mirroring channel

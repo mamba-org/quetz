@@ -515,7 +515,7 @@ def test_download_remote_file(client, owner, dummy_repo):
     assert response.status_code == 201
 
     # download from remote server
-    response = client.get("/channels/proxy_channel/test_file.txt")
+    response = client.get("/get/proxy_channel/test_file.txt")
 
     assert response.status_code == 200
     assert response.content == b"Hello world!"
@@ -526,7 +526,7 @@ def test_download_remote_file(client, owner, dummy_repo):
     assert dummy_repo == []
 
     # serve from cache
-    response = client.get("/channels/proxy_channel/test_file.txt")
+    response = client.get("/get/proxy_channel/test_file.txt")
 
     assert response.status_code == 200
     assert response.content == b"Hello world!"
@@ -534,7 +534,7 @@ def test_download_remote_file(client, owner, dummy_repo):
     assert dummy_repo == []
 
     # new file - download from remote
-    response = client.get("/channels/proxy_channel/test_file_2.txt")
+    response = client.get("/get/proxy_channel/test_file_2.txt")
 
     assert response.status_code == 200
     assert response.content == b"Hello world!"
@@ -557,11 +557,11 @@ def test_always_download_repodata(client, owner, dummy_repo):
     )
     assert response.status_code == 201
 
-    response = client.get("/channels/proxy_channel_2/repodata.json")
+    response = client.get("/get/proxy_channel_2/repodata.json")
     assert response.status_code == 200
     assert response.content == b"Hello world!"
 
-    response = client.get("/channels/proxy_channel_2/repodata.json")
+    response = client.get("/get/proxy_channel_2/repodata.json")
     assert response.status_code == 200
     assert response.content == b"Hello world!"
 
@@ -586,7 +586,7 @@ def test_api_methods_for_mirror_channels(client, mirror_channel):
     assert not response.json()
 
     response = client.get(
-        "/channels/{}/missing/path/file.json".format(mirror_channel.name),
+        "/get/{}/missing/path/file.json".format(mirror_channel.name),
     )
     assert response.status_code == 404
     assert "file.json not found" in response.json()["detail"]
