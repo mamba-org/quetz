@@ -18,6 +18,7 @@ from .db_models import (
     ApiKey,
     Channel,
     ChannelMember,
+    ChannelMirror,
     Identity,
     Package,
     PackageMember,
@@ -147,6 +148,21 @@ class Dao:
         self.db.commit()
 
         return channel
+
+    def create_channel_mirror(self, channel_name: str, url: str):
+
+        channel_mirror = ChannelMirror(channel_name=channel_name, url=url)
+        self.db.add(channel_mirror)
+        self.db.commit()
+
+        return channel_mirror
+
+    def delete_channel_mirror(self, channel_name: str, mirror_id: str):
+        mirror_uuid = uuid.UUID(mirror_id).bytes
+        self.db.query(ChannelMirror).filter(ChannelMirror.id == mirror_uuid).filter(
+            ChannelMirror.channel_name == channel_name
+        ).delete()
+        self.db.commit()
 
     def update_channel(self, channel_name, data: dict):
 
