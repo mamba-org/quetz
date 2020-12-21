@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, aliased, joinedload
 
@@ -719,18 +719,18 @@ class Dao:
 
         metric_name = "download"
 
-        package_version = (
-            self.db.query(PackageVersion)
-            .filter(PackageVersion.channel_name == channel)
-            .filter(PackageVersion.filename == filename)
-            .filter(PackageVersion.platform == platform)
-        ).one()
-
-        package_version.download_count += 1
+        self.db.query(PackageVersion).filter(
+            PackageVersion.channel_name == channel
+        ).filter(PackageVersion.filename == filename).filter(
+            PackageVersion.platform == platform
+        ).update(
+            {PackageVersion.download_count: PackageVersion.download_count + 1}
+        )
 
         q = (
             self.db.query(PackageVersionMetric)
-            .filter(PackageVersionMetric.package_version == package_version)
+            .filter(PackageVersionMetric.channel_name == channel)
+            .filter(PackageVersionMetric.platform == platform)
             .filter(PackageVersionMetric.metric_name == metric_name)
         )
 
@@ -746,14 +746,10 @@ class Dao:
             )
 
             if m is None:
-                package_version = (
-                    self.db.query(PackageVersion)
-                    .filter(PackageVersion.channel_name == channel)
-                    .filter(PackageVersion.filename == filename)
-                    .filter(PackageVersion.platform == platform)
-                ).one()
                 m = PackageVersionMetric(
-                    package_version=package_version,
+                    channel_name=channel,
+                    platform=platform,
+                    filename=filename,
                     metric_name=metric_name,
                     period=interval,
                     timestamp=now_interval,
@@ -775,10 +771,19 @@ class Dao:
     ):
 
         m = PackageVersionMetric
+        v = PackageVersion
 
         q = (
             self.db.query(m)
-            .filter(m.package_version_id == package_version_id)
+            .join(
+                v,
+                and_(
+                    v.platform == m.platform,
+                    v.channel_name == m.channel_name,
+                    m.filename == v.filename,
+                ),
+            )
+            .filter(v.id == package_version_id)
             .filter(m.period == period)
             .filter(m.metric_name == metric_name)
             .order_by(m.timestamp)
