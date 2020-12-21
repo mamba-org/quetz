@@ -8,8 +8,10 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
 from sqlalchemy.pool import StaticPool
 
+engine = None
 
-def get_engine(db_url, echo: bool = False, **kwargs) -> Engine:
+
+def get_engine(db_url, echo: bool = False, reuse_engine=True, **kwargs) -> Engine:
 
     if db_url.startswith('sqlite'):
         kwargs.setdefault('connect_args', {'check_same_thread': False})
@@ -19,7 +21,10 @@ def get_engine(db_url, echo: bool = False, **kwargs) -> Engine:
         # is ever created.
         kwargs.setdefault('poolclass', StaticPool)
 
-    engine = create_engine(db_url, echo=echo, **kwargs)
+    global engine
+
+    if not engine or not reuse_engine:
+        engine = create_engine(db_url, echo=echo, **kwargs)
     return engine
 
 
