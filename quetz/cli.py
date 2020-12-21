@@ -285,9 +285,8 @@ def init_db(
 
     logger.info("Initializing database")
 
-    config_file = _get_config(path)
+    config = _get_config(path)
 
-    config = Config(config_file)
     with working_directory(path):
         db = get_session(config.sqlalchemy_database_url)
         _run_migrations(config.sqlalchemy_database_url)
@@ -305,9 +304,8 @@ def make_migrations(
 
     logger.info("Initializing database")
 
-    config_file = _get_config(path)
+    config = _get_config(path)
 
-    config = Config(config_file)
     with working_directory(path):
         _make_migrations(config.sqlalchemy_database_url, message, plugin, initialize)
 
@@ -413,18 +411,18 @@ def create(
             _fill_test_database(db)
 
 
-def _get_config(path: Union[Path, str]) -> str:
+def _get_config(path: Union[Path, str]) -> Config:
     """get config path"""
     config_file = Path(path) / 'config.toml'
     if not config_file.exists():
         typer.echo(f'Could not find config at {config_file}')
         raise typer.Abort()
 
-    Config(config_file.resolve())
+    config = Config(str(config_file.resolve()))
     if not os.environ.get(_env_prefix + _env_config_file):
         os.environ[_env_prefix + _env_config_file] = str(config_file.resolve())
 
-    return str(config_file.resolve())
+    return config
 
 
 @app.command()
@@ -453,7 +451,7 @@ def start(
     logger.info(f"deploying quetz from directory {path}")
 
     deployment_folder = Path(path)
-    config_file = _get_config(deployment_folder)
+    _get_config(deployment_folder)
 
     if not _is_deployment(deployment_folder):
         typer.echo(
@@ -463,7 +461,6 @@ def start(
         )
         raise typer.Abort()
 
-    os.environ[_env_prefix + _env_config_file] = config_file
     with working_directory(path):
         import quetz
 
@@ -592,28 +589,23 @@ def watch_job_queue(
     num_procs: Optional[int] = typer.Option(
         None, help="Number of processes to use. Default: number of CPU cores"
     ),
-) -> NoReturn:
+) -> None:
     import time
 
     from quetz.jobs.runner import check_status, run_jobs, run_tasks
     from quetz.tasks.workers import SubprocessWorker
 
-    config_file = _get_config(path)
-
-    if not os.environ.get('QUETZ_CONFIG_FILE'):
-        os.environ['QUETZ_CONFIG_FILE'] = config_file
-
-    config = Config(config_file)
+    config = _get_config(path)
     manager = SubprocessWorker("", {}, config, {'max_workers': num_procs})
     with working_directory(path):
+        db = get_session(config.sqlalchemy_database_url)
         try:
-            db = get_session(config.sqlalchemy_database_url)
             while True:
                 run_jobs(db)
                 run_tasks(db, manager)
                 check_status(db)
                 time.sleep(5)
-        finally:
+        except KeyboardInterrupt:
             db.close()
 
 

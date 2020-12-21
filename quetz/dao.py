@@ -558,16 +558,15 @@ class Dao:
             query = query.filter(PackageVersion.time_created >= time_created_ge)
 
         if version_match_str:
+
             if version_match:
                 query = query.filter(
                     version_match(PackageVersion.version, version_match_str)
                 )
             else:
-                logger.warning(
-                    "Quetz Database extension not loaded. Compile and configure database_plugin_path correctly for support!"
-                )
                 raise NotImplementedError(
-                    "Quetz Database extension not loaded. Compile and configure database_plugin_path correctly for support!"
+                    "Quetz Database extension not loaded. Compile and configure "
+                    "database_plugin_path correctly for support!"
                 )
 
         return query.all()

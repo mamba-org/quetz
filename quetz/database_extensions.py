@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 
 from sqlalchemy import event
@@ -7,23 +8,24 @@ from sqlalchemy.pool import Pool, StaticPool
 from sqlalchemy.sql import expression
 from sqlalchemy.types import Numeric
 
-from quetz.config import Config, configure_logger
-
-config = Config()
 logger = logging.getLogger("quetz")
-configure_logger(loggers=("quetz",))
 
 try:
     from sqlite3 import Connection as SQLiteConnection
+
+    sqlite_available = True
 except ImportError:
-    SQLiteConnection = None
+    sqlite_available = False
     print("Could not import sqlite3")
 
 
 try:
     from psycopg2.extensions import connection as PGConnection
+
+    postgres_available = True
 except ImportError:
-    PGConnection = None
+    postgres_available = False
+
     print("Could not import postgres backend")
 
 
@@ -34,17 +36,34 @@ AS '{libpath}'
 LANGUAGE 'c'
 """
 
+search_path = os.getenv("QUETZ_DATABASE_PLUGIN_PATH")
+
 sqlite_plugin, pg_plugin = None, None
-if config.sqlalchemy_database_plugin_path:
-    plugin_path = Path(config.sqlalchemy_database_plugin_path)
-    logger.info(f"Looking for database extension: {plugin_path / 'libquetz_pg.so'}")
+if search_path:
+    plugin_path = Path(search_path)
 
     if (plugin_path / "libquetz_pg.so").exists():
         pg_plugin = str((plugin_path / "libquetz_pg.so").resolve())
+        logger.info(
+            "Looking for database extension: " "{plugin_path / 'libquetz_pg.so'}: FOUND"
+        )
+    else:
+        logger.info(
+            "Looking for database extension: "
+            f"{plugin_path / 'libquetz_pg.so'}: NOT FOUND"
+        )
 
-    logger.info(f"Looking for database extension: {plugin_path / 'libquetz_sqlite.so'}")
     if (plugin_path / "libquetz_sqlite.so").exists():
         sqlite_plugin = str((plugin_path / "libquetz_sqlite.so").resolve())
+        logger.info(
+            "Looking for database extension: "
+            f"{plugin_path / 'libquetz_sqlite.so'}: FOUND"
+        )
+    else:
+        logger.info(
+            "Looking for database extension: "
+            f"{plugin_path / 'libquetz_sqlite.so'}: NOT FOUND"
+        )
 
 
 class _version_match(expression.FunctionElement):
@@ -64,12 +83,12 @@ else:
 
 
 def load_plugins_after_connect(dbapi_connection, connection_record):
-    if SQLiteConnection and type(dbapi_connection) is SQLiteConnection:
+    if sqlite_available and type(dbapi_connection) is SQLiteConnection:
         if sqlite_plugin:
             dbapi_connection.enable_load_extension(True)
             dbapi_connection.load_extension(sqlite_plugin)
             dbapi_connection.enable_load_extension(False)
-    elif PGConnection and type(dbapi_connection) is PGConnection:
+    elif postgres_available and type(dbapi_connection) is PGConnection:
         if pg_plugin:
             cursor = dbapi_connection.cursor()
             cursor.execute(pg_create_function.format(libpath=pg_plugin))
