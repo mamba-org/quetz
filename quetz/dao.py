@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, aliased, joinedload
 
 from quetz import channel_data, errors, rest_models, versionorder
+from quetz.database_extensions import version_match
 from quetz.utils import apply_custom_query
 
 from .db_models import (
@@ -539,7 +540,9 @@ class Dao:
 
         return package_version
 
-    def get_package_versions(self, package, time_created_ge: datetime = None):
+    def get_package_versions(
+        self, package, time_created_ge: datetime = None, version_match_str: str = None
+    ):
         ApiKeyProfile = aliased(Profile)
 
         query = (
@@ -551,9 +554,20 @@ class Dao:
             .filter(PackageVersion.package_name == package.name)
             .order_by(PackageVersion.version_order.asc())
         )
-
         if time_created_ge:
             query = query.filter(PackageVersion.time_created >= time_created_ge)
+
+        if version_match_str:
+
+            if version_match:
+                query = query.filter(
+                    version_match(PackageVersion.version, version_match_str)
+                )
+            else:
+                raise NotImplementedError(
+                    "Quetz Database extension not loaded. Compile and configure "
+                    "database_plugin_path correctly for support!"
+                )
 
         return query.all()
 
