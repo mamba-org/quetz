@@ -804,7 +804,7 @@ class Dao:
         channel_name,
         period,
         metric_name,
-        platform: str,
+        platform: Optional[str] = None,
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
     ):
@@ -815,10 +815,13 @@ class Dao:
             self.db.query(m)
             .filter(m.channel_name == channel_name)
             .filter(m.period == period)
-            .filter(m.platform == platform)
             .filter(m.metric_name == metric_name)
-            .order_by(m.filename, m.timestamp)
         )
+
+        if platform:
+            q = q.filter(m.platform == platform)
+
+        q = q.order_by(m.platform, m.filename, m.timestamp)
 
         if start:
             q = q.filter(m.timestamp >= start)
@@ -826,7 +829,7 @@ class Dao:
         if end:
             q = q.filter(m.timestamp < end)
 
-        rows_per_filename = groupby(q, key=lambda row: row.filename)
+        rows_per_filename = groupby(q, key=lambda row: f"{row.platform}/{row.filename}")
 
         return {
             filename: {"series": list(group)} for filename, group in rows_per_filename

@@ -62,13 +62,14 @@ def get_channel_metrics(
     channel_name: str,
     period: IntervalType = IntervalType.day,
     metric_name: str = "download",
+    platform: Optional[str] = None,
     start: Optional[datetime] = None,
     end: Optional[datetime] = None,
     dao: Dao = Depends(get_dao),
 ):
 
     metrics = dao.get_channel_metrics(
-        channel_name, period, metric_name, "linux-64", start=start, end=end
+        channel_name, period, metric_name, platform=platform, start=start, end=end
     )
 
     return {

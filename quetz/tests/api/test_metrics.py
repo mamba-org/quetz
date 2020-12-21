@@ -135,7 +135,9 @@ def test_get_channel_download_count(
         "metric_name": "download",
         "period": "D",
         "packages": {
-            v.filename: {
+            v.platform
+            + '/'
+            + v.filename: {
                 "series": [
                     {
                         "timestamp": now.replace(
