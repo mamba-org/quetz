@@ -33,7 +33,7 @@ class PackageVersionMetric(Base):
 
     metric_name = sa.Column(sa.String(255), nullable=False, primary_key=True)
     period = sa.Column(sa.Enum(IntervalType), primary_key=True)
-    count = sa.Column(sa.Integer, default=0, nullable=False)
+    count = sa.Column(sa.Integer, server_default=sa.text("0"), nullable=False)
     timestamp = sa.Column(sa.DateTime(), nullable=False, primary_key=True)
 
     package_version = sa.orm.relationship(
