@@ -11,7 +11,7 @@ from sqlalchemy.pool import StaticPool
 engine = None
 
 
-def get_engine(db_url, echo: bool = False, **kwargs) -> Engine:
+def get_engine(db_url, echo: bool = False, reuse_engine=True, **kwargs) -> Engine:
 
     if db_url.startswith('sqlite'):
         kwargs.setdefault('connect_args', {'check_same_thread': False})
@@ -23,7 +23,7 @@ def get_engine(db_url, echo: bool = False, **kwargs) -> Engine:
 
     global engine
 
-    if not engine:
+    if not engine or not reuse_engine:
         engine = create_engine(db_url, echo=echo, **kwargs)
     return engine
 
