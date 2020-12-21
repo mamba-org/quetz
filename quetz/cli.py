@@ -27,7 +27,6 @@ from quetz.config import (
     configure_logger,
     create_config,
 )
-from quetz.dao import Dao
 from quetz.database import get_session
 from quetz.db_models import (
     ApiKey,
@@ -160,8 +159,9 @@ def _make_migrations(
 
 def _init_db(db: Session, config: Config):
     """Initialize the database and add users from config."""
-
     if config.configured_section("users"):
+        from quetz.dao import Dao
+
         dao = Dao(db)
         role_map = [
             (config.users_admins, "owner"),
@@ -177,6 +177,7 @@ def _init_db(db: Session, config: Config):
 
 def _fill_test_database(db: Session) -> NoReturn:
     """Create dummy users and channels to allow further testing in dev mode."""
+    from quetz.dao import Dao
 
     test_users = []
     dao = Dao(db)
@@ -418,6 +419,11 @@ def _get_config(path: Union[Path, str]) -> str:
     if not config_file.exists():
         typer.echo(f'Could not find config at {config_file}')
         raise typer.Abort()
+
+    Config(config_file.resolve())
+    if not os.environ.get(_env_prefix + _env_config_file):
+        os.environ[_env_prefix + _env_config_file] = str(config_file.resolve())
+
     return str(config_file.resolve())
 
 

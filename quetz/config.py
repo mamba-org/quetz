@@ -91,7 +91,13 @@ class Config:
             ],
             required=False,
         ),
-        ConfigSection("sqlalchemy", [ConfigEntry("database_url", str)]),
+        ConfigSection(
+            "sqlalchemy",
+            [
+                ConfigEntry("database_url", str),
+                ConfigEntry("database_plugin_path", str, default="", required=False),
+            ],
+        ),
         ConfigSection(
             "session",
             [ConfigEntry("secret", str), ConfigEntry("https_only", bool, default=True)],

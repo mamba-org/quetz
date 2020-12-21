@@ -12,8 +12,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, aliased, joinedload
 
 from quetz import channel_data, errors, rest_models, versionorder
+from quetz.database_extensions import version_match
 from quetz.utils import apply_custom_query
-from quetz.database import version_match
 
 from .db_models import (
     ApiKey,
@@ -558,9 +558,17 @@ class Dao:
             query = query.filter(PackageVersion.time_created >= time_created_ge)
 
         if version_match_str:
-            query = query.filter(
-                version_match(PackageVersion.version, version_match_str)
-            )
+            if version_match:
+                query = query.filter(
+                    version_match(PackageVersion.version, version_match_str)
+                )
+            else:
+                logger.warning(
+                    "Quetz Database extension not loaded. Compile and configure database_plugin_path correctly for support!"
+                )
+                raise NotImplementedError(
+                    "Quetz Database extension not loaded. Compile and configure database_plugin_path correctly for support!"
+                )
 
         return query.all()
 
