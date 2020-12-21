@@ -12,8 +12,6 @@ from typing import Generic, List, Optional, TypeVar
 from pydantic import BaseModel, Field, root_validator, validator
 from pydantic.generics import GenericModel
 
-from quetz.metrics.db_models import IntervalType
-
 T = TypeVar('T')
 
 
@@ -225,22 +223,6 @@ class PackageVersion(BaseModel):
             return json.loads(v)
         else:
             return v
-
-
-class PackageVersionMetricItem(BaseModel):
-    timestamp: datetime
-    count: int
-
-    class Config:
-        orm_mode = True
-
-
-class PackageVersionMetricSeries(BaseModel):
-
-    period: IntervalType
-    metric_name: str
-    total: int
-    series: List[PackageVersionMetricItem]
 
 
 class ChannelAction(BaseModel):
