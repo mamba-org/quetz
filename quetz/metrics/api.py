@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from quetz import db_models
 from quetz.dao import Dao
-from quetz.deps import get_channel_allow_proxy, get_dao, get_package_or_fail
+from quetz.deps import get_dao, get_package_or_fail
 from quetz.metrics import rest_models
 from quetz.metrics.db_models import IntervalType
 
@@ -14,7 +14,7 @@ api_router = APIRouter(prefix="/metrics")
 
 @api_router.get(
     "/channels/{channel_name}/packages/{package_name}/versions/{platform}/{filename}",  # noqa
-    response_model=rest_models.PackageVersionMetricSeries,
+    response_model=rest_models.PackageVersionMetricResponse,
     tags=["metrics"],
 )
 def get_package_version_metrics(
@@ -55,19 +55,27 @@ def get_package_version_metrics(
 
 @api_router.get(
     "/channels/{channel_name}",
-    response_model=rest_models.PackageVersionMetricSeries,
+    response_model=rest_models.ChannelMetricResponse,
     tags=["metrics"],
 )
 def get_channel_metrics(
     channel_name: str,
     period: IntervalType = IntervalType.day,
     metric_name: str = "download",
-    channel: db_models.Channel = Depends(get_channel_allow_proxy),
     start: Optional[datetime] = None,
     end: Optional[datetime] = None,
     dao: Dao = Depends(get_dao),
 ):
-    pass
+
+    metrics = dao.get_channel_metrics(
+        channel_name, period, metric_name, "linux-64", start=start, end=end
+    )
+
+    return {
+        "period": period,
+        "metric_name": metric_name,
+        "packages": metrics,
+    }
 
 
 def get_router():

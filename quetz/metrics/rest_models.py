@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import Dict, List
 
 from pydantic import BaseModel
 
@@ -16,7 +16,17 @@ class PackageVersionMetricItem(BaseModel):
 
 class PackageVersionMetricSeries(BaseModel):
 
+    series: List[PackageVersionMetricItem]
+
+
+class PackageVersionMetricResponse(PackageVersionMetricSeries):
+
     period: IntervalType
     metric_name: str
     total: int
-    series: List[PackageVersionMetricItem]
+
+
+class ChannelMetricResponse(BaseModel):
+    period: IntervalType
+    metric_name: str
+    packages: Dict[str, PackageVersionMetricSeries]

@@ -5,6 +5,7 @@ import json
 import logging
 import uuid
 from datetime import datetime
+from itertools import groupby
 from typing import List, Optional
 
 from sqlalchemy import and_, func, or_
@@ -732,6 +733,7 @@ class Dao:
             .filter(PackageVersionMetric.channel_name == channel)
             .filter(PackageVersionMetric.platform == platform)
             .filter(PackageVersionMetric.metric_name == metric_name)
+            .filter(PackageVersionMetric.filename == filename)
         )
 
         if timestamp is None:
@@ -796,3 +798,36 @@ class Dao:
             q = q.filter(m.timestamp < end)
 
         return q.all()
+
+    def get_channel_metrics(
+        self,
+        channel_name,
+        period,
+        metric_name,
+        platform: str,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+    ):
+
+        m = PackageVersionMetric
+
+        q = (
+            self.db.query(m)
+            .filter(m.channel_name == channel_name)
+            .filter(m.period == period)
+            .filter(m.platform == platform)
+            .filter(m.metric_name == metric_name)
+            .order_by(m.filename, m.timestamp)
+        )
+
+        if start:
+            q = q.filter(m.timestamp >= start)
+
+        if end:
+            q = q.filter(m.timestamp < end)
+
+        rows_per_filename = groupby(q, key=lambda row: row.filename)
+
+        return {
+            filename: {"series": list(group)} for filename, group in rows_per_filename
+        }
