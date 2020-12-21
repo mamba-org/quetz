@@ -458,14 +458,52 @@ def get_channel(channel: db_models.Channel = Depends(get_channel_allow_proxy)):
     tags=["channels"],
 )
 def post_channel_mirror(
+    request: Request,
     mirror: rest_models.ChannelMirrorBase,
     channel_name: str,
     channel: db_models.Channel = Depends(get_channel_or_fail),
     auth: authorization.Rules = Depends(get_rules),
     dao: Dao = Depends(get_dao),
+    remote_session: requests.Session = Depends(get_remote_session),
 ):
 
     auth.assert_register_mirror(channel_name)
+
+    response = remote_session.get(mirror.url)
+
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"could not connect to remote repository {mirror.url}",
+        )
+    response_data = response.json()
+
+    if "mirror_url" not in response_data:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="mirror server is not quetz server",
+        )
+
+    mirrored_server = response.json()["mirror_url"]
+
+    suffix = "/mirrors"
+    this_endpoint_url = str(request.url)
+    if not this_endpoint_url.endswith(suffix):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"wrong url path - missing '{suffix}' suffix",
+        )
+
+    this_channel_url = this_endpoint_url[: -len(suffix)]
+
+    if not mirrored_server == this_channel_url:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"the url configured in the mirror server '{mirrored_server}'"
+                f"does not match the url of this server {this_channel_url}"
+            ),
+        )
 
     dao.create_channel_mirror(channel_name, mirror.url)
 
@@ -535,7 +573,6 @@ def post_channel(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
     task: Task = Depends(get_tasks_worker),
-    remote_session: requests.Session = Depends(get_remote_session),
     config=Depends(get_config),
 ):
 

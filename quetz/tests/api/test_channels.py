@@ -450,7 +450,29 @@ def test_update_channel_permissions(
         assert response.status_code == 403
 
 
-def test_register_mirror(auth_client, public_channel, db):
+@pytest.fixture
+def remote_session(app, request, public_channel, auth_client):
+
+    mirror_url = f"{auth_client.base_url}/api/channels/{public_channel.name}"
+
+    from quetz.main import get_remote_session
+
+    class dummy_response:
+        status_code = 200
+
+        def json(self):
+            return {"mirror_url": mirror_url}
+
+    class dummy_session:
+        def get(self, url):
+            return dummy_response()
+
+    app.dependency_overrides[get_remote_session] = dummy_session
+
+    return dummy_session
+
+
+def test_register_mirror(auth_client, public_channel, db, remote_session):
 
     mirror_url = "http://mirror_url"
 
@@ -482,3 +504,14 @@ def test_register_mirror(auth_client, public_channel, db):
     assert response.status_code == 200
 
     assert response.json() == []
+
+
+def test_url_with_slash(auth_client, public_channel, db, remote_session):
+
+    mirror_url = "http://mirror_url"
+
+    response = auth_client.post(
+        f"/api/channels/{public_channel.name}/mirrors/", json={"url": mirror_url}
+    )
+
+    assert response.status_code == 405
