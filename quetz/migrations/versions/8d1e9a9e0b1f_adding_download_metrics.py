@@ -26,7 +26,7 @@ def upgrade():
             sa.Enum('hour', 'day', 'month', 'year', name='intervaltype'),
             nullable=False,
         ),
-        sa.Column('count', sa.Integer(), nullable=False),
+        sa.Column('count', sa.Integer(), nullable=False, server_default=sa.text("0")),
         sa.Column('timestamp', sa.DateTime(), nullable=False),
         sa.ForeignKeyConstraint(
             ['package_version_id'],
