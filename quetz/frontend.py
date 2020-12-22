@@ -85,7 +85,7 @@ def render_index(static_dir):
             fo.write(json.dumps(settings_template))
 
 
-@catchall_router.get('/{resource}', include_in_schema=False)
+@catchall_router.get('/{resource:path}', include_in_schema=False)
 def static(resource: str):
     if "." not in resource:
         return FileResponse(path=os.path.join(frontend_dir, "index.html"))
