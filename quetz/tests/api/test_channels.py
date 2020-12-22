@@ -478,7 +478,7 @@ def remote_session(app, request, public_channel, auth_client):
 
 def test_register_mirror(auth_client, public_channel, db, remote_session):
 
-    mirror_url = "http://mirror_url"
+    mirror_url = "http://mirror_url/get/my-channel"
 
     response = auth_client.post(
         f"/api/channels/{public_channel.name}/mirrors", json={"url": mirror_url}
@@ -494,7 +494,14 @@ def test_register_mirror(auth_client, public_channel, db, remote_session):
 
     assert response.status_code == 200
 
-    assert response.json() == [{"url": mirror_url, "id": ANY}]
+    assert response.json() == [
+        {
+            "url": mirror_url,
+            "id": ANY,
+            "api_endpoint": "http://mirror_url/api/channels/my-channel",
+            "metrics_endpoint": "http://mirror_url/metrics/channels/my-channel",
+        }
+    ]
 
     mirror_id = response.json()[0]["id"]
     response = auth_client.delete(

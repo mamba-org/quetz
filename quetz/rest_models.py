@@ -107,7 +107,7 @@ class Channel(ChannelBase):
     )
 
     @root_validator
-    def check_passwords_match(cls, values):
+    def check_mirror_params(cls, values):
         mirror_url = values.get("mirror_channel_url")
         mirror_mode = values.get("mirror_mode")
 
@@ -125,6 +125,8 @@ class Channel(ChannelBase):
 
 class ChannelMirrorBase(BaseModel):
     url: str = Field(None, regex="^(http|https)://.+")
+    api_endpoint: Optional[str] = Field(None, regex="^(http|https)://.+")
+    metrics_endpoint: Optional[str] = Field(None, regex="^(http|https)://.+")
 
     class Config:
         orm_mode = True

@@ -402,7 +402,14 @@ def post_channel_mirror(
 
     logger.debug(f"registering mirror {mirror.url}")
 
-    response = remote_session.get(mirror.url.replace("get", "api/channels"))
+    if not mirror.api_endpoint:
+        mirror.api_endpoint = mirror.url.replace("get", "api/channels")
+
+    if not mirror.metrics_endpoint:
+        mirror.metrics_endpoint = mirror.url.replace("get", "metrics/channels")
+
+    # check api response
+    response = remote_session.get(mirror.api_endpoint)
 
     if response.status_code != 200:
         raise HTTPException(
@@ -419,26 +426,15 @@ def post_channel_mirror(
             detail="mirror server is not quetz server",
         )
 
-    suffix = "/mirrors"
-    this_endpoint_url = str(request.url.replace(query=None))
-    if not this_endpoint_url.endswith(suffix):
+    if not mirrored_server:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"wrong url path - missing '{suffix}' suffix",
+            detail=f"{mirror.url} is not a mirror server",
         )
 
-    this_channel_url = this_endpoint_url[: -len(suffix)].replace("api/channels", "get")
-
-    if mirrored_server != this_channel_url:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=(
-                f"the url configured in the mirror server '{mirrored_server}'"
-                f"does not match the url of this server {this_channel_url}"
-            ),
-        )
-
-    dao.create_channel_mirror(channel_name, mirror.url)
+    dao.create_channel_mirror(
+        channel_name, mirror.url, mirror.api_endpoint, mirror.metrics_endpoint
+    )
 
     logger.info(f"successfully registered mirror {mirror.url}")
 
@@ -1265,16 +1261,16 @@ async def serve_path(
 
     chunk_size = 10_000
 
-    if pkgstore_support_url and (path.endswith('.tar.bz2') or path.endswith('.conda')):
-        # we have to ignore type checking here right now, sorry
-        return RedirectResponse(pkgstore.url(channel.name, path))  # type: ignore
-
     if path.endswith(".tar.bz2") or path.endswith(".conda"):
         try:
             platform, filename = os.path.split(path)
             dao.incr_download_count(channel.name, filename, platform)
         except ValueError:
             pass
+
+    if pkgstore_support_url and (path.endswith('.tar.bz2') or path.endswith('.conda')):
+        # we have to ignore type checking here right now, sorry
+        return RedirectResponse(pkgstore.url(channel.name, path))  # type: ignore
 
     def iter_chunks(fid):
         while True:

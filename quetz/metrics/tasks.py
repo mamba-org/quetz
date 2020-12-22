@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime
-from urllib.parse import urlparse, urlunparse
 
 import requests
 
@@ -16,7 +15,6 @@ def synchronize_metrics_from_mirrors(
     logger = logging.getLogger("quetz")
     channel = dao.get_channel(channel_name)
     for m in channel.mirrors:
-        parsed = urlparse(m.url)
         query_str = ["period=H"]
         if m.last_synchronised:
             start_time = m.last_synchronised.replace(minute=0, second=0, microsecond=0)
@@ -26,11 +24,7 @@ def synchronize_metrics_from_mirrors(
         end_time = now.replace(minute=0, second=0, microsecond=0)
         query_str.append(f"end={end_time.isoformat()}")
 
-        parsed = parsed._replace(
-            path=parsed.path.replace("get", "metrics/channels"),
-            query="&".join(query_str),
-        )
-        metrics_url = urlunparse(parsed)
+        metrics_url = m.metrics_endpoint + "?" + "&".join(query_str)
         response = session.get(metrics_url)
 
         if response.status_code != 200:
