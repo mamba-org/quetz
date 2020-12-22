@@ -31,16 +31,16 @@
     </template>
     <cv-side-nav id="side-nav">
       <cv-side-nav-items>
-        <cv-side-nav-link href="/#/channels">
+        <cv-side-nav-link href="/channels">
           Channels
         </cv-side-nav-link>
-        <cv-side-nav-link href="/#/users">
+        <cv-side-nav-link href="/users">
           Users
         </cv-side-nav-link>
-        <cv-side-nav-link href="/#/api-keys">
+        <cv-side-nav-link href="/api-keys">
           Api Keys
         </cv-side-nav-link>
-        <cv-side-nav-link href="/#/jobs">
+        <cv-side-nav-link href="/jobs">
           Jobs
         </cv-side-nav-link>
       </cv-side-nav-items>
