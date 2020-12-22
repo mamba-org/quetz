@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta
 from enum import Enum
 
 import sqlalchemy as sa
@@ -11,6 +12,18 @@ class IntervalType(Enum):
     day = "D"
     month = "M"
     year = "Y"
+
+    @property
+    def timedelta(self):
+
+        if self == IntervalType.hour:
+            return timedelta(hours=1)
+        if self == IntervalType.day:
+            return timedelta(days=1)
+        if self == IntervalType.month:
+            return timedelta(months=1)
+        if self == IntervalType.year:
+            return timedelta(years=1)
 
 
 def round_timestamp(timestamp, period):

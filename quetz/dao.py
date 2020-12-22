@@ -4,6 +4,7 @@
 import json
 import logging
 import uuid
+from collections import defaultdict
 from datetime import datetime
 from itertools import groupby
 from typing import List, Optional
@@ -778,6 +779,7 @@ class Dao:
         metric_name,
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
+        fill_zeros: bool = False,
     ):
 
         m = PackageVersionMetric
@@ -804,6 +806,32 @@ class Dao:
 
         if end:
             q = q.filter(m.timestamp < end)
+
+        if fill_zeros:
+
+            def factory():
+                return PackageVersionMetric(
+                    count=0,
+                    metric_name=metric_name,
+                    period=period,
+                )
+
+            timestamps = defaultdict(factory)
+
+            for d in q:
+                timestamps[d.timestamp] = d
+
+            first = round_timestamp(start, period)
+            last = round_timestamp(end, period)
+
+            metrics = []
+            delta = period.timedelta
+            while first <= last:
+                item = timestamps[first]
+                item.timestamp = first
+                metrics.append(item)
+                first = first + delta
+            return metrics
 
         return q.all()
 
