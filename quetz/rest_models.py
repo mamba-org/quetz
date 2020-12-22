@@ -90,6 +90,7 @@ class ChannelActionEnum(str, Enum):
     reindex = 'reindex'
     generate_indexes = 'generate_indexes'
     validate_packages = 'validate_packages'
+    synchronize_metrics = 'synchronize_metrics'
 
 
 class ChannelMetadata(BaseModel):

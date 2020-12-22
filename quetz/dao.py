@@ -230,7 +230,7 @@ class Dao:
 
         return query.all()
 
-    def get_channel(self, channel_name: str):
+    def get_channel(self, channel_name: str) -> Channel:
         return self.db.query(Channel).filter(Channel.name == channel_name).one_or_none()
 
     def get_package(self, channel_name: str, package_name: str):
