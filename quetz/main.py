@@ -400,6 +400,8 @@ def post_channel_mirror(
 
     auth.assert_register_mirror(channel_name)
 
+    logger.debug(f"registering mirror {mirror.url}")
+
     response = remote_session.get(mirror.url)
 
     if response.status_code != 200:
@@ -409,16 +411,16 @@ def post_channel_mirror(
         )
     response_data = response.json()
 
-    if "mirror_url" not in response_data:
+    try:
+        mirrored_server = response_data["mirror_channel_url"]
+    except KeyError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="mirror server is not quetz server",
         )
 
-    mirrored_server = response.json()["mirror_url"]
-
     suffix = "/mirrors"
-    this_endpoint_url = str(request.url)
+    this_endpoint_url = str(request.url.replace(query=None))
     if not this_endpoint_url.endswith(suffix):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -427,7 +429,7 @@ def post_channel_mirror(
 
     this_channel_url = this_endpoint_url[: -len(suffix)]
 
-    if not mirrored_server == this_channel_url:
+    if mirrored_server != this_channel_url:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
@@ -437,6 +439,8 @@ def post_channel_mirror(
         )
 
     dao.create_channel_mirror(channel_name, mirror.url)
+
+    logger.info(f"successfully registered mirror {mirror.url}")
 
 
 @api_router.get(
@@ -499,12 +503,16 @@ def put_mirror_channel_actions(
 
 @api_router.post("/channels", status_code=201, tags=["channels"])
 def post_channel(
+    request: Request,
     new_channel: rest_models.Channel,
     background_tasks: BackgroundTasks,
+    mirror_api_key: Optional[str] = None,
+    register_mirror: bool = False,
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
     task: Task = Depends(get_tasks_worker),
     config=Depends(get_config),
+    session: requests.Session = Depends(get_remote_session),
 ):
 
     user_id = auth.assert_user()
@@ -550,6 +558,18 @@ def post_channel(
             size_limit = None
 
     channel = dao.create_channel(new_channel, user_id, authorization.OWNER, size_limit)
+
+    # register mirror
+    if is_mirror and register_mirror:
+        mirror_url = new_channel.mirror_channel_url
+        headers = {"x-api-key": mirror_api_key} if mirror_api_key else {}
+        response = session.post(
+            mirror_url + '/mirrors',
+            json={"url": str(request.url.replace(query=None)) + '/' + new_channel.name},
+            headers=headers,
+        )
+        if response.status_code != 201:
+            logger.warning(f"could not register mirror due to error {response.content}")
 
     for action in actions:
         task.execute_channel_action(action, channel)

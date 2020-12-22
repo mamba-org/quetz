@@ -716,6 +716,7 @@ class Dao:
         filename: str,
         platform: str,
         timestamp: Optional[datetime] = None,
+        incr: int = 1,
     ):
 
         metric_name = "download"
@@ -725,7 +726,7 @@ class Dao:
         ).filter(PackageVersion.filename == filename).filter(
             PackageVersion.platform == platform
         ).update(
-            {PackageVersion.download_count: PackageVersion.download_count + 1}
+            {PackageVersion.download_count: PackageVersion.download_count + incr}
         )
 
         q = (
@@ -759,7 +760,7 @@ class Dao:
                 self.db.add(m)
                 self.db.flush()
 
-            m.count += 1
+            m.count += incr
 
         self.db.commit()
 

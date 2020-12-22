@@ -459,7 +459,7 @@ def remote_session(app, request, public_channel, auth_client):
         status_code = 200
 
         def json(self):
-            return {"mirror_url": mirror_url}
+            return {"mirror_channel_url": mirror_url}
 
     class dummy_session:
         def get(self, url):

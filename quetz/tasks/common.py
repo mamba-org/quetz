@@ -2,7 +2,8 @@ import logging
 
 from fastapi import HTTPException, status
 
-from quetz import authorization, db_models, metrics
+from quetz import authorization, db_models
+from quetz.metrics import tasks as metrics_tasks
 from quetz.rest_models import ChannelActionEnum
 
 from . import assertions, indexing, mirror, reindexing
@@ -68,7 +69,7 @@ class Task:
         elif action == ChannelActionEnum.synchronize_metrics:
             auth.assert_reindex_channel(channel_name)
             self.worker.execute(
-                metrics.tasks.synchronize_metrics_from_mirrors,
+                metrics_tasks.synchronize_metrics_from_mirrors,
                 channel_name=channel_name,
             )
         else:

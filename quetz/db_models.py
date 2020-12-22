@@ -93,7 +93,7 @@ class Channel(Base):
 
     members = relationship('ChannelMember', cascade="all,delete")
 
-    mirrors = relationship("ChannelMirror", cascade="all, delete")
+    mirrors = relationship("ChannelMirror", cascade="all, delete", uselist=True)
 
     def __repr__(self):
         return (
