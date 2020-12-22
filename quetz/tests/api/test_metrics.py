@@ -164,7 +164,11 @@ def test_get_channel_download_count(
 @pytest.fixture
 def channel_mirror(public_channel, dao: Dao):
     mirror_url = "http://mirror_server/get/my-mirror"
-    return dao.create_channel_mirror(public_channel.name, mirror_url)
+    api_endpoint = "http://mirror_server/api/my-mirror"
+    metrics_endpoint = "http://mirror_server/metrics/channels/my-mirror"
+    return dao.create_channel_mirror(
+        public_channel.name, mirror_url, api_endpoint, metrics_endpoint
+    )
 
 
 def test_synchronize_metrics_without_mirrors(public_channel, package_version, dao: Dao):

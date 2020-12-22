@@ -151,9 +151,16 @@ class Dao:
 
         return channel
 
-    def create_channel_mirror(self, channel_name: str, url: str):
+    def create_channel_mirror(
+        self, channel_name: str, url: str, api_endpoint: str, metrics_endpoint: str
+    ):
 
-        channel_mirror = ChannelMirror(channel_name=channel_name, url=url)
+        channel_mirror = ChannelMirror(
+            channel_name=channel_name,
+            url=url,
+            api_endpoint=api_endpoint,
+            metrics_endpoint=metrics_endpoint,
+        )
         self.db.add(channel_mirror)
         self.db.commit()
 
