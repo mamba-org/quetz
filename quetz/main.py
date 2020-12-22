@@ -402,7 +402,7 @@ def post_channel_mirror(
 
     logger.debug(f"registering mirror {mirror.url}")
 
-    response = remote_session.get(mirror.url)
+    response = remote_session.get(mirror.url.replace("get", "api/channels"))
 
     if response.status_code != 200:
         raise HTTPException(
@@ -427,7 +427,7 @@ def post_channel_mirror(
             detail=f"wrong url path - missing '{suffix}' suffix",
         )
 
-    this_channel_url = this_endpoint_url[: -len(suffix)]
+    this_channel_url = this_endpoint_url[: -len(suffix)].replace("api/channels", "get")
 
     if mirrored_server != this_channel_url:
         raise HTTPException(
@@ -562,10 +562,17 @@ def post_channel(
     # register mirror
     if is_mirror and register_mirror:
         mirror_url = str(new_channel.mirror_channel_url)
+        mirror_url = mirror_url.replace("get", "api/channels")
         headers = {"x-api-key": mirror_api_key} if mirror_api_key else {}
         response = session.post(
             mirror_url + '/mirrors',
-            json={"url": str(request.url.replace(query=None)) + '/' + new_channel.name},
+            json={
+                "url": str(request.url.replace(query=None)).replace(
+                    "api/channels", "get"
+                )
+                + '/'
+                + new_channel.name
+            },
             headers=headers,
         )
         if response.status_code != 201:

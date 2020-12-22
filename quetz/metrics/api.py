@@ -46,6 +46,7 @@ def get_package_version_metrics(
     total = sum(s.count for s in series)
 
     return {
+        "server_timestamp": datetime.utcnow(),
         "period": period,
         "metric_name": metric_name,
         "total": total,
@@ -73,6 +74,7 @@ def get_channel_metrics(
     )
 
     return {
+        "server_timestamp": datetime.utcnow(),
         "period": period,
         "metric_name": metric_name,
         "packages": metrics,

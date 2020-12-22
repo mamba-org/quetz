@@ -451,7 +451,7 @@ def test_update_channel_permissions(
 @pytest.fixture
 def remote_session(app, request, public_channel, auth_client):
 
-    mirror_url = f"{auth_client.base_url}/api/channels/{public_channel.name}"
+    mirror_url = f"{auth_client.base_url}/get/{public_channel.name}"
 
     from quetz.main import get_remote_session
 

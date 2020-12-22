@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from unittest.mock import Mock
+from unittest.mock import ANY, Mock
 
 import pytest
 
@@ -48,6 +48,7 @@ def test_get_download_count(auth_client, public_channel, package_version, db, da
     assert response.status_code == 200
 
     assert response.json() == {
+        "server_timestamp": ANY,
         "period": "D",
         "metric_name": "download",
         "total": 3,
@@ -61,6 +62,7 @@ def test_get_download_count(auth_client, public_channel, package_version, db, da
     assert response.status_code == 200
 
     assert response.json() == {
+        "server_timestamp": ANY,
         "period": "D",
         "metric_name": "download",
         "total": 2,
@@ -74,6 +76,7 @@ def test_get_download_count(auth_client, public_channel, package_version, db, da
     assert response.status_code == 200
 
     assert response.json() == {
+        "server_timestamp": ANY,
         "period": "M",
         "metric_name": "download",
         "total": 3,
@@ -135,6 +138,7 @@ def test_get_channel_download_count(
     assert response.status_code == 200
 
     expected = {
+        "server_timestamp": ANY,
         "metric_name": "download",
         "period": "D",
         "packages": {
@@ -159,7 +163,7 @@ def test_get_channel_download_count(
 
 @pytest.fixture
 def channel_mirror(public_channel, dao: Dao):
-    mirror_url = "http://mirror_server/api/channels/my-mirror"
+    mirror_url = "http://mirror_server/get/my-mirror"
     return dao.create_channel_mirror(public_channel.name, mirror_url)
 
 
@@ -183,7 +187,7 @@ def test_synchronize_metrics_with_mirrors(
 
     timestamp = datetime(2020, 10, 1, 5, 0)
     first_sync_time = timestamp - timedelta(days=1)
-    sync_time = timestamp + timedelta(minutes=2)
+    sync_time = timestamp + timedelta(hours=1)
 
     session = Mock()
     session.get.return_value.json.return_value = {
@@ -191,7 +195,9 @@ def test_synchronize_metrics_with_mirrors(
         "packages": {},
     }
     session.get.return_value.status_code = 200
-    synchronize_metrics_from_mirrors(public_channel.name, dao, session)
+    synchronize_metrics_from_mirrors(
+        public_channel.name, dao, session, now=first_sync_time
+    )
 
     metrics = dao.get_package_version_metrics(
         package_version.id, IntervalType.hour, "download"
@@ -199,7 +205,8 @@ def test_synchronize_metrics_with_mirrors(
 
     assert not metrics
     session.get.assert_called_with(
-        "http://mirror_server/metrics/channels/my-mirror?period=H"
+        "http://mirror_server/metrics/channels/my-mirror"
+        f"?period=H&end={first_sync_time.isoformat()}"
     )
     session.reset_mock()
 
@@ -214,7 +221,7 @@ def test_synchronize_metrics_with_mirrors(
         },
     }
 
-    synchronize_metrics_from_mirrors(public_channel.name, dao, session)
+    synchronize_metrics_from_mirrors(public_channel.name, dao, session, sync_time)
 
     for p in IntervalType:
         metrics = dao.get_package_version_metrics(package_version.id, p, "download")
@@ -223,7 +230,7 @@ def test_synchronize_metrics_with_mirrors(
 
     session.get.assert_called_with(
         "http://mirror_server/metrics/channels/my-mirror"
-        f"?period=H&start={first_sync_time.isoformat()}"
+        f"?period=H&start={first_sync_time.isoformat()}&end={sync_time.isoformat()}"
     )
 
     session.reset_mock()
@@ -242,10 +249,12 @@ def test_synchronize_metrics_with_mirrors(
         },
     }
 
-    synchronize_metrics_from_mirrors(public_channel.name, dao, session)
+    third_sync_time = sync_time + hour
+
+    synchronize_metrics_from_mirrors(public_channel.name, dao, session, third_sync_time)
     session.get.assert_called_with(
         "http://mirror_server/metrics/channels/my-mirror"
-        f"?period=H&start={sync_time.isoformat()}"
+        f"?period=H&start={sync_time.isoformat()}&end={third_sync_time.isoformat()}"
     )
 
     metrics = dao.get_package_version_metrics(

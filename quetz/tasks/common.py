@@ -21,6 +21,8 @@ def assert_channel_action(action, channel):
         action_allowed = assertions.can_channel_reindex(channel)
     elif action == ChannelActionEnum.reindex:
         action_allowed = assertions.can_channel_reindex(channel)
+    elif action == ChannelActionEnum.synchronize_metrics:
+        action_allowed = assertions.can_channel_synchronize_metrics(channel)
     else:
         action_allowed = False
 
