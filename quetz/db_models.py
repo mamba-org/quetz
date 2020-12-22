@@ -89,7 +89,9 @@ class Channel(Base):
     size = Column(Integer, default=0)
     size_limit = Column(Integer, default=None)
 
-    packages = relationship('Package', back_populates='channel', cascade="all,delete")
+    packages = relationship(
+        'Package', back_populates='channel', cascade="all,delete", uselist=True
+    )
 
     members = relationship('ChannelMember', cascade="all,delete")
 

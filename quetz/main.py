@@ -561,7 +561,7 @@ def post_channel(
 
     # register mirror
     if is_mirror and register_mirror:
-        mirror_url = new_channel.mirror_channel_url
+        mirror_url = str(new_channel.mirror_channel_url)
         headers = {"x-api-key": mirror_api_key} if mirror_api_key else {}
         response = session.post(
             mirror_url + '/mirrors',
@@ -569,7 +569,7 @@ def post_channel(
             headers=headers,
         )
         if response.status_code != 201:
-            logger.warning(f"could not register mirror due to error {response.content}")
+            logger.warning(f"could not register mirror due to error {response.text}")
 
     for action in actions:
         task.execute_channel_action(action, channel)
