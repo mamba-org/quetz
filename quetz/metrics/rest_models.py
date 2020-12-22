@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Dict, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from quetz.metrics.db_models import IntervalType
 
@@ -21,12 +21,20 @@ class PackageVersionMetricSeries(BaseModel):
 
 class PackageVersionMetricResponse(PackageVersionMetricSeries):
 
+    server_timestamp: datetime = Field(
+        default_factory=datetime.utcnow,
+        title="server timestamp at which the response was generated",
+    )
     period: IntervalType
     metric_name: str
     total: int
 
 
 class ChannelMetricResponse(BaseModel):
+    server_timestamp: datetime = Field(
+        default_factory=datetime.utcnow,
+        title="server timestamp at which the response was generated",
+    )
     period: IntervalType
     metric_name: str
     packages: Dict[str, PackageVersionMetricSeries]

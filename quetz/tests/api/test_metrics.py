@@ -1,9 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+from unittest.mock import Mock
 
 import pytest
 
 from quetz.dao import Dao
 from quetz.metrics.db_models import IntervalType, round_timestamp
+from quetz.metrics.tasks import synchronize_metrics_from_mirrors
 
 
 def test_round_timestamp():
@@ -153,3 +155,101 @@ def test_get_channel_download_count(
     }
 
     assert response.json() == expected
+
+
+@pytest.fixture
+def channel_mirror(public_channel, dao: Dao):
+    mirror_url = "http://mirror_server/api/channels/my-mirror"
+    return dao.create_channel_mirror(public_channel.name, mirror_url)
+
+
+def test_synchronize_metrics_without_mirrors(public_channel, package_version, dao: Dao):
+
+    session = Mock()
+
+    synchronize_metrics_from_mirrors(public_channel.name, dao, session)
+
+    metrics = dao.get_package_version_metrics(
+        package_version.id, IntervalType.hour, "download"
+    )
+
+    assert not metrics
+    session.get.assert_not_called()
+
+
+def test_synchronize_metrics_with_mirrors(
+    public_channel, package_version, channel_mirror, dao: Dao
+):
+
+    timestamp = datetime(2020, 10, 1, 5, 0)
+    first_sync_time = timestamp - timedelta(days=1)
+    sync_time = timestamp + timedelta(minutes=2)
+
+    session = Mock()
+    session.get.return_value.json.return_value = {
+        "server_timestamp": first_sync_time.isoformat(),
+        "packages": {},
+    }
+    session.get.return_value.status_code = 200
+    synchronize_metrics_from_mirrors(public_channel.name, dao, session)
+
+    metrics = dao.get_package_version_metrics(
+        package_version.id, IntervalType.hour, "download"
+    )
+
+    assert not metrics
+    session.get.assert_called_with(
+        "http://mirror_server/metrics/channels/my-mirror?period=H"
+    )
+    session.reset_mock()
+
+    session.get.return_value.json.return_value = {
+        "server_timestamp": sync_time.isoformat(),
+        "packages": {
+            f"{package_version.platform}/{package_version.filename}": {
+                "series": [
+                    {"timestamp": timestamp.isoformat(), "count": 2},
+                ]
+            }
+        },
+    }
+
+    synchronize_metrics_from_mirrors(public_channel.name, dao, session)
+
+    for p in IntervalType:
+        metrics = dao.get_package_version_metrics(package_version.id, p, "download")
+        assert len(metrics) == 1
+        assert metrics[0].count == 2
+
+    session.get.assert_called_with(
+        "http://mirror_server/metrics/channels/my-mirror"
+        f"?period=H&start={first_sync_time.isoformat()}"
+    )
+
+    session.reset_mock()
+    hour = timedelta(hours=1)
+    session.get.return_value.json.return_value = {
+        "server_timestamp": sync_time.replace(minute=5).isoformat(),
+        "packages": {
+            f"{package_version.platform}/{package_version.filename}": {
+                "series": [
+                    {
+                        "timestamp": (timestamp + hour).isoformat(),
+                        "count": 1,
+                    },
+                ]
+            }
+        },
+    }
+
+    synchronize_metrics_from_mirrors(public_channel.name, dao, session)
+    session.get.assert_called_with(
+        "http://mirror_server/metrics/channels/my-mirror"
+        f"?period=H&start={sync_time.isoformat()}"
+    )
+
+    metrics = dao.get_package_version_metrics(
+        package_version.id, IntervalType.day, "download"
+    )
+    assert len(metrics) == 1
+    assert metrics[0].count == 3
