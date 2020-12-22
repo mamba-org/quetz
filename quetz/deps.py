@@ -3,12 +3,12 @@ Define common dependencies for fastapi depenendcy-injection system
 """
 
 import requests
-from fastapi import BackgroundTasks, Depends, Request
+from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
 from requests.adapters import HTTPAdapter
 from sqlalchemy.orm import Session
 from urllib3.util.retry import Retry
 
-from quetz import authorization
+from quetz import authorization, db_models
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.database import get_session as get_db_session
@@ -117,3 +117,77 @@ def get_tasks_worker(
         raise ValueError("wrong configuration in worker.type")
 
     return Task(auth, worker)
+
+
+class ChannelChecker:
+    def __init__(
+        self,
+        allow_proxy: bool = False,
+        allow_mirror: bool = False,
+        allow_local: bool = True,
+    ):
+        self.allow_proxy = allow_proxy
+        self.allow_mirror = allow_mirror
+        self.allow_local = allow_local
+
+    def __call__(
+        self,
+        channel_name: str,
+        dao: Dao = Depends(get_dao),
+        auth: authorization.Rules = Depends(get_rules),
+    ) -> db_models.Channel:
+        channel = dao.get_channel(channel_name.lower())
+
+        if not channel:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Channel {channel_name} not found",
+            )
+
+        auth.assert_channel_read(channel)
+
+        mirror_url = channel.mirror_channel_url
+
+        is_proxy = mirror_url and channel.mirror_mode == "proxy"
+        is_mirror = mirror_url and channel.mirror_mode == "mirror"
+        is_local = not mirror_url
+        if is_proxy and not self.allow_proxy:
+            raise HTTPException(
+                status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+                detail="This method is not implemented for proxy channels",
+            )
+        if is_mirror and not self.allow_mirror:
+            raise HTTPException(
+                status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+                detail="This method is not implemented for mirror channels",
+            )
+        if is_local and not self.allow_local:
+            raise HTTPException(
+                status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+                detail="This method is not implemented for local channels",
+            )
+        return channel
+
+
+get_channel_or_fail = ChannelChecker(allow_proxy=False, allow_mirror=True)
+get_channel_allow_proxy = ChannelChecker(allow_proxy=True, allow_mirror=True)
+get_channel_mirror_only = ChannelChecker(allow_mirror=True, allow_local=False)
+
+
+def get_package_or_fail(
+    package_name: str,
+    channel_name: str,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+) -> db_models.Package:
+
+    package = dao.get_package(channel_name.lower(), package_name)
+
+    if not package:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Package {channel_name}/{package_name} not found",
+        )
+
+    auth.assert_package_read(package)
+    return package

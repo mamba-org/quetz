@@ -55,16 +55,20 @@ from quetz import (
 from quetz.config import Config, configure_logger, get_plugin_manager
 from quetz.dao import Dao
 from quetz.deps import (
+    ChannelChecker,
+    get_channel_allow_proxy,
+    get_channel_or_fail,
     get_config,
     get_dao,
     get_db,
+    get_package_or_fail,
     get_remote_session,
     get_rules,
     get_session,
     get_tasks_worker,
 )
 from quetz.jobs import api as jobs_api
-from quetz.metrics.db_models import IntervalType
+from quetz.metrics import api as metrics_api
 from quetz.rest_models import ChannelActionEnum, CPRole
 from quetz.tasks import indexing
 from quetz.tasks.common import Task
@@ -145,84 +149,11 @@ for router in plugin_routers:
     app.include_router(router)
 
 app.include_router(jobs_api.get_router())
+app.include_router(metrics_api.get_router())
 
 if config.configured_section("google"):
     auth_google.register(config)
     app.include_router(auth_google.router)
-
-
-class ChannelChecker:
-    def __init__(
-        self,
-        allow_proxy: bool = False,
-        allow_mirror: bool = False,
-        allow_local: bool = True,
-    ):
-        self.allow_proxy = allow_proxy
-        self.allow_mirror = allow_mirror
-        self.allow_local = allow_local
-
-    def __call__(
-        self,
-        channel_name: str,
-        dao: Dao = Depends(get_dao),
-        auth: authorization.Rules = Depends(get_rules),
-    ) -> db_models.Channel:
-        channel = dao.get_channel(channel_name.lower())
-
-        if not channel:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Channel {channel_name} not found",
-            )
-
-        auth.assert_channel_read(channel)
-
-        mirror_url = channel.mirror_channel_url
-
-        is_proxy = mirror_url and channel.mirror_mode == "proxy"
-        is_mirror = mirror_url and channel.mirror_mode == "mirror"
-        is_local = not mirror_url
-        if is_proxy and not self.allow_proxy:
-            raise HTTPException(
-                status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
-                detail="This method is not implemented for proxy channels",
-            )
-        if is_mirror and not self.allow_mirror:
-            raise HTTPException(
-                status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
-                detail="This method is not implemented for mirror channels",
-            )
-        if is_local and not self.allow_local:
-            raise HTTPException(
-                status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
-                detail="This method is not implemented for local channels",
-            )
-        return channel
-
-
-get_channel_or_fail = ChannelChecker(allow_proxy=False, allow_mirror=True)
-get_channel_allow_proxy = ChannelChecker(allow_proxy=True, allow_mirror=True)
-get_channel_mirror_only = ChannelChecker(allow_mirror=True, allow_local=False)
-
-
-def get_package_or_fail(
-    package_name: str,
-    channel_name: str,
-    dao: Dao = Depends(get_dao),
-    auth: authorization.Rules = Depends(get_rules),
-) -> db_models.Package:
-
-    package = dao.get_package(channel_name.lower(), package_name)
-
-    if not package:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Package {channel_name}/{package_name} not found",
-        )
-
-    auth.assert_package_read(package)
-    return package
 
 
 # helper functions
@@ -469,7 +400,9 @@ def post_channel_mirror(
 
     auth.assert_register_mirror(channel_name)
 
-    response = remote_session.get(mirror.url)
+    logger.debug(f"registering mirror {mirror.url}")
+
+    response = remote_session.get(mirror.url.replace("get", "api/channels"))
 
     if response.status_code != 200:
         raise HTTPException(
@@ -478,25 +411,25 @@ def post_channel_mirror(
         )
     response_data = response.json()
 
-    if "mirror_url" not in response_data:
+    try:
+        mirrored_server = response_data["mirror_channel_url"]
+    except KeyError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="mirror server is not quetz server",
         )
 
-    mirrored_server = response.json()["mirror_url"]
-
     suffix = "/mirrors"
-    this_endpoint_url = str(request.url)
+    this_endpoint_url = str(request.url.replace(query=None))
     if not this_endpoint_url.endswith(suffix):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"wrong url path - missing '{suffix}' suffix",
         )
 
-    this_channel_url = this_endpoint_url[: -len(suffix)]
+    this_channel_url = this_endpoint_url[: -len(suffix)].replace("api/channels", "get")
 
-    if not mirrored_server == this_channel_url:
+    if mirrored_server != this_channel_url:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
@@ -506,6 +439,8 @@ def post_channel_mirror(
         )
 
     dao.create_channel_mirror(channel_name, mirror.url)
+
+    logger.info(f"successfully registered mirror {mirror.url}")
 
 
 @api_router.get(
@@ -568,12 +503,16 @@ def put_mirror_channel_actions(
 
 @api_router.post("/channels", status_code=201, tags=["channels"])
 def post_channel(
+    request: Request,
     new_channel: rest_models.Channel,
     background_tasks: BackgroundTasks,
+    mirror_api_key: Optional[str] = None,
+    register_mirror: bool = False,
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
     task: Task = Depends(get_tasks_worker),
     config=Depends(get_config),
+    session: requests.Session = Depends(get_remote_session),
 ):
 
     user_id = auth.assert_user()
@@ -619,6 +558,25 @@ def post_channel(
             size_limit = None
 
     channel = dao.create_channel(new_channel, user_id, authorization.OWNER, size_limit)
+
+    # register mirror
+    if is_mirror and register_mirror:
+        mirror_url = str(new_channel.mirror_channel_url)
+        mirror_url = mirror_url.replace("get", "api/channels")
+        headers = {"x-api-key": mirror_api_key} if mirror_api_key else {}
+        response = session.post(
+            mirror_url + '/mirrors',
+            json={
+                "url": str(request.url.replace(query=None)).replace(
+                    "api/channels", "get"
+                )
+                + '/'
+                + new_channel.name
+            },
+            headers=headers,
+        )
+        if response.status_code != 201:
+            logger.warning(f"could not register mirror due to error {response.text}")
 
     for action in actions:
         task.execute_channel_action(action, channel)
@@ -895,47 +853,6 @@ def get_package_version(
         )
 
     return version
-
-
-@api_router.get(
-    "/channels/{channel_name}/packages/{package_name}/versions/{platform}/{filename}/metrics",  # noqa
-    response_model=rest_models.PackageVersionMetricSeries,
-    tags=["metrics"],
-)
-def get_package_version_metrics(
-    platform: str,
-    filename: str,
-    package_name: str,
-    channel_name: str,
-    period: IntervalType = IntervalType.day,
-    metric_name: str = "download",
-    start: Optional[datetime.datetime] = None,
-    end: Optional[datetime.datetime] = None,
-    package: db_models.Package = Depends(get_package_or_fail),
-    dao: Dao = Depends(get_dao),
-):
-    version = dao.get_package_version_by_filename(
-        channel_name, package_name, filename, platform
-    )
-
-    if not version:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"package version {platform}/{filename} not found",
-        )
-
-    series = dao.get_package_version_metrics(
-        version.id, period, metric_name, start=start, end=end
-    )
-
-    total = sum(s.count for s in series)
-
-    return {
-        "period": period,
-        "metric_name": metric_name,
-        "total": total,
-        "series": series,
-    }
 
 
 @api_router.delete(

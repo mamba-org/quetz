@@ -297,3 +297,6 @@ class Rules:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Not allowed",
             )
+
+    def execute_channel_actions(self, channel_name):
+        self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])

@@ -20,3 +20,7 @@ class ValidationError(QuetzError):
 
 class QuotaError(ValidationError):
     pass
+
+
+class TaskError(QuetzError):
+    pass

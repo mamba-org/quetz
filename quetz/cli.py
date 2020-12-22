@@ -110,6 +110,7 @@ def _make_migrations(
     # import the extra models here to register them with sqlalchemy mapper
     # so that it can create the tables
     from quetz.jobs.models import Job, Task  # noqa
+    from quetz.metrics.db_models import PackageVersionMetric  # noqa
 
     for entry_point in pkg_resources.iter_entry_points('quetz.models'):
         logger.debug("loading plugin %r", entry_point.name)

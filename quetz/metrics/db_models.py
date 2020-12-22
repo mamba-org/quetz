@@ -1,3 +1,4 @@
+import uuid
 from enum import Enum
 
 import sqlalchemy as sa
@@ -25,20 +26,20 @@ def round_timestamp(timestamp, period):
 
 
 class PackageVersionMetric(Base):
-    __tablename__ = "package_version_metrics"
+    __tablename__ = "aggregated_metrics"
 
-    package_version_id = sa.Column(
-        UUID, sa.ForeignKey("package_versions.id"), primary_key=True
-    )
+    id = sa.Column(UUID, default=lambda: uuid.uuid4().bytes, primary_key=True)
 
-    metric_name = sa.Column(sa.String(255), nullable=False, primary_key=True)
-    period = sa.Column(sa.Enum(IntervalType), primary_key=True)
+    channel_name = sa.Column(sa.String)
+
+    platform = sa.Column(sa.String)
+
+    filename = sa.Column(sa.String)
+
+    metric_name = sa.Column(sa.String(255), nullable=False)
+    period = sa.Column(sa.Enum(IntervalType))
     count = sa.Column(sa.Integer, server_default=sa.text("0"), nullable=False)
-    timestamp = sa.Column(sa.DateTime(), nullable=False, primary_key=True)
-
-    package_version = sa.orm.relationship(
-        "PackageVersion", backref=sa.orm.backref("metrics", cascade="all,delete-orphan")
-    )
+    timestamp = sa.Column(sa.DateTime(), nullable=False)
 
     def __repr__(self):
         return (

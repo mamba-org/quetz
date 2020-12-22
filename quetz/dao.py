@@ -5,9 +5,10 @@ import json
 import logging
 import uuid
 from datetime import datetime
+from itertools import groupby
 from typing import List, Optional
 
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, aliased, joinedload
 
@@ -229,7 +230,7 @@ class Dao:
 
         return query.all()
 
-    def get_channel(self, channel_name: str):
+    def get_channel(self, channel_name: str) -> Channel:
         return self.db.query(Channel).filter(Channel.name == channel_name).one_or_none()
 
     def get_package(self, channel_name: str, package_name: str):
@@ -715,23 +716,25 @@ class Dao:
         filename: str,
         platform: str,
         timestamp: Optional[datetime] = None,
+        incr: int = 1,
     ):
 
         metric_name = "download"
 
-        package_version = (
-            self.db.query(PackageVersion)
-            .filter(PackageVersion.channel_name == channel)
-            .filter(PackageVersion.filename == filename)
-            .filter(PackageVersion.platform == platform)
-        ).one()
-
-        package_version.download_count += 1
+        self.db.query(PackageVersion).filter(
+            PackageVersion.channel_name == channel
+        ).filter(PackageVersion.filename == filename).filter(
+            PackageVersion.platform == platform
+        ).update(
+            {PackageVersion.download_count: PackageVersion.download_count + incr}
+        )
 
         q = (
             self.db.query(PackageVersionMetric)
-            .filter(PackageVersionMetric.package_version == package_version)
+            .filter(PackageVersionMetric.channel_name == channel)
+            .filter(PackageVersionMetric.platform == platform)
             .filter(PackageVersionMetric.metric_name == metric_name)
+            .filter(PackageVersionMetric.filename == filename)
         )
 
         if timestamp is None:
@@ -746,14 +749,10 @@ class Dao:
             )
 
             if m is None:
-                package_version = (
-                    self.db.query(PackageVersion)
-                    .filter(PackageVersion.channel_name == channel)
-                    .filter(PackageVersion.filename == filename)
-                    .filter(PackageVersion.platform == platform)
-                ).one()
                 m = PackageVersionMetric(
-                    package_version=package_version,
+                    channel_name=channel,
+                    platform=platform,
+                    filename=filename,
                     metric_name=metric_name,
                     period=interval,
                     timestamp=now_interval,
@@ -761,7 +760,7 @@ class Dao:
                 self.db.add(m)
                 self.db.flush()
 
-            m.count += 1
+            m.count += incr
 
         self.db.commit()
 
@@ -775,10 +774,19 @@ class Dao:
     ):
 
         m = PackageVersionMetric
+        v = PackageVersion
 
         q = (
             self.db.query(m)
-            .filter(m.package_version_id == package_version_id)
+            .join(
+                v,
+                and_(
+                    v.platform == m.platform,
+                    v.channel_name == m.channel_name,
+                    m.filename == v.filename,
+                ),
+            )
+            .filter(v.id == package_version_id)
             .filter(m.period == period)
             .filter(m.metric_name == metric_name)
             .order_by(m.timestamp)
@@ -791,3 +799,39 @@ class Dao:
             q = q.filter(m.timestamp < end)
 
         return q.all()
+
+    def get_channel_metrics(
+        self,
+        channel_name,
+        period,
+        metric_name,
+        platform: Optional[str] = None,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+    ):
+
+        m = PackageVersionMetric
+
+        q = (
+            self.db.query(m)
+            .filter(m.channel_name == channel_name)
+            .filter(m.period == period)
+            .filter(m.metric_name == metric_name)
+        )
+
+        if platform:
+            q = q.filter(m.platform == platform)
+
+        q = q.order_by(m.platform, m.filename, m.timestamp)
+
+        if start:
+            q = q.filter(m.timestamp >= start)
+
+        if end:
+            q = q.filter(m.timestamp < end)
+
+        rows_per_filename = groupby(q, key=lambda row: f"{row.platform}/{row.filename}")
+
+        return {
+            filename: {"series": list(group)} for filename, group in rows_per_filename
+        }
