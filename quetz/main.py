@@ -1404,8 +1404,18 @@ async def serve_path(
             'ETag': fetag,
         }
     )
-    logger.debug(f"File response headers: {headers}")
     return StreamingResponse(package_content_iter, headers=headers)
+
+
+@app.get("/get/{channel_name}")
+async def serve_channel_index(
+    channel: db_models.Channel = Depends(get_channel_allow_proxy),
+    accept_encoding: Optional[str] = Header(None),
+    cache: LocalCache = Depends(LocalCache),
+    session=Depends(get_remote_session),
+    dao: Dao = Depends(get_dao),
+):
+    return await serve_path("index.html", channel, accept_encoding, cache, session, dao)
 
 
 frontend.register(app)

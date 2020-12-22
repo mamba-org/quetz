@@ -206,6 +206,12 @@ def test_channel_names_are_case_insensitive(auth_client, maintainer):
     assert response.status_code == 200
     assert package_filename in response.json()["packages"]
 
+    response = auth_client.get(f"/get/{channel_name.lower()}")
+    assert response.status_code == 200
+
+    response = auth_client.get(f"/get/{channel_name}")
+    assert response.status_code == 200
+
     response = auth_client.get(f"/get/{channel_name}/linux-64/repodata.json")
     assert response.status_code == 200
     assert package_filename in response.json()["packages"]
