@@ -1333,7 +1333,7 @@ def invalid_api():
     return None
 
 
-@app.get("/channels/{channel_name}/{path:path}")
+@app.get("/get/{channel_name}/{path:path}")
 async def serve_path(
     path,
     channel: db_models.Channel = Depends(get_channel_allow_proxy),

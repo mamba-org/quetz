@@ -416,36 +416,34 @@ def test_private_channels_create_package(data, client):
 def test_private_channels_download(db, client, data, channel_dirs):
 
     # succeed on public channel
-    response = client.get('/channels/testchannel/noarch/current_repodata.json')
+    response = client.get('/get/testchannel/noarch/current_repodata.json')
     assert response.status_code == 200
     assert response.text == "file content 0"
 
     # keep functioning when unnecessary token is provided
-    response = client.get(
-        '/t/[api-key]/channels/testchannel/noarch/current_repodata.json'
-    )
+    response = client.get('/t/[api-key]/get/testchannel/noarch/current_repodata.json')
     assert response.status_code == 200
     assert response.text == "file content 0"
 
     # fail on private channel without credentials
-    response = client.get('/channels/privatechannel/noarch/current_repodata.json')
+    response = client.get('/get/privatechannel/noarch/current_repodata.json')
     assert response.status_code == 401
 
     # fail on private channel with invalid credentials
     response = client.get(
-        '/t/[invalid-api-key]/channels/privatechannel/noarch/current_repodata.json'
+        '/t/[invalid-api-key]/get/privatechannel/noarch/current_repodata.json'
     )
     assert response.status_code == 401
 
     # fail on private channel with non member user
     response = client.get(
-        f'/t/{data.keyb}/channels/privatechannel/noarch/current_repodata.json'
+        f'/t/{data.keyb}/get/privatechannel/noarch/current_repodata.json'
     )
     assert response.status_code == 403
 
     # succeed on private channel with member user
     response = client.get(
-        f'/t/{data.keya}/channels/privatechannel/noarch/current_repodata.json'
+        f'/t/{data.keya}/get/privatechannel/noarch/current_repodata.json'
     )
     assert response.status_code == 200
     assert response.text == "file content 1"
