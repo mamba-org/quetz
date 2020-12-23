@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from typing import Optional
 
 import requests
 
@@ -22,6 +23,7 @@ def synchronize_metrics_from_mirrors(
             )
             continue
         query_str = ["period=H"]
+        start_time: Optional[datetime]
         if m.last_synchronised:
             start_time = m.last_synchronised.replace(minute=0, second=0, microsecond=0)
             query_str.append(f"start={start_time.isoformat()}")
