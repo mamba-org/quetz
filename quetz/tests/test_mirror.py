@@ -1,3 +1,4 @@
+import json
 import os
 import uuid
 from io import BytesIO
@@ -14,6 +15,7 @@ from quetz.tasks.mirror import (
     KNOWN_SUBDIRS,
     RemoteRepository,
     RemoteServerError,
+    fill_db_from_index,
     initial_sync_mirror,
 )
 
@@ -964,3 +966,86 @@ def test_can_not_sync_proxy_and_local_channels(
 
     response = client.put(f"/api/channels/{local_channel.name}")
     assert response.status_code == 405
+
+
+channeldata_json = """
+{
+  "channeldata_version": 1,
+  "packages": {
+    "other-package": {
+      "activate.d": false,
+      "binary_prefix": false,
+      "deactivate.d": false,
+      "description": null,
+      "dev_url": null,
+      "doc_source_url": null,
+      "doc_url": null,
+      "home": "https://palletsprojects.com/p/click/",
+      "icon_hash": null,
+      "icon_url": null,
+      "identifiers": {},
+      "keywords": {},
+      "license": "BSD",
+      "post_link": false,
+      "pre_link": false,
+      "pre_unlink": false,
+      "run_exports": {},
+      "source_git_url": null,
+      "source_url": null,
+      "subdirs": [
+        "linux-64"
+      ],
+      "summary": "dummy package",
+      "tags": {},
+      "text_prefix": false,
+      "timestamp": 1599839787,
+      "version": "0.2"
+    }
+  },
+  "subdirs": [
+    "linux-64",
+    "noarch"
+  ]
+}
+"""
+
+repodata_json = """
+{
+  "info": {
+    "subdir": "linux-64"
+  },
+  "packages": {
+    "other-package-0.2-0.tar.bz2": {
+      "arch": "x86_64",
+      "build": "0",
+      "build_number": 0,
+      "depends": [],
+      "license": "BSD",
+      "license_family": "BSD",
+      "md5": "f5764fa8299aa117fce80be10d76724c",
+      "name": "other-package",
+      "platform": "linux",
+      "sha256": "e46bd61cc2e9d269632314916c1187cc1c60a7f957a61dda38fe377824d28135",
+      "size": 2706,
+      "subdir": "linux-64",
+      "timestamp": 1599839787253,
+      "version": "0.2",
+      "time_modified": 1608636247
+    }
+  },
+  "packages.conda": {},
+  "repodata_version": 1
+}
+"""
+
+
+def test_fill_db_from_index(dao, user, local_channel, db):
+    channeldata = json.loads(channeldata_json)
+    repodata = {}
+    fill_db_from_index(local_channel.name, user.id, channeldata, repodata, dao)
+
+    package = db.query(Package).filter(Package.name == "other-package").one()
+
+    assert package
+    assert package.summary == "dummy package"
+    assert False

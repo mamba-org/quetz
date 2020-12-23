@@ -13,7 +13,7 @@ from fastapi import HTTPException, status
 from fastapi.responses import FileResponse, StreamingResponse
 from tenacity import after_log, retry, stop_after_attempt, wait_exponential
 
-from quetz import authorization
+from quetz import authorization, rest_models
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.db_models import Channel, PackageVersion
@@ -392,6 +392,29 @@ def initial_sync_mirror(
 
     if any_updated:
         indexing.update_indexes(dao, pkgstore, channel_name, subdirs=[arch])
+
+
+def fill_db_from_index(
+    channel_name: str, user_id: bytes, channeldata: dict, repodata: dict, dao: Dao
+):
+    subdirs = channeldata.get("subdirs", [])
+    packages = channeldata["packages"]
+
+    for package_name, metadata in packages.items():
+        package_data = rest_models.Package(
+            name=package_name,
+            summary=metadata.get("summary", ""),
+            description=metadata.get("description", ""),
+        )
+
+        package = dao.create_package(
+            channel_name, package_data, user_id, role=authorization.OWNER
+        )
+        package.channeldata = json.dumps(metadata)
+        dao.db.commit()
+
+    for s in subdirs:
+        pass
 
 
 def synchronize_packages(
