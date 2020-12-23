@@ -256,8 +256,8 @@ class ChannelMirror(Base):
     id = Column(UUID, primary_key=True, default=lambda: uuid.uuid4().bytes)
     channel_name = Column(String, ForeignKey("channels.name"))
     url = Column(String, nullable=False, unique=True)
-    api_endpoint = Column(String, nullable=False)
-    metrics_endpoint = Column(String, nullable=False)
+    api_endpoint = Column(String, nullable=True)
+    metrics_endpoint = Column(String, nullable=True)
     last_synchronised = Column(DateTime, default=None)
 
 
