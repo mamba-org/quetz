@@ -42,7 +42,7 @@ class Task:
         self.auth = auth
         self.worker = worker
 
-    def execute_channel_action(self, action: str, channel: db_models.Channel):
+    def execute_channel_action(self, action: str, channel: db_models.Channel, **kwargs):
         auth = self.auth
 
         channel_name = channel.name
@@ -53,8 +53,14 @@ class Task:
 
         if action == ChannelActionEnum.synchronize:
             auth.assert_synchronize_mirror(channel_name)
-
-            self.worker.execute(mirror.synchronize_packages, channel_name=channel_name)
+            include = kwargs.get('include')
+            package_list = kwargs.get('package_list')
+            self.worker.execute(
+                mirror.synchronize_packages,
+                channel_name=channel_name,
+                package_list=package_list,
+                include=include,
+            )
         elif action == ChannelActionEnum.validate_packages:
             auth.assert_validate_package_cache(channel_name)
             self.worker.execute(indexing.validate_packages, channel_name=channel.name)

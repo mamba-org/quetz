@@ -6,6 +6,7 @@ import shutil
 from concurrent.futures import ThreadPoolExecutor
 from http.client import IncompleteRead
 from tempfile import SpooledTemporaryFile
+from typing import List
 
 import requests
 from fastapi import HTTPException, status
@@ -18,6 +19,7 @@ from quetz.dao import Dao
 from quetz.db_models import Channel, PackageVersion
 from quetz.pkgstores import PackageStore
 from quetz.tasks import indexing
+from quetz.utils import check_package_membership
 
 # copy common subdirs from conda:
 # https://github.com/conda/conda/blob/a78a2387f26a188991d771967fc33aa1fb5bb810/conda/base/constants.py#L63
@@ -260,6 +262,8 @@ def initial_sync_mirror(
     dao: Dao,
     pkgstore: PackageStore,
     auth: authorization.Rules,
+    package_list: List[str] = [],
+    include: bool = False,
     skip_errors: bool = True,
 ):
 
@@ -357,24 +361,28 @@ def initial_sync_mirror(
             return False
 
         for package_name, metadata in packages.items():
-            path = os.path.join(arch, package_name)
+            if (include and check_package_membership(package_name, package_list)) or (
+                (not include)
+                and (not check_package_membership(package_name, package_list))
+            ):
+                path = os.path.join(arch, package_name)
 
-            # try to find out whether it's a new package version
+                # try to find out whether it's a new package version
 
-            is_uptodate = None
-            for _check in version_checks:
-                is_uptodate = _check(package_name, metadata)
-                if is_uptodate is not None:
-                    break
+                is_uptodate = None
+                for _check in version_checks:
+                    is_uptodate = _check(package_name, metadata)
+                    if is_uptodate is not None:
+                        break
 
-            # if package is up-to-date skip uploading file
-            if is_uptodate:
-                continue
-            else:
-                logger.debug(f"updating package {package_name} from {arch}")
+                # if package is up-to-date skip uploading file
+                if is_uptodate:
+                    continue
+                else:
+                    logger.debug(f"updating package {package_name} from {arch}")
 
-            update_batch.append(path)
-            update_size += metadata.get('size', 100_000)
+                update_batch.append(path)
+                update_size += metadata.get('size', 100_000)
 
             if len(update_batch) >= max_batch_length or update_size >= max_batch_size:
                 logger.debug(f"Executing batch with {update_size}")
@@ -395,6 +403,8 @@ def synchronize_packages(
     pkgstore: PackageStore,
     auth: authorization.Rules,
     session: requests.Session,
+    package_list: List[str] = [],
+    include: bool = False,
 ):
 
     logger.debug(f"executing synchronize_packages task in a process {os.getpid()}")
@@ -426,4 +436,6 @@ def synchronize_packages(
             dao,
             pkgstore,
             auth,
+            package_list,
+            include,
         )

@@ -18,6 +18,13 @@ from sqlalchemy import String, and_, cast, collate, not_, or_
 from .db_models import Channel, Package, PackageVersion, User
 
 
+def check_package_membership(package_name, package_list):
+    for each_package in package_list:
+        if package_name.startswith(each_package):
+            return True
+    return False
+
+
 def add_static_file(contents, channel_name, subdir, fname, pkgstore, file_index=None):
     if type(contents) is not bytes:
         raw_file = contents.encode("utf-8")

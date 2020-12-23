@@ -98,6 +98,12 @@ class ChannelMetadata(BaseModel):
     actions: Optional[List[ChannelActionEnum]] = Field(
         None, title="list of actions to run after channel creation"
     )
+    includelist: Optional[List[str]] = Field(
+        None, title="list of packages to include while creating a channel"
+    )
+    excludelist: Optional[List[str]] = Field(
+        None, title="list of packages to exclude while creating a channel"
+    )
 
 
 class Channel(ChannelBase):
