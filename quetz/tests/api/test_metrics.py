@@ -4,7 +4,7 @@ from unittest.mock import ANY, Mock
 import pytest
 
 from quetz.dao import Dao
-from quetz.metrics.db_models import IntervalType, round_timestamp
+from quetz.metrics.db_models import IntervalType, next_timestamp, round_timestamp
 from quetz.metrics.tasks import synchronize_metrics_from_mirrors
 
 
@@ -17,6 +17,29 @@ def test_round_timestamp():
     period = IntervalType.hour
     rounded = datetime(2020, 2, 3, 4, 00)
     assert round_timestamp(timestamp, period) == rounded
+
+
+def test_next_timestamp():
+    t = datetime.fromisoformat("2020-02-03T04:05")
+
+    T = IntervalType
+
+    assert next_timestamp(t, T.hour) == datetime(2020, 2, 3, 5, 5)
+    assert next_timestamp(t, T.day) == datetime(2020, 2, 4, 4, 5)
+    assert next_timestamp(t, T.month) == datetime(2020, 3, 3, 4, 5)
+    assert next_timestamp(t, T.year) == datetime(2021, 2, 3, 4, 5)
+
+    # special cases
+    assert next_timestamp(datetime(2020, 12, 31, 23, 55), T.hour) == datetime(
+        2021, 1, 1, 0, 55
+    )
+    assert next_timestamp(datetime(2020, 12, 31, 23, 55), T.month) == datetime(
+        2021, 1, 31, 23, 55
+    )
+    with pytest.raises(ValueError):
+        assert next_timestamp(datetime(2020, 1, 31, 23, 55), T.month) == datetime(
+            2021, 2, 28, 23, 55
+        )
 
 
 def test_get_download_count(auth_client, public_channel, package_version, db, dao: Dao):
@@ -69,6 +92,27 @@ def test_get_download_count(auth_client, public_channel, package_version, db, da
         "series": [
             {"timestamp": f"2020-{m:02}-{d:02}T00:00:00", "count": 1}
             for m, d in month_day[1:]
+        ],
+    }
+
+    # fill zeros
+    response = auth_client.get(
+        endpoint_url + "?start=2020-01-05T20:00"
+        "&end=2020-01-05T22:00"
+        "&period=H"
+        "&fill_zeros=true"
+    )
+    assert response.status_code == 200
+
+    assert response.json() == {
+        "server_timestamp": ANY,
+        "period": "H",
+        "metric_name": "download",
+        "total": 1,
+        "series": [
+            {"timestamp": "2020-01-05T20:00:00", "count": 0},
+            {"timestamp": "2020-01-05T21:00:00", "count": 1},
+            {"timestamp": "2020-01-05T22:00:00", "count": 0},
         ],
     }
 
