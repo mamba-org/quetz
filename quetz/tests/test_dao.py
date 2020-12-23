@@ -9,7 +9,7 @@ from quetz import errors, rest_models
 from quetz.dao import Dao
 from quetz.database import get_session
 from quetz.db_models import Channel, Package, PackageVersion
-from quetz.metrics.db_models import IntervalType, PackageVersionMetric
+from quetz.metrics.db_models import IntervalType, PackageVersionMetric, round_timestamp
 
 
 @pytest.fixture
@@ -257,6 +257,45 @@ def test_get_package_version_metrics(dao: Dao, channel, db, package_version):
         (timestamp + hour, 0),
     ]
 
+    # no start/end
+
+    metrics = dao.get_package_version_metrics(
+        package_version.id,
+        IntervalType.hour,
+        "download",
+        start=now - hour,
+        fill_zeros=True,
+    )
+    metrics_dict = [(m.timestamp, m.count) for m in metrics]
+    assert metrics_dict == [
+        (timestamp - hour, 0),
+        (timestamp, 1),
+    ]
+
+    metrics = dao.get_package_version_metrics(
+        package_version.id,
+        IntervalType.hour,
+        "download",
+        end=now + hour,
+        fill_zeros=True,
+    )
+    metrics_dict = [(m.timestamp, m.count) for m in metrics]
+    assert metrics_dict == [
+        (timestamp, 1),
+        (timestamp + hour, 0),
+    ]
+
+    metrics = dao.get_package_version_metrics(
+        package_version.id,
+        IntervalType.hour,
+        "download",
+        fill_zeros=True,
+    )
+    metrics_dict = [(m.timestamp, m.count) for m in metrics]
+    assert metrics_dict == [
+        (timestamp, 1),
+    ]
+
     # day interval
     timestamp_day = timestamp.replace(hour=0)
     metrics = dao.get_package_version_metrics(
@@ -280,6 +319,58 @@ def test_get_package_version_metrics(dao: Dao, channel, db, package_version):
         (timestamp_day, 1),
         (timestamp_day + day, 0),
     ]
+
+    # two items
+    dao.incr_download_count(
+        channel.name,
+        package_version.filename,
+        package_version.platform,
+        timestamp=now + datetime.timedelta(hours=2),
+    )
+
+    metrics = dao.get_package_version_metrics(
+        package_version.id,
+        IntervalType.hour,
+        "download",
+        fill_zeros=True,
+    )
+    metrics_dict = [(m.timestamp, m.count) for m in metrics]
+    assert metrics_dict == [
+        (timestamp, 1),
+        (timestamp + hour, 0),
+        (timestamp + 2 * hour, 1),
+    ]
+
+
+@pytest.mark.parametrize("interval", list(IntervalType))
+def test_get_package_version_metrics_intervals(
+    dao: Dao, channel, db, package_version, interval
+):
+
+    now = datetime.datetime(2020, 10, 1, 10, 1, 10)
+    dao.incr_download_count(
+        channel.name, package_version.filename, package_version.platform, timestamp=now
+    )
+
+    metrics = dao.get_package_version_metrics(package_version.id, interval, "download")
+    timestamp_interval = round_timestamp(now, interval)
+    metrics_dict = [(m.timestamp, m.count) for m in metrics]
+    assert metrics_dict == [(timestamp_interval, 1)]
+
+    end = timestamp_interval.replace(year=2021)
+    metrics = dao.get_package_version_metrics(
+        package_version.id,
+        interval,
+        "download",
+        start=timestamp_interval,
+        end=end,
+        fill_zeros=True,
+    )
+
+    metrics_dict = [(m.timestamp, m.count) for m in metrics]
+
+    assert metrics_dict[0] == (timestamp_interval, 1)
+    assert metrics_dict[-1] == (end, 0)
 
 
 def test_create_user_with_profile(dao: Dao, user_without_profile):

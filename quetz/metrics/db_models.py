@@ -1,5 +1,5 @@
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 from enum import Enum
 
 import sqlalchemy as sa
@@ -20,10 +20,7 @@ class IntervalType(Enum):
             return timedelta(hours=1)
         if self == IntervalType.day:
             return timedelta(days=1)
-        if self == IntervalType.month:
-            return timedelta(months=1)
-        if self == IntervalType.year:
-            return timedelta(years=1)
+        raise ValueError(f"can not create timedelta for interval '{self.name}'")
 
 
 def round_timestamp(timestamp, period):
@@ -36,6 +33,20 @@ def round_timestamp(timestamp, period):
     if period == IntervalType.year:
         now_interval = now_interval.replace(month=1)
     return now_interval
+
+
+def next_timestamp(timestamp: datetime, interval: IntervalType):
+    """next timestamp advanced by interval time"""
+    if interval in [IntervalType.day, IntervalType.hour]:
+        return timestamp + interval.timedelta
+    if interval == IntervalType.month:
+        if timestamp.month == 12:
+            return timestamp.replace(year=timestamp.year + 1, month=1)
+        else:
+            return timestamp.replace(month=timestamp.month + 1)
+    if interval == IntervalType.year:
+        return timestamp.replace(year=timestamp.year + 1)
+    raise ValueError(f"interval {interval.name} not supported")
 
 
 class PackageVersionMetric(Base):

@@ -7,7 +7,7 @@ import uuid
 from collections import defaultdict
 from datetime import datetime
 from itertools import groupby
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
@@ -30,7 +30,12 @@ from .db_models import (
     User,
 )
 from .jobs.models import Job
-from .metrics.db_models import IntervalType, PackageVersionMetric, round_timestamp
+from .metrics.db_models import (
+    IntervalType,
+    PackageVersionMetric,
+    next_timestamp,
+    round_timestamp,
+)
 
 logger = logging.getLogger("quetz")
 
@@ -807,6 +812,8 @@ class Dao:
         if end:
             q = q.filter(m.timestamp < end)
 
+        items = q.all()
+
         if fill_zeros:
 
             def factory():
@@ -816,24 +823,26 @@ class Dao:
                     period=period,
                 )
 
-            timestamps = defaultdict(factory)
+            timestamps: Dict[datetime, PackageVersionMetric] = defaultdict(factory)
 
-            for d in q:
+            for d in items:
                 timestamps[d.timestamp] = d
+
+            start = start or items[0].timestamp
+            end = end or items[-1].timestamp
 
             first = round_timestamp(start, period)
             last = round_timestamp(end, period)
 
             metrics = []
-            delta = period.timedelta
             while first <= last:
                 item = timestamps[first]
                 item.timestamp = first
                 metrics.append(item)
-                first = first + delta
+                first = next_timestamp(first, period)
             return metrics
-
-        return q.all()
+        else:
+            return items
 
     def get_channel_metrics(
         self,
