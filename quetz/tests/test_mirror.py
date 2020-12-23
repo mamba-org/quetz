@@ -15,7 +15,8 @@ from quetz.tasks.mirror import (
     KNOWN_SUBDIRS,
     RemoteRepository,
     RemoteServerError,
-    fill_db_from_index,
+    create_packages_from_channeldata,
+    create_versions_from_repodata,
     initial_sync_mirror,
 )
 
@@ -1039,13 +1040,26 @@ repodata_json = """
 """
 
 
-def test_fill_db_from_index(dao, user, local_channel, db):
+def test_create_packages_from_channeldata(dao, user, local_channel, db):
     channeldata = json.loads(channeldata_json)
-    repodata = {}
-    fill_db_from_index(local_channel.name, user.id, channeldata, repodata, dao)
+    create_packages_from_channeldata(local_channel.name, user.id, channeldata, dao)
 
     package = db.query(Package).filter(Package.name == "other-package").one()
 
     assert package
     assert package.summary == "dummy package"
-    assert False
+
+
+def test_create_versions_from_repodata(dao, user, local_channel, db):
+
+    pkg = Package(name="other-package", channel=local_channel)
+    db.add(pkg)
+    repodata = json.loads(repodata_json)
+    create_versions_from_repodata(local_channel.name, user.id, repodata, dao)
+    version = (
+        db.query(PackageVersion)
+        .filter(PackageVersion.package_name == "other-package")
+        .one()
+    )
+
+    assert version

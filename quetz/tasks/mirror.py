@@ -394,10 +394,9 @@ def initial_sync_mirror(
         indexing.update_indexes(dao, pkgstore, channel_name, subdirs=[arch])
 
 
-def fill_db_from_index(
-    channel_name: str, user_id: bytes, channeldata: dict, repodata: dict, dao: Dao
+def create_packages_from_channeldata(
+    channel_name: str, user_id: bytes, channeldata: dict, dao: Dao
 ):
-    subdirs = channeldata.get("subdirs", [])
     packages = channeldata["packages"]
 
     for package_name, metadata in packages.items():
@@ -413,8 +412,37 @@ def fill_db_from_index(
         package.channeldata = json.dumps(metadata)
         dao.db.commit()
 
-    for s in subdirs:
-        pass
+
+def create_versions_from_repodata(
+    channel_name: str, user_id: bytes, repodata: dict, dao: Dao
+):
+    packages: Dict[str, dict] = repodata["packages"]
+
+    for filename, metadata in packages.items():
+        pkg_format = "tarbz2" if filename.endswith(".tar.bz2") else ".conda"
+        dao.create_version(
+            channel_name,
+            metadata["name"],
+            pkg_format,
+            metadata["subdir"],
+            metadata["version"],
+            int(metadata["build_number"]),
+            metadata["build"],
+            filename,
+            json.dumps(metadata),
+            user_id,
+            metadata["size"],
+        )
+
+
+def fill_db_from_index(
+    channel_name: str,
+    user_id: bytes,
+    channel_url: str,
+    session: requests.Session,
+    dao: Dao,
+):
+    pass
 
 
 def synchronize_packages(
