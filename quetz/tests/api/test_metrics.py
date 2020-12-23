@@ -95,6 +95,27 @@ def test_get_download_count(auth_client, public_channel, package_version, db, da
         ],
     }
 
+    # fill zeros
+    response = auth_client.get(
+        endpoint_url + "?start=2020-01-05T20:00"
+        "&end=2020-01-05T22:00"
+        "&period=H"
+        "&fill_zeros=true"
+    )
+    assert response.status_code == 200
+
+    assert response.json() == {
+        "server_timestamp": ANY,
+        "period": "H",
+        "metric_name": "download",
+        "total": 1,
+        "series": [
+            {"timestamp": "2020-01-05T20:00:00", "count": 0},
+            {"timestamp": "2020-01-05T21:00:00", "count": 1},
+            {"timestamp": "2020-01-05T22:00:00", "count": 0},
+        ],
+    }
+
     response = auth_client.get(endpoint_url + "?period=M")
     assert response.status_code == 200
 

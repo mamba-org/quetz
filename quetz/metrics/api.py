@@ -22,6 +22,7 @@ def get_package_version_metrics(
     filename: str,
     package_name: str,
     channel_name: str,
+    fill_zeros: bool = False,
     period: IntervalType = IntervalType.day,
     metric_name: str = "download",
     start: Optional[datetime] = None,
@@ -40,7 +41,7 @@ def get_package_version_metrics(
         )
 
     series = dao.get_package_version_metrics(
-        version.id, period, metric_name, start=start, end=end
+        version.id, period, metric_name, start=start, end=end, fill_zeros=fill_zeros
     )
 
     total = sum(s.count for s in series)
