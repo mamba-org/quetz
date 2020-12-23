@@ -141,4 +141,44 @@ For example, to re-index the ``mirror-channel`` from previous example, you would
 
 This request will add existing package files to the repository, but it won't trigger a new synchronisation. If you want to synchronise the channel you can follow the example from the previous section. This synchronisation should only attempt to download the files that were not present in the package store.
 
+Registering mirrors
+^^^^^^^^^^^^^^^^^^^
 
+You can also register mirrors in the primary (mirrored) server. This will enable the primary server to pull and accumulate the metrics from the mirror servers and also provide the list of available mirrors for the clients. The clients will be then able to select the closest mirror or the mirror with the fastest connection.
+
+To register and list mirrors, you can use the `/api/channels/{channel_name}/mirrors` endpoint. This request will register a mirror `my-mirror` with the primary server `my-channel` (in this case they will be on the same local server, but normally they would be two different servers):
+
+.. code:: bash
+
+   curl -X POST "http://localhost:8000/api/channels/my-channel/mirrors" \
+       -H "X-API-Key: ${QUETZ_API_KEY}" \
+       -d '{"url": "http://localhost:8000/get/mirror-channel",
+            "api_endpoint": "http://localhost:8000/api/channels/mirror-channel",
+            "metrics_endpoint": "http://localhost:8000/metrics/channels/mirror-channel"}'
+
+You can also create a mirror and register it at the same time by passing the `register_mirror` query param with your "create channels" request. Note that you will also need to provide a valid API key for the primary server (`mirror_api_key`) with the permissions to register a channel:
+
+.. code:: bash
+
+   curl -X POST "localhost:8000/api/channels?register_mirror=true&mirror_api_key=${QUETZ_API_KEY}"  \
+       -d '{"name": "my-mirror-channel",
+            "private": false,
+            "mirror_channel_url": "http://localhost:8000/get/my-channel",
+            "mirror_mode": "mirror"}' \
+       -H "x-api-key: ${QUETZ_API_KEY}"
+
+
+Then you can list the mirros using:
+
+.. code:: bash
+
+   curl "http://localhost:8000/api/channels/my-channel/mirrors"
+
+
+To synchronize the metrics with the mirror server, use the `synchronize_metrics` action on the primary channel:
+
+.. code:: bash
+
+   curl -X PUT http://localhost:8000/api/channels/my-channel/actions \
+       -H "x-api-key:${QUETZ_API_KEY}" \
+       -d '{"action": "synchronize_metrics"}'
