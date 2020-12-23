@@ -2,6 +2,7 @@ import os
 import uuid
 from io import BytesIO
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -655,6 +656,52 @@ def test_add_mirror_without_sync(auth_client, dummy_repo):
     assert response.status_code == 201
 
     assert not dummy_repo
+
+
+@pytest.fixture
+def dummy_session_mock(app):
+
+    dummy_session = MagicMock()
+
+    def get_dummy_session():
+        return dummy_session
+
+    from quetz.main import get_remote_session
+
+    app.dependency_overrides[get_remote_session] = get_dummy_session
+
+    yield dummy_session
+
+    app.dependency_overrides.pop(get_remote_session)
+
+
+@pytest.mark.parametrize("user_role", ['maintainer'])
+def test_add_and_register_mirror(auth_client, dummy_session_mock):
+
+    host = "http://mirror3_host/get/my-channel"
+    response = auth_client.post(
+        "/api/channels",
+        params={"register_mirror": "true"},
+        json={
+            "name": "mirror_channel",
+            "private": False,
+            "mirror_channel_url": host,
+            "mirror_mode": "mirror",
+            "metadata": {"actions": []},
+        },
+    )
+    assert response.status_code == 201
+
+    dummy_session_mock.post.assert_called_with(
+        "http://mirror3_host/api/channels/my-channel/mirrors",
+        json={
+            "url": auth_client.base_url + '/get/mirror_channel',
+            "api_endpoint": auth_client.base_url + '/api/channels/mirror_channel',
+            "metrics_endpoint": auth_client.base_url
+            + '/metrics/channels/mirror_channel',
+        },
+        headers={},
+    )
 
 
 empty_archive = b""

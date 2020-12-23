@@ -560,14 +560,14 @@ def post_channel(
         mirror_url = str(new_channel.mirror_channel_url)
         mirror_url = mirror_url.replace("get", "api/channels")
         headers = {"x-api-key": mirror_api_key} if mirror_api_key else {}
+        api_endpoint = str(request.url.replace(query=None)) + '/' + new_channel.name
+        request.url
         response = session.post(
             mirror_url + '/mirrors',
             json={
-                "url": str(request.url.replace(query=None)).replace(
-                    "api/channels", "get"
-                )
-                + '/'
-                + new_channel.name
+                "url": api_endpoint.replace("api/channels", "get"),
+                "api_endpoint": api_endpoint,
+                "metrics_endpoint": api_endpoint.replace("api", "metrics"),
             },
             headers=headers,
         )
