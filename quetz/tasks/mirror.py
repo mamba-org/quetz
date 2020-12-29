@@ -360,8 +360,6 @@ def initial_sync_mirror(
 
             return False
 
-        print("Include List", includelist)
-        print("Exclude List", excludelist)
         for package_name, metadata in packages.items():
             if check_package_membership(package_name, includelist, excludelist):
                 path = os.path.join(arch, package_name)

@@ -29,6 +29,7 @@ def check_package_membership(package_name, includelist, excludelist):
             if package_name.startswith(each_package):
                 return False
         return True
+    return True
 
 
 def add_static_file(contents, channel_name, subdir, fname, pkgstore, file_index=None):
