@@ -551,15 +551,6 @@ def post_channel(
             detail="Cannot use both `includelist` and `excludelist` together.",
         )
 
-    package_list = []
-    include = False
-    if includelist is not None:
-        package_list = includelist
-        include = True
-    if excludelist is not None:
-        package_list = excludelist
-        include = False
-
     user_attrs = new_channel.dict(exclude_unset=True)
 
     if "size_limit" in user_attrs:
@@ -595,7 +586,7 @@ def post_channel(
     for action in actions:
         if action == ChannelActionEnum.synchronize:
             task.execute_channel_action(
-                action, channel, package_list=package_list, include=include
+                action, channel, includelist=includelist, excludelist=excludelist
             )
         else:
             task.execute_channel_action(action, channel)

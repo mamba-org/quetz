@@ -53,13 +53,13 @@ class Task:
 
         if action == ChannelActionEnum.synchronize:
             auth.assert_synchronize_mirror(channel_name)
-            include = kwargs.get('include')
-            package_list = kwargs.get('package_list')
+            includelist = kwargs.get('includelist')
+            excludelist = kwargs.get('excludelist')
             self.worker.execute(
                 mirror.synchronize_packages,
                 channel_name=channel_name,
-                package_list=package_list,
-                include=include,
+                includelist=includelist,
+                excludelist=excludelist,
             )
         elif action == ChannelActionEnum.validate_packages:
             auth.assert_validate_package_cache(channel_name)

@@ -18,11 +18,17 @@ from sqlalchemy import String, and_, cast, collate, not_, or_
 from .db_models import Channel, Package, PackageVersion, User
 
 
-def check_package_membership(package_name, package_list):
-    for each_package in package_list:
-        if package_name.startswith(each_package):
-            return True
-    return False
+def check_package_membership(package_name, includelist, excludelist):
+    if includelist:
+        for each_package in includelist:
+            if package_name.startswith(each_package):
+                return True
+        return False
+    elif excludelist:
+        for each_package in excludelist:
+            if package_name.startswith(each_package):
+                return False
+        return True
 
 
 def add_static_file(contents, channel_name, subdir, fname, pkgstore, file_index=None):

@@ -262,8 +262,8 @@ def initial_sync_mirror(
     dao: Dao,
     pkgstore: PackageStore,
     auth: authorization.Rules,
-    package_list: List[str] = [],
-    include: bool = False,
+    includelist: List[str],
+    excludelist: List[str],
     skip_errors: bool = True,
 ):
 
@@ -360,11 +360,10 @@ def initial_sync_mirror(
 
             return False
 
+        print("Include List", includelist)
+        print("Exclude List", excludelist)
         for package_name, metadata in packages.items():
-            if (include and check_package_membership(package_name, package_list)) or (
-                (not include)
-                and (not check_package_membership(package_name, package_list))
-            ):
+            if check_package_membership(package_name, includelist, excludelist):
                 path = os.path.join(arch, package_name)
 
                 # try to find out whether it's a new package version
@@ -403,8 +402,8 @@ def synchronize_packages(
     pkgstore: PackageStore,
     auth: authorization.Rules,
     session: requests.Session,
-    package_list: List[str] = [],
-    include: bool = False,
+    includelist: List[str],
+    excludelist: List[str],
 ):
 
     logger.debug(f"executing synchronize_packages task in a process {os.getpid()}")
@@ -436,6 +435,6 @@ def synchronize_packages(
             dao,
             pkgstore,
             auth,
-            package_list,
-            include,
+            includelist,
+            excludelist,
         )
