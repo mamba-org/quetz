@@ -542,6 +542,15 @@ def post_channel(
     else:
         actions = new_channel.metadata.actions
 
+    includelist = new_channel.metadata.includelist
+    excludelist = new_channel.metadata.excludelist
+
+    if includelist is not None and excludelist is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Cannot use both `includelist` and `excludelist` together.",
+        )
+
     user_attrs = new_channel.dict(exclude_unset=True)
 
     if "size_limit" in user_attrs:
@@ -575,7 +584,12 @@ def post_channel(
             logger.warning(f"could not register mirror due to error {response.text}")
 
     for action in actions:
-        task.execute_channel_action(action, channel)
+        if action == ChannelActionEnum.synchronize:
+            task.execute_channel_action(
+                action, channel, includelist=includelist, excludelist=excludelist
+            )
+        else:
+            task.execute_channel_action(action, channel)
 
 
 @api_router.patch(

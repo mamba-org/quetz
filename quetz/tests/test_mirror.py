@@ -891,6 +891,49 @@ def test_sync_mirror_channel(mirror_channel, user, client, dummy_repo):
     assert response.status_code == 200
 
 
+@pytest.mark.parametrize(
+    "package_list_type, expected_package",
+    [("includelist", "nrnpython"), ("excludelist", "test-package")],
+)
+def test_packagelist_mirror_channel(owner, client, package_list_type, expected_package):
+    response = client.get("/api/dummylogin/bartosz")
+    assert response.status_code == 200
+
+    response = client.post(
+        "/api/channels",
+        json={
+            "name": "mirror_channel_btel",
+            "private": False,
+            "mirror_channel_url": "https://conda.anaconda.org/btel",
+            "mirror_mode": "mirror",
+            "metadata": {package_list_type: ["nrnpython"]},
+        },
+    )
+    assert response.status_code == 201
+
+    response = client.get("/api/channels/mirror_channel_btel/packages")
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]['name'] == expected_package
+
+
+def test_includelist_and_excludelist_mirror_channel(owner, client):
+    response = client.get("/api/dummylogin/bartosz")
+    assert response.status_code == 200
+
+    response = client.post(
+        "/api/channels",
+        json={
+            "name": "mirror_channel_btel",
+            "private": False,
+            "mirror_channel_url": "https://conda.anaconda.org/btel",
+            "mirror_mode": "mirror",
+            "metadata": {"includelist": ["nrnpython"], "excludelist": ["test-package"]},
+        },
+    )
+    assert response.status_code == 422
+
+
 def test_sync_local_channel(local_channel, user, client, dummy_repo):
     response = client.put(
         f"/api/channels/{local_channel.name}/actions", json={"action": "synchronize"}
