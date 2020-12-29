@@ -262,8 +262,8 @@ def initial_sync_mirror(
     dao: Dao,
     pkgstore: PackageStore,
     auth: authorization.Rules,
-    includelist: List[str],
-    excludelist: List[str],
+    includelist: List[str] = None,
+    excludelist: List[str] = None,
     skip_errors: bool = True,
 ):
 
@@ -400,8 +400,8 @@ def synchronize_packages(
     pkgstore: PackageStore,
     auth: authorization.Rules,
     session: requests.Session,
-    includelist: List[str],
-    excludelist: List[str],
+    includelist: List[str] = None,
+    excludelist: List[str] = None,
 ):
 
     logger.debug(f"executing synchronize_packages task in a process {os.getpid()}")
