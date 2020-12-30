@@ -53,11 +53,27 @@ def get_theme(resource: str):
         raise HTTPException(status_code=404)
 
 
-def render_index(static_dir):
+def render_index(config):
+    static_dir = config.general_frontend_dir
     global mock_settings_dict
+    google_login_available = (
+        hasattr(config, 'google_client_id')
+        and config.google_client_id is not None
+        and hasattr(config, 'google_client_secret')
+        and config.google_client_secret is not None
+    )
+    github_login_available = (
+        hasattr(config, 'github_client_id')
+        and config.github_client_id is not None
+        and hasattr(config, 'github_client_secret')
+        and config.github_client_secret is not None
+    )
+
     config_data = {
         "appName": "Quetz – the fast conda package server!",
         "baseUrl": "/jlabmock/",
+        "github_login_available": github_login_available,
+        "google_login_available": google_login_available,
     }
     logger.info("Rendering index.html!")
     static_dir = Path(static_dir)
@@ -106,7 +122,7 @@ def register(app):
     app.include_router(catchall_router)
     # mount frontend
     if hasattr(config, 'general_frontend_dir') and config.general_frontend_dir:
-        render_index(config.general_frontend_dir)
+        render_index(config)
         frontend_dir = config.general_frontend_dir
         logger.info(f"Configured frontend found: {config.general_frontend_dir}")
     elif os.path.isfile("../quetz_frontend/dist/index.html"):
