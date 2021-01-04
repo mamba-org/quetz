@@ -7,7 +7,7 @@ from pathlib import Path
 
 import jinja2
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from starlette.staticfiles import StaticFiles
 
 from quetz import authorization, rest_models
@@ -121,10 +121,10 @@ def static(
     profile = dao.get_profile(user_id)
     profile.user.id = str(uuid.UUID(bytes=profile.user.id))
 
-    get_rendered_index(config_data, profile, index_template)
+    index_rendered = get_rendered_index(config_data, profile, index_template)
 
     if "." not in resource:
-        return FileResponse(path=os.path.join(frontend_dir, "index.html"))
+        return HTMLResponse(content=index_rendered, status_code=200)
     else:
         return FileResponse(path=os.path.join(frontend_dir, resource))
 
@@ -133,8 +133,7 @@ def get_rendered_index(config_data, profile, index_template):
     config_data["logged_in_user_profile"] = rest_models.Profile.from_orm(profile).json()
     logger.info(f"Page config: {config_data}")
     index_rendered = index_template.render(page_config=config_data)
-    with open(static_dir / "index.html", "w") as fo:
-        fo.write(index_rendered)
+    return index_rendered
 
 
 def register(app):
