@@ -1071,7 +1071,7 @@ def test_create_versions_from_repodata(dao, user, local_channel, db):
 
 
 @pytest.fixture
-def dummy_package_file():
+def dummy_package_file(config):
 
     filepath = OTHER_DUMMY_PACKAGE_V2
     fid = open(filepath, 'rb')
