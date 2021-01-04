@@ -1097,6 +1097,8 @@ def rules(user, db):
 def test_handle_repodata_package(
     dao, user, local_channel, dummy_package_file, rules, config, db
 ):
+    pkg = Package(name="other-package", channel=local_channel)
+    db.add(pkg)
 
     repodata = json.loads(repodata_json)
     package_name, package_data = list(repodata["packages"].items())[0]
