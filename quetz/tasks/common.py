@@ -61,6 +61,17 @@ class Task:
                 includelist=includelist,
                 excludelist=excludelist,
             )
+        elif action == ChannelActionEnum.synchronize_repodata:
+            auth.assert_synchronize_mirror(channel_name)
+            includelist = kwargs.get('includelist')
+            excludelist = kwargs.get('excludelist')
+            self.worker.execute(
+                mirror.synchronize_packages,
+                channel_name=channel_name,
+                use_repodata=True,
+                includelist=includelist,
+                excludelist=excludelist,
+            )
         elif action == ChannelActionEnum.validate_packages:
             auth.assert_validate_package_cache(channel_name)
             self.worker.execute(indexing.validate_packages, channel_name=channel.name)

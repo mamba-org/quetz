@@ -6,6 +6,7 @@ import shutil
 from concurrent.futures import ThreadPoolExecutor
 from http.client import IncompleteRead
 from tempfile import SpooledTemporaryFile
+from typing import List
 
 import requests
 from fastapi import HTTPException, status
@@ -18,8 +19,7 @@ from quetz.dao import Dao
 from quetz.db_models import Channel, PackageVersion
 from quetz.pkgstores import PackageStore
 from quetz.tasks import indexing
-from quetz.utils import check_package_membership
-from quetz.utils import TicToc
+from quetz.utils import TicToc, check_package_membership
 
 # copy common subdirs from conda:
 # https://github.com/conda/conda/blob/a78a2387f26a188991d771967fc33aa1fb5bb810/conda/base/constants.py#L63
@@ -465,13 +465,8 @@ def initial_sync_mirror(
                 else:
                     logger.debug(f"updating package {package_name} from {arch}")
 
-<<<<<<< HEAD
-                update_batch.append(path)
+                update_batch.append((path, package_name, metadata))
                 update_size += metadata.get('size', 100_000)
-=======
-            update_batch.append((path, package_name, metadata))
-            update_size += metadata.get('size', 100_000)
->>>>>>> 8440c0e (handle mirrors with repodata)
 
             if len(update_batch) >= max_batch_length or update_size >= max_batch_size:
                 logger.debug(f"Executing batch with {update_size}")
@@ -545,6 +540,7 @@ def synchronize_packages(
     session: requests.Session,
     includelist: List[str] = None,
     excludelist: List[str] = None,
+    use_repodata: bool = False,
 ):
 
     logger.debug(f"executing synchronize_packages task in a process {os.getpid()}")
@@ -582,4 +578,5 @@ def synchronize_packages(
             auth,
             includelist,
             excludelist,
+            use_repodata=use_repodata,
         )
