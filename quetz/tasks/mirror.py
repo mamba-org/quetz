@@ -6,12 +6,11 @@ import shutil
 from concurrent.futures import ThreadPoolExecutor
 from http.client import IncompleteRead
 from tempfile import SpooledTemporaryFile
-from typing import List
 
 import requests
 from fastapi import HTTPException, status
 from fastapi.responses import FileResponse, StreamingResponse
-from tenacity import after_log, retry, stop_after_attempt, wait_exponential
+from tenacity import TryAgain, after_log, retry, stop_after_attempt, wait_exponential
 
 from quetz import authorization, rest_models
 from quetz.config import Config
@@ -20,6 +19,7 @@ from quetz.db_models import Channel, PackageVersion
 from quetz.pkgstores import PackageStore
 from quetz.tasks import indexing
 from quetz.utils import check_package_membership
+from quetz.utils import TicToc
 
 # copy common subdirs from conda:
 # https://github.com/conda/conda/blob/a78a2387f26a188991d771967fc33aa1fb5bb810/conda/base/constants.py#L63
@@ -241,7 +241,8 @@ def _check_checksum(dao: Dao, channel_name: str, platform: str, keyname="sha256"
     wait=wait_exponential(multiplier=1, min=4, max=10),
     after=after_log(logger, logging.WARNING),
 )
-def download_file(remote_repository, path):
+def download_file(remote_repository, path_metadata):
+    path, package_name, metadata = path_metadata
     try:
         f = remote_repository.open(path)
     except RemoteServerError as e:
@@ -252,7 +253,78 @@ def download_file(remote_repository, path):
         raise e
 
     logger.debug(f"Fetched file {path}")
-    return f
+    return f, package_name, metadata
+
+
+def handle_repodata_package(
+    channel_name,
+    files_metadata,
+    dao,
+    auth,
+    force,
+    pkgstore,
+    config,
+):
+    user_id = auth.assert_user()
+
+    total_size = 0
+    for file, package_name, metadata in files_metadata:
+        parts = file.filename.rsplit("-", 2)
+        if len(parts) != 3:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"package file name has wrong format {file.filename}",
+            )
+        else:
+            package_name = parts[0]
+        auth.assert_upload_file(channel_name, package_name)
+        if force:
+            auth.assert_overwrite_package_version(channel_name, package_name)
+
+        # workaround for https://github.com/python/cpython/pull/3249
+        if type(file.file) is SpooledTemporaryFile and not hasattr(file, "seekable"):
+            file.file.seekable = file.file._file.seekable
+
+        file.file.seek(0, os.SEEK_END)
+        size = file.file.tell()
+        total_size += size
+        file.file.seek(0)
+
+    dao.assert_size_limits(channel_name, total_size)
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        after=after_log(logger, logging.WARNING),
+    )
+    def _upload_package(file, channel_name, subdir):
+
+        dest = os.path.join(subdir, file.filename)
+
+        try:
+            file.file.seek(0)
+            logger.debug(
+                f"uploading file {dest} from channel {channel_name} to package store"
+            )
+            pkgstore.add_package(file.file, channel_name, dest)
+
+        except AttributeError as e:
+            logger.error(f"Could not upload {file}, {file.filename}. {str(e)}")
+            raise TryAgain
+
+    pkgstore.create_channel(channel_name)
+    nthreads = config.general_package_unpack_threads
+
+    with TicToc("upload file without extracting"):
+        with ThreadPoolExecutor(max_workers=nthreads) as executor:
+            for file, package_name, metadata in files_metadata:
+                executor.submit(_upload_package, file, channel_name, metadata['subdir'])
+
+    with TicToc("add versions to the db"):
+        for file, package_name, metadata in files_metadata:
+            create_version_from_metadata(
+                channel_name, user_id, package_name, metadata, dao
+            )
 
 
 def initial_sync_mirror(
@@ -265,6 +337,7 @@ def initial_sync_mirror(
     includelist: List[str] = None,
     excludelist: List[str] = None,
     skip_errors: bool = True,
+    use_repodata: bool = False,
 ):
 
     force = True  # needed for updating packages
@@ -327,6 +400,7 @@ def initial_sync_mirror(
                 return False
 
             remote_packages = []
+            remote_packages_with_metadata = []
 
             with ThreadPoolExecutor(
                 max_workers=config.mirroring_num_parallel_downloads
@@ -337,16 +411,29 @@ def initial_sync_mirror(
                     update_batch,
                 ):
                     if f is not None:
-                        remote_packages.append(f)
+                        remote_packages.append(f[0])
+                        remote_packages_with_metadata.append(f)
 
             try:
-                handle_package_files(
-                    channel_name,
-                    remote_packages,
-                    dao,
-                    auth,
-                    force,
-                )
+                if use_repodata:
+                    handle_repodata_package(
+                        channel_name,
+                        remote_packages_with_metadata,
+                        dao,
+                        auth,
+                        force,
+                        pkgstore,
+                        config,
+                    )
+
+                else:
+                    handle_package_files(
+                        channel_name,
+                        remote_packages,
+                        dao,
+                        auth,
+                        force,
+                    )
                 return True
 
             except Exception as exc:
@@ -378,8 +465,13 @@ def initial_sync_mirror(
                 else:
                     logger.debug(f"updating package {package_name} from {arch}")
 
+<<<<<<< HEAD
                 update_batch.append(path)
                 update_size += metadata.get('size', 100_000)
+=======
+            update_batch.append((path, package_name, metadata))
+            update_size += metadata.get('size', 100_000)
+>>>>>>> 8440c0e (handle mirrors with repodata)
 
             if len(update_batch) >= max_batch_length or update_size >= max_batch_size:
                 logger.debug(f"Executing batch with {update_size}")
@@ -397,7 +489,7 @@ def initial_sync_mirror(
 def create_packages_from_channeldata(
     channel_name: str, user_id: bytes, channeldata: dict, dao: Dao
 ):
-    packages = channeldata["packages"]
+    packages = channeldata.get("packages", {})
 
     for package_name, metadata in packages.items():
         package_data = rest_models.Package(
@@ -413,36 +505,36 @@ def create_packages_from_channeldata(
         dao.db.commit()
 
 
+def create_version_from_metadata(
+    channel_name: str, user_id: bytes, package_name: str, package_data: dict, dao: Dao
+):
+
+    pkg_format = "tarbz2" if package_name.endswith(".tar.bz2") else ".conda"
+
+    version = dao.create_version(
+        channel_name,
+        package_data["name"],
+        pkg_format,
+        package_data["subdir"],
+        package_data["version"],
+        int(package_data["build_number"]),
+        package_data["build"],
+        package_name,
+        json.dumps(package_data),
+        user_id,
+        package_data["size"],
+    )
+
+    # pm.hook.post_add_package_version(version=version, condainfo=condainfo)
+    return version
+
+
 def create_versions_from_repodata(
     channel_name: str, user_id: bytes, repodata: dict, dao: Dao
 ):
-    packages: Dict[str, dict] = repodata["packages"]
-
+    packages = repodata.get("packages", {})
     for filename, metadata in packages.items():
-        pkg_format = "tarbz2" if filename.endswith(".tar.bz2") else ".conda"
-        dao.create_version(
-            channel_name,
-            metadata["name"],
-            pkg_format,
-            metadata["subdir"],
-            metadata["version"],
-            int(metadata["build_number"]),
-            metadata["build"],
-            filename,
-            json.dumps(metadata),
-            user_id,
-            metadata["size"],
-        )
-
-
-def fill_db_from_index(
-    channel_name: str,
-    user_id: bytes,
-    channel_url: str,
-    session: requests.Session,
-    dao: Dao,
-):
-    pass
+        create_version_from_metadata(channel_name, user_id, filename, metadata, dao)
 
 
 def synchronize_packages(
@@ -462,8 +554,12 @@ def synchronize_packages(
     host = new_channel.mirror_channel_url
 
     remote_repo = RemoteRepository(new_channel.mirror_channel_url, session)
+
+    user_id = auth.assert_user()
+
     try:
         channel_data = remote_repo.open("channeldata.json").json()
+        create_packages_from_channeldata(channel_name, user_id, channel_data, dao)
         subdirs = channel_data.get("subdirs", [])
     except (RemoteFileNotFound, json.JSONDecodeError):
         subdirs = None

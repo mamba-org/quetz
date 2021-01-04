@@ -17,6 +17,7 @@ from quetz.tasks.mirror import (
     RemoteServerError,
     create_packages_from_channeldata,
     create_versions_from_repodata,
+    handle_repodata_package,
     initial_sync_mirror,
 )
 
@@ -601,19 +602,23 @@ def test_api_methods_for_mirror_channels(client, mirror_channel):
     [
         # linux-64 subdir without packages
         (
-            [b'{"subdirs": ["linux-64"]}', b'{"packages": {}}'],
+            [b'{"subdirs": ["linux-64"], "packages":{}}', b'{"packages": {}}'],
             ["channeldata.json", "linux-64/repodata_from_packages.json"],
         ),
         # empty repodata
         (
-            [b'{"subdirs": ["linux-64"]}', b"{}"],
+            [b'{"subdirs": ["linux-64"], "packages":{}}', b"{}"],
             ["channeldata.json", "linux-64/repodata_from_packages.json"],
         ),
         # no subodirs
-        ([b'{"subdirs": []}'], ["channeldata.json"]),
+        ([b'{"subdirs": [], "packages":{}}'], ["channeldata.json"]),
         # two arbitrary subdirs
         (
-            [b'{"subdirs": ["some-arch-1", "some-arch-2"]}', b"{}", b"{}"],
+            [
+                b'{"subdirs": ["some-arch-1", "some-arch-2"], "packages":{}}',
+                b"{}",
+                b"{}",
+            ],
             [
                 "channeldata.json",
                 "some-arch-1/repodata_from_packages.json",
@@ -714,7 +719,7 @@ empty_archive = b""
     "repo_content",
     [
         [
-            b'{"subdirs": ["linux-64"]}',
+            b'{"subdirs": ["linux-64"], "packages":{}}',
             (
                 b'{"packages": {"my_package-0.1.tar.bz": '
                 b'{"subdir":"linux-64", "time_modified": 10}}}'
@@ -845,7 +850,7 @@ def test_disabled_methods_for_mirror_channels(
         # no archs in channeldata
         (b"{}", 200, []),
         # custom architecture
-        (b'{"subdirs":["wonder-arch"]}', 200, ["wonder-arch"]),
+        (b'{"subdirs":["wonder-arch"], "packages":{}}', 200, ["wonder-arch"]),
     ],
 )
 def test_repo_without_channeldata(owner, client, dummy_repo, expected_archs):
@@ -1063,3 +1068,51 @@ def test_create_versions_from_repodata(dao, user, local_channel, db):
     )
 
     assert version
+
+
+@pytest.fixture
+def dummy_package_file():
+
+    filepath = OTHER_DUMMY_PACKAGE_V2
+    fid = open(filepath, 'rb')
+
+    fid.filename = filepath.name
+    fid.content_type = "application/archive"
+    fid.file = fid
+
+    yield fid
+
+    fid.close()
+
+
+@pytest.fixture
+def rules(user, db):
+
+    rules = Rules("", {"user_id": str(uuid.UUID(bytes=user.id))}, db)
+
+    return rules
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+def test_handle_repodata_package(
+    dao, user, local_channel, dummy_package_file, rules, config, db
+):
+
+    repodata = json.loads(repodata_json)
+    package_name, package_data = list(repodata["packages"].items())[0]
+    pkgstore = config.get_package_store()
+
+    files_metadata = [(dummy_package_file, package_name, package_data)]
+
+    handle_repodata_package(
+        local_channel.name, files_metadata, dao, rules, False, pkgstore, config
+    )
+    version = (
+        db.query(PackageVersion)
+        .filter(PackageVersion.package_name == "other-package")
+        .one()
+    )
+
+    assert version
+
+    pkgstore.serve_path(local_channel.name, f"linux-64/{package_name}")
