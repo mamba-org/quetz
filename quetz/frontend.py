@@ -2,7 +2,6 @@ import json
 import logging
 import os
 import sys
-import uuid
 from pathlib import Path
 
 import jinja2
@@ -24,10 +23,28 @@ catchall_router = APIRouter()
 
 mock_settings_dict = None
 frontend_dir = ""
-static_dir = ""
-profile = None
-config_data = {}
 index_template = None
+
+
+google_login_available = (
+    hasattr(config, 'google_client_id')
+    and config.google_client_id is not None
+    and hasattr(config, 'google_client_secret')
+    and config.google_client_secret is not None
+)
+github_login_available = (
+    hasattr(config, 'github_client_id')
+    and config.github_client_id is not None
+    and hasattr(config, 'github_client_secret')
+    and config.github_client_secret is not None
+)
+
+config_data = {
+    "appName": "Quetz – the fast conda package server!",
+    "baseUrl": "/jlabmock/",
+    "github_login_available": github_login_available,
+    "google_login_available": google_login_available,
+}
 
 
 @mock_router.get('/api/sessions', include_in_schema=False)
@@ -63,31 +80,10 @@ def get_theme(resource: str):
 
 def render_index(config):
     global mock_settings_dict
-    global config_data
     global index_template
-    global static_dir
 
     static_dir = config.general_frontend_dir
 
-    google_login_available = (
-        hasattr(config, 'google_client_id')
-        and config.google_client_id is not None
-        and hasattr(config, 'google_client_secret')
-        and config.google_client_secret is not None
-    )
-    github_login_available = (
-        hasattr(config, 'github_client_id')
-        and config.github_client_id is not None
-        and hasattr(config, 'github_client_secret')
-        and config.github_client_secret is not None
-    )
-
-    config_data = {
-        "appName": "Quetz – the fast conda package server!",
-        "baseUrl": "/jlabmock/",
-        "github_login_available": github_login_available,
-        "google_login_available": google_login_available,
-    }
     logger.info("Rendering index.html!")
     static_dir = Path(static_dir)
     if (static_dir / ".." / "templates").exists():
@@ -117,14 +113,14 @@ def static(
     auth: authorization.Rules = Depends(get_rules),
 ):
     user_id = auth.assert_user()
-    global profile
     profile = dao.get_profile(user_id)
-    profile.user.id = str(uuid.UUID(bytes=profile.user.id))
-
-    index_rendered = get_rendered_index(config_data, profile, index_template)
 
     if "." not in resource:
-        return HTMLResponse(content=index_rendered, status_code=200)
+        if index_template is None:
+            return FileResponse(path=os.path.join(frontend_dir, "index.html"))
+        else:
+            index_rendered = get_rendered_index(config_data, profile, index_template)
+            return HTMLResponse(content=index_rendered, status_code=200)
     else:
         return FileResponse(path=os.path.join(frontend_dir, resource))
 
