@@ -74,6 +74,7 @@ def test_conda_suggest_endpoint_with_upload(
     package,
     subdir,
     config,
+    profile,
 ):
     response = client.get("/api/dummylogin/madhurt")
     filename = "test-package-0.1-0.tar.bz2"

@@ -5,11 +5,14 @@ import sys
 from pathlib import Path
 
 import jinja2
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse, HTMLResponse
 from starlette.staticfiles import StaticFiles
 
+from quetz import authorization, rest_models
 from quetz.config import Config
+from quetz.dao import Dao
+from quetz.deps import get_dao, get_rules, get_session
 
 config = Config()
 
@@ -20,6 +23,28 @@ catchall_router = APIRouter()
 
 mock_settings_dict = None
 frontend_dir = ""
+index_template = None
+
+
+google_login_available = (
+    hasattr(config, 'google_client_id')
+    and config.google_client_id is not None
+    and hasattr(config, 'google_client_secret')
+    and config.google_client_secret is not None
+)
+github_login_available = (
+    hasattr(config, 'github_client_id')
+    and config.github_client_id is not None
+    and hasattr(config, 'github_client_secret')
+    and config.github_client_secret is not None
+)
+
+config_data = {
+    "appName": "Quetz – the fast conda package server!",
+    "baseUrl": "/jlabmock/",
+    "github_login_available": github_login_available,
+    "google_login_available": google_login_available,
+}
 
 
 @mock_router.get('/api/sessions', include_in_schema=False)
@@ -54,27 +79,11 @@ def get_theme(resource: str):
 
 
 def render_index(config):
-    static_dir = config.general_frontend_dir
     global mock_settings_dict
-    google_login_available = (
-        hasattr(config, 'google_client_id')
-        and config.google_client_id is not None
-        and hasattr(config, 'google_client_secret')
-        and config.google_client_secret is not None
-    )
-    github_login_available = (
-        hasattr(config, 'github_client_id')
-        and config.github_client_id is not None
-        and hasattr(config, 'github_client_secret')
-        and config.github_client_secret is not None
-    )
+    global index_template
 
-    config_data = {
-        "appName": "Quetz – the fast conda package server!",
-        "baseUrl": "/jlabmock/",
-        "github_login_available": github_login_available,
-        "google_login_available": google_login_available,
-    }
+    static_dir = config.general_frontend_dir
+
     logger.info("Rendering index.html!")
     static_dir = Path(static_dir)
     if (static_dir / ".." / "templates").exists():
@@ -87,11 +96,6 @@ def render_index(config):
         with open(static_dir / ".." / "templates" / "default_settings.json") as fi:
             default_settings = fi.read()
 
-        logger.info(f"Page config: {config_data}")
-        index_rendered = index_template.render(page_config=config_data)
-        with open(static_dir / "index.html", "w") as fo:
-            fo.write(index_rendered)
-
         for setting in settings_template["settings"]:
             if setting["id"] == '@jupyterlab/apputils-extension:themes':
                 setting["raw"] = default_settings
@@ -102,11 +106,30 @@ def render_index(config):
 
 
 @catchall_router.get('/{resource:path}', include_in_schema=False)
-def static(resource: str):
+def static(
+    resource: str,
+    session: dict = Depends(get_session),
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    user_id = auth.get_user()
+
     if "." not in resource:
-        return FileResponse(path=os.path.join(frontend_dir, "index.html"))
+        if index_template is None or user_id is None:
+            return FileResponse(path=os.path.join(frontend_dir, "index.html"))
+        else:
+            profile = dao.get_profile(user_id)
+            index_rendered = get_rendered_index(config_data, profile, index_template)
+            return HTMLResponse(content=index_rendered, status_code=200)
     else:
         return FileResponse(path=os.path.join(frontend_dir, resource))
+
+
+def get_rendered_index(config_data, profile, index_template):
+    config_data["logged_in_user_profile"] = rest_models.Profile.from_orm(profile).json()
+    logger.info(f"Page config: {config_data}")
+    index_rendered = index_template.render(page_config=config_data)
+    return index_rendered
 
 
 def register(app):
