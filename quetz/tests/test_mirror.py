@@ -426,6 +426,70 @@ def test_synchronisation_sha(
 
 
 @pytest.mark.parametrize(
+    "repo_content,arch,n_new_packages",
+    [
+        # different version (new SHA256)
+        pytest.param(
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA"}}}',
+                DUMMY_PACKAGE,
+            ],
+            "noarch",
+            1,
+            id="new-sha-sum",
+        ),
+    ],
+)
+def test_synchronisation_no_checksums_in_db(
+    repo_content,
+    mirror_channel,
+    dao,
+    config,
+    dummy_response,
+    db,
+    user,
+    n_new_packages,
+    arch,
+    package_version,
+    mocker,
+):
+
+    package_info = '{"size": 5000, "subdirs":["noarch"]}'
+    package_version.info = package_info
+    db.commit()
+
+    pkgstore = config.get_package_store()
+    rules = Rules("", {"user_id": str(uuid.UUID(bytes=user.id))}, db)
+
+    class DummySession:
+        def get(self, path, stream=False):
+            return dummy_response()
+
+    # generate local repodata.json
+    update_indexes(dao, pkgstore, mirror_channel.name)
+
+    dummy_repo = RemoteRepository("", DummySession())
+
+    initial_sync_mirror(
+        mirror_channel.name,
+        dummy_repo,
+        arch,
+        dao,
+        pkgstore,
+        rules,
+        skip_errors=False,
+    )
+
+    versions = (
+        db.query(PackageVersion)
+        .filter(PackageVersion.channel_name == mirror_channel.name)
+        .all()
+    )
+
+    assert len(versions) == n_new_packages + 1
+
+
+@pytest.mark.parametrize(
     "repo_content,timestamp_mirror_sync,expected_timestamp,new_package",
     [
         # package modified but no server timestamp set

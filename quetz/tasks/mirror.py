@@ -215,22 +215,26 @@ def _check_checksum(dao: Dao, channel_name: str, platform: str, keyname="sha256"
                 .all()
             )
 
-            # logger.debug(
-            #     f"Got {len(package_versions)} existing packages for "
-            #     f"{channel_name} / {platform}"
-            # )
-            package_fingerprints = set()
+            package_fingerprints = {}
             for v in package_versions:
                 info = json.loads(v.info)
-                package_fingerprints.add((v.filename, info[keyname]))
+                package_fingerprints[v.filename] = info.get(keyname)
 
-        # use nonlocal to be able to modified last_timestamp in the
-        # outer scope
         if keyname not in metadata:
             return None
 
-        fingerprint = (package_name, metadata[keyname])
-        is_uptodate = fingerprint in package_fingerprints
+        new_checksum = metadata[keyname]
+        if package_name in package_fingerprints:
+            existing_checksum = package_fingerprints[package_name]
+            if existing_checksum is None:
+                # missing checksum
+                is_uptodate = None
+            else:
+                # compare  checksum
+                is_uptodate = existing_checksum == new_checksum
+        else:
+            # missing package version
+            is_uptodate = False
 
         return is_uptodate
 
