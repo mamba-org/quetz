@@ -6,7 +6,7 @@ from quetz_conda_suggest import db_models
 
 from quetz import rest_models
 from quetz.dao import Dao
-from quetz.db_models import User, Profile
+from quetz.db_models import Profile, User
 
 pytest_plugins = "quetz.testing.fixtures"
 
@@ -26,7 +26,9 @@ def user(db):
 
 @fixture
 def profile(db, user):
-    user_profile = Profile(name="madhur", avatar_url="madhur-tandon", user_id=user.id, user=user)
+    user_profile = Profile(
+        name="madhur", avatar_url="madhur-tandon", user_id=user.id, user=user
+    )
     db.add(user_profile)
     db.commit()
     yield user
