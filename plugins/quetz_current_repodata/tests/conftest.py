@@ -4,7 +4,7 @@ from pytest import fixture
 
 from quetz import rest_models
 from quetz.dao import Dao
-from quetz.db_models import User
+from quetz.db_models import User, Profile
 
 pytest_plugins = "quetz.testing.fixtures"
 
@@ -18,6 +18,14 @@ def dao(db) -> Dao:
 def user(db):
     user = User(id=uuid.uuid4().bytes, username="madhurt")
     db.add(user)
+    db.commit()
+    yield user
+
+
+@fixture
+def profile(db, user):
+    user_profile = Profile(name="madhur", avatar_url="madhur-tandon", user_id=user.id, user=user)
+    db.add(user_profile)
     db.commit()
     yield user
 

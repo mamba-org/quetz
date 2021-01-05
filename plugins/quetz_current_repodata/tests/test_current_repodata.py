@@ -11,6 +11,7 @@ def test_current_repodata_hook(
     files,
     packages,
     config,
+    profile,
 ):
     response = client.get("/api/dummylogin/madhurt")
     assert response.status_code == 200
