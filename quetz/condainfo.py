@@ -79,12 +79,19 @@ class CondaInfo:
     def __init__(self, file, filename):
         self.channeldata = {}
         self.package_format = None
-        self.info = {}
-        self.about = {}
-        self.paths = {}
-        self.run_exports = {}
-        self.files = {}
-        self._parse_conda(file, filename)
+        self._file = file
+        self._filename = filename
+        if filename.endswith(".conda"):
+            self.package_format = db_models.PackageFormatEnum.conda
+        else:
+            self.package_format = db_models.PackageFormatEnum.tarbz2
+
+    def __getattr__(self, name):
+        # lazily extract the conda info from package files
+        if name in ["info", "about", "paths", "run_exports", "files"]:
+            self._parse_conda()
+            self._parsed = True
+        return getattr(self, name)
 
     def _map_channeldata(self):
         channeldata = {}
@@ -165,7 +172,8 @@ class CondaInfo:
     def _calculate_file_hashes(self, file):
         calculate_file_hashes_and_size(self.info, file)
 
-    def _parse_conda(self, file, filename):
+    def _parse_conda(self):
+        file = self._file
 
         # workaround for https://github.com/python/cpython/pull/3249
         if not hasattr(file, "seekable"):
@@ -173,8 +181,7 @@ class CondaInfo:
 
         file.seek(0)
         filehandle = file
-        if filename.endswith(".conda"):
-            self.package_format = db_models.PackageFormatEnum.conda
+        if self.package_format == db_models.PackageFormatEnum.conda:
             with ZipFile(filehandle) as zf:
                 infotars = [_ for _ in zf.namelist() if _.startswith("info-")]
                 infotar = infotars[0]
@@ -189,7 +196,6 @@ class CondaInfo:
                     with tarfile.open(fileobj=fobj, mode="r") as tar:
                         self._load_jsons(tar)
         else:
-            self.package_format = db_models.PackageFormatEnum.tarbz2
             try:
                 with tarfile.open(fileobj=filehandle, mode="r:bz2") as tar:
                     self._load_jsons(tar)

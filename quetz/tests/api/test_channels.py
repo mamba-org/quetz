@@ -306,6 +306,7 @@ def test_upload_package_version_to_channel(
 
     with open(package_filename, "rb") as fid:
         condainfo = CondaInfo(fid, package_filename)
+        condainfo._parse_conda()
 
     assert response.status_code == 201
     db.refresh(public_channel)

@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from tenacity import TryAgain, after_log, retry, stop_after_attempt, wait_exponential
 
 from quetz import authorization, rest_models
-from quetz.condainfo import get_subdir_compat
+from quetz.condainfo import CondaInfo, get_subdir_compat
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.db_models import Channel, PackageVersion
@@ -266,6 +266,8 @@ def handle_repodata_package(
     pkgstore,
     config,
 ):
+    from quetz.main import pm
+
     user_id = auth.assert_user()
 
     total_size = 0
@@ -324,9 +326,11 @@ def handle_repodata_package(
 
     with TicToc("add versions to the db"):
         for file, package_name, metadata in files_metadata:
-            create_version_from_metadata(
+            version = create_version_from_metadata(
                 channel_name, user_id, package_name, metadata, dao
             )
+            condainfo = CondaInfo(file, package_name)
+            pm.hook.post_add_package_version(version=version, condainfo=condainfo)
 
 
 def initial_sync_mirror(
@@ -534,7 +538,6 @@ def create_version_from_metadata(
         package_data["size"],
     )
 
-    # pm.hook.post_add_package_version(version=version, condainfo=condainfo)
     return version
 
 

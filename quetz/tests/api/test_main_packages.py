@@ -244,6 +244,7 @@ def test_upload_package_version(
 
     with open(package_filename, "rb") as fid:
         condainfo = CondaInfo(fid, package_filename)
+        condainfo._parse_conda()
 
     if package_name == "my-package":
         assert response.status_code == 400
@@ -382,6 +383,7 @@ def test_validate_package_names_files_endpoint(
 
     with open(package_filename, "rb") as fid:
         condainfo = CondaInfo(fid, package_filename)
+        condainfo._parse_conda()
 
     # patch conda info
     condainfo.info['name'] = package_name
