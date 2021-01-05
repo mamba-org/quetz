@@ -76,7 +76,7 @@ def get_subdir_compat(info):
 
 
 class CondaInfo:
-    def __init__(self, file, filename):
+    def __init__(self, file, filename, lazy=False):
         self.channeldata = {}
         self.package_format = None
         self._file = file
@@ -85,12 +85,13 @@ class CondaInfo:
             self.package_format = db_models.PackageFormatEnum.conda
         else:
             self.package_format = db_models.PackageFormatEnum.tarbz2
+        if not lazy:
+            self._parse_conda()
 
     def __getattr__(self, name):
         # lazily extract the conda info from package files
         if name in ["info", "about", "paths", "run_exports", "files"]:
             self._parse_conda()
-            self._parsed = True
         return getattr(self, name)
 
     def _map_channeldata(self):
