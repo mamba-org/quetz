@@ -63,16 +63,36 @@ def calculate_file_hashes_and_size(info, file):
     info["sha256"] = sha.hexdigest()
 
 
+def get_subdir_compat(info):
+    "compatibility layer for subdir property of packages"
+
+    subdir = info.get("subdir", None)
+    if not subdir:
+        arch = info["arch"]
+        platform = info["platform"]
+        if arch == "x86_64":
+            subdir = platform + '-64'
+    return subdir
+
+
 class CondaInfo:
-    def __init__(self, file, filename):
+    def __init__(self, file, filename, lazy=False):
         self.channeldata = {}
         self.package_format = None
-        self.info = {}
-        self.about = {}
-        self.paths = {}
-        self.run_exports = {}
-        self.files = {}
-        self._parse_conda(file, filename)
+        self._file = file
+        self._filename = filename
+        if filename.endswith(".conda"):
+            self.package_format = db_models.PackageFormatEnum.conda
+        else:
+            self.package_format = db_models.PackageFormatEnum.tarbz2
+        if not lazy:
+            self._parse_conda()
+
+    def __getattr__(self, name):
+        # lazily extract the conda info from package files
+        if name in ["info", "about", "paths", "run_exports", "files"]:
+            self._parse_conda()
+        return getattr(self, name)
 
     def _map_channeldata(self):
         channeldata = {}
@@ -128,13 +148,7 @@ class CondaInfo:
     def _load_jsons(self, tar):
         self.info = json.load(tar.extractfile("info/index.json"))
 
-        subdir = self.info.get("subdir", None)
-        if not subdir:
-            arch = self.info["arch"]
-            platform = self.info["platform"]
-            if arch == "x86_64":
-                subdir = platform + '-64'
-            self.info['subdir'] = subdir
+        self.info['subdir'] = get_subdir_compat(self.info)
 
         try:
             self.about = json.load(tar.extractfile("info/about.json"))
@@ -159,7 +173,8 @@ class CondaInfo:
     def _calculate_file_hashes(self, file):
         calculate_file_hashes_and_size(self.info, file)
 
-    def _parse_conda(self, file, filename):
+    def _parse_conda(self):
+        file = self._file
 
         # workaround for https://github.com/python/cpython/pull/3249
         if not hasattr(file, "seekable"):
@@ -167,8 +182,7 @@ class CondaInfo:
 
         file.seek(0)
         filehandle = file
-        if filename.endswith(".conda"):
-            self.package_format = db_models.PackageFormatEnum.conda
+        if self.package_format == db_models.PackageFormatEnum.conda:
             with ZipFile(filehandle) as zf:
                 infotars = [_ for _ in zf.namelist() if _.startswith("info-")]
                 infotar = infotars[0]
@@ -183,7 +197,6 @@ class CondaInfo:
                     with tarfile.open(fileobj=fobj, mode="r") as tar:
                         self._load_jsons(tar)
         else:
-            self.package_format = db_models.PackageFormatEnum.tarbz2
             try:
                 with tarfile.open(fileobj=filehandle, mode="r:bz2") as tar:
                     self._load_jsons(tar)

@@ -1,3 +1,4 @@
+import json
 import os
 import uuid
 from io import BytesIO
@@ -14,6 +15,9 @@ from quetz.tasks.mirror import (
     KNOWN_SUBDIRS,
     RemoteRepository,
     RemoteServerError,
+    create_packages_from_channeldata,
+    create_versions_from_repodata,
+    handle_repodata_package,
     initial_sync_mirror,
 )
 
@@ -422,6 +426,70 @@ def test_synchronisation_sha(
 
 
 @pytest.mark.parametrize(
+    "repo_content,arch,n_new_packages",
+    [
+        # different version (new SHA256)
+        pytest.param(
+            [
+                b'{"packages": {"test-package-0.1-0.tar.bz2": {"sha256": "SHA"}}}',
+                DUMMY_PACKAGE,
+            ],
+            "noarch",
+            1,
+            id="new-sha-sum",
+        ),
+    ],
+)
+def test_synchronisation_no_checksums_in_db(
+    repo_content,
+    mirror_channel,
+    dao,
+    config,
+    dummy_response,
+    db,
+    user,
+    n_new_packages,
+    arch,
+    package_version,
+    mocker,
+):
+
+    package_info = '{"size": 5000, "subdirs":["noarch"]}'
+    package_version.info = package_info
+    db.commit()
+
+    pkgstore = config.get_package_store()
+    rules = Rules("", {"user_id": str(uuid.UUID(bytes=user.id))}, db)
+
+    class DummySession:
+        def get(self, path, stream=False):
+            return dummy_response()
+
+    # generate local repodata.json
+    update_indexes(dao, pkgstore, mirror_channel.name)
+
+    dummy_repo = RemoteRepository("", DummySession())
+
+    initial_sync_mirror(
+        mirror_channel.name,
+        dummy_repo,
+        arch,
+        dao,
+        pkgstore,
+        rules,
+        skip_errors=False,
+    )
+
+    versions = (
+        db.query(PackageVersion)
+        .filter(PackageVersion.channel_name == mirror_channel.name)
+        .all()
+    )
+
+    assert len(versions) == n_new_packages + 1
+
+
+@pytest.mark.parametrize(
     "repo_content,timestamp_mirror_sync,expected_timestamp,new_package",
     [
         # package modified but no server timestamp set
@@ -598,19 +666,23 @@ def test_api_methods_for_mirror_channels(client, mirror_channel):
     [
         # linux-64 subdir without packages
         (
-            [b'{"subdirs": ["linux-64"]}', b'{"packages": {}}'],
+            [b'{"subdirs": ["linux-64"], "packages":{}}', b'{"packages": {}}'],
             ["channeldata.json", "linux-64/repodata_from_packages.json"],
         ),
         # empty repodata
         (
-            [b'{"subdirs": ["linux-64"]}', b"{}"],
+            [b'{"subdirs": ["linux-64"], "packages":{}}', b"{}"],
             ["channeldata.json", "linux-64/repodata_from_packages.json"],
         ),
         # no subodirs
-        ([b'{"subdirs": []}'], ["channeldata.json"]),
+        ([b'{"subdirs": [], "packages":{}}'], ["channeldata.json"]),
         # two arbitrary subdirs
         (
-            [b'{"subdirs": ["some-arch-1", "some-arch-2"]}', b"{}", b"{}"],
+            [
+                b'{"subdirs": ["some-arch-1", "some-arch-2"], "packages":{}}',
+                b"{}",
+                b"{}",
+            ],
             [
                 "channeldata.json",
                 "some-arch-1/repodata_from_packages.json",
@@ -711,7 +783,7 @@ empty_archive = b""
     "repo_content",
     [
         [
-            b'{"subdirs": ["linux-64"]}',
+            b'{"subdirs": ["linux-64"], "packages":{}}',
             (
                 b'{"packages": {"my_package-0.1.tar.bz": '
                 b'{"subdir":"linux-64", "time_modified": 10}}}'
@@ -842,7 +914,7 @@ def test_disabled_methods_for_mirror_channels(
         # no archs in channeldata
         (b"{}", 200, []),
         # custom architecture
-        (b'{"subdirs":["wonder-arch"]}', 200, ["wonder-arch"]),
+        (b'{"subdirs":["wonder-arch"], "packages":{}}', 200, ["wonder-arch"]),
     ],
 )
 def test_repo_without_channeldata(owner, client, dummy_repo, expected_archs):
@@ -895,7 +967,9 @@ def test_sync_mirror_channel(mirror_channel, user, client, dummy_repo):
     "package_list_type, expected_package",
     [("includelist", "nrnpython"), ("excludelist", "test-package")],
 )
-def test_packagelist_mirror_channel(owner, client, package_list_type, expected_package):
+def test_packagelist_mirror_channel(
+    owner, client, package_list_type, expected_package, db
+):
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 
@@ -964,3 +1038,149 @@ def test_can_not_sync_proxy_and_local_channels(
 
     response = client.put(f"/api/channels/{local_channel.name}")
     assert response.status_code == 405
+
+
+channeldata_json = """
+{
+  "channeldata_version": 1,
+  "packages": {
+    "other-package": {
+      "activate.d": false,
+      "binary_prefix": false,
+      "deactivate.d": false,
+      "description": null,
+      "dev_url": null,
+      "doc_source_url": null,
+      "doc_url": null,
+      "home": "https://palletsprojects.com/p/click/",
+      "icon_hash": null,
+      "icon_url": null,
+      "identifiers": {},
+      "keywords": {},
+      "license": "BSD",
+      "post_link": false,
+      "pre_link": false,
+      "pre_unlink": false,
+      "run_exports": {},
+      "source_git_url": null,
+      "source_url": null,
+      "subdirs": [
+        "linux-64"
+      ],
+      "summary": "dummy package",
+      "tags": {},
+      "text_prefix": false,
+      "timestamp": 1599839787,
+      "version": "0.2"
+    }
+  },
+  "subdirs": [
+    "linux-64",
+    "noarch"
+  ]
+}
+"""
+
+repodata_json = """
+{
+  "info": {
+    "subdir": "linux-64"
+  },
+  "packages": {
+    "other-package-0.2-0.tar.bz2": {
+      "arch": "x86_64",
+      "build": "0",
+      "build_number": 0,
+      "depends": [],
+      "license": "BSD",
+      "license_family": "BSD",
+      "md5": "f5764fa8299aa117fce80be10d76724c",
+      "name": "other-package",
+      "platform": "linux",
+      "sha256": "e46bd61cc2e9d269632314916c1187cc1c60a7f957a61dda38fe377824d28135",
+      "size": 2706,
+      "subdir": "linux-64",
+      "timestamp": 1599839787253,
+      "version": "0.2",
+      "time_modified": 1608636247
+    }
+  },
+  "packages.conda": {},
+  "repodata_version": 1
+}
+"""
+
+
+def test_create_packages_from_channeldata(dao, user, local_channel, db):
+    channeldata = json.loads(channeldata_json)
+    create_packages_from_channeldata(local_channel.name, user.id, channeldata, dao)
+
+    package = db.query(Package).filter(Package.name == "other-package").one()
+
+    assert package
+    assert package.summary == "dummy package"
+
+
+def test_create_versions_from_repodata(dao, user, local_channel, db):
+
+    pkg = Package(name="other-package", channel=local_channel)
+    db.add(pkg)
+    repodata = json.loads(repodata_json)
+    create_versions_from_repodata(local_channel.name, user.id, repodata, dao)
+    version = (
+        db.query(PackageVersion)
+        .filter(PackageVersion.package_name == "other-package")
+        .one()
+    )
+
+    assert version
+
+
+@pytest.fixture
+def dummy_package_file(config):
+
+    filepath = OTHER_DUMMY_PACKAGE_V2
+    fid = open(filepath, 'rb')
+
+    fid.filename = filepath.name
+    fid.content_type = "application/archive"
+    fid.file = fid
+
+    yield fid
+
+    fid.close()
+
+
+@pytest.fixture
+def rules(user, db):
+
+    rules = Rules("", {"user_id": str(uuid.UUID(bytes=user.id))}, db)
+
+    return rules
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+def test_handle_repodata_package(
+    dao, user, local_channel, dummy_package_file, rules, config, db
+):
+    pkg = Package(name="other-package", channel=local_channel)
+    db.add(pkg)
+
+    repodata = json.loads(repodata_json)
+    package_name, package_data = list(repodata["packages"].items())[0]
+    pkgstore = config.get_package_store()
+
+    files_metadata = [(dummy_package_file, package_name, package_data)]
+
+    handle_repodata_package(
+        local_channel.name, files_metadata, dao, rules, False, pkgstore, config
+    )
+    version = (
+        db.query(PackageVersion)
+        .filter(PackageVersion.package_name == "other-package")
+        .one()
+    )
+
+    assert version
+
+    pkgstore.serve_path(local_channel.name, f"linux-64/{package_name}")

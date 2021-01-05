@@ -15,6 +15,8 @@ logger = logging.getLogger("quetz")
 def assert_channel_action(action, channel):
     if action == ChannelActionEnum.synchronize:
         action_allowed = assertions.can_channel_synchronize(channel)
+    elif action == ChannelActionEnum.synchronize_repodata:
+        action_allowed = assertions.can_channel_synchronize(channel)
     elif action == ChannelActionEnum.validate_packages:
         action_allowed = assertions.can_channel_validate_package_cache(channel)
     elif action == ChannelActionEnum.generate_indexes:
@@ -58,6 +60,17 @@ class Task:
             self.worker.execute(
                 mirror.synchronize_packages,
                 channel_name=channel_name,
+                includelist=includelist,
+                excludelist=excludelist,
+            )
+        elif action == ChannelActionEnum.synchronize_repodata:
+            auth.assert_synchronize_mirror(channel_name)
+            includelist = kwargs.get('includelist')
+            excludelist = kwargs.get('excludelist')
+            self.worker.execute(
+                mirror.synchronize_packages,
+                channel_name=channel_name,
+                use_repodata=True,
                 includelist=includelist,
                 excludelist=excludelist,
             )
