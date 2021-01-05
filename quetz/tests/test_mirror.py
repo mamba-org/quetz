@@ -903,7 +903,9 @@ def test_sync_mirror_channel(mirror_channel, user, client, dummy_repo):
     "package_list_type, expected_package",
     [("includelist", "nrnpython"), ("excludelist", "test-package")],
 )
-def test_packagelist_mirror_channel(owner, client, package_list_type, expected_package):
+def test_packagelist_mirror_channel(
+    owner, client, package_list_type, expected_package, db
+):
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 

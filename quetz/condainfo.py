@@ -63,6 +63,18 @@ def calculate_file_hashes_and_size(info, file):
     info["sha256"] = sha.hexdigest()
 
 
+def get_subdir_compat(info):
+    "compatibility layer for subdir property of packages"
+
+    subdir = info.get("subdir", None)
+    if not subdir:
+        arch = info["arch"]
+        platform = info["platform"]
+        if arch == "x86_64":
+            subdir = platform + '-64'
+    return subdir
+
+
 class CondaInfo:
     def __init__(self, file, filename):
         self.channeldata = {}
@@ -128,13 +140,7 @@ class CondaInfo:
     def _load_jsons(self, tar):
         self.info = json.load(tar.extractfile("info/index.json"))
 
-        subdir = self.info.get("subdir", None)
-        if not subdir:
-            arch = self.info["arch"]
-            platform = self.info["platform"]
-            if arch == "x86_64":
-                subdir = platform + '-64'
-            self.info['subdir'] = subdir
+        self.info['subdir'] = get_subdir_compat(self.info)
 
         try:
             self.about = json.load(tar.extractfile("info/about.json"))

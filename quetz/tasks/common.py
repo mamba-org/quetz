@@ -15,6 +15,8 @@ logger = logging.getLogger("quetz")
 def assert_channel_action(action, channel):
     if action == ChannelActionEnum.synchronize:
         action_allowed = assertions.can_channel_synchronize(channel)
+    elif action == ChannelActionEnum.synchronize_repodata:
+        action_allowed = assertions.can_channel_synchronize(channel)
     elif action == ChannelActionEnum.validate_packages:
         action_allowed = assertions.can_channel_validate_package_cache(channel)
     elif action == ChannelActionEnum.generate_indexes:

@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from tenacity import TryAgain, after_log, retry, stop_after_attempt, wait_exponential
 
 from quetz import authorization, rest_models
+from quetz.condainfo import get_subdir_compat
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.db_models import Channel, PackageVersion
@@ -318,7 +319,8 @@ def handle_repodata_package(
     with TicToc("upload file without extracting"):
         with ThreadPoolExecutor(max_workers=nthreads) as executor:
             for file, package_name, metadata in files_metadata:
-                executor.submit(_upload_package, file, channel_name, metadata['subdir'])
+                subdir = get_subdir_compat(metadata)
+                executor.submit(_upload_package, file, channel_name, subdir)
 
     with TicToc("add versions to the db"):
         for file, package_name, metadata in files_metadata:
@@ -501,20 +503,32 @@ def create_packages_from_channeldata(
 
 
 def create_version_from_metadata(
-    channel_name: str, user_id: bytes, package_name: str, package_data: dict, dao: Dao
+    channel_name: str,
+    user_id: bytes,
+    package_file_name: str,
+    package_data: dict,
+    dao: Dao,
 ):
+    package_name = package_data["name"]
+    package = dao.get_package(channel_name, package_name)
+    if not package:
+        package_info = rest_models.Package(
+            name=package_name,
+            summary=package_data.get("summary", ""),
+            description=package_data.get("description", ""),
+        )
+        dao.create_package(channel_name, package_info, user_id, "owner")
 
-    pkg_format = "tarbz2" if package_name.endswith(".tar.bz2") else ".conda"
-
+    pkg_format = "tarbz2" if package_file_name.endswith(".tar.bz2") else ".conda"
     version = dao.create_version(
         channel_name,
-        package_data["name"],
+        package_name,
         pkg_format,
-        package_data["subdir"],
+        get_subdir_compat(package_data),
         package_data["version"],
         int(package_data["build_number"]),
         package_data["build"],
-        package_name,
+        package_file_name,
         json.dumps(package_data),
         user_id,
         package_data["size"],

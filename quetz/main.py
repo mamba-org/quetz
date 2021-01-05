@@ -536,7 +536,7 @@ def post_channel(
 
     if new_channel.metadata.actions is None:
         if is_mirror:
-            actions = [ChannelActionEnum.synchronize]
+            actions = [ChannelActionEnum.synchronize_repodata]
         else:
             actions = []
     else:
@@ -584,12 +584,9 @@ def post_channel(
             logger.warning(f"could not register mirror due to error {response.text}")
 
     for action in actions:
-        if action == ChannelActionEnum.synchronize:
-            task.execute_channel_action(
-                action, channel, includelist=includelist, excludelist=excludelist
-            )
-        else:
-            task.execute_channel_action(action, channel)
+        task.execute_channel_action(
+            action, channel, includelist=includelist, excludelist=excludelist
+        )
 
 
 @api_router.patch(
