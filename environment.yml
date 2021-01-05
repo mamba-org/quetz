@@ -23,7 +23,6 @@ dependencies:
   - requests
   - h2<4.0.0
   - pluggy
-  - starlette-full
   - jinja2
   - itsdangerous
   - alembic
@@ -33,3 +32,6 @@ dependencies:
   - sphinx-book-theme
   - tenacity
   - xattr
+  - aiofiles
+  - pyyaml
+  - ujson
