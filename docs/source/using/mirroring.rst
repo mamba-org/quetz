@@ -104,7 +104,7 @@ If packages are added or modified on the primary server from which they were pul
 
    curl -X PUT localhost:8000/api/channels/mirror-channel/actions \ 
        -H "X-API-Key: ${QUETZ_API_KEY}" \
-       -d '{"action": "synchronize"}'
+       -d '{"action": "synchronize_repodata"}'
 
 Only channel owners or maintainers are allowed to trigger synchronisation, therefore you have to provide a valid API key of a privileged user.
 
