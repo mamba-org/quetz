@@ -112,13 +112,13 @@ def static(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
-    user_id = auth.assert_user()
-    profile = dao.get_profile(user_id)
+    user_id = auth.get_user()
 
     if "." not in resource:
-        if index_template is None:
+        if index_template is None or user_id is None:
             return FileResponse(path=os.path.join(frontend_dir, "index.html"))
         else:
+            profile = dao.get_profile(user_id)
             index_rendered = get_rendered_index(config_data, profile, index_template)
             return HTMLResponse(content=index_rendered, status_code=200)
     else:
