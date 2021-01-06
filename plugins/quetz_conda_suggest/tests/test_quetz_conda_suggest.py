@@ -17,7 +17,7 @@ def test_conda_suggest_endpoint_without_upload(client, channel, subdir):
     )  # noqa
     assert response.status_code == 404
     assert response.json() == {
-        'detail': 'conda-suggest map file for test_channel.linux-64 not found'
+        'detail': 'conda-suggest map file for test-channel.linux-64 not found'
     }
 
 
