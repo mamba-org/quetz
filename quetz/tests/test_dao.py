@@ -66,6 +66,13 @@ def package_version(dao, package, user):
     )
 
 
+def test_create_channel_with_invalid_name(dao, user, db):
+    with pytest.raises(errors.ValidationError):
+        channel_data = rest_models.Channel(name="my_channel", private=False)
+        channel = dao.create_channel(channel_data, user.id, "owner")
+        del channel
+
+
 def test_create_version(dao, package, channel_name, package_name, db, user):
 
     assert (

@@ -28,7 +28,7 @@ def user(db):
 def channel(dao, user, db):
 
     channel_data = rest_models.Channel(
-        name="test_mirror_channel",
+        name="test-mirror-channel",
         private=False,
         mirror_channel_url="http://host",
         mirror_mode="mirror",

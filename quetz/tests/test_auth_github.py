@@ -50,7 +50,7 @@ def config_extra(default_role):
 
 @pytest.fixture
 def login():
-    return "user_with_role"
+    return "user-with-role"
 
 
 @pytest.fixture
@@ -88,10 +88,10 @@ def test_config_create_default_channel(client, db, oauth_server):
 
     assert response.status_code == 200
 
-    user = db.query(User).filter(User.username == "user_with_role").one_or_none()
+    user = db.query(User).filter(User.username == "user-with-role").one_or_none()
     assert user
 
-    channel = db.query(Channel).filter(Channel.name == "user_with_role").one_or_none()
+    channel = db.query(Channel).filter(Channel.name == "user-with-role").one_or_none()
 
     assert channel
     assert user == channel.members[0].user
@@ -99,7 +99,7 @@ def test_config_create_default_channel(client, db, oauth_server):
 
 @pytest.fixture
 def channel(db):
-    channel = Channel(name="user_with_role", private=True)
+    channel = Channel(name="user-with-role", private=True)
     db.add(channel)
     db.commit()
     return channel
@@ -112,10 +112,10 @@ def test_config_create_default_channel_exists(client, db, oauth_server, channel)
 
     assert response.status_code == 200
 
-    user = db.query(User).filter(User.username == "user_with_role").one_or_none()
+    user = db.query(User).filter(User.username == "user-with-role").one_or_none()
     assert user
 
-    channel = db.query(Channel).filter(Channel.name == "user_with_role").one_or_none()
+    channel = db.query(Channel).filter(Channel.name == "user-with-role").one_or_none()
 
     assert channel
     assert user not in [member.user for member in channel.members]
@@ -126,7 +126,7 @@ def test_config_create_default_channel_exists(client, db, oauth_server, channel)
 
     assert user_channel
 
-    assert user_channel.channel_name.startswith("user_with_role")
+    assert user_channel.channel_name.startswith("user-with-role")
 
 
 @pytest.fixture

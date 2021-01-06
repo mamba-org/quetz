@@ -26,7 +26,7 @@ from quetz.tasks.mirror import (
 def proxy_channel(db):
 
     channel = Channel(
-        name="test_proxy_channel", mirror_channel_url="http://host", mirror_mode="proxy"
+        name="test-proxy-channel", mirror_channel_url="http://host", mirror_mode="proxy"
     )
     db.add(channel)
     db.commit()
@@ -41,7 +41,7 @@ def proxy_channel(db):
 def mirror_channel(dao, user, db):
 
     channel_data = rest_models.Channel(
-        name="test_mirror_channel",
+        name="test-mirror-channel",
         private=False,
         mirror_channel_url="http://host",
         mirror_mode="mirror",
@@ -58,7 +58,7 @@ def mirror_channel(dao, user, db):
 @pytest.fixture
 def local_channel(db):
 
-    channel = Channel(name="test_local_channel")
+    channel = Channel(name="test-local-channel")
     db.add(channel)
     db.commit()
 
@@ -144,7 +144,7 @@ def test_set_mirror_url(db, client, owner):
     response = client.post(
         "/api/channels",
         json={
-            "name": "test_create_channel",
+            "name": "test-create-channel",
             "private": False,
             "mirror_channel_url": "http://my_remote_host",
             "mirror_mode": "proxy",
@@ -152,7 +152,7 @@ def test_set_mirror_url(db, client, owner):
     )
     assert response.status_code == 201
 
-    response = client.get("/api/channels/test_create_channel")
+    response = client.get("/api/channels/test-create-channel")
 
     assert response.status_code == 200
     assert response.json()["mirror_channel_url"] == "http://my_remote_host"
@@ -175,7 +175,7 @@ def test_create_mirror_channel_permissions(
     response = client.post(
         "/api/channels",
         json={
-            "name": "test_create_channel",
+            "name": "test-create-channel",
             "private": False,
             "mirror_channel_url": "http://my_remote_host",
             "mirror_mode": mirror_mode,
@@ -575,7 +575,7 @@ def test_download_remote_file(client, owner, dummy_repo):
     response = client.post(
         "/api/channels",
         json={
-            "name": "proxy_channel",
+            "name": "proxy-channel",
             "private": False,
             "mirror_channel_url": "http://host",
             "mirror_mode": "proxy",
@@ -584,7 +584,7 @@ def test_download_remote_file(client, owner, dummy_repo):
     assert response.status_code == 201
 
     # download from remote server
-    response = client.get("/get/proxy_channel/test_file.txt")
+    response = client.get("/get/proxy-channel/test_file.txt")
 
     assert response.status_code == 200
     assert response.content == b"Hello world!"
@@ -595,7 +595,7 @@ def test_download_remote_file(client, owner, dummy_repo):
     assert dummy_repo == []
 
     # serve from cache
-    response = client.get("/get/proxy_channel/test_file.txt")
+    response = client.get("/get/proxy-channel/test_file.txt")
 
     assert response.status_code == 200
     assert response.content == b"Hello world!"
@@ -603,7 +603,7 @@ def test_download_remote_file(client, owner, dummy_repo):
     assert dummy_repo == []
 
     # new file - download from remote
-    response = client.get("/get/proxy_channel/test_file_2.txt")
+    response = client.get("/get/proxy-channel/test_file_2.txt")
 
     assert response.status_code == 200
     assert response.content == b"Hello world!"
@@ -618,7 +618,7 @@ def test_always_download_repodata(client, owner, dummy_repo):
     response = client.post(
         "/api/channels",
         json={
-            "name": "proxy_channel_2",
+            "name": "proxy-channel-2",
             "private": False,
             "mirror_channel_url": "http://host",
             "mirror_mode": "proxy",
@@ -626,11 +626,11 @@ def test_always_download_repodata(client, owner, dummy_repo):
     )
     assert response.status_code == 201
 
-    response = client.get("/get/proxy_channel_2/repodata.json")
+    response = client.get("/get/proxy-channel-2/repodata.json")
     assert response.status_code == 200
     assert response.content == b"Hello world!"
 
-    response = client.get("/get/proxy_channel_2/repodata.json")
+    response = client.get("/get/proxy-channel-2/repodata.json")
     assert response.status_code == 200
     assert response.content == b"Hello world!"
 
@@ -700,7 +700,7 @@ def test_mirror_initial_sync(client, dummy_repo, owner, expected_paths):
     response = client.post(
         "/api/channels",
         json={
-            "name": "mirror_channel_" + str(uuid.uuid4())[:10],
+            "name": "mirror-channel-" + str(uuid.uuid4())[:10],
             "private": False,
             "mirror_channel_url": host,
             "mirror_mode": "mirror",
@@ -718,7 +718,7 @@ def test_add_mirror_without_sync(auth_client, dummy_repo):
     response = auth_client.post(
         "/api/channels",
         json={
-            "name": "mirror_channel_" + str(uuid.uuid4())[:10],
+            "name": "mirror-channel-" + str(uuid.uuid4())[:10],
             "private": False,
             "mirror_channel_url": host,
             "mirror_mode": "mirror",
@@ -755,7 +755,7 @@ def test_add_and_register_mirror(auth_client, dummy_session_mock):
         "/api/channels",
         params={"register_mirror": "true"},
         json={
-            "name": "mirror_channel",
+            "name": "mirror-channel",
             "private": False,
             "mirror_channel_url": host,
             "mirror_mode": "mirror",
@@ -767,10 +767,10 @@ def test_add_and_register_mirror(auth_client, dummy_session_mock):
     dummy_session_mock.post.assert_called_with(
         "http://mirror3_host/api/channels/my-channel/mirrors",
         json={
-            "url": auth_client.base_url + '/get/mirror_channel',
-            "api_endpoint": auth_client.base_url + '/api/channels/mirror_channel',
+            "url": auth_client.base_url + '/get/mirror-channel',
+            "api_endpoint": auth_client.base_url + '/api/channels/mirror-channel',
             "metrics_endpoint": auth_client.base_url
-            + '/metrics/channels/mirror_channel',
+            + '/metrics/channels/mirror-channel',
         },
         headers={},
     )
@@ -797,7 +797,7 @@ def test_wrong_package_format(client, dummy_repo, owner):
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 
-    channel_name = "mirror_channel_" + str(uuid.uuid4())[:10]
+    channel_name = "mirror-channel-" + str(uuid.uuid4())[:10]
 
     response = client.post(
         "/api/channels",
@@ -925,7 +925,7 @@ def test_repo_without_channeldata(owner, client, dummy_repo, expected_archs):
     response = client.post(
         "/api/channels",
         json={
-            "name": "mirror_channel_" + str(uuid.uuid4())[:10],
+            "name": "mirror-channel-" + str(uuid.uuid4())[:10],
             "private": False,
             "mirror_channel_url": "http://mirror3_host",
             "mirror_mode": "mirror",
@@ -976,7 +976,7 @@ def test_packagelist_mirror_channel(
     response = client.post(
         "/api/channels",
         json={
-            "name": "mirror_channel_btel",
+            "name": "mirror-channel-btel",
             "private": False,
             "mirror_channel_url": "https://conda.anaconda.org/btel",
             "mirror_mode": "mirror",
@@ -985,7 +985,7 @@ def test_packagelist_mirror_channel(
     )
     assert response.status_code == 201
 
-    response = client.get("/api/channels/mirror_channel_btel/packages")
+    response = client.get("/api/channels/mirror-channel-btel/packages")
     assert response.status_code == 200
     assert len(response.json()) == 1
     assert response.json()[0]['name'] == expected_package
@@ -998,7 +998,7 @@ def test_includelist_and_excludelist_mirror_channel(owner, client):
     response = client.post(
         "/api/channels",
         json={
-            "name": "mirror_channel_btel",
+            "name": "mirror-channel-btel",
             "private": False,
             "mirror_channel_url": "https://conda.anaconda.org/btel",
             "mirror_mode": "mirror",

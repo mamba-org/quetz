@@ -138,6 +138,8 @@ class Dao:
         role: Optional[str],
         size_limit: Optional[int] = None,
     ):
+        if '_' in data.name:
+            raise errors.ValidationError("_ should not be used in channel name")
         channel = Channel(
             name=data.name,
             description=data.description,

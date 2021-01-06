@@ -35,7 +35,7 @@ def profile(db, user):
 @fixture
 def channel(dao, user, db):
     channel_data = rest_models.Channel(
-        name="test_channel",
+        name="test-channel",
         private=False,
     )
 
