@@ -258,35 +258,44 @@ def test_unicode_channel_names(auth_client, maintainer):
         "/api/channels", json={"name": channel_name, "private": False}
     )
 
-    assert response.status_code == 201
+    assert response.status_code == 422
+    assert (
+        response.json()["detail"]
+        == "only ASCII characters should be used in channel name"
+    )
 
     response = auth_client.get("/api/channels")
 
     assert response.status_code == 200
-    assert len(response.json()) == 1
-    assert response.json()[0]["name"] == channel_name
+    assert len(response.json()) == 0
 
     response = auth_client.get(f"/api/channels/{channel_name}")
 
-    assert response.status_code == 200
-    assert response.json()["name"] == channel_name
+    assert response.status_code == 404
 
 
 def test_accents_make_unique_channel_names(auth_client, maintainer):
 
     channel_names = ["żmija", "zmija", "grün", "grun"]
 
-    for name in channel_names:
+    for i, name in enumerate(channel_names):
         response = auth_client.post(
             "/api/channels", json={"name": name, "private": False}
         )
-        assert response.status_code == 201
+        if (i % 2) == 0:
+            assert response.status_code == 422
+            assert (
+                response.json()["detail"]
+                == "only ASCII characters should be used in channel name"
+            )
+        else:
+            assert response.status_code == 201
 
     response = auth_client.get("/api/channels")
 
     assert response.status_code == 200
 
-    assert len(response.json()) == 4
+    assert len(response.json()) == 2
 
 
 def test_upload_package_version_to_channel(

@@ -140,6 +140,10 @@ class Dao:
     ):
         if '_' in data.name:
             raise errors.ValidationError("_ should not be used in channel name")
+        if not data.name.isascii():
+            raise errors.ValidationError(
+                "only ASCII characters should be used in channel name"
+            )
         channel = Channel(
             name=data.name,
             description=data.description,
