@@ -31,7 +31,7 @@ def test_create_normal_channel_permissions(auth_client, expected_status):
     response = auth_client.post(
         "/api/channels",
         json={
-            "name": "test_create_channel",
+            "name": "test-create-channel",
             "private": False,
         },
     )
@@ -323,7 +323,7 @@ def test_upload_package_version_to_channel(
 )
 def test_create_channel_default_quotas(auth_client, expected_size_limit, db, config):
 
-    name = "test_create_channel_with_quotas"
+    name = "test-create-channel-with-quotas"
     response = auth_client.post(
         "/api/channels",
         json={
@@ -351,7 +351,7 @@ def test_create_channel_default_quotas(auth_client, expected_size_limit, db, con
     ],
 )
 def test_create_channel_with_limits(auth_client, db, user_role):
-    name = "test_create_channel_with_quotas"
+    name = "test-create-channel-with-quotas"
     response = auth_client.post(
         "/api/channels",
         json={"name": name, "private": False, "size_limit": 101},
