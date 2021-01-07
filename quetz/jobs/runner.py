@@ -168,7 +168,12 @@ def check_status(db):
     )
     try:
         for task in tasks:
-            process = _process_cache[task.id]
+            try:
+                process = _process_cache[task.id]
+            except KeyError:
+                logger.warning(f"running process for task {task} is lost, restarting")
+                task.status = TaskStatus.created
+                continue
             status = process.status
             if status == "pending":
                 task.status = TaskStatus.pending
@@ -187,7 +192,9 @@ def check_status(db):
             .filter(Job.status == JobStatus.running)
             .filter(
                 ~Job.tasks.any(
-                    Task.status.in_([TaskStatus.running, TaskStatus.pending])
+                    Task.status.in_(
+                        [TaskStatus.running, TaskStatus.pending, TaskStatus.created]
+                    )
                 )
             )
             .update({"status": JobStatus.success}, synchronize_session=False)

@@ -92,3 +92,9 @@ class Task(Base):
         "PackageVersion",
         backref=sa.orm.backref("tasks", cascade="all,delete-orphan"),
     )
+
+    def __repr__(self):
+        return (
+            f"Task(id={self.id}, package_version='{self.package_version.filename},"
+            f" job_id={self.job_id}')"
+        )
