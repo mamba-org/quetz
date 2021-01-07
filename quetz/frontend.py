@@ -46,6 +46,8 @@ config_data = {
     "google_login_available": google_login_available,
 }
 
+print("CONFIG DATA: ", config_data)
+
 
 @mock_router.get('/api/sessions', include_in_schema=False)
 def mock_sessions():
@@ -99,6 +101,9 @@ def render_index(config):
         for setting in settings_template["settings"]:
             if setting["id"] == '@jupyterlab/apputils-extension:themes':
                 setting["raw"] = default_settings
+
+        with open(os.path.join(static_dir, "index.html"), "w") as fo:
+            fo.write(index_template.render(page_config=config_data))
 
         mock_settings_dict = settings_template
         with open(static_dir / "settings.json", "w") as fo:
