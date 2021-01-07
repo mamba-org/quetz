@@ -88,7 +88,7 @@ class Channel(Base):
     timestamp_mirror_sync = Column(Integer, default=0)
     size = Column(Integer, default=0)
     size_limit = Column(Integer, default=None)
-    ttl = Column(Integer, default=60 * 60 * 10)  # 10 hours
+    ttl = Column(Integer, server_default=f'{60 * 60 * 10}', nullable=False)  # 10 hours
 
     packages = relationship(
         'Package', back_populates='channel', cascade="all,delete", uselist=True
