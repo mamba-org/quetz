@@ -1322,7 +1322,7 @@ async def serve_path(
     fsize, fmtime, fetag = pkgstore.get_filemetadata(channel.name, path)
     headers.update(
         {
-            'Cache-Control': 'max-age=' + str(60 * 60 * 10),  # 10 hours
+            'Cache-Control': f'max-age={channel.ttl}',
             'Content-Size': str(fsize),
             'Last-Modified': formatdate(fmtime, usegmt=True),
             'ETag': fetag,
