@@ -14,7 +14,7 @@ logger = logging.getLogger('quetz-cli')
 # manager = RQManager("127.0.0.1", 6379, 0, "", {}, config)
 
 
-_job_cache = {}
+_process_cache = {}
 
 
 def build_queue(job):
@@ -135,7 +135,7 @@ def run_jobs(db):
 
 def run_tasks(db, manager):
 
-    tasks = db.query(Task).filter(Task.status == TaskStatus.pending)
+    tasks = db.query(Task).filter(Task.status == TaskStatus.created)
     task: Task
     logger.info(f"Got pending tasks: {tasks.count()}")
     jobs = []
@@ -154,30 +154,42 @@ def run_tasks(db, manager):
             "uploader_id": task.package_version.uploader_id,
         }
         job = manager.execute(task.job.manifest, package_version=version_dict)
-        _job_cache[task.id] = job
+        _process_cache[task.id] = job
         jobs.append(job)
-        task.status = TaskStatus.running
+        task.status = TaskStatus.pending
         task.job.status = JobStatus.running
     db.commit()
     return jobs
 
 
 def check_status(db):
-    tasks = db.query(Task).filter(Task.status == TaskStatus.running)
+    tasks = db.query(Task).filter(
+        Task.status.in_([TaskStatus.running, TaskStatus.pending])
+    )
     try:
         for task in tasks:
-            job = _job_cache[task.id]
-            if job.done:
-                task.status = (
-                    TaskStatus.success if job.status == 'success' else TaskStatus.failed
-                )
-                _job_cache.pop(task.id)
+            process = _process_cache[task.id]
+            status = process.status
+            if status == "pending":
+                task.status = TaskStatus.pending
+            elif status == "running":
+                task.status = TaskStatus.running
+            elif status == "failed":
+                task.status = TaskStatus.failed
+                _process_cache.pop(task.id)
+            elif status == "success":
+                task.status = TaskStatus.success
+                _process_cache.pop(task.id)
 
         # update jobs with all tasks finished
         (
             db.query(Job)
             .filter(Job.status == JobStatus.running)
-            .filter(~Job.tasks.any(Task.status == TaskStatus.running))
+            .filter(
+                ~Job.tasks.any(
+                    Task.status.in_([TaskStatus.running, TaskStatus.pending])
+                )
+            )
             .update({"status": JobStatus.success}, synchronize_session=False)
         )
     finally:

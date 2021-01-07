@@ -132,17 +132,24 @@ class ThreadingWorker(AbstractWorker):
 class FutureJob(AbstractJob):
     def __init__(self, future: concurrent.futures.Future):
         self._future = future
-        self.status = "running"
 
     @property
-    def done(self):
+    def status(self):
+        is_running = self._future.running()
+        if is_running:
+            return "running"
+
         completed = self._future.done()
         if completed:
             if self._future.exception():
-                self.status = "failed"
+                return "failed"
             else:
-                self.status = "success"
-        return completed
+                return "success"
+        return "pending"
+
+    @property
+    def done(self):
+        return self.status in ["failed", "success"]
 
     async def wait(self, waittime=0.1):
         while not self.done:

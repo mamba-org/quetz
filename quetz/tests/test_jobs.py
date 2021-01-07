@@ -1,5 +1,6 @@
 import os
 import pickle
+import time
 from pathlib import Path
 
 import pytest
@@ -126,6 +127,10 @@ def failed_func(package_version: dict):
     raise Exception("some exception")
 
 
+def long_running(package_version: dict):
+    time.sleep(0.1)
+
+
 @pytest.mark.asyncio
 async def test_create_job(db, user, package_version, manager):
 
@@ -140,7 +145,7 @@ async def test_create_job(db, user, package_version, manager):
 
     assert job.status == JobStatus.running
 
-    assert task.status == TaskStatus.running
+    assert task.status == TaskStatus.pending
 
     # wait for job to finish
     await new_jobs[0].wait()
@@ -153,6 +158,37 @@ async def test_create_job(db, user, package_version, manager):
 
     db.refresh(job)
     assert job.status == JobStatus.success
+
+
+@pytest.mark.asyncio
+async def test_running_task(db, user, package_version, manager):
+
+    func_serialized = pickle.dumps(long_running)
+    job = Job(owner_id=user.id, manifest=func_serialized, items_spec="*")
+    db.add(job)
+    db.commit()
+    run_jobs(db)
+    processes = run_tasks(db, manager)
+    db.refresh(job)
+    task = db.query(Task).one()
+
+    assert job.status == JobStatus.running
+
+    assert task.status == TaskStatus.pending
+
+    time.sleep(0.01)
+    check_status(db)
+
+    db.refresh(task)
+    assert task.status == TaskStatus.running
+
+    # wait for job to finish
+    await processes[0].wait()
+
+    check_status(db)
+
+    db.refresh(task)
+    assert task.status == TaskStatus.success
 
 
 @pytest.mark.asyncio

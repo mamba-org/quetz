@@ -20,6 +20,7 @@ class JobStatus(Enum):
 
 
 class TaskStatus(Enum):
+    created = "created"
     pending = "pending"
     running = "running"
     success = "success"
@@ -78,7 +79,7 @@ class Task(Base):
     status = sa.Column(
         sa.Enum(TaskStatus),
         nullable=False,
-        default=TaskStatus.pending,
+        default=TaskStatus.created,
     )
     job_id = sa.Column(
         sa.Integer, sa.ForeignKey("jobs.id", ondelete="cascade"), nullable=False
