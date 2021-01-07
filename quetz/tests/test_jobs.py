@@ -9,6 +9,7 @@ from quetz.config import Config
 from quetz.dao import Dao
 from quetz.jobs.models import Job, JobStatus, Task, TaskStatus
 from quetz.jobs.runner import (
+    _process_cache,
     check_status,
     mk_sql_expr,
     parse_conda_spec,
@@ -188,6 +189,51 @@ async def test_running_task(db, user, package_version, manager):
     check_status(db)
 
     db.refresh(task)
+    assert task.status == TaskStatus.success
+
+
+@pytest.mark.asyncio
+async def test_restart_worker_process(db, user, package_version, manager, caplog):
+    # test if we can resume jobs if a worker was killed/restarted
+    func_serialized = pickle.dumps(long_running)
+
+    job = Job(owner_id=user.id, manifest=func_serialized, items_spec="*")
+    db.add(job)
+    db.commit()
+    run_jobs(db)
+    run_tasks(db, manager)
+    db.refresh(job)
+    task = db.query(Task).one()
+
+    assert job.status == JobStatus.running
+
+    assert task.status == TaskStatus.pending
+
+    time.sleep(0.01)
+    check_status(db)
+
+    db.refresh(task)
+    assert task.status == TaskStatus.running
+
+    _process_cache.clear()
+
+    check_status(db)
+    assert task.status == TaskStatus.created
+    assert "lost" in caplog.text
+
+    new_processes = run_tasks(db, manager)
+    db.refresh(task)
+
+    assert len(new_processes) == 1
+    assert task.status == TaskStatus.pending
+
+    more_processes = run_tasks(db, manager)
+    await new_processes[0].wait()
+    even_more_processes = run_tasks(db, manager)
+    check_status(db)
+    db.refresh(task)
+    assert not more_processes
+    assert not even_more_processes
     assert task.status == TaskStatus.success
 
 
