@@ -41,7 +41,8 @@ def database_url(sqlite_url):
 
 @fixture
 def engine(database_url):
-    engine = get_engine(database_url, echo=True, reuse_engine=False)
+    sql_echo = os.environ.get("QUETZ_TEST_SQLECHO", False)
+    engine = get_engine(database_url, echo=sql_echo, reuse_engine=False)
     yield engine
     engine.dispose()
 
