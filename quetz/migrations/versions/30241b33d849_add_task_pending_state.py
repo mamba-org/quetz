@@ -1,7 +1,7 @@
 """add task pending state
 
 Revision ID: 30241b33d849
-Revises: 303ff70c27fc
+Revises: cd404ed93cc0
 Create Date: 2021-01-07 14:39:43.251123
 
 """
@@ -10,7 +10,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = '30241b33d849'
-down_revision = '303ff70c27fc'
+down_revision = 'cd404ed93cc0'
 branch_labels = None
 depends_on = None
 
