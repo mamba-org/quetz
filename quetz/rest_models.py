@@ -86,6 +86,18 @@ class ChannelBase(BaseModel):
 
 
 class ChannelActionEnum(str, Enum):
+    """Execute special actions on channels (they may need specific permissions):
+
+    * `synchronize` -- _mirror only_, synchronize mirror channels and extract metadata
+      from packages (compute heavy)
+    * `synchronize_repodata` -- _mirror only_, synchronize mirror channels by extracting
+      metadata from index (less heavy)
+    * `reindex` -- find all downloaded packages and re-create db and index
+    * `generate_indexes` -- generate indexes (repodata.json and other) from data in db
+    * `validate_packages` -- validate package files
+    * `synchronize_metrics` -- _non-mirror_, pull download metrics from known mirrors
+    """
+
     synchronize = 'synchronize'
     synchronize_repodata = "synchronize_repodata"
     reindex = 'reindex'
@@ -97,7 +109,9 @@ class ChannelActionEnum(str, Enum):
 class ChannelMetadata(BaseModel):
 
     actions: Optional[List[ChannelActionEnum]] = Field(
-        None, title="list of actions to run after channel creation"
+        None,
+        title="list of actions to run after channel creation "
+        "(see /channels/{}/actions for description)",
     )
     includelist: Optional[List[str]] = Field(
         None, title="list of packages to include while creating a channel"
