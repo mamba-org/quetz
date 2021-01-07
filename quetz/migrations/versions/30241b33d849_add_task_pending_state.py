@@ -5,7 +5,7 @@ Revises: 303ff70c27fc
 Create Date: 2021-01-07 14:39:43.251123
 
 """
-# import sqlalchemy as sa
+import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -17,9 +17,25 @@ depends_on = None
 
 def upgrade():
     # manually entered
-    # https://alembic.sqlalchemy.org/en/latest/api/runtime.html#alembic.runtime.migration.MigrationContext.autocommit_block
-    with op.get_context().autocommit_block():
-        op.execute("ALTER TYPE taskstatus  ADD VALUE 'created'")
+
+    if op.get_context().dialect.name == 'postgresql':
+        # https://alembic.sqlalchemy.org/en/latest/api/runtime.html#alembic.runtime.migration.MigrationContext.autocommit_block
+        with op.get_context().autocommit_block():
+            op.execute("ALTER TYPE taskstatus  ADD VALUE 'created'")
+    else:
+        # sqlite uses varchar + constraint for enum types
+        taskstatus_enum = sa.Enum(
+            'created',
+            'pending',
+            'running',
+            'success',
+            'failed',
+            'skipped',
+            name='taskstatus',
+        )
+
+        with op.batch_alter_table("tasks") as batch_op:
+            batch_op.alter_column("status", type_=taskstatus_enum)
 
 
 def downgrade():
