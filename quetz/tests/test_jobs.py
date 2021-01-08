@@ -31,6 +31,30 @@ def channel_name():
     return "my-channel"
 
 
+def add_package_version(filename, channel_name, user, dao, package_name=None):
+
+    if not package_name:
+        package_name = "test-package"
+
+    package_format = "tarbz2"
+    package_info = "{}"
+    path = Path(filename)
+    version = dao.create_version(
+        channel_name,
+        package_name,
+        package_format,
+        "linux-64",
+        "0.1",
+        0,
+        "",
+        path.name,
+        package_info,
+        user.id,
+        size=11,
+    )
+    return version
+
+
 @pytest.fixture
 def package_version(
     db,
@@ -44,24 +68,12 @@ def package_version(
 ):
 
     pkgstore = config.get_package_store()
-    filename = Path("test-package-0.1-0.tar.bz2")
-    with open(filename, "rb") as fid:
-        pkgstore.add_file(fid.read(), channel_name, "linux-64" / filename)
-    package_format = "tarbz2"
-    package_info = "{}"
-    version = dao.create_version(
-        channel_name,
-        package_name,
-        package_format,
-        "linux-64",
-        "0.1",
-        0,
-        "",
-        str(filename),
-        package_info,
-        user.id,
-        size=11,
-    )
+
+    filename = "test-package-0.1-0.tar.bz2"
+    version = add_package_version(filename, channel_name, user, dao, package_name)
+    path = Path(filename)
+    with open(path, "rb") as fid:
+        pkgstore.add_file(fid.read(), channel_name, "linux-64" / path)
 
     dao.update_channel_size(channel_name)
     db.refresh(public_channel)
@@ -119,7 +131,7 @@ def test_create_task(db, user, package_version):
 
 
 def func(package_version: dict, config: Config):
-    with open("test-output.txt", "w") as fid:
+    with open("test-output.txt", "a") as fid:
         fid.write("ok")
 
 
@@ -129,6 +141,10 @@ def failed_func(package_version: dict):
 
 def long_running(package_version: dict):
     time.sleep(0.1)
+
+
+def dummy_func(package_version: dict):
+    pass
 
 
 @pytest.mark.asyncio
@@ -158,6 +174,50 @@ async def test_create_job(db, user, package_version, manager):
 
     db.refresh(job)
     assert job.status == JobStatus.success
+
+
+@pytest.mark.asyncio
+async def test_run_tasks_only_on_new_versions(
+    db, user, package_version, manager, dao, channel_name
+):
+
+    func_serialized = pickle.dumps(dummy_func)
+    job = Job(owner_id=user.id, manifest=func_serialized, items_spec="*")
+    db.add(job)
+    db.commit()
+    run_jobs(db)
+    new_jobs = run_tasks(db, manager)
+    db.refresh(job)
+    task = db.query(Task).one()
+
+    await new_jobs[0].wait()
+    check_status(db)
+    db.refresh(task)
+    db.refresh(job)
+    assert task.status == TaskStatus.success
+    assert job.status == JobStatus.success
+
+    job.status = JobStatus.pending
+    db.commit()
+    run_jobs(db)
+    new_jobs = run_tasks(db, manager)
+    check_status(db)
+    db.refresh(job)
+    assert not new_jobs
+    assert job.status == JobStatus.success
+
+    filename = "test-package-0.2-0.tar.bz2"
+    add_package_version(filename, channel_name, user, dao)
+
+    job.status = JobStatus.pending
+    db.commit()
+    run_jobs(db)
+    new_jobs = run_tasks(db, manager)
+    assert len(new_jobs) == 1
+    assert job.status == JobStatus.running
+    assert len(job.tasks) == 2
+    assert job.tasks[0].status == TaskStatus.success
+    assert job.tasks[1].status == TaskStatus.pending
 
 
 @pytest.mark.asyncio
