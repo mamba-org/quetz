@@ -1,8 +1,10 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
+import importlib
 import json
 import logging
+import pickle
 import uuid
 from collections import defaultdict
 from datetime import datetime
@@ -728,6 +730,21 @@ class Dao:
     def get_job(self, job_id: int):
         job = self.db.query(Job).filter(Job.id == job_id).one_or_none()
         return job
+
+    def create_job(self, user_id, function_name, items_spec):
+
+        paths = function_name.split(".")
+        module = importlib.import_module(".".join(paths[:-1]))
+        job_function = getattr(module, paths[-1])
+
+        serialized = pickle.dumps(job_function)
+        job = Job(
+            owner_id=user_id,
+            manifest=serialized,
+            items_spec=items_spec,
+        )
+        self.db.add(job)
+        self.db.commit()
 
     def incr_download_count(
         self,

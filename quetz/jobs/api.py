@@ -23,17 +23,19 @@ from .models import JobStatus, TaskStatus
 api_router = APIRouter()
 
 
-class Job(BaseModel):
+class JobBase(BaseModel):
+
+    items_spec: str = Field(None, title='Item selector spec')
+    manifest: str = Field(None, title='Name of the function')
+
+
+class Job(JobBase):
     id: int = Field(None, title='Unique id for job')
     owner: User = Field(None, title='User profile of the owner')
 
     created: datetime = Field(None, title='Created at')
 
-    items_spec: str = Field(None, title='Item selector spec')
-
     status: JobStatus = Field(None, title='Status of the job (running, paused, ...)')
-
-    manifest: str = Field(None, title='Name of the function')
 
     @validator("manifest", pre=True)
     def convert_name(cls, v):
@@ -65,6 +67,18 @@ def get_jobs(
 ):
     auth.assert_jobs()
     return dao.get_jobs()
+
+
+@api_router.post("/api/jobs", tags=["Jobs"], status_code=201)
+def post_jobs(
+    job: JobBase,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    """create a new job"""
+    user = auth.assert_user()
+    auth.assert_jobs()
+    dao.create_job(user, job.manifest, job.items_spec)
 
 
 def get_job_or_fail(
