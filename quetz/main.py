@@ -563,6 +563,8 @@ def post_channel(
             size_limit = None
 
     channel = dao.create_channel(new_channel, user_id, authorization.OWNER, size_limit)
+    pkgstore.create_channel(new_channel.name)
+    indexing.update_indexes(dao, pkgstore, new_channel.name)
 
     # register mirror
     if is_mirror and register_mirror:
