@@ -136,6 +136,7 @@ def run_jobs(db):
         else:
             logger.warning("empty package spec returns no results")
             q = []
+
         task = None
         for version in q:
             task = Task(job=job, package_version=version)

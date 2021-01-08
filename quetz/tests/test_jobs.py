@@ -446,3 +446,29 @@ def test_filter_versions(db, user, package_version, spec, n_tasks, manager):
     n_created_tasks = db.query(Task).count()
 
     assert n_created_tasks == n_tasks
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+def test_refresh_job(auth_client, user, db):
+
+    func_serialized = pickle.dumps(dummy_func)
+    job = Job(
+        owner_id=user.id,
+        manifest=func_serialized,
+        items_spec="*",
+    )
+    db.add(job)
+    db.commit()
+    run_jobs(db)
+    run_tasks(db, manager)
+
+    db.refresh(job)
+
+    assert job.status == JobStatus.success
+
+    response = auth_client.put(f"/api/jobs/{job.id}")
+
+    assert response.status_code == 200
+
+    db.refresh(job)
+    assert job.status == JobStatus.pending
