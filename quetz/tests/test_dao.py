@@ -66,6 +66,14 @@ def package_version(dao, package, user):
     )
 
 
+def test_channel_with_huge_size_limit(dao, user, db):
+    channel_data = rest_models.Channel(
+        name="my-channel", private=False, size_limit=1000000000000000000
+    )
+    channel = dao.create_channel(channel_data, user.id, "owner", 1000000000000000000)
+    del channel
+
+
 def test_create_channel_with_invalid_name(dao, user, db):
     with pytest.raises(errors.ValidationError):
         channel_data = rest_models.Channel(name="my_channel", private=False)

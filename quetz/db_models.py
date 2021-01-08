@@ -6,6 +6,7 @@ import uuid
 
 from sqlalchemy import (
     DDL,
+    BigInteger,
     Boolean,
     Column,
     DateTime,
@@ -86,8 +87,8 @@ class Channel(Base):
     mirror_channel_url = Column(String)
     mirror_mode = Column(String)
     timestamp_mirror_sync = Column(Integer, default=0)
-    size = Column(Integer, default=0)
-    size_limit = Column(Integer, default=None)
+    size = Column(BigInteger, default=0)
+    size_limit = Column(BigInteger, default=None)
     ttl = Column(Integer, server_default=f'{60 * 60 * 10}', nullable=False)  # 10 hours
 
     packages = relationship(
@@ -233,7 +234,7 @@ class PackageVersion(Base):
     version = Column(String)
     build_string = Column(String)
     build_number = Column(Integer)
-    size = Column(Integer)
+    size = Column(BigInteger)
 
     version_order = Column(Integer, default=0)
 
