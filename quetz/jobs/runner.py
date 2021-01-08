@@ -109,27 +109,43 @@ def run_jobs(db):
     for job in db.query(Job).filter(Job.status == JobStatus.pending):
         job.status = JobStatus.running
         if job.items == ItemsSelection.all:
-            q = db.query(PackageVersion)
-            if job.items_spec:
-                try:
-                    filter_expr = build_sql_from_package_spec(job.items_spec)
-                except Exception as e:
-                    logger.error(f"got error when parsing package spec: {e}")
-                    job.status = JobStatus.failed
-                    continue
-                q = q.filter(filter_expr)
-            else:
-                logger.warning("empty package spec returns no results")
-                q = []
-            task = None
-            for version in q:
-                task = Task(job=job, package_version=version)
-                db.add(task)
-            if not task:
-                logger.warning(
-                    f"no versions matching the package spec {job.items_spec}. skipping."
+            existing_task = (
+                db.query(Task.package_version_id, Task.id.label("task_id"))
+                .filter(Task.job_id == job.id)
+                .subquery()
+            )
+            q = (
+                db.query(PackageVersion)
+                .outerjoin(
+                    existing_task,
+                    PackageVersion.id == existing_task.c.package_version_id,
                 )
-                job.status = JobStatus.success
+                .filter(existing_task.c.task_id.is_(None))
+            )
+        else:
+            raise NotImplementedError(f"selection {job.items} is not implemented")
+
+        if job.items_spec:
+            try:
+                filter_expr = build_sql_from_package_spec(job.items_spec)
+            except Exception as e:
+                logger.error(f"got error when parsing package spec: {e}")
+                job.status = JobStatus.failed
+                continue
+            q = q.filter(filter_expr)
+        else:
+            logger.warning("empty package spec returns no results")
+            q = []
+
+        task = None
+        for version in q:
+            task = Task(job=job, package_version=version)
+            db.add(task)
+        if not task:
+            logger.warning(
+                f"no versions matching the package spec {job.items_spec}. skipping."
+            )
+            job.status = JobStatus.success
     db.commit()
 
 

@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field, validator
 
 from quetz import authorization
 from quetz.dao import Dao
-from quetz.deps import get_dao, get_rules
+from quetz.deps import get_dao, get_db, get_rules
 from quetz.jobs import models as job_db_models
 from quetz.rest_models import User
 
@@ -94,6 +94,18 @@ def get_tasks(
 ):
     auth.assert_jobs()
     return job.tasks
+
+
+@api_router.put("/api/jobs/{job_id}", tags=["Jobs"])
+def put_job(
+    db=Depends(get_db),
+    job: job_db_models.Job = Depends(get_job_or_fail),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    """refresh job (re-run on new packages)"""
+    auth.assert_jobs()
+    job.status = JobStatus.pending  # type: ignore
+    db.commit()
 
 
 def get_router():
