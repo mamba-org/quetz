@@ -31,7 +31,9 @@ def channel_name():
     return "my-channel"
 
 
-def add_package_version(filename, channel_name, user, dao, package_name=None):
+def add_package_version(
+    filename, package_version, channel_name, user, dao, package_name=None
+):
 
     if not package_name:
         package_name = "test-package"
@@ -44,7 +46,7 @@ def add_package_version(filename, channel_name, user, dao, package_name=None):
         package_name,
         package_format,
         "linux-64",
-        "0.1",
+        package_version,
         0,
         "",
         path.name,
@@ -70,7 +72,9 @@ def package_version(
     pkgstore = config.get_package_store()
 
     filename = "test-package-0.1-0.tar.bz2"
-    version = add_package_version(filename, channel_name, user, dao, package_name)
+    version = add_package_version(
+        filename, "0.1", channel_name, user, dao, package_name
+    )
     path = Path(filename)
     with open(path, "rb") as fid:
         pkgstore.add_file(fid.read(), channel_name, "linux-64" / path)
@@ -178,7 +182,7 @@ async def test_create_job(db, user, package_version, manager):
 
 @pytest.mark.asyncio
 async def test_run_tasks_only_on_new_versions(
-    db, user, package_version, manager, dao, channel_name
+    db, user, package_version, manager, dao, channel_name, package_name
 ):
 
     func_serialized = pickle.dumps(dummy_func)
@@ -207,7 +211,7 @@ async def test_run_tasks_only_on_new_versions(
     assert job.status == JobStatus.success
 
     filename = "test-package-0.2-0.tar.bz2"
-    add_package_version(filename, channel_name, user, dao)
+    add_package_version(filename, "0.2", channel_name, user, dao, package_name)
 
     job.status = JobStatus.pending
     db.commit()
