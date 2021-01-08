@@ -122,26 +122,29 @@ def run_jobs(db):
                 )
                 .filter(existing_task.c.task_id.is_(None))
             )
-            if job.items_spec:
-                try:
-                    filter_expr = build_sql_from_package_spec(job.items_spec)
-                except Exception as e:
-                    logger.error(f"got error when parsing package spec: {e}")
-                    job.status = JobStatus.failed
-                    continue
-                q = q.filter(filter_expr)
-            else:
-                logger.warning("empty package spec returns no results")
-                q = []
-            task = None
-            for version in q:
-                task = Task(job=job, package_version=version)
-                db.add(task)
-            if not task:
-                logger.warning(
-                    f"no versions matching the package spec {job.items_spec}. skipping."
-                )
-                job.status = JobStatus.success
+        else:
+            raise NotImplementedError(f"selection {job.items} is not implemented")
+
+        if job.items_spec:
+            try:
+                filter_expr = build_sql_from_package_spec(job.items_spec)
+            except Exception as e:
+                logger.error(f"got error when parsing package spec: {e}")
+                job.status = JobStatus.failed
+                continue
+            q = q.filter(filter_expr)
+        else:
+            logger.warning("empty package spec returns no results")
+            q = []
+        task = None
+        for version in q:
+            task = Task(job=job, package_version=version)
+            db.add(task)
+        if not task:
+            logger.warning(
+                f"no versions matching the package spec {job.items_spec}. skipping."
+            )
+            job.status = JobStatus.success
     db.commit()
 
 
