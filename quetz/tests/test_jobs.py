@@ -554,6 +554,8 @@ def dummy_plugin(test_data_dir):
     "manifest",
     [
         "dummy_func",
+        "os:listdir",
+        "os.listdir",
         "quetz.dummy_func",
         "quetz-plugin:dummy_func",
         "quetz-dummyplugin:missing_job",
