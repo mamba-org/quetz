@@ -1,6 +1,5 @@
 import os
 import pickle
-import shutil
 import time
 from pathlib import Path
 from unittest import mock
@@ -543,31 +542,47 @@ def test_refresh_job(auth_client, user, db, package_version, manager):
     assert len(job.tasks) == 2
 
 
-@pytest.mark.parametrize("user_role", ["owner"])
-@pytest.mark.parametrize(
-    "manifest", ["dummy_func", "quetz.dummy_func", "quetz-plugin:dummy_func"]
-)
-def test_post_new_job_manifest_validation(auth_client, user, db, manifest):
-    response = auth_client.post(
-        "/api/jobs", json={"items_spec": "*", "manifest": manifest}
-    )
-    assert response.status_code == 422
-    assert "invalid function" in response.json()['detail']
-
-
-@pytest.fixture
-def dummy_plugin(config_dir, test_data_dir):
+@pytest.fixture(scope="session")
+def dummy_plugin(test_data_dir):
     plugin_dir = Path(test_data_dir) / "dummy-plugin"
-    shutil.copytree(plugin_dir, config_dir, dirs_exist_ok=True)
-    dist = list(pkg_resources.find_distributions("."))[0]
+    dist = list(pkg_resources.find_distributions(plugin_dir))[0]
     pkg_resources.working_set.add(dist)
 
 
 @pytest.mark.parametrize("user_role", ["owner"])
-@pytest.mark.parametrize("manifest", ["quetz-dummyplugin:dummy_job_mocked"])
+@pytest.mark.parametrize(
+    "manifest",
+    [
+        "dummy_func",
+        "quetz.dummy_func",
+        "quetz-plugin:dummy_func",
+        "quetz-dummyplugin:missing_job",
+    ],
+)
+def test_post_new_job_manifest_validation(
+    auth_client, user, db, manifest, dummy_plugin
+):
+    response = auth_client.post(
+        "/api/jobs", json={"items_spec": "*", "manifest": manifest}
+    )
+    assert response.status_code == 422
+    msg = response.json()['detail']
+    assert "invalid function" in msg
+    for name in manifest.split(":"):
+        assert name in msg
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+@pytest.mark.parametrize(
+    "manifest", ["quetz-dummyplugin:dummy_func", "quetz-dummyplugin:dummy_job"]
+)
 def test_post_new_job_from_plugin(auth_client, user, db, manifest, dummy_plugin):
-    with mock.patch("quetz_dummyplugin.jobs.dummy_job_mocked", dummy_func, create=True):
+
+    with mock.patch("quetz_dummyplugin.jobs.dummy_func", dummy_func, create=True):
         response = auth_client.post(
             "/api/jobs", json={"items_spec": "*", "manifest": manifest}
         )
     assert response.status_code == 201
+    job_id = response.json()['id']
+    job = db.query(Job).get(job_id)
+    assert pickle.loads(job.manifest).__name__ == manifest.split(":")[1]

@@ -174,7 +174,7 @@ def config_dir(home):
     shutil.rmtree(path)
 
 
-@fixture
+@fixture(scope="session")
 def test_data_dir():
     return os.path.join(os.path.dirname(quetz.__file__), "tests", "data")
 
