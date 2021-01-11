@@ -105,8 +105,11 @@ def build_sql_from_package_spec(selector: str):
     return sql_expr
 
 
-def run_jobs(db, force=False):
-    for job in db.query(Job).filter(Job.status == JobStatus.pending):
+def run_jobs(db, job_id=None, force=False):
+    jobs = db.query(Job).filter(Job.status == JobStatus.pending)
+    if job_id:
+        jobs = jobs.filter(Job.id == job_id)
+    for job in jobs:
         job.status = JobStatus.running
         if job.items == ItemsSelection.all:
             if force:

@@ -134,7 +134,7 @@ def update_job(
 
     # ignore tasks that have already been run
     if job_data.force:
-        run_jobs(db, force=True)
+        run_jobs(db, job_id=job.id, force=True)
 
     db.commit()
 

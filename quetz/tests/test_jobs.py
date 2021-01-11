@@ -541,6 +541,25 @@ def test_refresh_job(auth_client, user, db, package_version, manager):
     assert job.status == JobStatus.running
     assert len(job.tasks) == 2
 
+    # forcing one job should not affect the other
+    other_job = Job(
+        id=2,
+        owner_id=user.id,
+        manifest=func_serialized,
+        items_spec="*",
+        status=JobStatus.success,
+    )
+    job.status = JobStatus.pending
+    db.add(other_job)
+    db.commit()
+
+    response = auth_client.patch(
+        f"/api/jobs/{other_job.id}", json={"status": "pending", "force": True}
+    )
+    db.refresh(job)
+    assert job.status == JobStatus.pending
+    assert len(job.tasks) == 2
+
 
 @pytest.fixture(scope="session")
 def dummy_plugin(test_data_dir):
