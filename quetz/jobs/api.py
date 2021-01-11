@@ -19,6 +19,7 @@ from quetz.jobs import models as job_db_models
 from quetz.rest_models import User
 
 from .models import JobStatus, TaskStatus
+from .runner import run_jobs
 
 api_router = APIRouter()
 
@@ -129,6 +130,11 @@ def patch_job(
     """refresh job (re-run on new packages)"""
     auth.assert_jobs()
     job.status = job_data.status  # type: ignore
+
+    # ignore tasks that have already been run
+    if job_data.force:
+        run_jobs(db, force=True)
+
     db.commit()
 
 

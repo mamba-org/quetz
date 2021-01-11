@@ -224,6 +224,14 @@ async def test_run_tasks_only_on_new_versions(
     assert job.tasks[0].status == TaskStatus.success
     assert job.tasks[1].status == TaskStatus.pending
 
+    # force rerunning
+    job.status = JobStatus.pending
+    run_jobs(db, force=True)
+    db.refresh(job)
+    new_jobs = run_tasks(db, manager)
+    assert len(job.tasks) == 4
+    assert len(new_jobs) == 2
+
 
 @pytest.mark.asyncio
 async def test_running_task(db, user, package_version, manager):
@@ -495,22 +503,22 @@ def test_filter_versions(db, user, package_version, spec, n_tasks, manager):
 
 
 @pytest.mark.parametrize("user_role", ["owner"])
-def test_refresh_job(auth_client, user, db):
+def test_refresh_job(auth_client, user, db, package_version, manager):
 
     func_serialized = pickle.dumps(dummy_func)
     job = Job(
         owner_id=user.id,
         manifest=func_serialized,
         items_spec="*",
+        status=JobStatus.success,
     )
+    task = Task(job=job, status=TaskStatus.success, package_version=package_version)
     db.add(job)
+    db.add(task)
     db.commit()
-    run_jobs(db)
-    run_tasks(db, manager)
-
-    db.refresh(job)
 
     assert job.status == JobStatus.success
+    assert len(job.tasks) == 1
 
     response = auth_client.patch(f"/api/jobs/{job.id}", json={"status": "pending"})
 
@@ -518,6 +526,18 @@ def test_refresh_job(auth_client, user, db):
 
     db.refresh(job)
     assert job.status == JobStatus.pending
+    assert len(job.tasks) == 1
+
+    run_jobs(db)
+    assert job.status == JobStatus.success
+    assert len(job.tasks) == 1
+
+    response = auth_client.patch(
+        f"/api/jobs/{job.id}", json={"status": "pending", "force": True}
+    )
+    db.refresh(job)
+    assert job.status == JobStatus.running
+    assert len(job.tasks) == 2
 
 
 @pytest.mark.parametrize("user_role", ["owner"])

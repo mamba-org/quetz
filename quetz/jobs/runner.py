@@ -105,23 +105,26 @@ def build_sql_from_package_spec(selector: str):
     return sql_expr
 
 
-def run_jobs(db):
+def run_jobs(db, force=False):
     for job in db.query(Job).filter(Job.status == JobStatus.pending):
         job.status = JobStatus.running
         if job.items == ItemsSelection.all:
-            existing_task = (
-                db.query(Task.package_version_id, Task.id.label("task_id"))
-                .filter(Task.job_id == job.id)
-                .subquery()
-            )
-            q = (
-                db.query(PackageVersion)
-                .outerjoin(
-                    existing_task,
-                    PackageVersion.id == existing_task.c.package_version_id,
+            if force:
+                q = db.query(PackageVersion)
+            else:
+                existing_task = (
+                    db.query(Task.package_version_id, Task.id.label("task_id"))
+                    .filter(Task.job_id == job.id)
+                    .subquery()
                 )
-                .filter(existing_task.c.task_id.is_(None))
-            )
+                q = (
+                    db.query(PackageVersion)
+                    .outerjoin(
+                        existing_task,
+                        PackageVersion.id == existing_task.c.package_version_id,
+                    )
+                    .filter(existing_task.c.task_id.is_(None))
+                )
         else:
             raise NotImplementedError(f"selection {job.items} is not implemented")
 
