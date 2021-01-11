@@ -770,6 +770,7 @@ class Dao:
         )
         self.db.add(job)
         self.db.commit()
+        return job
 
     def incr_download_count(
         self,

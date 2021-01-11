@@ -79,8 +79,8 @@ def get_jobs(
     return dao.get_jobs()
 
 
-@api_router.post("/api/jobs", tags=["Jobs"], status_code=201)
-def post_jobs(
+@api_router.post("/api/jobs", tags=["Jobs"], status_code=201, response_model=Job)
+def create_job(
     job: JobBase,
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
@@ -88,7 +88,8 @@ def post_jobs(
     """create a new job"""
     user = auth.assert_user()
     auth.assert_jobs()
-    dao.create_job(user, job.manifest, job.items_spec)
+    new_job = dao.create_job(user, job.manifest, job.items_spec)
+    return new_job
 
 
 def get_job_or_fail(
@@ -121,7 +122,7 @@ def get_tasks(
 
 
 @api_router.patch("/api/jobs/{job_id}", tags=["Jobs"])
-def patch_job(
+def update_job(
     job_data: JobUpdateModel,
     db=Depends(get_db),
     job: job_db_models.Job = Depends(get_job_or_fail),
