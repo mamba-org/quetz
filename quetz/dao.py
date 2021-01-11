@@ -1,7 +1,6 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-import importlib
 import json
 import logging
 import pickle
@@ -11,6 +10,7 @@ from datetime import datetime
 from itertools import groupby
 from typing import Dict, List, Optional
 
+import pkg_resources
 from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, aliased, joinedload
@@ -733,9 +733,34 @@ class Dao:
 
     def create_job(self, user_id, function_name, items_spec):
 
-        paths = function_name.split(".")
-        module = importlib.import_module(".".join(paths[:-1]))
-        job_function = getattr(module, paths[-1])
+        paths = function_name.split(":")
+
+        if len(paths) == 2:
+            plugin_name, job_name = paths
+            entry_points = list(
+                pkg_resources.iter_entry_points('quetz.jobs', plugin_name)
+            )
+            if not entry_points:
+                raise errors.ValidationError(
+                    f"invalid function {function_name}: "
+                    f"plugin {plugin_name} not installed"
+                )
+            job_module = entry_points[0].load()
+            try:
+                job_function = getattr(job_module, job_name)
+            except AttributeError:
+                raise errors.ValidationError(
+                    f"invalid function '{job_name}' name in plugin '{plugin_name}'"
+                )
+        elif len(paths) == 1:
+            raise errors.ValidationError(
+                f"invalid function {function_name}: no such built-in function,"
+                " please provide plugin name"
+            )
+        else:
+            raise errors.ValidationError(
+                f"invalid function {function_name} - could not parse"
+            )
 
         serialized = pickle.dumps(job_function)
         job = Job(

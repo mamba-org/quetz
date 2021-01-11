@@ -518,3 +518,15 @@ def test_refresh_job(auth_client, user, db):
 
     db.refresh(job)
     assert job.status == JobStatus.pending
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+@pytest.mark.parametrize(
+    "manifest", ["dummy_func", "quetz.dummy_func", "quetz-plugin:dummy_func"]
+)
+def test_post_new_job_manifest_validation(auth_client, user, db, manifest):
+    response = auth_client.post(
+        "/api/jobs", json={"items_spec": "*", "manifest": manifest}
+    )
+    assert response.status_code == 422
+    assert "invalid function" in response.json()['detail']
