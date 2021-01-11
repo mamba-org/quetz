@@ -1,8 +1,11 @@
 import os
 import pickle
+import shutil
 import time
 from pathlib import Path
+from unittest import mock
 
+import pkg_resources
 import pytest
 
 from quetz.config import Config
@@ -550,3 +553,21 @@ def test_post_new_job_manifest_validation(auth_client, user, db, manifest):
     )
     assert response.status_code == 422
     assert "invalid function" in response.json()['detail']
+
+
+@pytest.fixture
+def dummy_plugin(config_dir, test_data_dir):
+    plugin_dir = Path(test_data_dir) / "dummy-plugin"
+    shutil.copytree(plugin_dir, config_dir, dirs_exist_ok=True)
+    dist = list(pkg_resources.find_distributions("."))[0]
+    pkg_resources.working_set.add(dist)
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+@pytest.mark.parametrize("manifest", ["quetz-dummyplugin:dummy_job_mocked"])
+def test_post_new_job_from_plugin(auth_client, user, db, manifest, dummy_plugin):
+    with mock.patch("quetz_dummyplugin.jobs.dummy_job_mocked", dummy_func, create=True):
+        response = auth_client.post(
+            "/api/jobs", json={"items_spec": "*", "manifest": manifest}
+        )
+    assert response.status_code == 201
