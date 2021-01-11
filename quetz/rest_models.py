@@ -163,6 +163,16 @@ class Package(BaseModel):
     )
     summary: str = Field(None, title='The summary of the package')
     description: str = Field(None, title='The description of the package')
+    url: str = Field(None, title="project url")
+    platforms: List[str] = Field(None, title="project url")
+
+    @validator("platforms", pre=True)
+    def parse_list_of_platforms(cls, v):
+
+        if isinstance(v, str):
+            return v.split(":")
+        else:
+            return v
 
     class Config:
         orm_mode = True

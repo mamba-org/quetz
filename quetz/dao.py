@@ -302,6 +302,8 @@ class Dao:
             old_data = None
         data = channel_data.combine(old_data, channeldata)
         package.channeldata = json.dumps(data)
+        package.url = data.get("home", "")
+        package.platforms = ":".join(data.get("subdirs", []))
         self.db.commit()
 
     def get_channel_members(self, channel_name: str):

@@ -144,6 +144,10 @@ class Package(Base):
     # channeldata is always from the most recent version
     channeldata = Column(String)
 
+    url = Column(String)
+
+    platforms = Column(String)
+
     def __repr__(self):
         return (
             f"<Package name={self.name}, summary={self.summary},"
