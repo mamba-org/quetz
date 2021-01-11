@@ -593,6 +593,8 @@ def watch_job_queue(
 ) -> None:
     import time
 
+    configure_logger(loggers=("quetz",))
+
     from quetz.jobs.runner import check_status, run_jobs, run_tasks
     from quetz.tasks.workers import SubprocessWorker
 

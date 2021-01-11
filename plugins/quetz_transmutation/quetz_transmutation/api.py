@@ -11,7 +11,7 @@ from .jobs import transmutation
 from .rest_models import PackageSpec
 
 router = APIRouter()
-logger = logging.getLogger("quetz-jobs")
+logger = logging.getLogger("quetz.jobs")
 
 transmutation_serialized = pickle.dumps(transmutation)
 

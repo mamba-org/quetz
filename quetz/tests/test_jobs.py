@@ -512,7 +512,7 @@ def test_refresh_job(auth_client, user, db):
 
     assert job.status == JobStatus.success
 
-    response = auth_client.put(f"/api/jobs/{job.id}")
+    response = auth_client.patch(f"/api/jobs/{job.id}", json={"status": "pending"})
 
     assert response.status_code == 200
 

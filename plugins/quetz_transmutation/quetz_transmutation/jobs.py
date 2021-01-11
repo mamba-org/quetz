@@ -11,7 +11,7 @@ from quetz.condainfo import calculate_file_hashes_and_size
 from quetz.dao import Dao
 from quetz.pkgstores import PackageStore
 
-logger = logging.getLogger("quetz-plugins")
+logger = logging.getLogger("quetz.plugins")
 
 
 def transmutation(package_version: dict, config, pkgstore: PackageStore, dao: Dao):

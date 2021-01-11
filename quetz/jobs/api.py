@@ -24,9 +24,18 @@ api_router = APIRouter()
 
 
 class JobBase(BaseModel):
+    """New job spec"""
 
     items_spec: str = Field(None, title='Item selector spec')
     manifest: str = Field(None, title='Name of the function')
+
+
+class JobUpdateModel(BaseModel):
+    """Modify job spec items (status and items_spec)"""
+
+    items_spec: str = Field(None, title='Item selector spec')
+    status: JobStatus = Field(None, title='Change status')
+    force: bool = Field(False, title="force re-running job on all matching packages")
 
 
 class Job(JobBase):
@@ -110,15 +119,16 @@ def get_tasks(
     return job.tasks
 
 
-@api_router.put("/api/jobs/{job_id}", tags=["Jobs"])
-def put_job(
+@api_router.patch("/api/jobs/{job_id}", tags=["Jobs"])
+def patch_job(
+    job_data: JobUpdateModel,
     db=Depends(get_db),
     job: job_db_models.Job = Depends(get_job_or_fail),
     auth: authorization.Rules = Depends(get_rules),
 ):
     """refresh job (re-run on new packages)"""
     auth.assert_jobs()
-    job.status = JobStatus.pending  # type: ignore
+    job.status = job_data.status  # type: ignore
     db.commit()
 
 
