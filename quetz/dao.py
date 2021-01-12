@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 
 from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Query, Session, aliased, contains_eager, joinedload
+from sqlalchemy.orm import Query, Session, aliased, joinedload
 
 from quetz import channel_data, errors, rest_models, versionorder
 from quetz.database_extensions import version_match
@@ -199,21 +199,7 @@ class Dao:
         self.db.commit()
 
     def get_packages(self, channel_name: str, skip: int, limit: int, q: Optional[str]):
-
-        # load eagerly only the current package version
-        # the list of all versions should be loaded lazily
-        # sqlalchemy docs: https://docs.sqlalchemy.org/en/14/orm/loading_relationships.html#using-contains-eager-to-load-a-custom-filtered-collection-result # noqa
-
-        pvalias = aliased(PackageVersion)
-
-        query = (
-            self.db.query(Package)
-            .outerjoin(Package.current_package_version.of_type(pvalias))
-            .options(contains_eager(Package.current_package_version.of_type(pvalias)))
-            .filter(pvalias.version_order == 0)
-            .filter(Package.channel_name == channel_name)
-            .populate_existing()
-        )
+        query = self.db.query(Package).filter(Package.channel_name == channel_name)
 
         if q:
             query = query.filter(Package.name.like(f'%{q}%'))
