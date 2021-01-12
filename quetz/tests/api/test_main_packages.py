@@ -456,3 +456,71 @@ def test_validation_hook(auth_client, public_channel, plugin, config):
     assert "test-package not allowed" in response.json()["detail"]
     with pytest.raises(FileNotFoundError):
         pkgstore.serve_path(public_channel.name, 'linux-64/test-package-0.1-0.tar.bz2')
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "/api/channels/{channel_name}/packages/{package_name}",
+        "/api/channels/{channel_name}/packages",
+        "/api/packages/search/?q='channel:{channel_name}'",
+    ],
+)
+@pytest.mark.parametrize("package_name", ["test-package"])
+def test_package_current_version(
+    auth_client, make_package_version, channel_name, endpoint
+):
+    # test platforms, current_version and url
+    make_package_version("test-package-0.1-0.tar.bz2", "0.1", platform="linux-64")
+    make_package_version("test-package-0.1-0.tar.bz2", "0.1", platform="noarch")
+    make_package_version("test-package-0.2-0.tar.bz2", "0.2", platform="linux-64")
+    v = make_package_version("test-package-0.2-0.tar.bz2", "0.2", platform="os-x")
+
+    response = auth_client.get(
+        endpoint.format(channel_name=channel_name, package_name=v.package_name)
+    )
+    assert response.status_code == 200
+
+    package_data = response.json()
+
+    if isinstance(package_data, list):
+        assert len(package_data) == 1
+        package_data = package_data[0]
+
+    assert package_data['current_version'] == "0.2"
+
+
+@pytest.mark.parametrize("package_name", ["test-package"])
+def test_get_package_with_versions(
+    make_package_version, channel_name, dao, package_name
+):
+    # test loading of latest (current) and all other versions
+
+    make_package_version("test-package-0.1-0.tar.bz2", "0.1", platform="linux-64")
+    make_package_version("test-package-0.1-0.tar.bz2", "0.1", platform="noarch")
+    v = make_package_version("test-package-0.2-0.tar.bz2", "0.2", platform="linux-64")
+
+    package = dao.get_package(channel_name, package_name)
+
+    assert package.current_package_version == v
+    assert len(package.package_versions) == 3
+
+
+@pytest.mark.parametrize("package_name", ["test-package"])
+def test_package_channel_data_attributes(
+    auth_client, make_package_version, channel_name
+):
+    # test attributes derived from channel data
+    for package_filename in Path(".").glob("*.tar.bz2"):
+        with open(package_filename, "rb") as fid:
+            files = {"files": (str(package_filename), fid)}
+            response = auth_client.post(
+                f"/api/channels/{channel_name}/files/",
+                files=files,
+            )
+
+    response = auth_client.get(f"/api/channels/{channel_name}/packages/test-package")
+    assert response.status_code == 200
+    content = response.json()
+    assert content['platforms'] == ['linux-64']
+    assert content['url'].startswith("https://")

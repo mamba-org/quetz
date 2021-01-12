@@ -251,7 +251,7 @@ class Dao:
 
         return query.all()
 
-    def get_channel(self, channel_name: str) -> Channel:
+    def get_channel(self, channel_name: str) -> Optional[Channel]:
         return self.db.query(Channel).filter(Channel.name == channel_name).one_or_none()
 
     def get_package(self, channel_name: str, package_name: str):
@@ -304,6 +304,8 @@ class Dao:
             old_data = None
         data = channel_data.combine(old_data, channeldata)
         package.channeldata = json.dumps(data)
+        package.url = data.get("home", "")
+        package.platforms = ":".join(data.get("subdirs", []))
         self.db.commit()
 
     def get_channel_members(self, channel_name: str):
@@ -502,7 +504,9 @@ class Dao:
             if all_existing_versions:
                 new_version = versionorder.VersionOrder(version)
                 for v in all_existing_versions:
-                    other = versionorder.VersionOrder(v.version)
+                    # type checker justly complains that v.version could be None
+                    # ignoring it before attempting true fix
+                    other = versionorder.VersionOrder(v.version)  # type: ignore
                     is_newer = other < new_version or (
                         other == new_version and v.build_number < build_number
                     )

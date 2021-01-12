@@ -264,7 +264,7 @@ class Rules:
         if channel.private:
             self.assert_channel_roles(channel.name, [OWNER, MAINTAINER, MEMBER])
 
-    def assert_set_channel_size_limit(self, channel):
+    def assert_set_channel_size_limit(self):
 
         self.assert_server_roles(
             [SERVER_OWNER, SERVER_MAINTAINER],

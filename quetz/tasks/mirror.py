@@ -377,6 +377,10 @@ def initial_sync_mirror(
 
     channel = dao.get_channel(channel_name)
 
+    if not channel:
+        logger.error(f"channel {channel_name} not found")
+        return
+
     from quetz.main import handle_package_files
 
     packages = repodata.get("packages", {})
@@ -567,6 +571,10 @@ def synchronize_packages(
     logger.debug(f"executing synchronize_packages task in a process {os.getpid()}")
 
     new_channel = dao.get_channel(channel_name)
+
+    if not new_channel:
+        logger.error(f"channel {channel_name} not found")
+        return
 
     host = new_channel.mirror_channel_url
 

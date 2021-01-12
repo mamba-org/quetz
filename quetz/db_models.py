@@ -36,7 +36,7 @@ class User(Base):
     id = Column(UUID, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
 
-    identities = relationship('Identity', back_populates='user')
+    identities = relationship('Identity', back_populates='user', uselist=True)
     profile = relationship(
         'Profile', uselist=False, back_populates='user', cascade="all,delete-orphan"
     )
@@ -143,6 +143,26 @@ class Package(Base):
 
     # channeldata is always from the most recent version
     channeldata = Column(String)
+
+    url = Column(String)
+
+    platforms = Column(String)
+
+    current_package_version = relationship(
+        "PackageVersion",
+        uselist=False,
+        primaryjoin=(
+            "and_(Package.name==PackageVersion.package_name, "
+            "Package.channel_name==PackageVersion.channel_name, "
+            "PackageVersion.version_order==0)"
+        ),
+        viewonly=True,
+        lazy="select",
+    )
+
+    @property
+    def current_version(self):
+        return self.current_package_version.version
 
     def __repr__(self):
         return (

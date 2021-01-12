@@ -71,7 +71,7 @@ def private_package_version(dao, private_channel, private_package, other_user, c
 
 
 @pytest.fixture
-def package_version(
+def make_package_version(
     db,
     user,
     public_channel,
@@ -83,27 +83,37 @@ def package_version(
 ):
 
     pkgstore = config.get_package_store()
-    filename = Path("test-package-0.1-0.tar.bz2")
-    with open(filename, "rb") as fid:
-        pkgstore.add_file(fid.read(), channel_name, "linux-64" / filename)
-    package_format = "tarbz2"
-    package_info = "{}"
-    version = dao.create_version(
-        channel_name,
-        package_name,
-        package_format,
-        "linux-64",
-        "0.1",
-        0,
-        "",
-        str(filename),
-        package_info,
-        user.id,
-        size=11,
-    )
 
-    dao.update_channel_size(channel_name)
-    db.refresh(public_channel)
+    def _make_package_version(filename, version_number, platform="linux-64"):
+        filename = Path(filename)
+        with open(filename, "rb") as fid:
+            pkgstore.add_file(fid.read(), channel_name, platform / filename)
+        package_format = "tarbz2"
+        package_info = "{}"
+        version = dao.create_version(
+            channel_name,
+            package_name,
+            package_format,
+            platform,
+            version_number,
+            0,
+            "",
+            str(filename),
+            package_info,
+            user.id,
+            size=11,
+        )
+
+        dao.update_channel_size(channel_name)
+
+        return version
+
+    yield _make_package_version
+
+
+@pytest.fixture
+def package_version(db, make_package_version):
+    version = make_package_version("test-package-0.1-0.tar.bz2", "0.1")
 
     yield version
 

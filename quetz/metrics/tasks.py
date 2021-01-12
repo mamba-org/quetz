@@ -15,6 +15,8 @@ def synchronize_metrics_from_mirrors(
 ):
     logger = logging.getLogger("quetz")
     channel = dao.get_channel(channel_name)
+    if not channel:
+        return
     for m in channel.mirrors:
         if not m.metrics_endpoint:
             logger.warning(
