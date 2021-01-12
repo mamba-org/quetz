@@ -96,6 +96,7 @@ class Config:
             [
                 ConfigEntry("database_url", str),
                 ConfigEntry("database_plugin_path", str, default="", required=False),
+                ConfigEntry("echo_sql", bool, default=False, required=False),
             ],
         ),
         ConfigSection(

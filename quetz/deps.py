@@ -47,7 +47,7 @@ def get_config():
 def get_db(config: Config = Depends(get_config)):
 
     database_url = config.sqlalchemy_database_url
-    db = get_db_session(database_url)
+    db = get_db_session(database_url, echo=config.sqlalchemy_echo_sql)
     try:
         yield db
     finally:

@@ -219,9 +219,7 @@ class Dao:
             query = query.filter(Package.name.like(f'%{q}%'))
 
         if limit < 0:
-            res = query.all()
-            print(res)
-            return res
+            return query.all()
 
         return get_paginated_result(query, skip, limit)
 
