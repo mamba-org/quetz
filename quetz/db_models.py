@@ -157,7 +157,7 @@ class Package(Base):
             "PackageVersion.version_order==0)"
         ),
         viewonly=True,
-        lazy="joined",
+        lazy="select",
     )
 
     @property
