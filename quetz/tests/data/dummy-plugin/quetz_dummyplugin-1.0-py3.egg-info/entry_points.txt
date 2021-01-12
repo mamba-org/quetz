@@ -1,0 +1,3 @@
+[quetz.jobs]
+
+quetz-dummyplugin = quetz_dummyplugin.jobs

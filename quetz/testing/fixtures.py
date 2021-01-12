@@ -174,8 +174,13 @@ def config_dir(home):
     shutil.rmtree(path)
 
 
+@fixture(scope="session")
+def test_data_dir():
+    return os.path.join(os.path.dirname(quetz.__file__), "tests", "data")
+
+
 @fixture
-def config(config_str, config_dir):
+def config(config_str, config_dir, test_data_dir):
 
     config_path = os.path.join(config_dir, "config.toml")
     with open(config_path, "w") as fid:
@@ -183,9 +188,8 @@ def config(config_str, config_dir):
     old_dir = os.path.abspath(os.curdir)
     os.chdir(config_dir)
     os.environ["QUETZ_CONFIG_FILE"] = config_path
-    data_dir = os.path.join(os.path.dirname(quetz.__file__), "tests", "data")
-    for filename in os.listdir(data_dir):
-        full_path = os.path.join(data_dir, filename)
+    for filename in os.listdir(test_data_dir):
+        full_path = os.path.join(test_data_dir, filename)
         dest = os.path.join(config_dir, filename)
         if os.path.isfile(full_path):
             shutil.copy(full_path, dest)

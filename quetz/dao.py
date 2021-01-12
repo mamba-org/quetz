@@ -3,12 +3,14 @@
 
 import json
 import logging
+import pickle
 import uuid
 from collections import defaultdict
 from datetime import datetime
 from itertools import groupby
 from typing import Dict, List, Optional
 
+import pkg_resources
 from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, aliased, joinedload
@@ -727,6 +729,47 @@ class Dao:
 
     def get_job(self, job_id: int):
         job = self.db.query(Job).filter(Job.id == job_id).one_or_none()
+        return job
+
+    def create_job(self, user_id, function_name, items_spec):
+
+        paths = function_name.split(":")
+
+        if len(paths) == 2:
+            plugin_name, job_name = paths
+            entry_points = list(
+                pkg_resources.iter_entry_points('quetz.jobs', plugin_name)
+            )
+            if not entry_points:
+                raise errors.ValidationError(
+                    f"invalid function {function_name}: "
+                    f"plugin {plugin_name} not installed"
+                )
+            job_module = entry_points[0].load()
+            try:
+                job_function = getattr(job_module, job_name)
+            except AttributeError:
+                raise errors.ValidationError(
+                    f"invalid function '{job_name}' name in plugin '{plugin_name}'"
+                )
+        elif len(paths) == 1:
+            raise errors.ValidationError(
+                f"invalid function {function_name}: no such built-in function,"
+                " please provide plugin name"
+            )
+        else:
+            raise errors.ValidationError(
+                f"invalid function {function_name} - could not parse"
+            )
+
+        serialized = pickle.dumps(job_function)
+        job = Job(
+            owner_id=user_id,
+            manifest=serialized,
+            items_spec=items_spec,
+        )
+        self.db.add(job)
+        self.db.commit()
         return job
 
     def incr_download_count(

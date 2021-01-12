@@ -19,21 +19,33 @@ from quetz.jobs import models as job_db_models
 from quetz.rest_models import User
 
 from .models import JobStatus, TaskStatus
+from .runner import run_jobs
 
 api_router = APIRouter()
 
 
-class Job(BaseModel):
+class JobBase(BaseModel):
+    """New job spec"""
+
+    items_spec: str = Field(None, title='Item selector spec')
+    manifest: str = Field(None, title='Name of the function')
+
+
+class JobUpdateModel(BaseModel):
+    """Modify job spec items (status and items_spec)"""
+
+    items_spec: str = Field(None, title='Item selector spec')
+    status: JobStatus = Field(None, title='Change status')
+    force: bool = Field(False, title="force re-running job on all matching packages")
+
+
+class Job(JobBase):
     id: int = Field(None, title='Unique id for job')
     owner: User = Field(None, title='User profile of the owner')
 
     created: datetime = Field(None, title='Created at')
 
-    items_spec: str = Field(None, title='Item selector spec')
-
     status: JobStatus = Field(None, title='Status of the job (running, paused, ...)')
-
-    manifest: str = Field(None, title='Name of the function')
 
     @validator("manifest", pre=True)
     def convert_name(cls, v):
@@ -67,6 +79,19 @@ def get_jobs(
     return dao.get_jobs()
 
 
+@api_router.post("/api/jobs", tags=["Jobs"], status_code=201, response_model=Job)
+def create_job(
+    job: JobBase,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    """create a new job"""
+    user = auth.assert_user()
+    auth.assert_jobs()
+    new_job = dao.create_job(user, job.manifest, job.items_spec)
+    return new_job
+
+
 def get_job_or_fail(
     job_id: int,
     dao: Dao = Depends(get_dao),
@@ -96,15 +121,21 @@ def get_tasks(
     return job.tasks
 
 
-@api_router.put("/api/jobs/{job_id}", tags=["Jobs"])
-def put_job(
+@api_router.patch("/api/jobs/{job_id}", tags=["Jobs"])
+def update_job(
+    job_data: JobUpdateModel,
     db=Depends(get_db),
     job: job_db_models.Job = Depends(get_job_or_fail),
     auth: authorization.Rules = Depends(get_rules),
 ):
     """refresh job (re-run on new packages)"""
     auth.assert_jobs()
-    job.status = JobStatus.pending  # type: ignore
+    job.status = job_data.status  # type: ignore
+
+    # ignore tasks that have already been run
+    if job_data.force:
+        run_jobs(db, job_id=job.id, force=True)
+
     db.commit()
 
 

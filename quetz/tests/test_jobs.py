@@ -2,7 +2,9 @@ import os
 import pickle
 import time
 from pathlib import Path
+from unittest import mock
 
+import pkg_resources
 import pytest
 
 from quetz.config import Config
@@ -223,6 +225,14 @@ async def test_run_tasks_only_on_new_versions(
     assert len(job.tasks) == 2
     assert job.tasks[0].status == TaskStatus.success
     assert job.tasks[1].status == TaskStatus.pending
+
+    # force rerunning
+    job.status = JobStatus.pending
+    run_jobs(db, force=True)
+    db.refresh(job)
+    new_jobs = run_tasks(db, manager)
+    assert len(job.tasks) == 4
+    assert len(new_jobs) == 2
 
 
 @pytest.mark.asyncio
@@ -495,26 +505,105 @@ def test_filter_versions(db, user, package_version, spec, n_tasks, manager):
 
 
 @pytest.mark.parametrize("user_role", ["owner"])
-def test_refresh_job(auth_client, user, db):
+def test_refresh_job(auth_client, user, db, package_version, manager):
 
     func_serialized = pickle.dumps(dummy_func)
     job = Job(
         owner_id=user.id,
         manifest=func_serialized,
         items_spec="*",
+        status=JobStatus.success,
     )
+    task = Task(job=job, status=TaskStatus.success, package_version=package_version)
     db.add(job)
+    db.add(task)
     db.commit()
-    run_jobs(db)
-    run_tasks(db, manager)
-
-    db.refresh(job)
 
     assert job.status == JobStatus.success
+    assert len(job.tasks) == 1
 
-    response = auth_client.put(f"/api/jobs/{job.id}")
+    response = auth_client.patch(f"/api/jobs/{job.id}", json={"status": "pending"})
 
     assert response.status_code == 200
 
     db.refresh(job)
     assert job.status == JobStatus.pending
+    assert len(job.tasks) == 1
+
+    run_jobs(db)
+    assert job.status == JobStatus.success
+    assert len(job.tasks) == 1
+
+    response = auth_client.patch(
+        f"/api/jobs/{job.id}", json={"status": "pending", "force": True}
+    )
+    db.refresh(job)
+    assert job.status == JobStatus.running
+    assert len(job.tasks) == 2
+
+    # forcing one job should not affect the other
+    other_job = Job(
+        id=2,
+        owner_id=user.id,
+        manifest=func_serialized,
+        items_spec="*",
+        status=JobStatus.success,
+    )
+    job.status = JobStatus.pending
+    db.add(other_job)
+    db.commit()
+
+    response = auth_client.patch(
+        f"/api/jobs/{other_job.id}", json={"status": "pending", "force": True}
+    )
+    db.refresh(job)
+    assert job.status == JobStatus.pending
+    assert len(job.tasks) == 2
+
+
+@pytest.fixture(scope="session")
+def dummy_plugin(test_data_dir):
+    plugin_dir = Path(test_data_dir) / "dummy-plugin"
+    dist = list(pkg_resources.find_distributions(plugin_dir))[0]
+    pkg_resources.working_set.add(dist)
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+@pytest.mark.parametrize(
+    "manifest",
+    [
+        "dummy_func",
+        "os:listdir",
+        "os.listdir",
+        "quetz.dummy_func",
+        "quetz-plugin:dummy_func",
+        "quetz-dummyplugin:missing_job",
+    ],
+)
+def test_post_new_job_manifest_validation(
+    auth_client, user, db, manifest, dummy_plugin
+):
+    response = auth_client.post(
+        "/api/jobs", json={"items_spec": "*", "manifest": manifest}
+    )
+    assert response.status_code == 422
+    msg = response.json()['detail']
+    assert "invalid function" in msg
+    for name in manifest.split(":"):
+        assert name in msg
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+@pytest.mark.parametrize(
+    "manifest", ["quetz-dummyplugin:dummy_func", "quetz-dummyplugin:dummy_job"]
+)
+def test_post_new_job_from_plugin(auth_client, user, db, manifest, dummy_plugin):
+
+    with mock.patch("quetz_dummyplugin.jobs.dummy_func", dummy_func, create=True):
+        response = auth_client.post(
+            "/api/jobs", json={"items_spec": "*", "manifest": manifest}
+        )
+    assert response.status_code == 201
+    job_id = response.json()['id']
+    job = db.query(Job).get(job_id)
+    assert pickle.loads(job.manifest).__name__ == manifest.split(":")[1]
