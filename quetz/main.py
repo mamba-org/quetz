@@ -641,7 +641,8 @@ def get_packages(
     """
     Retrieve all packages in a channel, optionally matching a query `q`.
     """
-    return dao.get_packages(channel.name, 0, -1, q)
+    res = dao.get_packages(channel.name, 0, -1, q)
+    return res
 
 
 @api_router.get(

@@ -148,6 +148,12 @@ class Package(Base):
 
     platforms = Column(String)
 
+    current_package_version = relationship("PackageVersion", uselist=False)
+
+    @property
+    def current_version(self):
+        return self.current_package_version.version
+
     def __repr__(self):
         return (
             f"<Package name={self.name}, summary={self.summary},"
