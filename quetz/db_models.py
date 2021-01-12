@@ -148,7 +148,17 @@ class Package(Base):
 
     platforms = Column(String)
 
-    current_package_version = relationship("PackageVersion", uselist=False)
+    current_package_version = relationship(
+        "PackageVersion",
+        uselist=False,
+        primaryjoin=(
+            "and_(Package.name==PackageVersion.package_name, "
+            "Package.channel_name==PackageVersion.channel_name, "
+            "PackageVersion.version_order==0)"
+        ),
+        viewonly=True,
+        lazy="joined",
+    )
 
     @property
     def current_version(self):
