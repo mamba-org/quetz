@@ -513,9 +513,9 @@ def post_channel(
 
     user_id = auth.assert_user()
 
-    channel = dao.get_channel(new_channel.name)
+    existing_channel = dao.get_channel(new_channel.name)
 
-    if channel:
+    if existing_channel:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Channel {new_channel.name} exists",
@@ -554,7 +554,7 @@ def post_channel(
     user_attrs = new_channel.dict(exclude_unset=True)
 
     if "size_limit" in user_attrs:
-        auth.assert_set_channel_size_limit(channel)
+        auth.assert_set_channel_size_limit()
         size_limit = new_channel.size_limit
     else:
         if config.configured_section("quotas"):
@@ -610,7 +610,7 @@ def patch_channel(
     user_attrs = channel_data.dict(exclude_unset=True)
 
     if "size_limit" in user_attrs:
-        auth.assert_set_channel_size_limit(channel)
+        auth.assert_set_channel_size_limit()
 
     changeable_attrs = ["private", "size_limit"]
 

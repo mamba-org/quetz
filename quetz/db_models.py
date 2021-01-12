@@ -36,7 +36,7 @@ class User(Base):
     id = Column(UUID, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
 
-    identities = relationship('Identity', back_populates='user')
+    identities = relationship('Identity', back_populates='user', uselist=True)
     profile = relationship(
         'Profile', uselist=False, back_populates='user', cascade="all,delete-orphan"
     )
