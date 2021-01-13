@@ -85,6 +85,11 @@ class ChannelBase(BaseModel):
         orm_mode = True
 
 
+class ChannelExtra(ChannelBase):
+    members_count: int
+    packages_count: int
+
+
 class ChannelRole(BaseModel):
     name: str = Field(title="channel name")
     role: str = Field(title="user role")

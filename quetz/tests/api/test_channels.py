@@ -574,3 +574,46 @@ def test_list_channels(
         expected_channels = set(owned_channels)
 
     assert channel_names == expected_channels
+
+
+def test_channel_package_members_count(
+    auth_client, public_channel, db, private_channel, other_user
+):
+    response = auth_client.get(f"/api/channels/{public_channel.name}")
+    assert response.status_code == 200
+
+    channel_data = response.json()
+
+    assert channel_data['members_count'] == 1
+    assert channel_data['packages_count'] == 0
+
+    package = db_models.Package(channel=public_channel, name="test-package")
+    db.add(package)
+    db.commit()
+
+    response = auth_client.get(f"/api/channels/{public_channel.name}")
+    channel_data = response.json()
+    assert channel_data['packages_count'] == 1
+    assert channel_data['members_count'] == 1
+
+    package = db_models.Package(
+        channel=private_channel, name="test-package-different-channel"
+    )
+    db.add(package)
+    db.commit()
+
+    response = auth_client.get(f"/api/channels/{public_channel.name}")
+    channel_data = response.json()
+    assert channel_data['packages_count'] == 1
+    assert channel_data['members_count'] == 1
+
+    channel_member = db_models.ChannelMember(
+        channel=public_channel, user=other_user, role="member"
+    )
+    db.add(channel_member)
+    db.commit()
+
+    response = auth_client.get(f"/api/channels/{public_channel.name}")
+    channel_data = response.json()
+    assert channel_data['packages_count'] == 1
+    assert channel_data['members_count'] == 2
