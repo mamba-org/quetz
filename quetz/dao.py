@@ -143,6 +143,23 @@ class Dao:
 
         return get_paginated_result(query, skip, limit)
 
+    def get_user_channels_with_role(
+        self,
+        skip: int,
+        limit: int,
+        user_id: bytes,
+    ):
+        query = (
+            self.db.query(Channel.name, ChannelMember.role)
+            .join(ChannelMember)
+            .filter(ChannelMember.user_id == user_id)
+        )
+
+        if limit < 0:
+            return query.all()
+
+        return get_paginated_result(query, skip, limit)
+
     def create_channel(
         self,
         data: rest_models.Channel,

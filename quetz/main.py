@@ -328,21 +328,9 @@ def list_user_channels(
 
     auth.assert_read_user_data(user.id)
 
-    channels = dao.get_channels(skip, limit, None, user.id, include_public=False)
-    channel_list = channels["result"] if "result" in channels else channels
+    channels = dao.get_user_channels_with_role(skip, limit, user.id)
 
-    data = [
-        {
-            "name": ch.name,
-            "role": ch.members[0].role,
-        }
-        for ch in channel_list
-    ]
-
-    if "pagination" in channels:
-        return {"pagination": channels["pagination"], "result": data}
-
-    return data
+    return channels
 
 
 @api_router.delete("/users/{username}", tags=["users"])

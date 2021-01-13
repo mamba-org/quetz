@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from quetz.db_models import ApiKey, User
+from quetz.db_models import ApiKey, ChannelMember, User
 
 
 def test_validate_user_role_names(user, client, other_user, db):
@@ -226,19 +226,30 @@ def test_get_users_without_profile(auth_client, other_user_without_profile, user
     assert response.status_code == 404
 
 
-def test_list_user_channels(user, client, other_user, db, private_channel):
+@pytest.mark.parametrize(
+    "http_user,expected_role", [("bartosz", "member"), ("other", "owner")]
+)
+def test_list_user_channels(
+    user, client, other_user, db, private_channel, http_user, expected_role
+):
 
-    response = client.get(f"/api/dummylogin/{other_user.username}")
+    member = ChannelMember(
+        channel_name=private_channel.name, user_id=user.id, role="member"
+    )
+    db.add(member)
+    db.commit()
+
+    response = client.get(f"/api/dummylogin/{http_user}")
     assert response.status_code == 200
 
-    response = client.get(f"/api/users/{other_user.username}/channels")
+    response = client.get(f"/api/users/{http_user}/channels")
     assert response.status_code == 200
 
-    assert response.json() == [{"name": private_channel.name, "role": "owner"}]
+    assert response.json() == [{"name": private_channel.name, "role": expected_role}]
 
-    response = client.get(f"/api/paginated/users/{other_user.username}/channels")
+    response = client.get(f"/api/paginated/users/{http_user}/channels")
     assert response.status_code == 200
 
     assert response.json()["result"] == [
-        {"name": private_channel.name, "role": "owner"}
+        {"name": private_channel.name, "role": expected_role}
     ]
