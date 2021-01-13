@@ -224,3 +224,21 @@ def test_get_users_without_profile(auth_client, other_user_without_profile, user
     response = auth_client.get(f"/api/users/{other_user_without_profile.username}")
 
     assert response.status_code == 404
+
+
+def test_list_user_channels(user, client, other_user, db, private_channel):
+
+    response = client.get(f"/api/dummylogin/{other_user.username}")
+    assert response.status_code == 200
+
+    response = client.get(f"/api/users/{other_user.username}/channels")
+    assert response.status_code == 200
+
+    assert response.json() == [{"name": private_channel.name, "role": "owner"}]
+
+    response = client.get(f"/api/paginated/users/{other_user.username}/channels")
+    assert response.status_code == 200
+
+    assert response.json()["result"] == [
+        {"name": private_channel.name, "role": "owner"}
+    ]

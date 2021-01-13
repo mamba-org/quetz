@@ -288,6 +288,63 @@ def get_user(
     return user
 
 
+@api_router.get(
+    "/users/{username}/channels",
+    response_model=List[rest_models.ChannelRole],
+    tags=["users"],
+)
+def get_user_channels(
+    username: str,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    return list_user_channels(username, dao, auth, 0, -1)
+
+
+@api_router.get(
+    "/paginated/users/{username}/channels",
+    response_model=rest_models.PaginatedResponse[rest_models.ChannelRole],
+    tags=["users"],
+)
+def get_paginated_user_channels(
+    username: str,
+    skip: int = 0,
+    limit: int = 50,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    return list_user_channels(username, dao, auth, skip, limit)
+
+
+def list_user_channels(
+    username: str, dao: Dao, auth: authorization.Rules, skip: int, limit: int
+):
+    user = dao.get_user_by_username(username)
+
+    if not user or not user.profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"User {username} not found"
+        )
+
+    auth.assert_read_user_data(user.id)
+
+    channels = dao.get_channels(skip, limit, None, user.id, include_public=False)
+    channel_list = channels["result"] if "result" in channels else channels
+
+    data = [
+        {
+            "name": ch.name,
+            "role": ch.members[0].role,
+        }
+        for ch in channel_list
+    ]
+
+    if "pagination" in channels:
+        return {"pagination": channels["pagination"], "result": data}
+
+    return data
+
+
 @api_router.delete("/users/{username}", tags=["users"])
 def delete_user(
     username: str,
