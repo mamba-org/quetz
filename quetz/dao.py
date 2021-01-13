@@ -111,17 +111,27 @@ class Dao:
             self.db.commit()
 
     def get_channels(
-        self, skip: int, limit: int, q: Optional[str], user_id: Optional[bytes]
+        self,
+        skip: int,
+        limit: int,
+        q: Optional[str],
+        user_id: Optional[bytes],
+        include_public: bool = True,
     ):
         query = self.db.query(Channel)
 
         if user_id:
-            query = query.filter(
-                or_(
-                    Channel.private == False,  # noqa
-                    Channel.members.any(ChannelMember.user_id == user_id),
+            if include_public:
+                query = query.filter(
+                    or_(
+                        ~Channel.private,
+                        Channel.members.any(ChannelMember.user_id == user_id),
+                    )
                 )
-            )
+            else:
+                query = query.filter(
+                    Channel.members.any(ChannelMember.user_id == user_id)
+                )
         else:
             query = query.filter(Channel.private == False)  # noqa
 

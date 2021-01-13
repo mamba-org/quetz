@@ -347,6 +347,7 @@ def set_user_role(
     "/channels", response_model=List[rest_models.ChannelBase], tags=["channels"]
 )
 def get_channels(
+    public: bool = True,
     dao: Dao = Depends(get_dao),
     q: str = None,
     auth: authorization.Rules = Depends(get_rules),
@@ -354,7 +355,7 @@ def get_channels(
     """List all channels"""
 
     user_id = auth.get_user()
-    return dao.get_channels(0, -1, q, user_id)
+    return dao.get_channels(0, -1, q, user_id, include_public=public)
 
 
 @api_router.get(
@@ -366,12 +367,13 @@ def get_paginated_channels(
     dao: Dao = Depends(get_dao),
     skip: int = 0,
     limit: int = 10,
+    public: bool = True,
     q: str = None,
     auth: authorization.Rules = Depends(get_rules),
 ):
     """List all channels, as a paginated response"""
     user_id = auth.get_user()
-    return dao.get_channels(skip, limit, q, user_id)
+    return dao.get_channels(skip, limit, q, user_id, include_public=public)
 
 
 @api_router.get(

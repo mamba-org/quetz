@@ -536,3 +536,41 @@ def test_url_with_slash(auth_client, public_channel, db, remote_session):
     )
 
     assert response.status_code == 405
+
+
+@pytest.mark.parametrize(
+    "auth_user,owned_channels",
+    [("bartosz", ["my-channel"]), ("other", ["private-channel"])],
+)
+@pytest.mark.parametrize("include_public", [1, 0])
+@pytest.mark.parametrize("endpoint", ["channels", "paginated/channels"])
+def test_list_channels(
+    client,
+    private_channel,
+    public_channel,
+    auth_user,
+    include_public,
+    owned_channels,
+    endpoint,
+):
+    response = client.get(f"/api/dummylogin/{auth_user}")
+    assert response.status_code == 200
+
+    response = client.get(f"/api/{endpoint}?public={include_public}")
+    assert response.status_code == 200
+    results = response.json()
+
+    try:
+        results = results['result']
+    except TypeError:
+        # non-paginated response
+        pass
+
+    channel_names = {r["name"] for r in results}
+
+    if include_public:
+        expected_channels = {public_channel.name, *owned_channels}
+    else:
+        expected_channels = set(owned_channels)
+
+    assert channel_names == expected_channels
