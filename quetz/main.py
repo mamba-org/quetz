@@ -389,7 +389,7 @@ def set_user_role(
 
 
 @api_router.get(
-    "/channels", response_model=List[rest_models.ChannelBase], tags=["channels"]
+    "/channels", response_model=List[rest_models.ChannelExtra], tags=["channels"]
 )
 def get_channels(
     public: bool = True,
@@ -642,7 +642,7 @@ def post_channel(
     "/channels/{channel_name}",
     status_code=200,
     tags=["channels"],
-    response_model=rest_models.ChannelExtra,
+    response_model=rest_models.ChannelBase,
 )
 def patch_channel(
     channel_data: rest_models.Channel,

@@ -576,13 +576,16 @@ def test_list_channels(
     assert channel_names == expected_channels
 
 
+@pytest.mark.parametrize("endpoint", ["/api/channels/{channel_name}", "/api/channels"])
 def test_channel_package_members_count(
-    auth_client, public_channel, db, private_channel, other_user
+    auth_client, public_channel, db, private_channel, other_user, endpoint
 ):
-    response = auth_client.get(f"/api/channels/{public_channel.name}")
+    response = auth_client.get(endpoint.format(channel_name=public_channel.name))
     assert response.status_code == 200
 
     channel_data = response.json()
+    if isinstance(channel_data, list):
+        channel_data = channel_data[0]
 
     assert channel_data['members_count'] == 1
     assert channel_data['packages_count'] == 0
@@ -591,8 +594,11 @@ def test_channel_package_members_count(
     db.add(package)
     db.commit()
 
-    response = auth_client.get(f"/api/channels/{public_channel.name}")
+    response = auth_client.get(endpoint.format(channel_name=public_channel.name))
     channel_data = response.json()
+    if isinstance(channel_data, list):
+        channel_data = channel_data[0]
+
     assert channel_data['packages_count'] == 1
     assert channel_data['members_count'] == 1
 
@@ -602,8 +608,11 @@ def test_channel_package_members_count(
     db.add(package)
     db.commit()
 
-    response = auth_client.get(f"/api/channels/{public_channel.name}")
+    response = auth_client.get(endpoint.format(channel_name=public_channel.name))
     channel_data = response.json()
+    if isinstance(channel_data, list):
+        channel_data = channel_data[0]
+
     assert channel_data['packages_count'] == 1
     assert channel_data['members_count'] == 1
 
@@ -613,7 +622,10 @@ def test_channel_package_members_count(
     db.add(channel_member)
     db.commit()
 
-    response = auth_client.get(f"/api/channels/{public_channel.name}")
+    response = auth_client.get(endpoint.format(channel_name=public_channel.name))
     channel_data = response.json()
+    if isinstance(channel_data, list):
+        channel_data = channel_data[0]
+
     assert channel_data['packages_count'] == 1
     assert channel_data['members_count'] == 2
