@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from quetz.db_models import ApiKey, ChannelMember, User
+from quetz.db_models import ApiKey, ChannelMember, PackageMember, User
 
 
 def test_validate_user_role_names(user, client, other_user, db):
@@ -252,4 +252,51 @@ def test_list_user_channels(
 
     assert response.json()["result"] == [
         {"name": private_channel.name, "role": expected_role}
+    ]
+
+
+@pytest.mark.parametrize(
+    "http_user,expected_role", [("bartosz", "member"), ("other", "owner")]
+)
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "/api/users/{http_user}/packages",
+        "/api/paginated/users/{http_user}/packages",
+    ],
+)
+def test_list_user_packages(
+    user,
+    client,
+    other_user,
+    db,
+    private_channel,
+    private_package,
+    http_user,
+    expected_role,
+    endpoint,
+):
+    member = PackageMember(
+        channel=private_channel, package=private_package, user=user, role="member"
+    )
+    db.add(member)
+    db.commit()
+
+    response = client.get(f"/api/dummylogin/{http_user}")
+    assert response.status_code == 200
+
+    response = client.get(endpoint.format(http_user=http_user))
+    assert response.status_code == 200
+
+    data = response.json()
+
+    if "result" in data:
+        data = data["result"]
+
+    assert data == [
+        {
+            "name": private_package.name,
+            "channel_name": private_channel.name,
+            "role": expected_role,
+        }
     ]

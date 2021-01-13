@@ -187,6 +187,15 @@ class Package(BaseModel):
         orm_mode = True
 
 
+class PackageRole(BaseModel):
+    name: str = Field(title='The name of package')
+    channel_name: str = Field(title='The channel this package belongs to')
+    role: str = Field(title="user role for this package")
+
+    class Config:
+        orm_mode = True
+
+
 class PackageSearch(Package):
     channel_name: str = Field(None, title='The channel this package belongs to')
 

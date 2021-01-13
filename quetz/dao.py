@@ -238,6 +238,18 @@ class Dao:
 
         return get_paginated_result(query, skip, limit)
 
+    def get_user_packages(self, skip: int, limit: int, user_id: bytes):
+        query = (
+            self.db.query(Package.name, Package.channel_name, PackageMember.role)
+            .join(PackageMember)
+            .filter(PackageMember.user_id == user_id)
+        )
+
+        if limit < 0:
+            return query.all()
+
+        return get_paginated_result(query, skip, limit)
+
     def search_packages(
         self,
         keywords: List[str],

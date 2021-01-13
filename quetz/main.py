@@ -302,6 +302,20 @@ def get_user_channels(
 
 
 @api_router.get(
+    "/users/{username}/packages",
+    response_model=List[rest_models.PackageRole],
+    tags=["users"],
+)
+def get_user_packages(
+    username: str,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+
+    return list_user_packages(username, dao, auth, 0, -1)
+
+
+@api_router.get(
     "/paginated/users/{username}/channels",
     response_model=rest_models.PaginatedResponse[rest_models.ChannelRole],
     tags=["users"],
@@ -314,6 +328,40 @@ def get_paginated_user_channels(
     auth: authorization.Rules = Depends(get_rules),
 ):
     return list_user_channels(username, dao, auth, skip, limit)
+
+
+@api_router.get(
+    "/paginated/users/{username}/packages",
+    response_model=rest_models.PaginatedResponse[rest_models.PackageRole],
+    tags=["users"],
+)
+def get_paginated_user_packages(
+    username: str,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+    skip: int = 0,
+    limit: int = 50,
+):
+    return list_user_packages(username, dao, auth, skip, limit)
+
+
+def list_user_packages(
+    username: str,
+    dao: Dao,
+    auth: authorization.Rules,
+    skip: int,
+    limit: int,
+):
+    user = dao.get_user_by_username(username)
+
+    if not user or not user.profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"User {username} not found"
+        )
+
+    auth.assert_read_user_data(user.id)
+
+    return dao.get_user_packages(skip, limit, user.id)
 
 
 def list_user_channels(
