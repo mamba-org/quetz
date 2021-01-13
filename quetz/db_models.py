@@ -20,9 +20,10 @@ from sqlalchemy import (
     UniqueConstraint,
     event,
     func,
+    select,
 )
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import backref, relationship
+from sqlalchemy.orm import backref, column_property, relationship
 from sqlalchemy.schema import ForeignKeyConstraint
 
 Base = declarative_base()
@@ -72,39 +73,6 @@ class Profile(Base):
     avatar_url = Column(String)
     user_id = Column(UUID, ForeignKey('users.id'), primary_key=True)
     user = relationship('User', back_populates='profile')
-
-
-class Channel(Base):
-    __tablename__ = 'channels'
-
-    name = Column(
-        String(100, collation="nocase"),
-        primary_key=True,
-        index=True,
-    )
-    description = Column(String)
-    private = Column(Boolean, default=False)
-    mirror_channel_url = Column(String)
-    mirror_mode = Column(String)
-    timestamp_mirror_sync = Column(Integer, default=0)
-    size = Column(BigInteger, default=0)
-    size_limit = Column(BigInteger, default=None)
-    ttl = Column(Integer, server_default=f'{60 * 60 * 10}', nullable=False)  # 10 hours
-
-    packages = relationship(
-        'Package', back_populates='channel', cascade="all,delete", uselist=True
-    )
-
-    members = relationship('ChannelMember', cascade="all,delete")
-
-    mirrors = relationship("ChannelMirror", cascade="all, delete", uselist=True)
-
-    def __repr__(self):
-        return (
-            f"<Channel name={self.name}, "
-            "description={self.description}, "
-            "private={self.private}>"
-        )
 
 
 class ChannelMember(Base):
@@ -168,6 +136,49 @@ class Package(Base):
         return (
             f"<Package name={self.name}, summary={self.summary},"
             + f" channel={self.channel_name}>"
+        )
+
+
+class Channel(Base):
+    __tablename__ = 'channels'
+
+    name = Column(
+        String(100, collation="nocase"),
+        primary_key=True,
+        index=True,
+    )
+    description = Column(String)
+    private = Column(Boolean, default=False)
+    mirror_channel_url = Column(String)
+    mirror_mode = Column(String)
+    timestamp_mirror_sync = Column(Integer, default=0)
+    size = Column(BigInteger, default=0)
+    size_limit = Column(BigInteger, default=None)
+    ttl = Column(Integer, server_default=f'{60 * 60 * 10}', nullable=False)  # 10 hours
+
+    packages = relationship(
+        'Package', back_populates='channel', cascade="all,delete", uselist=True
+    )
+
+    members = relationship('ChannelMember', cascade="all,delete")
+
+    mirrors = relationship("ChannelMirror", cascade="all, delete", uselist=True)
+
+    members_count = column_property(
+        select([func.count(ChannelMember.user_id)]).where(
+            ChannelMember.channel_name == name
+        )
+    )
+
+    packages_count = column_property(
+        select([func.count(Package.name)]).where(Package.channel_name == name)
+    )
+
+    def __repr__(self):
+        return (
+            f"<Channel name={self.name}, "
+            "description={self.description}, "
+            "private={self.private}>"
         )
 
 

@@ -437,7 +437,7 @@ def set_user_role(
 
 
 @api_router.get(
-    "/channels", response_model=List[rest_models.ChannelBase], tags=["channels"]
+    "/channels", response_model=List[rest_models.ChannelExtra], tags=["channels"]
 )
 def get_channels(
     public: bool = True,
@@ -453,7 +453,7 @@ def get_channels(
 
 @api_router.get(
     "/paginated/channels",
-    response_model=rest_models.PaginatedResponse[rest_models.ChannelBase],
+    response_model=rest_models.PaginatedResponse[rest_models.ChannelExtra],
     tags=["channels"],
 )
 def get_paginated_channels(
@@ -471,7 +471,7 @@ def get_paginated_channels(
 
 @api_router.get(
     "/channels/{channel_name}",
-    response_model=rest_models.ChannelBase,
+    response_model=rest_models.ChannelExtra,
     tags=["channels"],
 )
 def get_channel(channel: db_models.Channel = Depends(get_channel_allow_proxy)):
