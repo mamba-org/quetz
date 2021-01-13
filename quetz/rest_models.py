@@ -85,6 +85,14 @@ class ChannelBase(BaseModel):
         orm_mode = True
 
 
+class ChannelRole(BaseModel):
+    name: str = Field(title="channel name")
+    role: str = Field(title="user role")
+
+    class Config:
+        orm_mode = True
+
+
 class ChannelActionEnum(str, Enum):
     """Execute special actions on channels (they may need specific permissions):
 

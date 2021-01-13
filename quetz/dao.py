@@ -111,22 +111,49 @@ class Dao:
             self.db.commit()
 
     def get_channels(
-        self, skip: int, limit: int, q: Optional[str], user_id: Optional[bytes]
+        self,
+        skip: int,
+        limit: int,
+        q: Optional[str],
+        user_id: Optional[bytes],
+        include_public: bool = True,
     ):
         query = self.db.query(Channel)
 
         if user_id:
-            query = query.filter(
-                or_(
-                    Channel.private == False,  # noqa
-                    Channel.members.any(ChannelMember.user_id == user_id),
+            if include_public:
+                query = query.filter(
+                    or_(
+                        ~Channel.private,
+                        Channel.members.any(ChannelMember.user_id == user_id),
+                    )
                 )
-            )
+            else:
+                query = query.filter(
+                    Channel.members.any(ChannelMember.user_id == user_id)
+                )
         else:
             query = query.filter(Channel.private == False)  # noqa
 
         if q:
             query = query.filter(Channel.name.ilike(f'%{q}%'))
+
+        if limit < 0:
+            return query.all()
+
+        return get_paginated_result(query, skip, limit)
+
+    def get_user_channels_with_role(
+        self,
+        skip: int,
+        limit: int,
+        user_id: bytes,
+    ):
+        query = (
+            self.db.query(Channel.name, ChannelMember.role)
+            .join(ChannelMember)
+            .filter(ChannelMember.user_id == user_id)
+        )
 
         if limit < 0:
             return query.all()

@@ -288,6 +288,51 @@ def get_user(
     return user
 
 
+@api_router.get(
+    "/users/{username}/channels",
+    response_model=List[rest_models.ChannelRole],
+    tags=["users"],
+)
+def get_user_channels(
+    username: str,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    return list_user_channels(username, dao, auth, 0, -1)
+
+
+@api_router.get(
+    "/paginated/users/{username}/channels",
+    response_model=rest_models.PaginatedResponse[rest_models.ChannelRole],
+    tags=["users"],
+)
+def get_paginated_user_channels(
+    username: str,
+    skip: int = 0,
+    limit: int = 50,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    return list_user_channels(username, dao, auth, skip, limit)
+
+
+def list_user_channels(
+    username: str, dao: Dao, auth: authorization.Rules, skip: int, limit: int
+):
+    user = dao.get_user_by_username(username)
+
+    if not user or not user.profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"User {username} not found"
+        )
+
+    auth.assert_read_user_data(user.id)
+
+    channels = dao.get_user_channels_with_role(skip, limit, user.id)
+
+    return channels
+
+
 @api_router.delete("/users/{username}", tags=["users"])
 def delete_user(
     username: str,
@@ -347,6 +392,7 @@ def set_user_role(
     "/channels", response_model=List[rest_models.ChannelBase], tags=["channels"]
 )
 def get_channels(
+    public: bool = True,
     dao: Dao = Depends(get_dao),
     q: str = None,
     auth: authorization.Rules = Depends(get_rules),
@@ -354,7 +400,7 @@ def get_channels(
     """List all channels"""
 
     user_id = auth.get_user()
-    return dao.get_channels(0, -1, q, user_id)
+    return dao.get_channels(0, -1, q, user_id, include_public=public)
 
 
 @api_router.get(
@@ -366,12 +412,13 @@ def get_paginated_channels(
     dao: Dao = Depends(get_dao),
     skip: int = 0,
     limit: int = 10,
+    public: bool = True,
     q: str = None,
     auth: authorization.Rules = Depends(get_rules),
 ):
     """List all channels, as a paginated response"""
     user_id = auth.get_user()
-    return dao.get_channels(skip, limit, q, user_id)
+    return dao.get_channels(skip, limit, q, user_id, include_public=public)
 
 
 @api_router.get(
