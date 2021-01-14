@@ -18,7 +18,7 @@ from quetz.config import PAGINATION_LIMIT
 from quetz.dao import Dao
 from quetz.deps import get_dao, get_db, get_rules
 from quetz.jobs import models as job_db_models
-from quetz.rest_models import PaginatedResponse, User
+from quetz.rest_models import PaginatedResponse
 
 from .models import JobStatus, TaskStatus
 from .runner import run_jobs
@@ -45,7 +45,7 @@ class JobUpdateModel(BaseModel):
 
 class Job(JobBase):
     id: int = Field(None, title='Unique id for job')
-    owner: User = Field(None, title='User profile of the owner')
+    owner_id: uuid.UUID = Field(None, title='User id of the owner')
 
     created: datetime = Field(None, title='Created at')
 
