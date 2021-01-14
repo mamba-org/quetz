@@ -125,14 +125,14 @@ def get_job_or_fail(
     return job
 
 
-@api_router.get("/api/jobs/{job_id}", tags=["Jobs"], response_model=List[Task])
-def get_tasks(
+@api_router.get("/api/jobs/{job_id}", tags=["Jobs"], response_model=Job)
+def get_job(
     dao: Dao = Depends(get_dao),
-    job: job_db_models.Job = Depends(get_job_or_fail),
     auth: authorization.Rules = Depends(get_rules),
+    job: job_db_models.Job = Depends(get_job_or_fail),
 ):
     auth.assert_jobs()
-    return job.tasks
+    return job
 
 
 @api_router.patch("/api/jobs/{job_id}", tags=["Jobs"])
@@ -151,6 +151,16 @@ def update_job(
         run_jobs(db, job_id=job.id, force=True)
 
     db.commit()
+
+
+@api_router.get("/api/jobs/{job_id}/tasks", tags=["Jobs"], response_model=List[Task])
+def get_tasks(
+    dao: Dao = Depends(get_dao),
+    job: job_db_models.Job = Depends(get_job_or_fail),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    auth.assert_jobs()
+    return job.tasks
 
 
 def get_router():
