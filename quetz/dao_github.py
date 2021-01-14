@@ -60,6 +60,7 @@ def user_github_profile_changed(user, identity, profile):
 
 
 def update_user_from_github_profile(db: Session, user, identity, profile) -> User:
+
     identity.username = profile['login']
     user.profile.name = profile['name']
     user.profile.avatar_url = profile['avatar_url']
@@ -74,9 +75,12 @@ def get_user_by_github_identity(dao: Dao, profile: dict, config: Config) -> User
     db = dao.db
 
     try:
-        user, identity = db.query(User, Identity).join(Identity).filter(
-            Identity.provider == 'github'
-        ).filter(Identity.identity_id == str(profile['id'])).one_or_none() or (
+        user, identity = db.query(User, Identity).outerjoin(
+            Identity,
+            User.identities.expression
+            & (Identity.provider == 'github')
+            & (Identity.identity_id == str(profile['id'])),
+        ).one_or_none() or (
             None,
             None,
         )
@@ -90,8 +94,8 @@ def get_user_by_github_identity(dao: Dao, profile: dict, config: Config) -> User
         default_role = None
         create_default_channel = False
 
-    if user:
-        if user_github_profile_changed(user, identity, profile):
+    if user and identity:
+        if not identity and user_github_profile_changed(user, identity, profile):
             return update_user_from_github_profile(db, user, identity, profile)
         return user
 
