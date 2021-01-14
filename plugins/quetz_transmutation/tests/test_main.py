@@ -3,6 +3,12 @@ from pathlib import Path
 import pytest
 from httpx import AsyncClient
 
+from quetz.authorization import (
+    SERVER_MAINTAINER,
+    SERVER_MEMBER,
+    SERVER_OWNER,
+    SERVER_USER,
+)
 from quetz.db_models import PackageVersion
 from quetz.jobs.models import Job, Task, TaskStatus
 from quetz.jobs.runner import check_status, run_jobs, run_tasks
@@ -95,3 +101,22 @@ def test_package_specs(
         db.query(Task).delete()
     finally:
         db.commit()
+
+
+@pytest.mark.parametrize(
+    "user_role,expected_status",
+    [
+        (SERVER_OWNER, 201),
+        (SERVER_MAINTAINER, 201),
+        (SERVER_USER, 401),
+        (SERVER_MEMBER, 401),
+    ],
+)
+def test_permissions(auth_client, db, expected_status):
+
+    response = auth_client.post(
+        "/api/jobs",
+        json={"items_spec": "*", "manifest": "quetz-transmutation:transmutation"},
+    )
+
+    assert response.status_code == expected_status
