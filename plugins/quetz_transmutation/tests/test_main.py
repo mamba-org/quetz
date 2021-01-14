@@ -3,6 +3,12 @@ from pathlib import Path
 import pytest
 from httpx import AsyncClient
 
+from quetz.authorization import (
+    SERVER_MAINTAINER,
+    SERVER_MEMBER,
+    SERVER_OWNER,
+    SERVER_USER,
+)
 from quetz.db_models import PackageVersion
 from quetz.jobs.models import Job, Task, TaskStatus
 from quetz.jobs.runner import check_status, run_jobs, run_tasks
@@ -10,13 +16,18 @@ from quetz.jobs.runner import check_status, run_jobs, run_tasks
 
 @pytest.mark.asyncio
 async def test_transmutation_endpoint(
-    auth_client, db, config, work_manager, package_version, app, channel_name
+    api_key, db, config, work_manager, package_version, app, channel_name
 ):
 
+    # we need to use asynchronous http client because the test is async
     async with AsyncClient(app=app, base_url="http://test") as ac:
-        response = await ac.put("/api/transmutation", json={"package_spec": "*"})
+        response = await ac.post(
+            "/api/jobs",
+            json={"items_spec": "*", "manifest": "quetz-transmutation:transmutation"},
+            headers={"x-api-key": api_key.key},
+        )
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     run_jobs(db)
     new_jobs = run_tasks(db, work_manager)
     await new_jobs[0].wait()
@@ -68,9 +79,12 @@ def test_package_specs(
     auth_client, db, config, work_manager, package_version, spec, n_tasks
 ):
 
-    response = auth_client.put("/api/transmutation", json={"package_spec": spec})
+    response = auth_client.post(
+        "/api/jobs",
+        json={"items_spec": spec, "manifest": "quetz-transmutation:transmutation"},
+    )
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     run_jobs(db)
     run_tasks(db, work_manager)
 
@@ -87,3 +101,22 @@ def test_package_specs(
         db.query(Task).delete()
     finally:
         db.commit()
+
+
+@pytest.mark.parametrize(
+    "user_role,expected_status",
+    [
+        (SERVER_OWNER, 201),
+        (SERVER_MAINTAINER, 201),
+        (SERVER_USER, 401),
+        (SERVER_MEMBER, 401),
+    ],
+)
+def test_permissions(auth_client, db, expected_status):
+
+    response = auth_client.post(
+        "/api/jobs",
+        json={"items_spec": "*", "manifest": "quetz-transmutation:transmutation"},
+    )
+
+    assert response.status_code == expected_status

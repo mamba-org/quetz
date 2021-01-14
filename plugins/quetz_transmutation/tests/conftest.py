@@ -6,7 +6,7 @@ import pytest
 from quetz.authorization import SERVER_OWNER
 from quetz.config import Config
 from quetz.dao import Dao
-from quetz.db_models import Profile, User
+from quetz.db_models import ApiKey, Profile, User
 from quetz.rest_models import Channel, Package
 from quetz.tasks.workers import SubprocessWorker
 
@@ -37,6 +37,15 @@ def user(db, user_role):
 
     db.delete(new_user)
     db.commit()
+
+
+@pytest.fixture
+def api_key(db, user):
+
+    key = ApiKey(user_id=user.id, owner_id=user.id, key="apikey")
+    db.add(key)
+    db.commit()
+    return key
 
 
 @pytest.fixture
