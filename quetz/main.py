@@ -52,7 +52,7 @@ from quetz import (
     frontend,
     rest_models,
 )
-from quetz.config import Config, configure_logger, get_plugin_manager
+from quetz.config import PAGINATION_LIMIT, Config, configure_logger, get_plugin_manager
 from quetz.dao import Dao
 from quetz.deps import (
     ChannelChecker,
@@ -263,7 +263,7 @@ def get_users(
 def get_paginated_users(
     dao: Dao = Depends(get_dao),
     skip: int = 0,
-    limit: int = 10,
+    limit: int = PAGINATION_LIMIT,
     q: str = None,
     auth: authorization.Rules = Depends(get_rules),
 ):
@@ -323,7 +323,7 @@ def get_user_packages(
 def get_paginated_user_channels(
     username: str,
     skip: int = 0,
-    limit: int = 50,
+    limit: int = PAGINATION_LIMIT,
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
@@ -340,7 +340,7 @@ def get_paginated_user_packages(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
     skip: int = 0,
-    limit: int = 50,
+    limit: int = PAGINATION_LIMIT,
 ):
     return list_user_packages(username, dao, auth, skip, limit)
 
@@ -459,7 +459,7 @@ def get_channels(
 def get_paginated_channels(
     dao: Dao = Depends(get_dao),
     skip: int = 0,
-    limit: int = 10,
+    limit: int = PAGINATION_LIMIT,
     public: bool = True,
     q: str = None,
     auth: authorization.Rules = Depends(get_rules),
@@ -749,7 +749,7 @@ def get_paginated_packages(
     channel: db_models.Channel = Depends(get_channel_or_fail),
     dao: Dao = Depends(get_dao),
     skip: int = 0,
-    limit: int = -1,
+    limit: int = PAGINATION_LIMIT,
     q: Optional[str] = None,
 ):
     """

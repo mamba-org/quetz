@@ -14,6 +14,7 @@ from fastapi import status as http_status
 from pydantic import BaseModel, Field, validator
 
 from quetz import authorization
+from quetz.config import PAGINATION_LIMIT
 from quetz.dao import Dao
 from quetz.deps import get_dao, get_db, get_rules
 from quetz.jobs import models as job_db_models
@@ -84,7 +85,7 @@ def get_jobs(
     auth: authorization.Rules = Depends(get_rules),
     status: List[JobStatus] = Query([JobStatus.pending, JobStatus.running]),
     skip: int = 0,
-    limit: int = -1,
+    limit: int = PAGINATION_LIMIT,
 ):
     # if this is merged https://github.com/tiangolo/fastapi/issues/2077
     # we will be able to use non-exploded list, i.e., ?state=running,pending

@@ -32,6 +32,8 @@ _env_config_file = "CONFIG_FILE"
 _site_dir = appdirs.site_config_dir("quetz")
 _user_dir = appdirs.user_config_dir("quetz")
 
+PAGINATION_LIMIT = 20
+
 
 class ConfigEntry(NamedTuple):
     name: str
