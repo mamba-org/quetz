@@ -17,6 +17,7 @@ from sqlalchemy.orm import Query, Session, aliased, joinedload
 
 from quetz import channel_data, errors, rest_models, versionorder
 from quetz.database_extensions import version_match
+from quetz.jobs.models import JobStatus
 from quetz.utils import apply_custom_query
 
 from .db_models import (
@@ -766,9 +767,12 @@ class Dao:
 
         return user
 
-    def get_jobs(self):
-        jobs = self.db.query(Job).all()
-        return jobs
+    def get_jobs(self, states: Optional[List[JobStatus]] = None):
+        jobs = self.db.query(Job)
+        if states:
+            jobs = jobs.filter(Job.status.in_(states))
+
+        return jobs.all()
 
     def get_job(self, job_id: int):
         job = self.db.query(Job).filter(Job.id == job_id).one_or_none()
