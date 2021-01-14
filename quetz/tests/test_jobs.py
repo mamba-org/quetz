@@ -607,3 +607,61 @@ def test_post_new_job_from_plugin(auth_client, user, db, manifest, dummy_plugin)
     job_id = response.json()['id']
     job = db.query(Job).get(job_id)
     assert pickle.loads(job.manifest).__name__ == manifest.split(":")[1]
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+@pytest.mark.parametrize(
+    "status,job_ids",
+    [
+        (["pending"], [1]),
+        (["running"], [0]),
+        (["pending", "running"], [0, 1]),
+        ([], [0, 1]),
+        (["success"], []),
+    ],
+)
+def test_filter_jobs_by_status(auth_client, db, user, status, job_ids):
+    job0 = Job(
+        id=0,
+        items_spec="*",
+        manifest=pickle.dumps(dummy_func),
+        status=JobStatus.running,
+        owner=user,
+    )
+    db.add(job0)
+    job1 = Job(
+        id=1,
+        items_spec="*",
+        manifest=pickle.dumps(dummy_func),
+        status=JobStatus.pending,
+        owner=user,
+    )
+    db.add(job1)
+
+    db.commit()
+
+    query = "&".join(["status={}".format(s) for s in status])
+
+    response = auth_client.get(f"/api/jobs?{query}")
+
+    assert response.status_code == 200
+    assert {job['id'] for job in response.json()} == set(job_ids)
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+@pytest.mark.parametrize(
+    "query_str,ok",
+    [
+        ("status=pending&status=running", True),
+        ("status=missing", False),
+        ("status=success", True),
+        ("status=failed", True),
+        ("status=pending,running", False),
+    ],
+)
+def test_validate_query_string(auth_client, query_str, ok):
+    response = auth_client.get(f"/api/jobs?{query_str}")
+    if ok:
+        assert response.status_code == 200
+    else:
+        assert response.status_code == 422
