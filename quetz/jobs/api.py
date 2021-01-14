@@ -153,14 +153,21 @@ def update_job(
     db.commit()
 
 
-@api_router.get("/api/jobs/{job_id}/tasks", tags=["Jobs"], response_model=List[Task])
+@api_router.get(
+    "/api/jobs/{job_id}/tasks", tags=["Jobs"], response_model=PaginatedResponse[Task]
+)
 def get_tasks(
+    job_id: int,
     dao: Dao = Depends(get_dao),
-    job: job_db_models.Job = Depends(get_job_or_fail),
+    status: List[TaskStatus] = Query(
+        [TaskStatus.created, TaskStatus.pending, TaskStatus.running]
+    ),
     auth: authorization.Rules = Depends(get_rules),
+    skip: int = 0,
+    limit: int = PAGINATION_LIMIT,
 ):
     auth.assert_jobs()
-    return job.tasks
+    return dao.get_tasks(job_id, status, skip, limit)
 
 
 def get_router():
