@@ -645,7 +645,9 @@ def test_filter_jobs_by_status(auth_client, db, user, status, job_ids):
     response = auth_client.get(f"/api/jobs?{query}")
 
     assert response.status_code == 200
-    assert {job['id'] for job in response.json()} == set(job_ids)
+    response_data = response.json()
+    assert {job['id'] for job in response_data['result']} == set(job_ids)
+    assert response_data['pagination']['all_records_count'] == len(job_ids)
 
 
 @pytest.mark.parametrize("user_role", ["owner"])
@@ -657,6 +659,8 @@ def test_filter_jobs_by_status(auth_client, db, user, status, job_ids):
         ("status=success", True),
         ("status=failed", True),
         ("status=pending,running", False),
+        ("limit=wrongtype", False),
+        ("limit=10", True),
     ],
 )
 def test_validate_query_string(auth_client, query_str, ok):
@@ -665,3 +669,30 @@ def test_validate_query_string(auth_client, query_str, ok):
         assert response.status_code == 200
     else:
         assert response.status_code == 422
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+@pytest.mark.parametrize("skip,limit", [(0, 2), (1, -1), (2, 1), (2, 5)])
+def test_jobs_pagination(auth_client, db, user, skip, limit):
+    n_jobs = 5
+    for i in range(n_jobs):
+        job = Job(
+            id=i,
+            items_spec="*",
+            manifest=pickle.dumps(dummy_func),
+            status=JobStatus.running,
+            owner=user,
+        )
+        db.add(job)
+
+    response = auth_client.get(f"/api/jobs?skip={skip}&limit={limit}")
+    assert response.status_code == 200
+
+    jobs = response.json()["result"]
+
+    assert jobs[0]['id'] == skip
+    if limit > 0:
+        assert jobs[-1]['id'] == min(n_jobs - 1, skip + limit - 1)
+        assert len(jobs) == min(n_jobs - skip, limit)
+    else:
+        assert jobs[-1]['id'] == n_jobs - 1

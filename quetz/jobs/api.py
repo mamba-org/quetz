@@ -17,7 +17,7 @@ from quetz import authorization
 from quetz.dao import Dao
 from quetz.deps import get_dao, get_db, get_rules
 from quetz.jobs import models as job_db_models
-from quetz.rest_models import User
+from quetz.rest_models import PaginatedResponse, User
 
 from .models import JobStatus, TaskStatus
 from .runner import run_jobs
@@ -78,16 +78,18 @@ class Task(BaseModel):
         orm_mode = True
 
 
-@api_router.get("/api/jobs", tags=["Jobs"], response_model=List[Job])
+@api_router.get("/api/jobs", tags=["Jobs"], response_model=PaginatedResponse[Job])
 def get_jobs(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
     status: List[JobStatus] = Query([JobStatus.pending, JobStatus.running]),
+    skip: int = 0,
+    limit: int = -1,
 ):
     # if this is merged https://github.com/tiangolo/fastapi/issues/2077
     # we will be able to use non-exploded list, i.e., ?state=running,pending
     auth.assert_jobs()
-    return dao.get_jobs(states=status)
+    return dao.get_jobs(states=status, skip=skip, limit=limit)
 
 
 @api_router.post("/api/jobs", tags=["Jobs"], status_code=201, response_model=Job)
