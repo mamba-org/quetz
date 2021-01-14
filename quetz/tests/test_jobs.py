@@ -607,3 +607,92 @@ def test_post_new_job_from_plugin(auth_client, user, db, manifest, dummy_plugin)
     job_id = response.json()['id']
     job = db.query(Job).get(job_id)
     assert pickle.loads(job.manifest).__name__ == manifest.split(":")[1]
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+@pytest.mark.parametrize(
+    "status,job_ids",
+    [
+        (["pending"], [1]),
+        (["running"], [0]),
+        (["pending", "running"], [0, 1]),
+        ([], [0, 1]),
+        (["success"], []),
+    ],
+)
+def test_filter_jobs_by_status(auth_client, db, user, status, job_ids):
+    job0 = Job(
+        id=0,
+        items_spec="*",
+        manifest=pickle.dumps(dummy_func),
+        status=JobStatus.running,
+        owner=user,
+    )
+    db.add(job0)
+    job1 = Job(
+        id=1,
+        items_spec="*",
+        manifest=pickle.dumps(dummy_func),
+        status=JobStatus.pending,
+        owner=user,
+    )
+    db.add(job1)
+
+    db.commit()
+
+    query = "&".join(["status={}".format(s) for s in status])
+
+    response = auth_client.get(f"/api/jobs?{query}")
+
+    assert response.status_code == 200
+    response_data = response.json()
+    assert {job['id'] for job in response_data['result']} == set(job_ids)
+    assert response_data['pagination']['all_records_count'] == len(job_ids)
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+@pytest.mark.parametrize(
+    "query_str,ok",
+    [
+        ("status=pending&status=running", True),
+        ("status=missing", False),
+        ("status=success", True),
+        ("status=failed", True),
+        ("status=pending,running", False),
+        ("limit=wrongtype", False),
+        ("limit=10", True),
+    ],
+)
+def test_validate_query_string(auth_client, query_str, ok):
+    response = auth_client.get(f"/api/jobs?{query_str}")
+    if ok:
+        assert response.status_code == 200
+    else:
+        assert response.status_code == 422
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+@pytest.mark.parametrize("skip,limit", [(0, 2), (1, -1), (2, 1), (2, 5)])
+def test_jobs_pagination(auth_client, db, user, skip, limit):
+    n_jobs = 5
+    for i in range(n_jobs):
+        job = Job(
+            id=i,
+            items_spec="*",
+            manifest=pickle.dumps(dummy_func),
+            status=JobStatus.running,
+            owner=user,
+        )
+        db.add(job)
+
+    response = auth_client.get(f"/api/jobs?skip={skip}&limit={limit}")
+    assert response.status_code == 200
+
+    jobs = response.json()["result"]
+
+    assert jobs[0]['id'] == skip
+    if limit > 0:
+        assert jobs[-1]['id'] == min(n_jobs - 1, skip + limit - 1)
+        assert len(jobs) == min(n_jobs - skip, limit)
+    else:
+        assert jobs[-1]['id'] == n_jobs - 1

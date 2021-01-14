@@ -17,6 +17,7 @@ from sqlalchemy.orm import Query, Session, aliased, joinedload
 
 from quetz import channel_data, errors, rest_models, versionorder
 from quetz.database_extensions import version_match
+from quetz.jobs.models import JobStatus
 from quetz.utils import apply_custom_query
 
 from .db_models import (
@@ -43,13 +44,13 @@ logger = logging.getLogger("quetz")
 
 
 def get_paginated_result(query: Query, skip: int, limit: int):
+    count = query.order_by(None).count()
+    query = query.offset(skip)
+    if limit >= 0:
+        query = query.limit(limit)
     return {
-        'pagination': {
-            'skip': skip,
-            'limit': limit,
-            'all_records_count': query.order_by(None).count(),
-        },
-        'result': query.offset(skip).limit(limit).all(),
+        'pagination': {'skip': skip, 'limit': limit, 'all_records_count': count},
+        'result': query.all(),
     }
 
 
@@ -766,9 +767,15 @@ class Dao:
 
         return user
 
-    def get_jobs(self):
-        jobs = self.db.query(Job).all()
-        return jobs
+    def get_jobs(
+        self, states: Optional[List[JobStatus]] = None, skip: int = 0, limit: int = -1
+    ):
+        jobs = self.db.query(Job)
+
+        if states:
+            jobs = jobs.filter(Job.status.in_(states))
+
+        return get_paginated_result(jobs, skip, limit)
 
     def get_job(self, job_id: int):
         job = self.db.query(Job).filter(Job.id == job_id).one_or_none()

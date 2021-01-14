@@ -3,25 +3,29 @@
 
 from __future__ import annotations
 
+import logging
 import pickle
 import uuid
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi import status as http_status
 from pydantic import BaseModel, Field, validator
 
 from quetz import authorization
+from quetz.config import PAGINATION_LIMIT
 from quetz.dao import Dao
 from quetz.deps import get_dao, get_db, get_rules
 from quetz.jobs import models as job_db_models
-from quetz.rest_models import User
+from quetz.rest_models import PaginatedResponse, User
 
 from .models import JobStatus, TaskStatus
 from .runner import run_jobs
 
 api_router = APIRouter()
+
+logger = logging.getLogger("quetz")
 
 
 class JobBase(BaseModel):
@@ -49,7 +53,12 @@ class Job(JobBase):
 
     @validator("manifest", pre=True)
     def convert_name(cls, v):
-        return pickle.loads(v).__name__
+        try:
+            func = pickle.loads(v)
+            return f"{func.__module__}:{func.__name__}"
+        except ModuleNotFoundError as e:
+            logger.error(f"job function not found: could not import module {e.name}")
+            return e.name + ":undefined"
 
     class Config:
         orm_mode = True
@@ -70,13 +79,18 @@ class Task(BaseModel):
         orm_mode = True
 
 
-@api_router.get("/api/jobs", tags=["Jobs"], response_model=List[Job])
+@api_router.get("/api/jobs", tags=["Jobs"], response_model=PaginatedResponse[Job])
 def get_jobs(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
+    status: List[JobStatus] = Query([JobStatus.pending, JobStatus.running]),
+    skip: int = 0,
+    limit: int = PAGINATION_LIMIT,
 ):
+    # if this is merged https://github.com/tiangolo/fastapi/issues/2077
+    # we will be able to use non-exploded list, i.e., ?state=running,pending
     auth.assert_jobs()
-    return dao.get_jobs()
+    return dao.get_jobs(states=status, skip=skip, limit=limit)
 
 
 @api_router.post("/api/jobs", tags=["Jobs"], status_code=201, response_model=Job)
