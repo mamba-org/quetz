@@ -696,3 +696,36 @@ def test_jobs_pagination(auth_client, db, user, skip, limit):
         assert len(jobs) == min(n_jobs - skip, limit)
     else:
         assert jobs[-1]['id'] == n_jobs - 1
+
+
+@pytest.mark.parametrize(
+    "query_params,expected_task_count",
+    [
+        ("", 1),
+        ("status=created&status=pending", 1),
+        ("skip=0&limit=1", 1),
+        ("skip=1", 0),
+        ("limit=0", 0),
+        ("status=running", 0),
+    ],
+)
+@pytest.mark.parametrize("user_role", ["owner"])
+def test_get_tasks(
+    auth_client, db, user, package_version, query_params, expected_task_count
+):
+    job = Job(items_spec="*", owner=user, manifest=pickle.dumps(dummy_func))
+    db.add(job)
+    task = Task(job=job, package_version=package_version)
+    db.add(task)
+
+    db.commit()
+
+    response = auth_client.get(f"/api/jobs/{job.id}/tasks?{query_params}")
+    assert response.status_code == 200
+    data = response.json()
+
+    assert len(data['result']) == expected_task_count
+
+    if expected_task_count > 0:
+        assert data['result'][0]['id'] == task.id
+        assert data['result'][0]['job_id'] == job.id

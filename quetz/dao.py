@@ -17,7 +17,6 @@ from sqlalchemy.orm import Query, Session, aliased, joinedload
 
 from quetz import channel_data, errors, rest_models, versionorder
 from quetz.database_extensions import version_match
-from quetz.jobs.models import JobStatus
 from quetz.utils import apply_custom_query
 
 from .db_models import (
@@ -32,7 +31,7 @@ from .db_models import (
     Profile,
     User,
 )
-from .jobs.models import Job
+from .jobs.models import Job, JobStatus, Task, TaskStatus
 from .metrics.db_models import (
     IntervalType,
     PackageVersionMetric,
@@ -780,6 +779,20 @@ class Dao:
     def get_job(self, job_id: int):
         job = self.db.query(Job).filter(Job.id == job_id).one_or_none()
         return job
+
+    def get_tasks(
+        self,
+        job_id: int,
+        states: Optional[List[TaskStatus]] = None,
+        skip: int = 0,
+        limit: int = -1,
+    ):
+        tasks = self.db.query(Task).filter(Task.job_id == job_id)
+
+        if states:
+            tasks = tasks.filter(Task.status.in_(states))
+
+        return get_paginated_result(tasks, skip, limit)
 
     def create_job(self, user_id, function_name, items_spec):
 

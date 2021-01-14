@@ -18,7 +18,7 @@ from quetz.config import PAGINATION_LIMIT
 from quetz.dao import Dao
 from quetz.deps import get_dao, get_db, get_rules
 from quetz.jobs import models as job_db_models
-from quetz.rest_models import PaginatedResponse, User
+from quetz.rest_models import PaginatedResponse
 
 from .models import JobStatus, TaskStatus
 from .runner import run_jobs
@@ -45,7 +45,7 @@ class JobUpdateModel(BaseModel):
 
 class Job(JobBase):
     id: int = Field(None, title='Unique id for job')
-    owner: User = Field(None, title='User profile of the owner')
+    owner_id: uuid.UUID = Field(None, title='User id of the owner')
 
     created: datetime = Field(None, title='Created at')
 
@@ -125,14 +125,14 @@ def get_job_or_fail(
     return job
 
 
-@api_router.get("/api/jobs/{job_id}", tags=["Jobs"], response_model=List[Task])
-def get_tasks(
+@api_router.get("/api/jobs/{job_id}", tags=["Jobs"], response_model=Job)
+def get_job(
     dao: Dao = Depends(get_dao),
-    job: job_db_models.Job = Depends(get_job_or_fail),
     auth: authorization.Rules = Depends(get_rules),
+    job: job_db_models.Job = Depends(get_job_or_fail),
 ):
     auth.assert_jobs()
-    return job.tasks
+    return job
 
 
 @api_router.patch("/api/jobs/{job_id}", tags=["Jobs"])
@@ -151,6 +151,23 @@ def update_job(
         run_jobs(db, job_id=job.id, force=True)
 
     db.commit()
+
+
+@api_router.get(
+    "/api/jobs/{job_id}/tasks", tags=["Jobs"], response_model=PaginatedResponse[Task]
+)
+def get_tasks(
+    job_id: int,
+    dao: Dao = Depends(get_dao),
+    status: List[TaskStatus] = Query(
+        [TaskStatus.created, TaskStatus.pending, TaskStatus.running]
+    ),
+    auth: authorization.Rules = Depends(get_rules),
+    skip: int = 0,
+    limit: int = PAGINATION_LIMIT,
+):
+    auth.assert_jobs()
+    return dao.get_tasks(job_id, status, skip, limit)
 
 
 def get_router():
