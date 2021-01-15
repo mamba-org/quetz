@@ -16,4 +16,4 @@ level = "DEBUG"
 file = "quetz.log"
 
 [users]
-admins = ["alice"]
+admins = ["dummy:alice"]
