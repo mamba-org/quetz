@@ -7,7 +7,7 @@ from starlette.responses import Response as ASGIResponse
 from quetz import auth_github
 from quetz.authorization import SERVER_OWNER
 from quetz.dao import Dao
-from quetz.db_models import Channel, ChannelMember, User
+from quetz.db_models import Channel, ChannelMember, Identity, User
 
 
 class AsyncPathMapDispatch:
@@ -161,3 +161,19 @@ def test_config_user_exists(
     assert new_user.profile
     assert new_user.identities
     assert new_user.identities[0].provider == 'github'
+
+
+@pytest.mark.parametrize("login", ["existing_user"])
+def test_config_user_with_identity_exists(
+    client, db, oauth_server, channel, user, config, login, default_role
+):
+    # we should not be allowed to associate a social account a user that already
+    # has an identity
+    identity = Identity(provider='dummy', user=user, identity_id='some-identity')
+    db.add(identity)
+
+    response = client.get('/auth/github/authorize')
+    db.refresh(user)
+    assert len(user.identities) == 1
+    assert user.identities[0].provider == "dummy"
+    assert response.status_code != 200
