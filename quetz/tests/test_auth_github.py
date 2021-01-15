@@ -7,7 +7,7 @@ from starlette.responses import Response as ASGIResponse
 from quetz import auth_github
 from quetz.authorization import SERVER_OWNER
 from quetz.dao import Dao
-from quetz.db_models import Channel, ChannelMember, Identity, User
+from quetz.db_models import Channel, ChannelMember, Identity, Profile, User
 
 
 class AsyncPathMapDispatch:
@@ -63,7 +63,7 @@ def oauth_server(config, login):
                 "body": {
                     "login": login,
                     "avatar_url": "",
-                    "id": 1,
+                    "id": login + "_id",
                     "name": "monalisa",
                 }
             },
@@ -139,9 +139,10 @@ def user(dao: Dao):
 def test_config_user_exists(
     client, db, oauth_server, channel, user, config, login, default_role
 ):
-
-    assert not user.profile
-    assert not user.identities
+    profile = Profile(user=user)
+    identity = Identity(provider='github', user=user, identity_id="existing_user_id")
+    db.add(identity)
+    db.add(profile)
 
     response = client.get('/auth/github/authorize')
 
@@ -163,17 +164,18 @@ def test_config_user_exists(
     assert new_user.identities[0].provider == 'github'
 
 
+@pytest.mark.parametrize("provider", ["dummy", "github", "google"])
 @pytest.mark.parametrize("login", ["existing_user"])
 def test_config_user_with_identity_exists(
-    client, db, oauth_server, channel, user, config, login, default_role
+    client, db, oauth_server, channel, user, config, login, default_role, provider
 ):
-    # we should not be allowed to associate a social account a user that already
-    # has an identity
-    identity = Identity(provider='dummy', user=user, identity_id='some-identity')
+    # we should not be allowed to associate a social account with a user that
+    # already has an identity from a different provider
+    identity = Identity(provider=provider, user=user, identity_id='some-identity')
     db.add(identity)
 
     response = client.get('/auth/github/authorize')
     db.refresh(user)
     assert len(user.identities) == 1
-    assert user.identities[0].provider == "dummy"
-    assert response.status_code != 200
+    assert user.identities[0].provider == provider
+    assert response.status_code == 422

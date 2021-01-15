@@ -742,32 +742,29 @@ class Dao:
           or raise an error
         """
 
-        user = User(id=uuid.uuid4().bytes, username=username, role=role)
+        user = self.db.query(User).filter(User.username == username).one_or_none()
 
         if user and not exist_ok:
             raise IntegrityError(f"User {username} exists", "", "")
 
-        self.db.add(user)
-        self.db.commit()
-
-        self.create_identity_and_profile(user, provider, identity_id, name, avatar_url)
-        return user
-
-    def create_identity_and_profile(
-        self, user, provider, identity_id, name, avatar_url
-    ):
+        if not user:
+            user = User(id=uuid.uuid4().bytes, username=username, role=role)
 
         identity = Identity(
             provider=provider,
             identity_id=identity_id,
-            username=user.username,
+            username=username,
         )
 
         profile = Profile(name=name, avatar_url=avatar_url)
 
         user.identities.append(identity)
         user.profile = profile
+        self.db.add(user)
         self.db.commit()
+        self.db.refresh(user)
+
+        return user
 
     def get_jobs(
         self, states: Optional[List[JobStatus]] = None, skip: int = 0, limit: int = -1
