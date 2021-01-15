@@ -1,6 +1,7 @@
 # Copyright 2020 QuantStack, Codethink Ltd
 # Distributed under the terms of the Modified BSD License.
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import rest_models
@@ -8,6 +9,7 @@ from .authorization import OWNER
 from .config import Config
 from .dao import Dao
 from .db_models import Channel, Identity, User
+from .errors import ValidationError
 
 
 def create_user_with_google_identity(
@@ -22,7 +24,7 @@ def create_user_with_google_identity(
         name=google_profile["name"],
         avatar_url=google_profile['picture'],
         role=default_role,
-        exist_ok=True,
+        exist_ok=False,
     )
 
     if create_default_channel:
@@ -95,6 +97,11 @@ def get_user_by_google_identity(dao: Dao, profile: dict, config: Config) -> User
             return update_user_from_google_profile(db, user, identity, profile)
         return user
 
-    return create_user_with_google_identity(
-        dao, profile, default_role, create_default_channel
-    )
+    try:
+        user = create_user_with_google_identity(
+            dao, profile, default_role, create_default_channel
+        )
+    except IntegrityError:
+        raise ValidationError(f"user name {profile['email']} already exists")
+
+    return user

@@ -176,7 +176,7 @@ def _init_db(db: Session, config: Config):
                     # use github as default provider
                     raise ValueError(
                         "could not parse the users setting, please provide users in"
-                        "the format 'PROVIDER:USERNAME' where provider is one of"
+                        "the format 'PROVIDER:USERNAME' where PROVIDER is one of"
                         "'google', 'github', 'dummy', etc."
                     )
                 logger.info(f"create user {username} with role {role}")
