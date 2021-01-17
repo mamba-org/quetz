@@ -161,9 +161,7 @@ def _make_migrations(
 def _init_db(db: Session, config: Config):
     """Initialize the database and add users from config."""
     if config.configured_section("users"):
-        from quetz.dao import Dao
 
-        dao = Dao(db)
         role_map = [
             (config.users_admins, "owner"),
             (config.users_maintainers, "maintainer"),
@@ -172,8 +170,32 @@ def _init_db(db: Session, config: Config):
 
         for users, role in role_map:
             for username in users:
+                try:
+                    provider, username = username.split(":")
+                except ValueError:
+                    # use github as default provider
+                    raise ValueError(
+                        "could not parse the users setting, please provide users in"
+                        "the format 'PROVIDER:USERNAME' where PROVIDER is one of"
+                        "'google', 'github', 'dummy', etc."
+                    )
                 logger.info(f"create user {username} with role {role}")
-                dao.create_user_with_role(username, role)
+                user = (
+                    db.query(User)
+                    .join(Identity)
+                    .filter(Identity.provider == provider)
+                    .filter(User.username == username)
+                    .one_or_none()
+                )
+                if not user:
+                    logger.warning(
+                        f"could not find user '{username}' "
+                        f"with identity from provider '{provider}'"
+                    )
+                else:
+                    user.role = role
+
+        db.commit()
 
 
 def _fill_test_database(db: Session) -> NoReturn:
@@ -407,9 +429,9 @@ def create(
     with working_directory(path):
         db = get_session(config.sqlalchemy_database_url)
         _run_migrations(config.sqlalchemy_database_url)
-        _init_db(db, config)
         if dev:
             _fill_test_database(db)
+        _init_db(db, config)
 
 
 def _get_config(path: Union[Path, str]) -> Config:

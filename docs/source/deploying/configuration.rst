@@ -42,22 +42,25 @@ Configure default user permissions, creating default channel and super-admin per
 
    [users]
    # users with owner role
-   admins = ["admin_user"]
+   admins = ["github:admin_user"]
    # users with maintainer role
-   maintainers = ["other_user"]
+   maintainers = ["google:other_user"]
    # users with memeber role
-   members = ["some", "random", "name"]
+   members = ["github:some", "github:random", "github:name"]
    # default role assigned to new users
    # leave out if role should be null
    default_role = "member"
    # create a default channel for new users named {username}
    create_default_channel = false
 
-You can use one of the following options to configure privilaged users:
+You can use one of the following options to configure privileged users:
 
 :admins: list of users with super-admin permissions (``owner`` role), default: empty list
 :maintainers: list of users with maintainer permission (``maintainer`` role), default: empty list
 :members: list of standard members (``member`` role), default: empty list
+
+The format of the entries is ``PROVIDER:USERNAME`` where ``PROVIDER`` is the name of one of
+the supported providers (such as ``google`` or ``github``).
 
 For all other users, you can define the default role with the following option:
 

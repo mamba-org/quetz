@@ -14,7 +14,7 @@ from typer.testing import CliRunner
 
 from quetz import cli
 from quetz.config import Config
-from quetz.db_models import Base, User
+from quetz.db_models import Base, Identity, User
 
 runner = CliRunner()
 
@@ -30,8 +30,16 @@ def config_extra(user_group):
         return ""
     else:
         return f"""[users]
-                {user_group} = ["bartosz"]
+                {user_group} = ["github:bartosz"]
                 """
+
+
+@pytest.fixture
+def user_with_identity(user, db):
+    identity = Identity(user=user, provider="github", identity_id="1")
+    db.add(identity)
+    db.commit()
+    return identity
 
 
 def get_user(db, config_dir, username="bartosz"):
@@ -48,14 +56,15 @@ def get_user(db, config_dir, username="bartosz"):
     "user_group,expected_role",
     [("admins", "owner"), ("maintainers", "maintainer"), ("members", "member")],
 )
-def test_init_db(db, config, config_dir, user_group, expected_role, mocker):
+def test_init_db(
+    db, config, config_dir, user_group, expected_role, mocker, user_with_identity
+):
     _run_migrations: MagicMock = mocker.patch("quetz.cli._run_migrations")
     user = get_user(db, config_dir)
     assert user
 
     assert user.role == expected_role
     assert user.username == "bartosz"
-    assert not user.profile
     _run_migrations.assert_called_once()
 
 
@@ -69,7 +78,7 @@ def test_init_db_no_user(db, config, config_dir, user_group, mocker: MockerFixtu
     _run_migrations.assert_called_once()
 
 
-def test_init_db_user_exists(db, config, config_dir, user, mocker):
+def test_init_db_user_exists(db, config, config_dir, user, mocker, user_with_identity):
     _run_migrations: MagicMock = mocker.patch("quetz.cli._run_migrations")
     user = get_user(db, config_dir)
     assert user
@@ -79,7 +88,7 @@ def test_init_db_user_exists(db, config, config_dir, user, mocker):
     _run_migrations.assert_called_once()
 
 
-@pytest.mark.parametrize("config_extra", ['[users]\nadmins = ["alice"]\n'])
+@pytest.mark.parametrize("config_extra", ['[users]\nadmins = ["dummy:alice"]\n'])
 def test_init_db_create_test_users(db, config, mocker, config_dir):
 
     _run_migrations: MagicMock = mocker.patch("quetz.cli._run_migrations")

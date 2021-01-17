@@ -1,6 +1,7 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import rest_models
@@ -8,6 +9,7 @@ from .authorization import OWNER
 from .config import Config
 from .dao import Dao
 from .db_models import Channel, Identity, User
+from .errors import ValidationError
 
 
 def create_user_with_github_identity(
@@ -22,7 +24,7 @@ def create_user_with_github_identity(
         name=github_profile["name"],
         avatar_url=github_profile["avatar_url"],
         role=default_role,
-        exist_ok=True,
+        exist_ok=False,
     )
 
     if create_default_channel:
@@ -60,6 +62,7 @@ def user_github_profile_changed(user, identity, profile):
 
 
 def update_user_from_github_profile(db: Session, user, identity, profile) -> User:
+
     identity.username = profile['login']
     user.profile.name = profile['name']
     user.profile.avatar_url = profile['avatar_url']
@@ -76,7 +79,7 @@ def get_user_by_github_identity(dao: Dao, profile: dict, config: Config) -> User
     try:
         user, identity = db.query(User, Identity).join(Identity).filter(
             Identity.provider == 'github'
-        ).filter(Identity.identity_id == str(profile['id'])).one_or_none() or (
+        ).filter(Identity.identity_id == str(profile['id']),).one_or_none() or (
             None,
             None,
         )
@@ -95,6 +98,11 @@ def get_user_by_github_identity(dao: Dao, profile: dict, config: Config) -> User
             return update_user_from_github_profile(db, user, identity, profile)
         return user
 
-    return create_user_with_github_identity(
-        dao, profile, default_role, create_default_channel
-    )
+    try:
+        user = create_user_with_github_identity(
+            dao, profile, default_role, create_default_channel
+        )
+    except IntegrityError:
+        raise ValidationError(f"user name '{profile['login']}' already exists")
+
+    return user
