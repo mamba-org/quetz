@@ -17,7 +17,7 @@ router = APIRouter(prefix='/auth/google')
 oauth = OAuth()
 
 
-def register(config):
+def register(config, client_kwargs={}):
     # Register the app here: https://console.developers.google.com/apis/credentials
     oauth.register(
         name="google",
@@ -26,7 +26,7 @@ def register(config):
         server_metadata_url=(
             'https://accounts.google.com/.well-known/openid-configuration'
         ),
-        client_kwargs={'scope': 'openid email profile'},
+        client_kwargs={'scope': 'openid email profile', **client_kwargs},
         prompt='select_account',
     )
 
