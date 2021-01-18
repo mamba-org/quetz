@@ -1029,13 +1029,18 @@ def get_api_keys(
     """Get API keys for current user"""
 
     user_id = auth.assert_user()
-    api_key_list = dao.get_api_keys_with_members(user_id)
-
-    from itertools import groupby
+    user_role_keys, custom_role_keys = dao.get_api_keys_with_members(user_id)
 
     api_keys = []
 
-    grouped_by_key = groupby(api_key_list, key=lambda k: k[0])
+    for key in user_role_keys:
+        api_keys.append(
+            rest_models.ApiKey(key=key.key, description=key.description, roles=None)
+        )
+
+    from itertools import groupby
+
+    grouped_by_key = groupby(custom_role_keys, key=lambda k: k[0])
 
     for group_key, group_items in grouped_by_key:
         roles = []
