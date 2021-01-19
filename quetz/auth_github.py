@@ -19,7 +19,9 @@ class GithubAuthenticator:
     oauth = OAuth()
     provider = "github"
 
-    def __init__(self, config: Config, client_kwargs=None):
+    def __init__(self, config: Config, client_kwargs=None, provider=None):
+        if provider is not None:
+            self.provider = str(provider)
         self.register(config, client_kwargs=client_kwargs)
 
         self.router = APIRouter(prefix=f"/auth/{self.provider}")

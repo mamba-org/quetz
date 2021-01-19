@@ -2,18 +2,10 @@
 # Distributed under the terms of the Modified BSD License.
 
 import json
-import uuid
 
-from authlib.integrations.starlette_client import OAuth
-from fastapi import APIRouter, Depends, Request
 from starlette.responses import RedirectResponse
 
-from quetz.deps import get_config, get_dao
-
 from .auth_github import GithubAuthenticator
-from .config import Config
-from .dao import Dao
-from .dao_google import get_user_by_google_identity
 
 
 class GoogleAuthenticator(GithubAuthenticator):
