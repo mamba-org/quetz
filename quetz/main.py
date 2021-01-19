@@ -141,9 +141,11 @@ plugin_routers = pm.hook.register_router()
 pkgstore = config.get_package_store()
 pkgstore_support_url = hasattr(pkgstore, 'url')
 
+
 if config.configured_section("github"):
-    auth_github.register(config)
-    app.include_router(auth_github.router)
+    _auth_github = auth_github.GithubAuthenticator("github", config)
+    _auth_github.register(config)
+    app.include_router(_auth_github.router)
 
 for router in plugin_routers:
     app.include_router(router)
@@ -163,7 +165,7 @@ async def check_token_revocation(session):
     valid = True
     identity_provider = session.get("identity_provider")
     if identity_provider == "github":
-        valid = await auth_github.validate_token(session.get("token"))
+        valid = await _auth_github.validate_token(session.get("token"))
     elif identity_provider == "google":
         valid = await auth_google.validate_token(session.get("token"))
     if not valid:

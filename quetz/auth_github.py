@@ -14,71 +14,75 @@ from .config import Config
 from .dao import Dao
 from .dao_github import get_user_by_github_identity
 
-router = APIRouter(prefix='/auth/github')
-oauth = OAuth()
 
+class GithubAuthenticator:
+    oauth = OAuth()
 
-def register(config, client_kwargs=None):
-    # Register the app here: https://github.com/settings/applications/new
+    def __init__(self, provider: str, config: Config, client_kwargs=None):
+        self.register(config, client_kwargs=client_kwargs)
+        self.router = APIRouter(prefix=f"/auth/{provider}")
+        self.router.add_api_route("/login", self.login, methods=["GET"])
+        self.router.add_api_route("/enabled", self.enabled, methods=["GET"])
+        self.router.add_api_route(
+            "/authorize", self.authorize, methods=["GET"], name="authorize_github"
+        )
+        self.router.add_api_route("/revoke", self.revoke, methods=["GET"])
 
-    if client_kwargs is None:
-        client_kwargs = {}
+    async def login(self, request: Request):
+        github = self.oauth.create_client('github')
+        redirect_uri = request.url_for('authorize_github')
+        return await github.authorize_redirect(request, redirect_uri)
 
-    oauth.register(
-        name="github",
-        client_id=config.github_client_id,
-        client_secret=config.github_client_secret,
-        access_token_url='https://github.com/login/oauth/access_token',
-        access_token_params=None,
-        authorize_url='https://github.com/login/oauth/authorize',
-        authorize_params=None,
-        api_base_url='https://api.github.com/',
-        client_kwargs={'scope': 'user:email', **client_kwargs},
-    )
+    def register(self, config, client_kwargs=None):
+        # Register the app here: https://github.com/settings/applications/new
 
+        if client_kwargs is None:
+            client_kwargs = {}
 
-async def validate_token(token):
-    # identity = get_identity(db, identity_id)
-    resp = await oauth.github.get('user', token=json.loads(token))
-    return resp.status_code != 401
+        self.oauth.register(
+            name="github",
+            client_id=config.github_client_id,
+            client_secret=config.github_client_secret,
+            access_token_url='https://github.com/login/oauth/access_token',
+            access_token_params=None,
+            authorize_url='https://github.com/login/oauth/authorize',
+            authorize_params=None,
+            api_base_url='https://api.github.com/',
+            client_kwargs={'scope': 'user:email', **client_kwargs},
+        )
 
+    async def validate_token(self, token):
+        # identity = get_identity(db, identity_id)
+        resp = await self.oauth.github.get('user', token=json.loads(token))
+        return resp.status_code != 401
 
-@router.get('/login')
-async def login(request: Request):
-    github = oauth.create_client('github')
-    redirect_uri = request.url_for('authorize_github')
-    return await github.authorize_redirect(request, redirect_uri)
+    async def enabled(self):
+        """Entrypoint used by frontend to show the login button."""
+        return True
 
+    async def authorize(
+        self,
+        request: Request,
+        dao: Dao = Depends(get_dao),
+        config: Config = Depends(get_config),
+    ):
+        token = await self.oauth.github.authorize_access_token(request)
+        resp = await self.oauth.github.get('user', token=token)
+        profile = resp.json()
+        user = get_user_by_github_identity(dao, profile, config)
 
-@router.get('/enabled')
-async def enabled():
-    """Entrypoint used by frontend to show the login button."""
-    return True
+        request.session['user_id'] = str(uuid.UUID(bytes=user.id))
 
+        request.session['identity_provider'] = 'github'
 
-@router.get('/authorize', name='authorize_github')
-async def authorize(
-    request: Request, dao: Dao = Depends(get_dao), config: Config = Depends(get_config)
-):
-    token = await oauth.github.authorize_access_token(request)
-    resp = await oauth.github.get('user', token=token)
-    profile = resp.json()
-    user = get_user_by_github_identity(dao, profile, config)
+        request.session['token'] = json.dumps(token)
 
-    request.session['user_id'] = str(uuid.UUID(bytes=user.id))
+        resp = RedirectResponse('/')
 
-    request.session['identity_provider'] = 'github'
+        return resp
 
-    request.session['token'] = json.dumps(token)
-
-    resp = RedirectResponse('/')
-
-    return resp
-
-
-@router.route('/revoke')
-async def revoke(request):
-    client_id = oauth.github.client_id
-    return RedirectResponse(
-        f'https://github.com/settings/connections/applications/{client_id}'
-    )
+    async def revoke(self, request):
+        client_id = self.oauth.github.client_id
+        return RedirectResponse(
+            f'https://github.com/settings/connections/applications/{client_id}'
+        )
