@@ -19,7 +19,7 @@ def create_user_with_github_identity(
     username = github_profile["login"]
     user = dao.create_user_with_profile(
         username=username,
-        provider="github",
+        provider=github_profile['provider'],
         identity_id=github_profile["id"],
         name=github_profile["name"],
         avatar_url=github_profile["avatar_url"],
@@ -75,10 +75,11 @@ def update_user_from_github_profile(db: Session, user, identity, profile) -> Use
 def get_user_by_github_identity(dao: Dao, profile: dict, config: Config) -> User:
 
     db = dao.db
+    provider = profile.get("provider", "github")
 
     try:
         user, identity = db.query(User, Identity).join(Identity).filter(
-            Identity.provider == 'github'
+            Identity.provider == provider
         ).filter(Identity.identity_id == str(profile['id']),).one_or_none() or (
             None,
             None,
