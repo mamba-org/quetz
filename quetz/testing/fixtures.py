@@ -133,12 +133,19 @@ def db(session_maker):
 
 
 @fixture
-def config_base(database_url, plugins):
-    return f"""
+def config_auth():
+    return """
 [github]
 # Register the app here: https://github.com/settings/applications/new
 client_id = "aaa"
 client_secret = "bbb"
+"""
+
+
+@fixture
+def config_base(database_url, plugins, config_auth):
+    return f"""
+{config_auth}
 
 [sqlalchemy]
 database_url = "{database_url}"
