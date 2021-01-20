@@ -149,6 +149,10 @@ if config.configured_section("google"):
     _auth_google = auth_google.GoogleAuthenticator(config)
     app.include_router(_auth_google.router)
 
+# from quetz.authentication import base as auth_base
+# _auth_simple = auth_base.SimpleAuthenticator(config)
+# app.include_router(_auth_simple.router)
+
 
 # helper functions
 

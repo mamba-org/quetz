@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Request
+import uuid
+
+from fastapi import APIRouter, Depends, Request, Response
 from starlette.responses import RedirectResponse
 
 from quetz.config import Config
@@ -6,8 +8,11 @@ from quetz.dao import Dao
 from quetz.deps import get_config, get_dao
 
 
-class AuthenticationHandlers:
+class BaseAuthenticationHandlers:
     """Handlers for authenticator endpoints"""
+
+    # list of methods that /authorize endpoint can be requested with
+    authorize_methods = []
 
     def __init__(self, authenticator, app=None):
 
@@ -19,16 +24,16 @@ class AuthenticationHandlers:
         )
         self.router.add_api_route("/login", self.login, methods=["GET"])
         self.router.add_api_route("/enabled", self.enabled, methods=["GET"])
+
         self.router.add_api_route(
             "/authorize",
             self.authorize,
-            methods=["GET"],
+            methods=self.authorize_methods,
             name=f"authorize_{authenticator.provider}",
         )
-        self.router.add_api_route("/revoke", self.revoke, methods=["GET"])
 
     async def login(self, request: Request):
-        return "<html><body><h1>Login Page</h1></body></html>"
+        raise NotImplementedError("method login must be implemented in subclasses")
 
     async def enabled(self):
         """Entrypoint used by frontend to show the login button."""
@@ -49,7 +54,8 @@ class AuthenticationHandlers:
 
         request.session['token'] = user_dict['auth_state']['token']
 
-        resp = RedirectResponse('/')
+        # use 303 code so that the method is always changed to GET
+        resp = RedirectResponse('/', status_code=303)
 
         return resp
 
@@ -58,7 +64,7 @@ class BaseAuthenticator:
     """Base class for authenticators using Oauth2 protocol and its variants"""
 
     provider = "base"
-    handler_cls = AuthenticationHandlers
+    handler_cls = BaseAuthenticationHandlers
 
     is_enabled = False
 
@@ -77,4 +83,42 @@ class BaseAuthenticator:
         raise NotImplementedError("subclasses need to implement configure")
 
     async def validate_token(self, token):
-        return True
+        return False
+
+    async def authenticate(self, request, dao, config):
+        raise NotImplementedError("subclasses need to implement authenticate")
+
+
+class FormHandlers(BaseAuthenticationHandlers):
+
+    authorize_methods = ["POST"]
+
+    async def login(self, request: Request):
+        redirect_uri = request.url_for(f'authorize_{self.authenticator.provider}')
+        data = f"""
+<html><body><h1>Login Page</h1>
+<form method="post" action="{redirect_uri}">
+  <label>username:
+    <input name="username" autocomplete="name">
+  </label>
+  <button>Submit</button>
+</form>
+</body></html>"""
+        return Response(content=data, media_type="text/html")
+
+
+class SimpleAuthenticator(BaseAuthenticator):
+    provider = "simple"
+    handler_cls = FormHandlers
+
+    def configure(self, config):
+        self.is_enabled = True
+
+    async def authenticate(self, request: Request, dao, config):
+        data = await request.form()
+        user = dao.get_user_by_username(data['username'])
+
+        return {
+            "user_id": str(uuid.UUID(bytes=user.id)),
+            "auth_state": {"provider": self.provider, "token": "Token"},
+        }

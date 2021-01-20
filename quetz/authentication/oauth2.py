@@ -12,11 +12,13 @@ from starlette.responses import RedirectResponse
 from quetz.config import Config
 
 from .auth_dao import get_user_by_github_identity
-from .base import AuthenticationHandlers, BaseAuthenticator
+from .base import BaseAuthenticationHandlers, BaseAuthenticator
 
 
-class OAuthHandlers(AuthenticationHandlers):
+class OAuthHandlers(BaseAuthenticationHandlers):
     """Handlers for authenticator endpoints"""
+
+    authorize_methods = ["GET"]
 
     def __init__(self, authenticator, app=None):
 
