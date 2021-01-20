@@ -1048,7 +1048,7 @@ channeldata_json = """
       "activate.d": false,
       "binary_prefix": false,
       "deactivate.d": false,
-      "description": null,
+      "description": "descriptive description",
       "dev_url": null,
       "doc_source_url": null,
       "doc_url": null,
@@ -1065,7 +1065,7 @@ channeldata_json = """
       "source_git_url": null,
       "source_url": null,
       "subdirs": [
-        "linux-64"
+        "linux-64", "osx"
       ],
       "summary": "dummy package",
       "tags": {},
@@ -1119,6 +1119,55 @@ def test_create_packages_from_channeldata(dao, user, local_channel, db):
 
     assert package
     assert package.summary == "dummy package"
+
+
+@pytest.fixture
+def local_package(db, local_channel):
+    pkg = Package(name="other-package", channel=local_channel)
+    db.add(pkg)
+    db.commit()
+    # do not keep the instance because sqlalchemy won't allow creating duplicate
+    return
+
+
+@pytest.fixture
+def dummy_user(db):
+
+    new_user = User(id=uuid.uuid4().bytes, username="dummyuser", role="owner")
+    db.add(new_user)
+    db.commit()
+
+    yield new_user
+
+    db.delete(new_user)
+    db.commit()
+
+
+@pytest.mark.parametrize("auto_rollback", [False])
+def test_create_packages_from_channeldata_update_existing(
+    dao, dummy_user, local_channel, db, local_package
+):
+    # update exisiting package
+
+    channeldata = json.loads(channeldata_json)
+
+    create_packages_from_channeldata(
+        local_channel.name, dummy_user.id, channeldata, dao
+    )
+
+    package = db.query(Package).filter(Package.name == "other-package").one()
+
+    assert package
+
+    assert package.description == "descriptive description"
+    assert package.summary == "dummy package"
+    assert package.url == "https://palletsprojects.com/p/click/"
+    assert package.platforms == "linux-64:osx"
+    assert json.loads(package.channeldata)["summary"] == "dummy package"
+
+    # need to clean up manually due to auto_rollback=False option
+    db.delete(package)
+    db.commit()
 
 
 def test_create_versions_from_repodata(dao, user, local_channel, db):

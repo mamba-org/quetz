@@ -18,6 +18,7 @@ from quetz.condainfo import CondaInfo, get_subdir_compat
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.db_models import Channel, PackageVersion
+from quetz.errors import DBError
 from quetz.pkgstores import PackageStore
 from quetz.tasks import indexing
 from quetz.utils import TicToc, check_package_membership
@@ -501,15 +502,25 @@ def create_packages_from_channeldata(
     packages = channeldata.get("packages", {})
 
     for package_name, metadata in packages.items():
+        description = metadata.get("description", "")
+        summary = metadata.get("summary", "")
         package_data = rest_models.Package(
             name=package_name,
-            summary=metadata.get("summary", ""),
-            description=metadata.get("description", ""),
+            summary=summary,
+            description=description,
         )
 
-        package = dao.create_package(
-            channel_name, package_data, user_id, role=authorization.OWNER
-        )
+        try:
+            package = dao.create_package(
+                channel_name, package_data, user_id, role=authorization.OWNER
+            )
+        except DBError:
+            # package already exists so skip it so we retrieve and update it
+            package = dao.get_package(channel_name, package_name)
+            package.description = description
+            package.summary = summary
+        package.url = metadata.get("home", "")
+        package.platforms = ":".join(metadata.get("subdirs", []))
         package.channeldata = json.dumps(metadata)
         dao.db.commit()
 
