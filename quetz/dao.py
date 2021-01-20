@@ -412,8 +412,6 @@ class Dao:
         user_role_api_keys = (
             self.db.query(ApiKey)
             .filter(ApiKey.owner_id == user_id)
-            .outerjoin(Profile, ApiKey.user_id == Profile.user_id)
-            .filter(Profile.name.isnot(None))
             .filter(ApiKey.user_id == user_id)
             .filter(~ApiKey.deleted)
             .all()
