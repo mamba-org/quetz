@@ -5,7 +5,8 @@ from authlib.jose import JsonWebKey, jwt
 from authlib.oidc.core.util import create_half_hash
 from fastapi.testclient import TestClient
 
-from quetz import auth_github, auth_google
+from quetz.authentication import github as auth_github
+from quetz.authentication import google as auth_google
 from quetz.authorization import SERVER_OWNER
 from quetz.dao import Dao
 from quetz.db_models import Channel, ChannelMember, Identity, Profile, User

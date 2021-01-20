@@ -1,4 +1,4 @@
-from quetz import dao_github
+from quetz.authentication import auth_dao
 
 
 def test_get_user_by_github_identity_new_user(dao, config):
@@ -11,7 +11,7 @@ def test_get_user_by_github_identity_new_user(dao, config):
         "provider": "github",
     }
 
-    user = dao_github.get_user_by_github_identity(dao, profile, config)
+    user = auth_dao.get_user_by_github_identity(dao, profile, config)
 
     assert user.username == 'bartosz'
     assert user.identities[0].provider == 'github'

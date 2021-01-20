@@ -9,11 +9,11 @@ from authlib.integrations.starlette_client import OAuth
 from fastapi import APIRouter, Depends, Request
 from starlette.responses import RedirectResponse
 
+from quetz.config import Config
+from quetz.dao import Dao
 from quetz.deps import get_config, get_dao
 
-from .config import Config
-from .dao import Dao
-from .dao_github import get_user_by_github_identity
+from .auth_dao import get_user_by_github_identity
 
 
 class OAuthHandlers:
@@ -90,7 +90,7 @@ class OAuthAuthenticator:
     server_metadata_url: Optional[str] = None
     prompt: Optional[str] = None
 
-    # provider api endpoint urls
+    # provider's api endpoint urls
     validate_token_url: Optional[str] = None
     revoke_url: Optional[str] = None
 
@@ -146,31 +146,3 @@ class OAuthAuthenticator:
     async def validate_token(self, token):
         resp = await self.client.get(self.validate_token_url, token=json.loads(token))
         return resp.status_code != 401
-
-
-class GithubAuthenticator(OAuthAuthenticator):
-    # Register the app here: https://github.com/settings/applications/new
-
-    oauth = OAuth()
-    provider = "github"
-
-    # oauth client params
-    access_token_url = 'https://github.com/login/oauth/access_token'
-    authorize_url = 'https://github.com/login/oauth/authorize'
-    api_base_url = 'https://api.github.com/'
-    scope = 'user:email'
-
-    # endpoint urls
-    validate_token_url = "user"
-    revoke_url = 'https://github.com/settings/connections/applications/{client_id}'
-
-    async def userinfo(self, request, token):
-        resp = await self.client.get('user', token=token)
-        profile = resp.json()
-
-        return profile
-
-    def configure(self, config):
-        self.client_id = config.github_client_id
-        self.client_secret = config.github_client_secret
-        self.is_enabled = True

@@ -1,7 +1,7 @@
 # Copyright 2020 QuantStack, Codethink Ltd
 # Distributed under the terms of the Modified BSD License.
 
-from .auth_github import OAuthAuthenticator
+from .oauth2 import OAuthAuthenticator
 
 
 class GoogleAuthenticator(OAuthAuthenticator):

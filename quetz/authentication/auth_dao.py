@@ -1,28 +1,28 @@
-# Copyright 2020 QuantStack, Codethink Ltd
+# Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from . import rest_models
-from .authorization import OWNER
-from .config import Config
-from .dao import Dao
-from .db_models import Channel, Identity, User
-from .errors import ValidationError
+from quetz import rest_models
+from quetz.authorization import OWNER
+from quetz.config import Config
+from quetz.dao import Dao
+from quetz.db_models import Channel, Identity, User
+from quetz.errors import ValidationError
 
 
-def create_user_with_google_identity(
-    dao: Dao, google_profile: dict, default_role: str, create_default_channel: bool
+def create_user_with_github_identity(
+    dao: Dao, github_profile: dict, default_role: str, create_default_channel: bool
 ) -> User:
 
-    username = google_profile['email']
+    username = github_profile["login"]
     user = dao.create_user_with_profile(
         username=username,
-        provider="google",
-        identity_id=google_profile["sub"],
-        name=google_profile["name"],
-        avatar_url=google_profile['picture'],
+        provider=github_profile['provider'],
+        identity_id=github_profile["id"],
+        name=github_profile["name"],
+        avatar_url=github_profile["avatar_url"],
         role=default_role,
         exist_ok=False,
     )
@@ -50,35 +50,37 @@ def create_user_with_google_identity(
     return user
 
 
-def user_google_profile_changed(user, identity, profile):
+def user_github_profile_changed(user, identity, profile):
     if (
-        identity.username != profile['email']
+        identity.username != profile['login']
         or user.profile.name != profile['name']
-        or user.profile.avatar_url != profile['picture']
+        or user.profile.avatar_url != profile['avatar_url']
     ):
         return True
 
     return False
 
 
-def update_user_from_google_profile(db: Session, user, identity, profile) -> User:
-    identity.username = profile['email']
+def update_user_from_github_profile(db: Session, user, identity, profile) -> User:
+
+    identity.username = profile['login']
     user.profile.name = profile['name']
-    user.profile.avatar_url = profile['picture']
+    user.profile.avatar_url = profile['avatar_url']
 
     db.commit()
     db.refresh(user)
     return user
 
 
-def get_user_by_google_identity(dao: Dao, profile: dict, config: Config) -> User:
+def get_user_by_github_identity(dao: Dao, profile: dict, config: Config) -> User:
 
     db = dao.db
+    provider = profile.get("provider", "github")
 
     try:
         user, identity = db.query(User, Identity).join(Identity).filter(
-            Identity.provider == 'google'
-        ).filter(Identity.identity_id == str(profile['sub'])).one_or_none() or (
+            Identity.provider == provider
+        ).filter(Identity.identity_id == str(profile['id']),).one_or_none() or (
             None,
             None,
         )
@@ -93,15 +95,15 @@ def get_user_by_google_identity(dao: Dao, profile: dict, config: Config) -> User
         create_default_channel = False
 
     if user:
-        if user_google_profile_changed(user, identity, profile):
-            return update_user_from_google_profile(db, user, identity, profile)
+        if user_github_profile_changed(user, identity, profile):
+            return update_user_from_github_profile(db, user, identity, profile)
         return user
 
     try:
-        user = create_user_with_google_identity(
+        user = create_user_with_github_identity(
             dao, profile, default_role, create_default_channel
         )
     except IntegrityError:
-        raise ValidationError(f"user name {profile['email']} already exists")
+        raise ValidationError(f"user name '{profile['login']}' already exists")
 
     return user

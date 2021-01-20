@@ -42,16 +42,9 @@ from tenacity import (
     wait_exponential,
 )
 
-from quetz import (
-    auth_github,
-    auth_google,
-    authorization,
-    db_models,
-    errors,
-    exceptions,
-    frontend,
-    rest_models,
-)
+from quetz import authorization, db_models, errors, exceptions, frontend, rest_models
+from quetz.authentication import github as auth_github
+from quetz.authentication import google as auth_google
 from quetz.config import PAGINATION_LIMIT, Config, configure_logger, get_plugin_manager
 from quetz.dao import Dao
 from quetz.deps import (
