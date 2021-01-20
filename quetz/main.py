@@ -42,16 +42,9 @@ from tenacity import (
     wait_exponential,
 )
 
-from quetz import (
-    auth_github,
-    auth_google,
-    authorization,
-    db_models,
-    errors,
-    exceptions,
-    frontend,
-    rest_models,
-)
+from quetz import authorization, db_models, errors, exceptions, frontend, rest_models
+from quetz.authentication import github as auth_github
+from quetz.authentication import google as auth_google
 from quetz.config import PAGINATION_LIMIT, Config, configure_logger, get_plugin_manager
 from quetz.dao import Dao
 from quetz.deps import (
@@ -141,9 +134,10 @@ plugin_routers = pm.hook.register_router()
 pkgstore = config.get_package_store()
 pkgstore_support_url = hasattr(pkgstore, 'url')
 
+
 if config.configured_section("github"):
-    auth_github.register(config)
-    app.include_router(auth_github.router)
+    _auth_github = auth_github.GithubAuthenticator(config)
+    app.include_router(_auth_github.router)
 
 for router in plugin_routers:
     app.include_router(router)
@@ -152,8 +146,8 @@ app.include_router(jobs_api.get_router())
 app.include_router(metrics_api.get_router())
 
 if config.configured_section("google"):
-    auth_google.register(config)
-    app.include_router(auth_google.router)
+    _auth_google = auth_google.GoogleAuthenticator(config)
+    app.include_router(_auth_google.router)
 
 
 # helper functions
@@ -163,9 +157,9 @@ async def check_token_revocation(session):
     valid = True
     identity_provider = session.get("identity_provider")
     if identity_provider == "github":
-        valid = await auth_github.validate_token(session.get("token"))
+        valid = await _auth_github.validate_token(session.get("token"))
     elif identity_provider == "google":
-        valid = await auth_google.validate_token(session.get("token"))
+        valid = await _auth_google.validate_token(session.get("token"))
     if not valid:
         logout(session)
         raise HTTPException(

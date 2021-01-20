@@ -4,12 +4,12 @@
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from . import rest_models
-from .authorization import OWNER
-from .config import Config
-from .dao import Dao
-from .db_models import Channel, Identity, User
-from .errors import ValidationError
+from quetz import rest_models
+from quetz.authorization import OWNER
+from quetz.config import Config
+from quetz.dao import Dao
+from quetz.db_models import Channel, Identity, User
+from quetz.errors import ValidationError
 
 
 def create_user_with_github_identity(
@@ -19,7 +19,7 @@ def create_user_with_github_identity(
     username = github_profile["login"]
     user = dao.create_user_with_profile(
         username=username,
-        provider="github",
+        provider=github_profile['provider'],
         identity_id=github_profile["id"],
         name=github_profile["name"],
         avatar_url=github_profile["avatar_url"],
@@ -75,10 +75,11 @@ def update_user_from_github_profile(db: Session, user, identity, profile) -> Use
 def get_user_by_github_identity(dao: Dao, profile: dict, config: Config) -> User:
 
     db = dao.db
+    provider = profile.get("provider", "github")
 
     try:
         user, identity = db.query(User, Identity).join(Identity).filter(
-            Identity.provider == 'github'
+            Identity.provider == provider
         ).filter(Identity.identity_id == str(profile['id']),).one_or_none() or (
             None,
             None,

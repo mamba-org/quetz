@@ -1,11 +1,12 @@
-import importlib
 import time
 
 import pytest
 from authlib.jose import JsonWebKey, jwt
 from authlib.oidc.core.util import create_half_hash
+from fastapi.testclient import TestClient
 
-from quetz import auth_github, auth_google
+from quetz.authentication import github as auth_github
+from quetz.authentication import google as auth_google
 from quetz.authorization import SERVER_OWNER
 from quetz.dao import Dao
 from quetz.db_models import Channel, ChannelMember, Identity, Profile, User
@@ -42,7 +43,7 @@ def github_response(config, login):
         },
     }
 
-    return "github", response
+    return "test_github", response
 
 
 @pytest.fixture
@@ -98,7 +99,7 @@ def google_response(config, login):
         },
     }
 
-    return "google", response
+    return "test_google", response
 
 
 @pytest.fixture
@@ -120,41 +121,50 @@ client_secret = "bbb"
         "google_response",
     ]
 )
-def oauth_server(request, config):
+def oauth_server(request, config, app):
     provider, response = request.getfixturevalue(request.param)
 
-    app = AsyncPathMapDispatch(response)
+    server_app = AsyncPathMapDispatch(response)
 
     # we need to remove the client, because it might have been already
     # registered in quetz.main
 
-    if provider == 'github':
-        auth_module = auth_github
-    elif provider == "google":
-        auth_module = auth_google
+    if provider == 'test_github':
+        auth_module = auth_github.GithubAuthenticator
+    elif provider == "test_google":
+        auth_module = auth_google.GoogleAuthenticator
 
-    # we need to reload here because we changed config and
-    # some providers might not have been registered
-    from quetz import main
+    module = auth_module(
+        config,
+        client_kwargs={'app': server_app},
+        provider=provider,
+        app=app,
+    )
 
-    importlib.reload(main)
-    _prev_registry_item = auth_module.oauth._registry.pop(provider, None)
-    _prev_clients_item = auth_module.oauth._clients.pop(provider, None)
+    yield module
 
-    auth_module.register(config, client_kwargs={'app': app})
+    module.oauth._registry.pop(provider)
+    module.oauth._clients.pop(provider)
 
-    yield provider
 
-    if _prev_registry_item:
-        auth_module.oauth._registry[provider] = _prev_registry_item
-    if _prev_clients_item:
-        auth_module.oauth._clients[provider] = _prev_clients_item
+@pytest.fixture
+def routed_client(app, oauth_server):
+
+    # need to prepend the routes so that frontend routes do not
+    # take priority
+    for route in oauth_server.router.routes:
+        app.router.routes.insert(0, route)
+
+    yield TestClient(app)
+
+    for route in oauth_server.router.routes:
+        app.router.routes.remove(route)
 
 
 @pytest.mark.parametrize("config_extra", ["[users]\ncreate_default_channel = true"])
-def test_config_create_default_channel(client, db, oauth_server, config):
+def test_config_create_default_channel(routed_client, db, oauth_server, config):
 
-    response = client.get(f'/auth/{oauth_server}/authorize')
+    response = routed_client.get(f'/auth/{oauth_server.provider}/authorize')
 
     assert response.status_code == 200
 
@@ -176,9 +186,9 @@ def channel(db):
 
 
 @pytest.mark.parametrize("config_extra", ["[users]\ncreate_default_channel = true"])
-def test_config_create_default_channel_exists(client, db, oauth_server, channel):
+def test_config_create_default_channel_exists(routed_client, db, oauth_server, channel):
 
-    response = client.get(f'/auth/{oauth_server}/authorize')
+    response = routed_client.get(f'/auth/{oauth_server.provider}/authorize')
 
     assert response.status_code == 200
 
@@ -200,23 +210,27 @@ def test_config_create_default_channel_exists(client, db, oauth_server, channel)
 
 
 @pytest.fixture
-def user(dao: Dao):
-    return dao.create_user_with_role("existing_user", role=SERVER_OWNER)
+def user(dao: Dao, db):
+    user = dao.create_user_with_role("existing_user", role=SERVER_OWNER)
+    yield user
+    db.delete(user)
+    db.commit()
 
 
 @pytest.mark.parametrize("default_role", ["member", "maintainer", "owner", None])
 @pytest.mark.parametrize("login", ["existing_user", "new_user"])
 def test_config_user_exists(
-    client, db, oauth_server, channel, user, config, login, default_role
+    routed_client, db, oauth_server, channel, user, login, default_role, app
 ):
     profile = Profile(user=user)
     identity = Identity(
-        provider=oauth_server, user=user, identity_id="existing_user_id"
+        provider=oauth_server.provider, user=user, identity_id="existing_user_id"
     )
     db.add(identity)
     db.add(profile)
+    db.commit()
 
-    response = client.get(f'/auth/{oauth_server}/authorize')
+    response = routed_client.get(f'/auth/{oauth_server.provider}/authorize')
 
     assert response.status_code == 200
 
@@ -233,21 +247,37 @@ def test_config_user_exists(
     assert login == "existing_user" or new_user.role == default_role
     assert new_user.profile
     assert new_user.identities
-    assert new_user.identities[0].provider == oauth_server
+    assert new_user.identities[0].provider == oauth_server.provider
 
 
-@pytest.mark.parametrize("provider", ["dummy", "github", "google"])
+@pytest.fixture
+def some_identity(user, db):
+    identity = Identity(
+        provider="some-provider", user=user, identity_id='some-identity'
+    )
+    db.add(identity)
+    db.commit()
+    yield identity
+    db.delete(identity)
+    db.commit()
+
+
+# db will automatically rollback, so need to disable running tests in nested transaction
+@pytest.mark.parametrize("auto_rollback", [False])
 @pytest.mark.parametrize("login", ["existing_user"])
 def test_config_user_with_identity_exists(
-    client, db, oauth_server, channel, user, config, login, default_role, provider
+    routed_client,
+    db,
+    oauth_server,
+    user,
+    login,
+    some_identity,
 ):
     # we should not be allowed to associate a social account with a user that
     # already has an identity from a different provider
-    identity = Identity(provider=provider, user=user, identity_id='some-identity')
-    db.add(identity)
 
-    response = client.get(f'/auth/{oauth_server}/authorize')
+    response = routed_client.get(f'/auth/{oauth_server.provider}/authorize')
     db.refresh(user)
     assert len(user.identities) == 1
-    assert user.identities[0].provider == provider
+    assert user.identities[0].provider == "some-provider"
     assert response.status_code == 422
