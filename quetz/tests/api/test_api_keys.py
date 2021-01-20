@@ -81,20 +81,8 @@ def test_list_keys_with_channel_roles(
     returned_keys = {key["description"]: key["roles"] for key in response.json()}
     assert len(returned_keys) == 2
 
-    assert returned_keys["user_is_user"] == [
-        {
-            "channel": private_channel.name,
-            "package": None,
-            "role": "maintainer",
-        }
-    ]
-    assert returned_keys["key"] == [
-        {
-            "channel": private_channel.name,
-            "package": None,
-            "role": "maintainer",
-        }
-    ]
+    assert returned_keys["user_is_user"] is None
+    assert returned_keys["key"] is None
 
 
 def test_list_keys_with_package_roles(
@@ -118,21 +106,8 @@ def test_list_keys_with_package_roles(
     returned_keys = {key["description"]: key["roles"] for key in response.json()}
     assert len(returned_keys) == 2
 
-    assert returned_keys["user_is_user"] == [
-        # package role
-        {
-            "channel": private_channel.name,
-            "package": private_package.name,
-            "role": "maintainer",
-        },
-    ]
-    assert returned_keys["key"] == [
-        {
-            "channel": private_channel.name,
-            "package": private_package.name,
-            "role": "maintainer",
-        }
-    ]
+    assert returned_keys["user_is_user"] is None
+    assert returned_keys["key"] is None
 
 
 def test_list_keys_subrole(auth_client, dao, user, private_channel):
@@ -172,7 +147,7 @@ def test_list_keys_without_roles(auth_client, dao, user):
     returned_keys = {key["description"]: key["roles"] for key in response.json()}
     assert len(returned_keys) == 1
     assert "user-key" in returned_keys
-    assert returned_keys['user-key'] == []
+    assert returned_keys['user-key'] is None
 
 
 def test_unlist_delete_api_keys(auth_client, api_keys, db, private_channel, user):

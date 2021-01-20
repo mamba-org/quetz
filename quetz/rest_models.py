@@ -236,7 +236,7 @@ class CPRole(BaseModel):
 
 class BaseApiKey(BaseModel):
     description: str
-    roles: List[CPRole]
+    roles: Optional[List[CPRole]]
 
 
 class ApiKey(BaseApiKey):

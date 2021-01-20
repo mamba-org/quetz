@@ -409,15 +409,26 @@ class Dao:
         self.db.commit()
 
     def get_api_keys_with_members(self, user_id):
-        return (
+        user_role_api_keys = (
+            self.db.query(ApiKey)
+            .filter(ApiKey.owner_id == user_id)
+            .filter(ApiKey.user_id == user_id)
+            .filter(~ApiKey.deleted)
+            .all()
+        )
+
+        custom_role_api_keys = (
             self.db.query(ApiKey, PackageMember, ChannelMember)
-            .select_from(ApiKey)
             .filter(ApiKey.owner_id == user_id)
             .filter(~ApiKey.deleted)
+            .outerjoin(Profile, ApiKey.user_id == Profile.user_id)
+            .filter(Profile.name.is_(None))
             .outerjoin(ChannelMember, ChannelMember.user_id == ApiKey.user_id)
             .outerjoin(PackageMember, PackageMember.user_id == ApiKey.user_id)
             .all()
         )
+
+        return user_role_api_keys, custom_role_api_keys
 
     def get_package_api_keys(self, user_id):
         return (
@@ -452,38 +463,41 @@ class Dao:
         )
 
         self.db.add(db_api_key)
-        for role in api_key.roles:
-            if role.package:
-                package_member = (
-                    self.db.query(PackageMember)
-                    .filter_by(
-                        user=user, channel_name=role.channel, package_name=role.package
+        if api_key.roles is not None:
+            for role in api_key.roles:
+                if role.package:
+                    package_member = (
+                        self.db.query(PackageMember)
+                        .filter_by(
+                            user=user,
+                            channel_name=role.channel,
+                            package_name=role.package,
+                        )
+                        .one_or_none()
                     )
-                    .one_or_none()
-                )
-                if not package_member:
-                    package_member = PackageMember(
-                        user=user,
-                        channel_name=role.channel,
-                        package_name=role.package,
-                        role=role.role,
-                    )
-                    self.db.add(package_member)
+                    if not package_member:
+                        package_member = PackageMember(
+                            user=user,
+                            channel_name=role.channel,
+                            package_name=role.package,
+                            role=role.role,
+                        )
+                        self.db.add(package_member)
+                    else:
+                        package_member.role = role.role
                 else:
-                    package_member.role = role.role
-            else:
-                channel_member = (
-                    self.db.query(ChannelMember)
-                    .filter_by(user=user, channel_name=role.channel)
-                    .one_or_none()
-                )
-                if not channel_member:
-                    channel_member = ChannelMember(
-                        user=user, channel_name=role.channel, role=role.role
+                    channel_member = (
+                        self.db.query(ChannelMember)
+                        .filter_by(user=user, channel_name=role.channel)
+                        .one_or_none()
                     )
-                    self.db.add(channel_member)
-                else:
-                    channel_member.role = role.role
+                    if not channel_member:
+                        channel_member = ChannelMember(
+                            user=user, channel_name=role.channel, role=role.role
+                        )
+                        self.db.add(channel_member)
+                    else:
+                        channel_member.role = role.role
 
         self.db.commit()
 
