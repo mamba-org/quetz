@@ -19,12 +19,15 @@ class GithubAuthenticator:
     oauth = OAuth()
     provider = "github"
 
-    def __init__(self, config: Config, client_kwargs=None, provider=None):
+    def __init__(self, config: Config, client_kwargs=None, provider=None, app=None):
         if provider is not None:
             self.provider = str(provider)
         self.register(config, client_kwargs=client_kwargs)
 
-        self.router = APIRouter(prefix=f"/auth/{self.provider}")
+        # dependency_overrides_provider kwarg is needed for unit test
+        self.router = APIRouter(
+            prefix=f"/auth/{self.provider}", dependency_overrides_provider=app
+        )
         self.router.add_api_route("/login", self.login, methods=["GET"])
         self.router.add_api_route("/enabled", self.enabled, methods=["GET"])
         self.router.add_api_route(

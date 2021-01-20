@@ -133,7 +133,12 @@ def oauth_server(request, config, app):
     elif provider == "test_google":
         auth_module = auth_google.GoogleAuthenticator
 
-    module = auth_module(config, client_kwargs={'app': server_app}, provider=provider)
+    module = auth_module(
+        config,
+        client_kwargs={'app': server_app},
+        provider=provider,
+        app=app,
+    )
 
     yield module
 
