@@ -48,11 +48,23 @@ class BaseAuthenticationHandlers:
 
         user_dict = await self.authenticator.authenticate(request, dao, config)
 
-        request.session['user_id'] = user_dict['user_id']
+        if isinstance(user_dict, (str, bytes)):
 
-        request.session['identity_provider'] = user_dict['auth_state']['provider']
+            user_id = (
+                user_dict
+                if isinstance(user_dict, str)
+                else str(uuid.UUID(bytes=user_dict))
+            )
+            request.session["user_id"] = user_id
+            request.session['identity_provider'] = self.authenticator.provider
 
-        request.session['token'] = user_dict['auth_state']['token']
+        elif isinstance(dict, str):
+
+            request.session['user_id'] = user_dict['user_id']
+
+            request.session['identity_provider'] = user_dict['auth_state']['provider']
+
+            request.session['token'] = user_dict['auth_state']['token']
 
         # use 303 code so that the method is always changed to GET
         resp = RedirectResponse('/', status_code=303)
@@ -118,7 +130,5 @@ class SimpleAuthenticator(BaseAuthenticator):
         data = await request.form()
         user = dao.get_user_by_username(data['username'])
 
-        return {
-            "user_id": str(uuid.UUID(bytes=user.id)),
-            "auth_state": {"provider": self.provider, "token": "Token"},
-        }
+        if user:
+            return user.id
