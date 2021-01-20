@@ -5,6 +5,8 @@ from .auth_github import OAuthAuthenticator
 
 
 class GoogleAuthenticator(OAuthAuthenticator):
+    # Register the app here: https://console.developers.google.com/apis/credentials
+
     provider = 'google'
     server_metadata_url = 'https://accounts.google.com/.well-known/openid-configuration'
     scope = "openid email profile"

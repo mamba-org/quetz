@@ -16,9 +16,65 @@ from .dao import Dao
 from .dao_github import get_user_by_github_identity
 
 
+class OAuthHandlers:
+    """Handlers for authenticator endpoints"""
+
+    def __init__(self, authenticator, app=None):
+
+        self.authenticator = authenticator
+
+        # dependency_overrides_provider kwarg is needed for unit test
+        self.router = APIRouter(
+            prefix=f"/auth/{authenticator.provider}", dependency_overrides_provider=app
+        )
+        self.router.add_api_route("/login", self.login, methods=["GET"])
+        self.router.add_api_route("/enabled", self.enabled, methods=["GET"])
+        self.router.add_api_route(
+            "/authorize",
+            self.authorize,
+            methods=["GET"],
+            name=f"authorize_{authenticator.provider}",
+        )
+        self.router.add_api_route("/revoke", self.revoke, methods=["GET"])
+
+    async def login(self, request: Request):
+        redirect_uri = request.url_for(f'authorize_{self.authenticator.provider}')
+        return await self.authenticator.client.authorize_redirect(request, redirect_uri)
+
+    async def enabled(self):
+        """Entrypoint used by frontend to show the login button."""
+        return self.authenticator.is_enabled
+
+    async def authorize(
+        self,
+        request: Request,
+        dao: Dao = Depends(get_dao),
+        config: Config = Depends(get_config),
+    ):
+
+        user_dict = await self.authenticator.authenticate(request, dao, config)
+
+        request.session['user_id'] = user_dict['user_id']
+
+        request.session['identity_provider'] = user_dict['auth_state']['provider']
+
+        request.session['token'] = user_dict['auth_state']['token']
+
+        resp = RedirectResponse('/')
+
+        return resp
+
+    async def revoke(self, request):
+        client_id = self.client.client_id
+        return RedirectResponse(self.revoke_url.format(client_id=client_id))
+
+
 class OAuthAuthenticator:
+    """Base class for authenticators using Oauth2 protocol and its variants"""
+
     oauth = OAuth()
     provider = "oauth"
+    handler_cls = OAuthHandlers
 
     # client credentials and state
     # they can be also set in configure method
@@ -38,30 +94,17 @@ class OAuthAuthenticator:
     validate_token_url: Optional[str] = None
     revoke_url: Optional[str] = None
 
+    @property
+    def router(self):
+        return self.handler.router
+
     def __init__(self, config: Config, client_kwargs=None, provider=None, app=None):
         if provider is not None:
             self.provider = str(provider)
+        self.handler = OAuthHandlers(self, app)
 
         self.configure(config)
         self.register(client_kwargs=client_kwargs)
-
-        # dependency_overrides_provider kwarg is needed for unit test
-        self.router = APIRouter(
-            prefix=f"/auth/{self.provider}", dependency_overrides_provider=app
-        )
-        self.router.add_api_route("/login", self.login, methods=["GET"])
-        self.router.add_api_route("/enabled", self.enabled, methods=["GET"])
-        self.router.add_api_route(
-            "/authorize",
-            self.authorize,
-            methods=["GET"],
-            name=f"authorize_{self.provider}",
-        )
-        self.router.add_api_route("/revoke", self.revoke, methods=["GET"])
-
-    async def login(self, request: Request):
-        redirect_uri = request.url_for(f'authorize_{self.provider}')
-        return await self.client.authorize_redirect(request, redirect_uri)
 
     def configure(self, config):
         raise NotImplementedError("subclasses need to implement configure")
@@ -69,8 +112,18 @@ class OAuthAuthenticator:
     async def userinfo(self, request, token):
         raise NotImplementedError("subclasses need to implement userinfo")
 
+    async def authenticate(self, request, dao, config):
+        token = await self.client.authorize_access_token(request)
+        profile = await self.userinfo(request, token)
+        profile['provider'] = self.provider
+        user = get_user_by_github_identity(dao, profile, config)
+
+        return {
+            "user_id": str(uuid.UUID(bytes=user.id)),
+            'auth_state': {"token": json.dumps(token), "provider": self.provider},
+        }
+
     def register(self, client_kwargs=None):
-        # Register the app here: https://github.com/settings/applications/new
 
         if client_kwargs is None:
             client_kwargs = {}
@@ -91,41 +144,13 @@ class OAuthAuthenticator:
         )
 
     async def validate_token(self, token):
-        # identity = get_identity(db, identity_id)
         resp = await self.client.get(self.validate_token_url, token=json.loads(token))
         return resp.status_code != 401
 
-    async def enabled(self):
-        """Entrypoint used by frontend to show the login button."""
-        return self.is_enabled
-
-    async def authorize(
-        self,
-        request: Request,
-        dao: Dao = Depends(get_dao),
-        config: Config = Depends(get_config),
-    ):
-        token = await self.client.authorize_access_token(request)
-        profile = await self.userinfo(request, token)
-        profile['provider'] = self.provider
-        user = get_user_by_github_identity(dao, profile, config)
-
-        request.session['user_id'] = str(uuid.UUID(bytes=user.id))
-
-        request.session['identity_provider'] = self.provider
-
-        request.session['token'] = json.dumps(token)
-
-        resp = RedirectResponse('/')
-
-        return resp
-
-    async def revoke(self, request):
-        client_id = self.client.client_id
-        return RedirectResponse(self.revoke_url.format(client_id=client_id))
-
 
 class GithubAuthenticator(OAuthAuthenticator):
+    # Register the app here: https://github.com/settings/applications/new
+
     oauth = OAuth()
     provider = "github"
 
