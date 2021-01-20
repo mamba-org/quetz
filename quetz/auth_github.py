@@ -3,6 +3,7 @@
 
 import json
 import uuid
+from typing import Optional
 
 from authlib.integrations.starlette_client import OAuth
 from fastapi import APIRouter, Depends, Request
@@ -15,14 +16,34 @@ from .dao import Dao
 from .dao_github import get_user_by_github_identity
 
 
-class GithubAuthenticator:
+class OAuthAuthenticator:
     oauth = OAuth()
-    provider = "github"
+    provider = "oauth"
+
+    # client credentials and state
+    # they can be also set in configure method
+    client_id: str = ""
+    client_secret: str = ""
+    is_enabled = False
+
+    # oauth client params
+    access_token_url: Optional[str] = None
+    authorize_url: Optional[str] = None
+    api_base_url: Optional[str] = None
+    scope: Optional[str] = None
+    server_metadata_url: Optional[str] = None
+    prompt: Optional[str] = None
+
+    # provider api endpoint urls
+    validate_token_url: Optional[str] = None
+    revoke_url: Optional[str] = None
 
     def __init__(self, config: Config, client_kwargs=None, provider=None, app=None):
         if provider is not None:
             self.provider = str(provider)
-        self.register(config, client_kwargs=client_kwargs)
+
+        self.configure(config)
+        self.register(client_kwargs=client_kwargs)
 
         # dependency_overrides_provider kwarg is needed for unit test
         self.router = APIRouter(
@@ -42,38 +63,41 @@ class GithubAuthenticator:
         redirect_uri = request.url_for(f'authorize_{self.provider}')
         return await self.client.authorize_redirect(request, redirect_uri)
 
-    def register(self, config, client_kwargs=None):
+    def configure(self, config):
+        raise NotImplementedError("subclasses need to implement configure")
+
+    async def userinfo(self, request, token):
+        raise NotImplementedError("subclasses need to implement userinfo")
+
+    def register(self, client_kwargs=None):
         # Register the app here: https://github.com/settings/applications/new
 
         if client_kwargs is None:
             client_kwargs = {}
 
+        if self.scope:
+            client_kwargs["scope"] = self.scope
+
         self.client = self.oauth.register(
             name=self.provider,
-            client_id=config.github_client_id,
-            client_secret=config.github_client_secret,
-            access_token_url='https://github.com/login/oauth/access_token',
-            access_token_params=None,
-            authorize_url='https://github.com/login/oauth/authorize',
-            authorize_params=None,
-            api_base_url='https://api.github.com/',
-            client_kwargs={'scope': 'user:email', **client_kwargs},
+            client_id=self.client_id,
+            client_secret=self.client_secret,
+            access_token_url=self.access_token_url,
+            authorize_url=self.authorize_url,
+            api_base_url=self.api_base_url,
+            server_metadata_url=self.server_metadata_url,
+            prompt=self.prompt,
+            client_kwargs=client_kwargs,
         )
 
     async def validate_token(self, token):
         # identity = get_identity(db, identity_id)
-        resp = await self.client.get('user', token=json.loads(token))
+        resp = await self.client.get(self.validate_token_url, token=json.loads(token))
         return resp.status_code != 401
 
     async def enabled(self):
         """Entrypoint used by frontend to show the login button."""
-        return True
-
-    async def userinfo(self, request, token):
-        resp = await self.client.get('user', token=token)
-        profile = resp.json()
-
-        return profile
+        return self.is_enabled
 
     async def authorize(
         self,
@@ -98,6 +122,30 @@ class GithubAuthenticator:
 
     async def revoke(self, request):
         client_id = self.client.client_id
-        return RedirectResponse(
-            f'https://github.com/settings/connections/applications/{client_id}'
-        )
+        return RedirectResponse(self.revoke_url.format(client_id=client_id))
+
+
+class GithubAuthenticator(OAuthAuthenticator):
+    oauth = OAuth()
+    provider = "github"
+
+    # oauth client params
+    access_token_url = 'https://github.com/login/oauth/access_token'
+    authorize_url = 'https://github.com/login/oauth/authorize'
+    api_base_url = 'https://api.github.com/'
+    scope = 'user:email'
+
+    # endpoint urls
+    validate_token_url = "user"
+    revoke_url = 'https://github.com/settings/connections/applications/{client_id}'
+
+    async def userinfo(self, request, token):
+        resp = await self.client.get('user', token=token)
+        profile = resp.json()
+
+        return profile
+
+    def configure(self, config):
+        self.client_id = config.github_client_id
+        self.client_secret = config.github_client_secret
+        self.is_enabled = True

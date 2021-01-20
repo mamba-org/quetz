@@ -1,38 +1,17 @@
 # Copyright 2020 QuantStack, Codethink Ltd
 # Distributed under the terms of the Modified BSD License.
 
-import json
-
-from starlette.responses import RedirectResponse
-
-from .auth_github import GithubAuthenticator
+from .auth_github import OAuthAuthenticator
 
 
-class GoogleAuthenticator(GithubAuthenticator):
+class GoogleAuthenticator(OAuthAuthenticator):
     provider = 'google'
     server_metadata_url = 'https://accounts.google.com/.well-known/openid-configuration'
+    scope = "openid email profile"
+    prompt = 'select_account'
 
-    def register(self, config, client_kwargs=None):
-        # Register the app here: https://console.developers.google.com/apis/credentials
-        if client_kwargs is None:
-            client_kwargs = {}
-        self.client = self.oauth.register(
-            name=self.provider,
-            client_id=config.google_client_id,
-            client_secret=config.google_client_secret,
-            server_metadata_url=self.server_metadata_url,
-            client_kwargs={'scope': 'openid email profile', **client_kwargs},
-            prompt='select_account',
-        )
-
-    async def validate_token(self, token):
-        resp = await self.client.get(
-            'https://openidconnect.googleapis.com/v1/userinfo', token=json.loads(token)
-        )
-        return resp.status_code != 401
-
-    async def revoke(request):
-        return RedirectResponse('https://myaccount.google.com/permissions')
+    revoke_url = 'https://myaccount.google.com/permissions'
+    validate_token_url = 'https://openidconnect.googleapis.com/v1/userinfo'
 
     async def userinfo(self, request, token):
         profile = await self.client.parse_id_token(request, token)
@@ -44,3 +23,8 @@ class GoogleAuthenticator(GithubAuthenticator):
             "login": profile["email"],
         }
         return github_profile
+
+    def configure(self, config):
+        self.client_id = config.google_client_id
+        self.client_secret = config.google_client_secret
+        self.is_enabled = True
