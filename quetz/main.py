@@ -11,6 +11,7 @@ from email.utils import formatdate
 from tempfile import SpooledTemporaryFile
 from typing import List, Optional
 
+import pkg_resources
 import pydantic
 import requests
 from fastapi import (
@@ -152,6 +153,20 @@ if config.configured_section("google"):
 # from quetz.authentication import base as auth_base
 # _auth_simple = auth_base.SimpleAuthenticator(config)
 # app.include_router(_auth_simple.router)
+
+authenticators = {}
+for auth_ep in pkg_resources.iter_entry_points('quetz.authenticator'):
+    auth_cls = auth_ep.load()
+    if auth_cls.provider in authenticators:
+        logger.warning(f"authenticators {auth_cls.provider} already registered")
+        continue
+    auth_obj = auth_cls(config)
+    app.include_router(auth_obj.router)
+    authenticators[auth_cls.provider] = auth_obj
+    logger.info(
+        f"new authenticator provider {auth_cls.provider} "
+        f"from class {auth_cls.__name__} registered"
+    )
 
 
 # helper functions

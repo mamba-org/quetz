@@ -2,7 +2,6 @@
 # Distributed under the terms of the Modified BSD License.
 
 import json
-import uuid
 from typing import Optional
 
 from authlib.integrations.starlette_client import OAuth
@@ -11,7 +10,6 @@ from starlette.responses import RedirectResponse
 
 from quetz.config import Config
 
-from .auth_dao import get_user_by_github_identity
 from .base import BaseAuthenticationHandlers, BaseAuthenticator
 
 
@@ -75,12 +73,11 @@ class OAuthAuthenticator(BaseAuthenticator):
         token = await self.client.authorize_access_token(request)
         profile = await self.userinfo(request, token)
         profile['provider'] = self.provider
-        user = get_user_by_github_identity(dao, profile, config)
 
-        return {
-            "user_id": str(uuid.UUID(bytes=user.id)),
-            'auth_state': {"token": json.dumps(token), "provider": self.provider},
-        }
+        username = profile["login"]
+        auth_state = {"token": json.dumps(token), "provider": self.provider}
+
+        return {"username": username, "profile": profile, "auth_state": auth_state}
 
     def register(self, client_kwargs=None):
 

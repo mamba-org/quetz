@@ -7,6 +7,8 @@ from quetz.config import Config
 from quetz.dao import Dao
 from quetz.deps import get_config, get_dao
 
+from .auth_dao import get_user_by_github_identity
+
 
 class BaseAuthenticationHandlers:
     """Handlers for authenticator endpoints"""
@@ -57,23 +59,31 @@ class BaseAuthenticationHandlers:
 
         user_dict = await self._authenticate(request, dao, config)
 
-        if isinstance(user_dict, (str, bytes)):
+        if not user_dict:
+            return Response("login failed")
 
-            user_id = (
-                user_dict
-                if isinstance(user_dict, str)
-                else str(uuid.UUID(bytes=user_dict))
-            )
-            request.session["user_id"] = user_id
-            request.session['identity_provider'] = self.authenticator.provider
+        if isinstance(user_dict, str):
+            # wrap string in a dictionary
+            user_dict = {"username": user_dict}
 
-        elif isinstance(dict, str):
+        profile = user_dict.get(
+            "profile",
+            {
+                "login": user_dict["username"],
+                "id": user_dict["username"],
+                "provider": self.authenticator.provider,
+                "name": user_dict["username"],
+                "avatar_url": "",
+            },
+        )
 
-            request.session['user_id'] = user_dict['user_id']
+        user = get_user_by_github_identity(dao, profile, config)
 
-            request.session['identity_provider'] = user_dict['auth_state']['provider']
+        user_id = str(uuid.UUID(bytes=user.id))
 
-            request.session['token'] = user_dict['auth_state']['token']
+        request.session['user_id'] = user_id
+        request.session['identity_provider'] = self.authenticator.provider
+        request.session.update(user_dict.get("auth_state", {}))
 
         # use 303 code so that the method is always changed to GET
         resp = RedirectResponse('/', status_code=303)
@@ -149,10 +159,15 @@ class FormHandlers(BaseAuthenticationHandlers):
         user_dict = await self.authenticator.authenticate(
             request, data=data, dao=dao, config=config
         )
+
         return user_dict
 
 
 class SimpleAuthenticator(BaseAuthenticator):
+    """A demo of a possible implementation.
+
+    NOT FOR USE IN PRODUCTION."""
+
     provider = "simple"
     handler_cls = FormHandlers
 
@@ -162,7 +177,5 @@ class SimpleAuthenticator(BaseAuthenticator):
     async def authenticate(
         self, request: Request, data=None, dao=None, config=None, **kwargs
     ):
-        user = dao.get_user_by_username(data['username'])
-
-        if user:
-            return user.id
+        if data["username"] == data["password"]:
+            return data['username']
