@@ -8,7 +8,7 @@ from quetz.config import Config
 from quetz.dao import Dao
 from quetz.deps import get_config, get_dao
 
-from .auth_dao import get_user_by_identity
+from . import auth_dao
 
 
 class UserProfile(TypedDict):
@@ -110,7 +110,7 @@ class BaseAuthenticationHandlers:
 
         profile: UserProfile = user_data.get("profile", default_profile)
 
-        user = get_user_by_identity(dao, profile, config)
+        user = auth_dao.get_user_by_identity(dao, profile, config)
 
         user_id = str(uuid.UUID(bytes=user.id))
 
