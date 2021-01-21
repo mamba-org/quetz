@@ -1,4 +1,5 @@
 import uuid
+from typing import List
 
 from fastapi import APIRouter, Depends, Request, Response
 from starlette.responses import RedirectResponse
@@ -14,7 +15,7 @@ class BaseAuthenticationHandlers:
     """Handlers for authenticator endpoints"""
 
     # list of methods that /authorize endpoint can be requested with
-    authorize_methods = []
+    authorize_methods: List[str] = []
 
     def __init__(self, authenticator, app=None):
 
