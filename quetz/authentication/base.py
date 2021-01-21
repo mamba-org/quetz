@@ -33,10 +33,14 @@ class BaseAuthenticationHandlers:
         )
 
     async def login(self, request: Request):
+        """{prefix}/login endpoint
+        First entry point to trigger login process"""
         raise NotImplementedError("method login must be implemented in subclasses")
 
     async def enabled(self):
-        """Entrypoint used by frontend to show the login button."""
+        """{prefix}/enabled endpoint
+        Used by frontend to show the login button."""
+
         return self.authenticator.is_enabled
 
     async def authorize(
@@ -45,8 +49,13 @@ class BaseAuthenticationHandlers:
         dao: Dao = Depends(get_dao),
         config: Config = Depends(get_config),
     ):
+        """{prefix}/authorize endpoint
+        Entry point for user submitted data or callback for oauth applications.
 
-        user_dict = await self.authenticator.authenticate(request, dao, config)
+        To configure HTTP method that this endpoint will handle, set authorize_methods.
+        """
+
+        user_dict = await self._authenticate(request, dao, config)
 
         if isinstance(user_dict, (str, bytes)):
 
@@ -70,6 +79,16 @@ class BaseAuthenticationHandlers:
         resp = RedirectResponse('/', status_code=303)
 
         return resp
+
+    async def _authenticate(self, request, dao, config):
+        """wrapper around `authenticate` method of the Authenticator subclasses
+
+        mainly used to extract data from request."""
+
+        user_dict = await self.authenticator.authenticate(
+            request, data=None, dao=dao, config=config
+        )
+        return user_dict
 
 
 class BaseAuthenticator:
@@ -97,7 +116,7 @@ class BaseAuthenticator:
     async def validate_token(self, token):
         return False
 
-    async def authenticate(self, request, dao, config):
+    async def authenticate(self, request, data=None, dao=None, config=None, **kwargs):
         raise NotImplementedError("subclasses need to implement authenticate")
 
 
@@ -113,10 +132,24 @@ class FormHandlers(BaseAuthenticationHandlers):
   <label>username:
     <input name="username" autocomplete="name">
   </label>
+  <label>password:
+    <input name="password" autocomplete="name">
+  </label>
   <button>Submit</button>
 </form>
 </body></html>"""
         return Response(content=data, media_type="text/html")
+
+    async def _authenticate(self, request, dao, config):
+        """wrapper around `authenticate` method of the Authenticator subclasses
+        Extracts form data from request."""
+
+        data = await request.form()
+
+        user_dict = await self.authenticator.authenticate(
+            request, data=data, dao=dao, config=config
+        )
+        return user_dict
 
 
 class SimpleAuthenticator(BaseAuthenticator):
@@ -126,8 +159,9 @@ class SimpleAuthenticator(BaseAuthenticator):
     def configure(self, config):
         self.is_enabled = True
 
-    async def authenticate(self, request: Request, dao, config):
-        data = await request.form()
+    async def authenticate(
+        self, request: Request, data=None, dao=None, config=None, **kwargs
+    ):
         user = dao.get_user_by_username(data['username'])
 
         if user:
