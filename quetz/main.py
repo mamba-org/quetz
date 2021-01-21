@@ -124,61 +124,61 @@ class CondaTokenMiddleware(BaseHTTPMiddleware):
         return response
 
 
-pm = get_plugin_manager()
-
 app.add_middleware(CondaTokenMiddleware)
-
-api_router = APIRouter()
-
-plugin_routers = pm.hook.register_router()
 
 pkgstore = config.get_package_store()
 pkgstore_support_url = hasattr(pkgstore, 'url')
 
+# authenticators
+
+builtin_authenticators = []
+plugin_authenticators = [
+    ep.load() for ep in pkg_resources.iter_entry_points('quetz.authenticator')
+]
+
+enabled_authenticators = {}
+
 
 if config.configured_section("github"):
-    _auth_github = auth_github.GithubAuthenticator(config)
-    app.include_router(_auth_github.router)
+    builtin_authenticators.append(auth_github.GithubAuthenticator)
+
+if config.configured_section("google"):
+    builtin_authenticators.append(auth_google.GoogleAuthenticator)
+
+for auth_cls in builtin_authenticators + plugin_authenticators:
+    auth_obj = auth_cls(config)
+    if auth_obj.provider in enabled_authenticators:
+        logger.warning(f"authenticator '{auth_obj.provider}' already registered")
+        continue
+    app.include_router(auth_obj.router)
+    enabled_authenticators[auth_obj.provider] = auth_obj
+    logger.info(
+        f"authentication provider '{auth_obj.provider}' "
+        f"of class {auth_cls.__name__} registered"
+    )
+
+# other routers
+
+pm = get_plugin_manager()
+api_router = APIRouter()
+plugin_routers = pm.hook.register_router()
 
 for router in plugin_routers:
     app.include_router(router)
-
 app.include_router(jobs_api.get_router())
 app.include_router(metrics_api.get_router())
 
-if config.configured_section("google"):
-    _auth_google = auth_google.GoogleAuthenticator(config)
-    app.include_router(_auth_google.router)
-
-# from quetz.authentication import base as auth_base
-# _auth_simple = auth_base.SimpleAuthenticator(config)
-# app.include_router(_auth_simple.router)
-
-authenticators = {}
-for auth_ep in pkg_resources.iter_entry_points('quetz.authenticator'):
-    auth_cls = auth_ep.load()
-    if auth_cls.provider in authenticators:
-        logger.warning(f"authenticators {auth_cls.provider} already registered")
-        continue
-    auth_obj = auth_cls(config)
-    app.include_router(auth_obj.router)
-    authenticators[auth_cls.provider] = auth_obj
-    logger.info(
-        f"new authenticator provider {auth_cls.provider} "
-        f"from class {auth_cls.__name__} registered"
-    )
-
 
 # helper functions
-
-
 async def check_token_revocation(session):
     valid = True
     identity_provider = session.get("identity_provider")
-    if identity_provider == "github":
-        valid = await _auth_github.validate_token(session.get("token"))
-    elif identity_provider == "google":
-        valid = await _auth_google.validate_token(session.get("token"))
+
+    if identity_provider is None:
+        valid = False
+    elif identity_provider != "dummy":
+        auth_obj = enabled_authenticators[identity_provider]
+        valid = await auth_obj.validate_token(session.get("token"))
     if not valid:
         logout(session)
         raise HTTPException(
