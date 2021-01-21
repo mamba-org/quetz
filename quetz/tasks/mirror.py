@@ -595,7 +595,8 @@ def synchronize_packages(
 
     try:
         channel_data = remote_repo.open("channeldata.json").json()
-        create_packages_from_channeldata(channel_name, user_id, channel_data, dao)
+        if use_repodata:
+            create_packages_from_channeldata(channel_name, user_id, channel_data, dao)
         subdirs = channel_data.get("subdirs", [])
     except (RemoteFileNotFound, json.JSONDecodeError):
         subdirs = None
