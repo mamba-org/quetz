@@ -8,7 +8,7 @@ from quetz.config import Config
 from quetz.dao import Dao
 from quetz.deps import get_config, get_dao
 
-from .auth_dao import get_user_by_github_identity
+from .auth_dao import get_user_by_identity
 
 
 class BaseAuthenticationHandlers:
@@ -78,7 +78,7 @@ class BaseAuthenticationHandlers:
             },
         )
 
-        user = get_user_by_github_identity(dao, profile, config)
+        user = get_user_by_identity(dao, profile, config)
 
         user_id = str(uuid.UUID(bytes=user.id))
 

@@ -9,7 +9,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from email.utils import formatdate
 from tempfile import SpooledTemporaryFile
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import pkg_resources
 import pydantic
@@ -46,6 +46,7 @@ from tenacity import (
 from quetz import authorization, db_models, errors, exceptions, frontend, rest_models
 from quetz.authentication import github as auth_github
 from quetz.authentication import google as auth_google
+from quetz.authentication.base import BaseAuthenticator
 from quetz.config import PAGINATION_LIMIT, Config, configure_logger, get_plugin_manager
 from quetz.dao import Dao
 from quetz.deps import (
@@ -131,12 +132,12 @@ pkgstore_support_url = hasattr(pkgstore, 'url')
 
 # authenticators
 
-builtin_authenticators = []
-plugin_authenticators = [
+builtin_authenticators: List[BaseAuthenticator] = []
+plugin_authenticators: List[BaseAuthenticator] = [
     ep.load() for ep in pkg_resources.iter_entry_points('quetz.authenticator')
 ]
 
-enabled_authenticators = {}
+enabled_authenticators: Dict[str, BaseAuthenticator] = {}
 
 
 if config.configured_section("github"):
