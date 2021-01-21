@@ -27,11 +27,11 @@ class DummyAuthenticator(BaseAuthenticator):
 @pytest.fixture
 def dummy_authenticator(app, config):
 
-    from quetz.main import registry
+    from quetz.main import auth_registry
 
     authenticator = DummyAuthenticator(config)
 
-    registry.register(authenticator)
+    auth_registry.register(authenticator)
 
     return authenticator
 

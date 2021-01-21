@@ -132,7 +132,11 @@ pkgstore_support_url = hasattr(pkgstore, 'url')
 
 # authenticators
 
-builtin_authenticators: List[Type[BaseAuthenticator]] = []
+builtin_authenticators: List[Type[BaseAuthenticator]] = [
+    auth_github.GithubAuthenticator,
+    auth_google.GoogleAuthenticator,
+]
+
 plugin_authenticators: List[Type[BaseAuthenticator]] = [
     ep.load() for ep in pkg_resources.iter_entry_points('quetz.authenticator')
 ]
@@ -154,17 +158,12 @@ class AuthenticatorRegistry:
         )
 
 
-registry = AuthenticatorRegistry()
-
-if config.configured_section("github"):
-    builtin_authenticators.append(auth_github.GithubAuthenticator)
-
-if config.configured_section("google"):
-    builtin_authenticators.append(auth_google.GoogleAuthenticator)
+auth_registry = AuthenticatorRegistry()
 
 for auth_cls in builtin_authenticators + plugin_authenticators:
     auth_obj = auth_cls(config)
-    registry.register(auth_obj)
+    if auth_obj.is_enabled:
+        auth_registry.register(auth_obj)
 
 # other routers
 
@@ -186,7 +185,7 @@ async def check_token_revocation(session):
     if identity_provider is None:
         valid = False
     elif identity_provider != "dummy":
-        auth_obj = registry.enabled_authenticators[identity_provider]
+        auth_obj = auth_registry.enabled_authenticators[identity_provider]
         valid = await auth_obj.validate_token(session.get("token"))
     if not valid:
         logout(session)
