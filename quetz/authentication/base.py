@@ -1,5 +1,5 @@
 import uuid
-from typing import List
+from typing import Dict, List, Optional, Type, TypedDict, Union
 
 from fastapi import APIRouter, Depends, Request, Response
 from starlette.responses import RedirectResponse
@@ -11,11 +11,43 @@ from quetz.deps import get_config, get_dao
 from .auth_dao import get_user_by_identity
 
 
+class UserProfile(TypedDict):
+
+    id: str
+    name: str
+    avatar_url: str
+    login: str
+
+
+class UserName(TypedDict):
+    username: str
+
+
+class UserDict(UserName, total=False):
+    # profile and auth_state keys are optional
+    profile: UserProfile
+    auth_state: Dict[str, str]
+
+
+AuthReturnType = Optional[Union[str, UserDict]]
+
+
 class BaseAuthenticationHandlers:
-    """Handlers for authenticator endpoints"""
+    """Handlers for authenticator endpoints.
+
+    Subclasses MUST implement:
+
+    - login method
+    - authorize_methods: provide allowed HTTP methods for authorize endpoint
+
+    SHOULD override:
+
+    - _authenticate method - to extract data and past it to
+      BaseAuthenticator.authenticate method
+    """
 
     # list of methods that /authorize endpoint can be requested with
-    authorize_methods: List[str] = []
+    authorize_methods: List[str]
 
     def __init__(self, authenticator, app=None):
 
@@ -60,23 +92,23 @@ class BaseAuthenticationHandlers:
 
         user_dict = await self._authenticate(request, dao, config)
 
-        if not user_dict:
+        if user_dict is None:
             return Response("login failed")
 
         if isinstance(user_dict, str):
             # wrap string in a dictionary
-            user_dict = {"username": user_dict}
+            user_data: UserDict = {"username": user_dict}
+        else:
+            user_data = user_dict
 
-        profile = user_dict.get(
-            "profile",
-            {
-                "login": user_dict["username"],
-                "id": user_dict["username"],
-                "provider": self.authenticator.provider,
-                "name": user_dict["username"],
-                "avatar_url": "",
-            },
-        )
+        default_profile: UserProfile = {
+            "login": user_data["username"],
+            "id": user_data["username"],
+            "name": user_data["username"],
+            "avatar_url": "",
+        }
+
+        profile: UserProfile = user_data.get("profile", default_profile)
 
         user = get_user_by_identity(dao, profile, config)
 
@@ -84,14 +116,14 @@ class BaseAuthenticationHandlers:
 
         request.session['user_id'] = user_id
         request.session['identity_provider'] = self.authenticator.provider
-        request.session.update(user_dict.get("auth_state", {}))
+        request.session.update(user_data.get("auth_state", {}))
 
         # use 303 code so that the method is always changed to GET
         resp = RedirectResponse('/', status_code=303)
 
         return resp
 
-    async def _authenticate(self, request, dao, config):
+    async def _authenticate(self, request, dao, config) -> AuthReturnType:
         """wrapper around `authenticate` method of the Authenticator subclasses
 
         mainly used to extract data from request."""
@@ -103,10 +135,20 @@ class BaseAuthenticationHandlers:
 
 
 class BaseAuthenticator:
-    """Base class for authenticators using Oauth2 protocol and its variants"""
+    """Base class for authenticators.
+
+    Subclasses MUST implement:
+
+    - configure
+    - authenticate
+
+    Subclasses SHOULD implement:
+
+    - validate_token
+    """
 
     provider = "base"
-    handler_cls = BaseAuthenticationHandlers
+    handler_cls: Type[BaseAuthenticationHandlers] = BaseAuthenticationHandlers
 
     is_enabled = False
 
@@ -122,12 +164,20 @@ class BaseAuthenticator:
         self.configure(config)
 
     def configure(self, config):
+        """configure authenticator and set is_enabled=True"""
         raise NotImplementedError("subclasses need to implement configure")
 
     async def validate_token(self, token):
-        return False
+        "check token validity"
+        return True
 
-    async def authenticate(self, request, data=None, dao=None, config=None, **kwargs):
+    async def authenticate(
+        self, request, data=None, dao=None, config=None, **kwargs
+    ) -> AuthReturnType:
+        """return username or dictionary with keys 'username', 'profile', 'auth_state'.
+        See type annotation for detail.
+
+        Return None if login credentials are not correct"""
         raise NotImplementedError("subclasses need to implement authenticate")
 
 
@@ -152,7 +202,8 @@ class FormHandlers(BaseAuthenticationHandlers):
         return Response(content=data, media_type="text/html")
 
     async def _authenticate(self, request, dao, config):
-        """wrapper around `authenticate` method of the Authenticator subclasses
+        """Wrapper around `authenticate` method of the Authenticator subclasses.
+
         Extracts form data from request."""
 
         data = await request.form()
@@ -177,6 +228,8 @@ class SimpleAuthenticator(BaseAuthenticator):
 
     async def authenticate(
         self, request: Request, data=None, dao=None, config=None, **kwargs
-    ):
+    ) -> Optional[str]:
         if data["username"] == data["password"]:
             return data['username']
+        else:
+            return None

@@ -11,9 +11,14 @@ from quetz.dao import Dao
 from quetz.db_models import Channel, Identity, User
 from quetz.errors import ValidationError
 
+from . import base
+
 
 def create_user_with_identity(
-    dao: Dao, profile: dict, default_role: str, create_default_channel: bool
+    dao: Dao,
+    profile: 'base.UserProfile',
+    default_role: str,
+    create_default_channel: bool,
 ) -> User:
 
     username = profile["login"]
@@ -50,7 +55,7 @@ def create_user_with_identity(
     return user
 
 
-def user_profile_changed(user, identity, profile):
+def user_profile_changed(user, identity, profile: 'base.UserProfile'):
     if (
         identity.username != profile['login']
         or user.profile.name != profile['name']
@@ -61,7 +66,9 @@ def user_profile_changed(user, identity, profile):
     return False
 
 
-def update_user_from_profile(db: Session, user, identity, profile) -> User:
+def update_user_from_profile(
+    db: Session, user, identity, profile: 'base.UserProfile'
+) -> User:
 
     identity.username = profile['login']
     user.profile.name = profile['name']
@@ -72,7 +79,7 @@ def update_user_from_profile(db: Session, user, identity, profile) -> User:
     return user
 
 
-def get_user_by_identity(dao: Dao, profile: dict, config: Config) -> User:
+def get_user_by_identity(dao: Dao, profile: 'base.UserProfile', config: Config) -> User:
 
     db = dao.db
     provider = profile.get("provider", "github")

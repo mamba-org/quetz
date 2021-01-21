@@ -9,7 +9,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from email.utils import formatdate
 from tempfile import SpooledTemporaryFile
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Type
 
 import pkg_resources
 import pydantic
@@ -132,13 +132,29 @@ pkgstore_support_url = hasattr(pkgstore, 'url')
 
 # authenticators
 
-builtin_authenticators: List[BaseAuthenticator] = []
-plugin_authenticators: List[BaseAuthenticator] = [
+builtin_authenticators: List[Type[BaseAuthenticator]] = []
+plugin_authenticators: List[Type[BaseAuthenticator]] = [
     ep.load() for ep in pkg_resources.iter_entry_points('quetz.authenticator')
 ]
 
-enabled_authenticators: Dict[str, BaseAuthenticator] = {}
 
+class AuthenticatorRegistry:
+
+    enabled_authenticators: Dict[str, BaseAuthenticator] = {}
+
+    def register(self, auth: BaseAuthenticator):
+        if auth.provider in self.enabled_authenticators:
+            logger.warning(f"authenticator '{auth.provider}' already registered")
+            return
+        app.include_router(auth.router)
+        self.enabled_authenticators[auth.provider] = auth
+        logger.info(
+            f"authentication provider '{auth.provider}' "
+            f"of class {auth.__class__.__name__} registered"
+        )
+
+
+registry = AuthenticatorRegistry()
 
 if config.configured_section("github"):
     builtin_authenticators.append(auth_github.GithubAuthenticator)
@@ -148,15 +164,7 @@ if config.configured_section("google"):
 
 for auth_cls in builtin_authenticators + plugin_authenticators:
     auth_obj = auth_cls(config)
-    if auth_obj.provider in enabled_authenticators:
-        logger.warning(f"authenticator '{auth_obj.provider}' already registered")
-        continue
-    app.include_router(auth_obj.router)
-    enabled_authenticators[auth_obj.provider] = auth_obj
-    logger.info(
-        f"authentication provider '{auth_obj.provider}' "
-        f"of class {auth_cls.__name__} registered"
-    )
+    registry.register(auth_obj)
 
 # other routers
 
@@ -178,7 +186,7 @@ async def check_token_revocation(session):
     if identity_provider is None:
         valid = False
     elif identity_provider != "dummy":
-        auth_obj = enabled_authenticators[identity_provider]
+        auth_obj = registry.enabled_authenticators[identity_provider]
         valid = await auth_obj.validate_token(session.get("token"))
     if not valid:
         logout(session)

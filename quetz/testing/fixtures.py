@@ -216,7 +216,9 @@ def plugins() -> List[str]:
 
 @fixture
 def app(config, db, mocker):
-    # disabling/enabling specific plugins for tests
+
+    # avoid addding frontend router
+    mocker.patch("quetz.frontend.register")
 
     from quetz.deps import get_db
     from quetz.main import app
