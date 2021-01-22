@@ -24,6 +24,7 @@ class DictionaryAuthenticator(SimpleAuthenticator):
             self.passwords = dict(
                 user_pass.split(":") for user_pass in config.dictauthenticator_users
             )
+            self.is_enabled = True
         else:
             self.passwords = {}
 
