@@ -25,6 +25,7 @@ catchall_router = APIRouter()
 mock_settings_dict = None
 frontend_dir = ""
 index_template = None
+config_data: dict
 
 
 @mock_router.get('/api/sessions', include_in_schema=False)
