@@ -9,8 +9,9 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from email.utils import formatdate
 from tempfile import SpooledTemporaryFile
-from typing import List, Optional
+from typing import List, Optional, Type
 
+import pkg_resources
 import pydantic
 import requests
 from fastapi import (
@@ -43,6 +44,7 @@ from tenacity import (
 )
 
 from quetz import authorization, db_models, errors, exceptions, frontend, rest_models
+from quetz.authentication import AuthenticatorRegistry, BaseAuthenticator
 from quetz.authentication import github as auth_github
 from quetz.authentication import google as auth_google
 from quetz.config import PAGINATION_LIMIT, Config, configure_logger, get_plugin_manager
@@ -123,43 +125,53 @@ class CondaTokenMiddleware(BaseHTTPMiddleware):
         return response
 
 
-pm = get_plugin_manager()
-
 app.add_middleware(CondaTokenMiddleware)
-
-api_router = APIRouter()
-
-plugin_routers = pm.hook.register_router()
 
 pkgstore = config.get_package_store()
 pkgstore_support_url = hasattr(pkgstore, 'url')
 
+# authenticators
 
-if config.configured_section("github"):
-    _auth_github = auth_github.GithubAuthenticator(config)
-    app.include_router(_auth_github.router)
+builtin_authenticators: List[Type[BaseAuthenticator]] = [
+    auth_github.GithubAuthenticator,
+    auth_google.GoogleAuthenticator,
+]
+
+plugin_authenticators: List[Type[BaseAuthenticator]] = [
+    ep.load() for ep in pkg_resources.iter_entry_points('quetz.authenticator')
+]
+
+
+auth_registry = AuthenticatorRegistry()
+auth_registry.set_router(app)
+
+for auth_cls in builtin_authenticators + plugin_authenticators:
+    auth_obj = auth_cls(config)
+    if auth_obj.is_enabled:
+        auth_registry.register(auth_obj)
+
+# other routers
+
+pm = get_plugin_manager()
+api_router = APIRouter()
+plugin_routers = pm.hook.register_router()
 
 for router in plugin_routers:
     app.include_router(router)
-
 app.include_router(jobs_api.get_router())
 app.include_router(metrics_api.get_router())
 
-if config.configured_section("google"):
-    _auth_google = auth_google.GoogleAuthenticator(config)
-    app.include_router(_auth_google.router)
-
 
 # helper functions
-
-
 async def check_token_revocation(session):
     valid = True
     identity_provider = session.get("identity_provider")
-    if identity_provider == "github":
-        valid = await _auth_github.validate_token(session.get("token"))
-    elif identity_provider == "google":
-        valid = await _auth_google.validate_token(session.get("token"))
+
+    if identity_provider is None:
+        valid = False
+    elif identity_provider != "dummy":
+        auth_obj = auth_registry.enabled_authenticators[identity_provider]
+        valid = await auth_obj.validate_token(session.get("token"))
     if not valid:
         logout(session)
         raise HTTPException(

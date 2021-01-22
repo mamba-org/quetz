@@ -1,6 +1,8 @@
 # Copyright 2020 QuantStack, Codethink Ltd
 # Distributed under the terms of the Modified BSD License.
 
+from quetz.config import Config
+
 from .oauth2 import OAuthAuthenticator
 
 
@@ -26,7 +28,10 @@ class GoogleAuthenticator(OAuthAuthenticator):
         }
         return github_profile
 
-    def configure(self, config):
-        self.client_id = config.google_client_id
-        self.client_secret = config.google_client_secret
-        self.is_enabled = True
+    def configure(self, config: Config):
+        if config.configured_section("google"):
+            self.client_id = config.google_client_id
+            self.client_secret = config.google_client_secret
+            self.is_enabled = True
+        else:
+            self.is_enabled = False

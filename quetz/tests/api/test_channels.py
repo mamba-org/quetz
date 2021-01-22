@@ -535,7 +535,7 @@ def test_url_with_slash(auth_client, public_channel, db, remote_session):
         f"/api/channels/{public_channel.name}/mirrors/", json={"url": mirror_url}
     )
 
-    assert response.status_code == 405
+    assert response.status_code == 307
 
 
 @pytest.mark.parametrize(

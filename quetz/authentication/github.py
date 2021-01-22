@@ -23,6 +23,9 @@ class GithubAuthenticator(OAuthAuthenticator):
         return profile
 
     def configure(self, config):
-        self.client_id = config.github_client_id
-        self.client_secret = config.github_client_secret
-        self.is_enabled = True
+        if config.configured_section("github"):
+            self.client_id = config.github_client_id
+            self.client_secret = config.github_client_secret
+            self.is_enabled = True
+        else:
+            self.is_enabled = False

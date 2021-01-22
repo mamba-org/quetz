@@ -11,18 +11,23 @@ from quetz.dao import Dao
 from quetz.db_models import Channel, Identity, User
 from quetz.errors import ValidationError
 
+from . import base
 
-def create_user_with_github_identity(
-    dao: Dao, github_profile: dict, default_role: str, create_default_channel: bool
+
+def create_user_with_identity(
+    dao: Dao,
+    profile: 'base.UserProfile',
+    default_role: str,
+    create_default_channel: bool,
 ) -> User:
 
-    username = github_profile["login"]
+    username = profile["login"]
     user = dao.create_user_with_profile(
         username=username,
-        provider=github_profile['provider'],
-        identity_id=github_profile["id"],
-        name=github_profile["name"],
-        avatar_url=github_profile["avatar_url"],
+        provider=profile['provider'],
+        identity_id=profile["id"],
+        name=profile["name"],
+        avatar_url=profile["avatar_url"],
         role=default_role,
         exist_ok=False,
     )
@@ -50,7 +55,7 @@ def create_user_with_github_identity(
     return user
 
 
-def user_github_profile_changed(user, identity, profile):
+def user_profile_changed(user, identity, profile: 'base.UserProfile'):
     if (
         identity.username != profile['login']
         or user.profile.name != profile['name']
@@ -61,7 +66,9 @@ def user_github_profile_changed(user, identity, profile):
     return False
 
 
-def update_user_from_github_profile(db: Session, user, identity, profile) -> User:
+def update_user_from_profile(
+    db: Session, user, identity, profile: 'base.UserProfile'
+) -> User:
 
     identity.username = profile['login']
     user.profile.name = profile['name']
@@ -72,7 +79,7 @@ def update_user_from_github_profile(db: Session, user, identity, profile) -> Use
     return user
 
 
-def get_user_by_github_identity(dao: Dao, profile: dict, config: Config) -> User:
+def get_user_by_identity(dao: Dao, profile: 'base.UserProfile', config: Config) -> User:
 
     db = dao.db
     provider = profile.get("provider", "github")
@@ -95,12 +102,12 @@ def get_user_by_github_identity(dao: Dao, profile: dict, config: Config) -> User
         create_default_channel = False
 
     if user:
-        if user_github_profile_changed(user, identity, profile):
-            return update_user_from_github_profile(db, user, identity, profile)
+        if user_profile_changed(user, identity, profile):
+            return update_user_from_profile(db, user, identity, profile)
         return user
 
     try:
-        user = create_user_with_github_identity(
+        user = create_user_with_identity(
             dao, profile, default_role, create_default_channel
         )
     except IntegrityError:
