@@ -217,7 +217,9 @@ def plugins() -> List[str]:
 @fixture
 def app(config, db, mocker):
 
-    # avoid addding frontend router
+    # frontend router catches all urls
+    # and takes priority over routes added after (in tests)
+    # so we avoid adding it here
     mocker.patch("quetz.frontend.register")
 
     from quetz.deps import get_db
@@ -230,6 +232,12 @@ def app(config, db, mocker):
     # overiding dependency works with all requests handlers that
     # depend on quetz.deps.get_db
     app.dependency_overrides[get_db] = lambda: db
+
+    # root url was removed with fronted urls above but
+    # redirects to root must work for some tests to pass
+    @app.get("/")
+    def root_endpoint():
+        return "root"
 
     yield app
     app.dependency_overrides.pop(get_db)
