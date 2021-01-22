@@ -110,7 +110,9 @@ class BaseAuthenticationHandlers:
 
         profile: UserProfile = user_data.get("profile", default_profile)
 
-        user = auth_dao.get_user_by_identity(dao, profile, config)
+        user = auth_dao.get_user_by_identity(
+            dao, self.authenticator.provider, profile, config
+        )
 
         user_id = str(uuid.UUID(bytes=user.id))
 
@@ -194,7 +196,7 @@ class FormHandlers(BaseAuthenticationHandlers):
     <input name="username" autocomplete="name">
   </label>
   <label>password:
-    <input name="password" autocomplete="name">
+    <input name="password" type="password">
   </label>
   <button>Submit</button>
 </form>

@@ -72,7 +72,6 @@ class OAuthAuthenticator(BaseAuthenticator):
     async def authenticate(self, request, data=None, dao=None, config=None):
         token = await self.client.authorize_access_token(request)
         profile = await self.userinfo(request, token)
-        profile['provider'] = self.provider
 
         username = profile["login"]
         auth_state = {"token": json.dumps(token), "provider": self.provider}

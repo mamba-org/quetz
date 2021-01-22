@@ -16,6 +16,7 @@ from . import base
 
 def create_user_with_identity(
     dao: Dao,
+    provider: str,
     profile: 'base.UserProfile',
     default_role: str,
     create_default_channel: bool,
@@ -24,7 +25,7 @@ def create_user_with_identity(
     username = profile["login"]
     user = dao.create_user_with_profile(
         username=username,
-        provider=profile['provider'],
+        provider=provider,
         identity_id=profile["id"],
         name=profile["name"],
         avatar_url=profile["avatar_url"],
@@ -79,10 +80,11 @@ def update_user_from_profile(
     return user
 
 
-def get_user_by_identity(dao: Dao, profile: 'base.UserProfile', config: Config) -> User:
+def get_user_by_identity(
+    dao: Dao, provider: str, profile: 'base.UserProfile', config: Config
+) -> User:
 
     db = dao.db
-    provider = profile.get("provider", "github")
 
     try:
         user, identity = db.query(User, Identity).join(Identity).filter(
@@ -108,7 +110,7 @@ def get_user_by_identity(dao: Dao, profile: 'base.UserProfile', config: Config) 
 
     try:
         user = create_user_with_identity(
-            dao, profile, default_role, create_default_channel
+            dao, provider, profile, default_role, create_default_channel
         )
     except IntegrityError:
         raise ValidationError(f"user name '{profile['login']}' already exists")
