@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from starlette.staticfiles import StaticFiles
 
 from quetz import authorization, rest_models
+from quetz.authentication import AuthenticatorRegistry
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.deps import get_dao, get_rules, get_session
@@ -24,29 +25,6 @@ catchall_router = APIRouter()
 mock_settings_dict = None
 frontend_dir = ""
 index_template = None
-
-
-google_login_available = (
-    hasattr(config, 'google_client_id')
-    and config.google_client_id is not None
-    and hasattr(config, 'google_client_secret')
-    and config.google_client_secret is not None
-)
-github_login_available = (
-    hasattr(config, 'github_client_id')
-    and config.github_client_id is not None
-    and hasattr(config, 'github_client_secret')
-    and config.github_client_secret is not None
-)
-
-config_data = {
-    "appName": "Quetz – the fast conda package server!",
-    "baseUrl": "/jlabmock/",
-    "github_login_available": github_login_available,
-    "google_login_available": google_login_available,
-}
-
-print("CONFIG DATA: ", config_data)
 
 
 @mock_router.get('/api/sessions', include_in_schema=False)
@@ -142,6 +120,20 @@ def register(app):
     # This is to help the jupyterlab-based frontend to not
     # have any 404 requests.
     global frontend_dir
+    global config_data
+
+    auth_registry = AuthenticatorRegistry()
+    google_login_available = auth_registry.is_registered("google")
+    github_login_available = auth_registry.is_registered("github")
+
+    config_data = {
+        "appName": "Quetz – the fast conda package server!",
+        "baseUrl": "/jlabmock/",
+        "github_login_available": github_login_available,
+        "google_login_available": google_login_available,
+    }
+
+    logger.info(f"Frontend config: {config_data}")
 
     app.include_router(mock_router, prefix="/jlabmock")
 

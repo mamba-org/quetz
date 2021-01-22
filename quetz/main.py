@@ -9,7 +9,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from email.utils import formatdate
 from tempfile import SpooledTemporaryFile
-from typing import Dict, List, Optional, Type
+from typing import List, Optional, Type
 
 import pkg_resources
 import pydantic
@@ -44,9 +44,9 @@ from tenacity import (
 )
 
 from quetz import authorization, db_models, errors, exceptions, frontend, rest_models
+from quetz.authentication import AuthenticatorRegistry, BaseAuthenticator
 from quetz.authentication import github as auth_github
 from quetz.authentication import google as auth_google
-from quetz.authentication.base import BaseAuthenticator
 from quetz.config import PAGINATION_LIMIT, Config, configure_logger, get_plugin_manager
 from quetz.dao import Dao
 from quetz.deps import (
@@ -142,23 +142,8 @@ plugin_authenticators: List[Type[BaseAuthenticator]] = [
 ]
 
 
-class AuthenticatorRegistry:
-
-    enabled_authenticators: Dict[str, BaseAuthenticator] = {}
-
-    def register(self, auth: BaseAuthenticator):
-        if auth.provider in self.enabled_authenticators:
-            logger.warning(f"authenticator '{auth.provider}' already registered")
-            return
-        app.include_router(auth.router)
-        self.enabled_authenticators[auth.provider] = auth
-        logger.info(
-            f"authentication provider '{auth.provider}' "
-            f"of class {auth.__class__.__name__} registered"
-        )
-
-
 auth_registry = AuthenticatorRegistry()
+auth_registry.set_router(app)
 
 for auth_cls in builtin_authenticators + plugin_authenticators:
     auth_obj = auth_cls(config)
