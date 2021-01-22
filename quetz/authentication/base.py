@@ -110,8 +110,11 @@ class BaseAuthenticationHandlers:
 
         profile: UserProfile = user_data.get("profile", default_profile)
 
+        role = await self.authenticator.user_role(request, profile)
+        default_channel = await self.authenticator.user_channels(request, profile)
+
         user = auth_dao.get_user_by_identity(
-            dao, self.authenticator.provider, profile, config
+            dao, self.authenticator.provider, profile, config, role, default_channel
         )
 
         user_id = str(uuid.UUID(bytes=user.id))
@@ -154,6 +157,9 @@ class BaseAuthenticator:
 
     is_enabled = False
 
+    default_role: Optional[str] = None
+    default_channel: Optional[str] = None
+
     @property
     def router(self):
         return self.handler.router
@@ -167,11 +173,32 @@ class BaseAuthenticator:
 
     def configure(self, config):
         """configure authenticator and set is_enabled=True"""
-        raise NotImplementedError("subclasses need to implement configure")
+
+        # use the config to configure default role and
+        # whether to create a default channel
+        if config.configured_section("users"):
+            self.default_role = config.users_default_role
+            self.create_default_channel = config.users_create_default_channel
+        else:
+            self.default_role = None
+            self.create_default_channel = False
 
     async def validate_token(self, token):
         "check token validity"
         return True
+
+    async def user_role(self, request: Request, profile: UserProfile) -> Optional[str]:
+        """return default role of the new user"""
+        return self.default_role
+
+    async def user_channels(
+        self, request: Request, profile: UserProfile
+    ) -> Optional[List[str]]:
+        """user channel"""
+        if self.create_default_channel:
+            return [profile["login"]]
+        else:
+            return None
 
     async def authenticate(
         self, request, data=None, dao=None, config=None, **kwargs
@@ -227,6 +254,8 @@ class SimpleAuthenticator(BaseAuthenticator):
 
     def configure(self, config):
         self.is_enabled = True
+
+        super().configure(config)
 
     async def authenticate(
         self, request: Request, data=None, dao=None, config=None, **kwargs

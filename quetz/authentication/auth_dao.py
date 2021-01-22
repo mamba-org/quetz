@@ -1,6 +1,8 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
+from typing import List, Optional
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -18,8 +20,8 @@ def create_user_with_identity(
     dao: Dao,
     provider: str,
     profile: 'base.UserProfile',
-    default_role: str,
-    create_default_channel: bool,
+    default_role: Optional[str],
+    default_channels: Optional[List[str]],
 ) -> User:
 
     username = profile["login"]
@@ -33,25 +35,27 @@ def create_user_with_identity(
         exist_ok=False,
     )
 
-    if create_default_channel:
+    if default_channels is not None:
 
-        channel_name = username
+        for channel_name in default_channels:
 
-        i = 0
+            i = 0
 
-        while dao.db.query(Channel).filter(Channel.name == channel_name).one_or_none():
+            while (
+                dao.db.query(Channel).filter(Channel.name == channel_name).one_or_none()
+            ):
 
-            channel_name = f"{username}-{i}"
+                channel_name = f"{username}-{i}"
 
-            i += 1
+                i += 1
 
-        channel_meta = rest_models.Channel(
-            name=channel_name,
-            description=f"{username}'s default channel",
-            private=True,
-        )
+            channel_meta = rest_models.Channel(
+                name=channel_name,
+                description=f"{username}'s default channel",
+                private=True,
+            )
 
-        dao.create_channel(channel_meta, user.id, OWNER)
+            dao.create_channel(channel_meta, user.id, OWNER)
 
     return user
 
@@ -81,7 +85,12 @@ def update_user_from_profile(
 
 
 def get_user_by_identity(
-    dao: Dao, provider: str, profile: 'base.UserProfile', config: Config
+    dao: Dao,
+    provider: str,
+    profile: 'base.UserProfile',
+    config: Config,
+    default_role: Optional[str] = None,
+    default_channels: Optional[List[str]] = None,
 ) -> User:
 
     db = dao.db
@@ -96,13 +105,6 @@ def get_user_by_identity(
     except KeyError:
         print(f"unexpected response format: {profile}")
 
-    if config.configured_section("users"):
-        default_role = config.users_default_role
-        create_default_channel = config.users_create_default_channel
-    else:
-        default_role = None
-        create_default_channel = False
-
     if user:
         if user_profile_changed(user, identity, profile):
             return update_user_from_profile(db, user, identity, profile)
@@ -110,7 +112,7 @@ def get_user_by_identity(
 
     try:
         user = create_user_with_identity(
-            dao, provider, profile, default_role, create_default_channel
+            dao, provider, profile, default_role, default_channels
         )
     except IntegrityError:
         raise ValidationError(f"user name '{profile['login']}' already exists")

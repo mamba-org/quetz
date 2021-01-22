@@ -35,3 +35,6 @@ class GoogleAuthenticator(OAuthAuthenticator):
             self.is_enabled = True
         else:
             self.is_enabled = False
+
+        # call the configure of base class to set default_channel and default role
+        super().configure(config)
