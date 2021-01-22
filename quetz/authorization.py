@@ -1,6 +1,7 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
+import enum
 import uuid
 from typing import Optional
 
@@ -19,6 +20,13 @@ SERVER_MEMBER = MEMBER
 SERVER_USER = None
 
 ROLES = [OWNER, MAINTAINER, MEMBER]
+
+
+class ServerRole(str, enum.Enum):
+    OWNER = OWNER
+    MAINTAINER = MAINTAINER
+    MEMBER = MEMBER
+    USER = None
 
 
 class Rules:
