@@ -3,7 +3,7 @@
 
 import enum
 import uuid
-
+from datetime import datetime
 from sqlalchemy import (
     DDL,
     BigInteger,
@@ -224,6 +224,8 @@ class ApiKey(Base):
 
     key = Column(String, primary_key=True, index=True)
     description = Column(String)
+    create_at = Column(DateTime(timezone=True), server_default=func.now())
+    expire_at = Column(DateTime)
     deleted = Column(Boolean, default=False)
     user_id = Column(UUID, ForeignKey('users.id'))
     owner_id = Column(UUID, ForeignKey('users.id'))

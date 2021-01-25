@@ -1029,7 +1029,7 @@ def get_api_keys(
 
     for key in user_role_keys:
         api_keys.append(
-            rest_models.ApiKey(key=key.key, description=key.description, roles=None)
+            rest_models.ApiKey(key=key.key, description=key.description, expiration=key.expiration, roles=None)
         )
 
     from itertools import groupby
@@ -1057,7 +1057,7 @@ def get_api_keys(
                 )
         api_keys.append(
             rest_models.ApiKey(
-                key=group_key.key, description=group_key.description, roles=roles
+                key=group_key.key, description=group_key.description, expiration=group_key.expiration, roles=roles
             )
         )
 
