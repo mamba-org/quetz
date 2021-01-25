@@ -43,7 +43,15 @@ from tenacity import (
     wait_exponential,
 )
 
-from quetz import authorization, db_models, errors, exceptions, frontend, rest_models
+from quetz import (
+    authorization,
+    db_models,
+    errors,
+    exceptions,
+    frontend,
+    metrics,
+    rest_models,
+)
 from quetz.authentication import AuthenticatorRegistry, BaseAuthenticator
 from quetz.authentication import github as auth_github
 from quetz.authentication import google as auth_google
@@ -64,8 +72,6 @@ from quetz.deps import (
 )
 from quetz.jobs import api as jobs_api
 from quetz.metrics import api as metrics_api
-from quetz.metrics.middleware import PrometheusMiddleware
-from quetz.metrics.view import metrics
 from quetz.rest_models import ChannelActionEnum, CPRole
 from quetz.tasks import indexing
 from quetz.tasks.common import Task
@@ -88,8 +94,7 @@ app.add_middleware(
     https_only=config.session_https_only,
 )
 
-app.add_middleware(PrometheusMiddleware)
-app.add_route("/metricsp", metrics)
+metrics.init(app)
 
 if config.configured_section("cors"):
     logger.info("Configuring CORS with ")
