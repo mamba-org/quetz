@@ -1029,7 +1029,13 @@ def get_api_keys(
 
     for key in user_role_keys:
         api_keys.append(
-            rest_models.ApiKey(key=key.key, description=key.description, expiration=key.expiration, roles=None)
+            rest_models.ApiKey(
+                key=key.key,
+                description=key.description,
+                created_at=key.created_at,
+                expire_at=key.expire_at,
+                roles=None
+            )
         )
 
     from itertools import groupby
@@ -1057,7 +1063,11 @@ def get_api_keys(
                 )
         api_keys.append(
             rest_models.ApiKey(
-                key=group_key.key, description=group_key.description, expiration=group_key.expiration, roles=roles
+                key=group_key.key,
+                description=group_key.description,
+                created_at=group_key.created_at,
+                expire_at=group_key.expire_at,
+                roles=roles
             )
         )
 
@@ -1079,10 +1089,50 @@ def post_api_key(
 
     key = generate_random_key(32)
     dao.create_api_key(user_id, api_key, key)
+    
+    user_role_keys, custom_role_keys = dao.get_api_keys_with_members(user_id, key)
 
-    return rest_models.ApiKey(
-        description=api_key.description, roles=api_key.roles, key=key
-    )
+    if len(user_role_keys) > 0 :
+        key = user_role_keys[0]
+        return rest_models.ApiKey(
+            key=key.key,
+            description=key.description,
+            created_at=key.created_at,
+            expire_at=key.expire_at,
+            roles=None
+        )
+
+    else :
+        key = custom_role_keys[0][0]
+        package_member = custom_role_keys[0][1]
+        channel_member = custom_role_keys[0][2]
+        roles = []
+        
+        if package_member:
+            roles.append(
+                CPRole(
+                    channel=package_member.channel_name,
+                    package=package_member.package_name,
+                    role=package_member.role,
+                )
+            )
+
+        if channel_member:
+            roles.append(
+                CPRole(
+                    channel=channel_member.channel_name,
+                    package=None,
+                    role=channel_member.role,
+                )
+            )
+
+        return rest_models.ApiKey(
+            key=key.key,
+            description=key.description,
+            created_at=key.created_at,
+            expire_at=key.expire_at,
+            roles=roles
+        )
 
 
 @api_router.delete("/api-keys/{key}", tags=["API keys"])
