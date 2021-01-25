@@ -64,6 +64,8 @@ from quetz.deps import (
 )
 from quetz.jobs import api as jobs_api
 from quetz.metrics import api as metrics_api
+from quetz.metrics.middleware import PrometheusMiddleware
+from quetz.metrics.view import metrics
 from quetz.rest_models import ChannelActionEnum, CPRole
 from quetz.tasks import indexing
 from quetz.tasks.common import Task
@@ -86,6 +88,8 @@ app.add_middleware(
     https_only=config.session_https_only,
 )
 
+app.add_middleware(PrometheusMiddleware)
+app.add_route("/metricsp", metrics)
 
 if config.configured_section("cors"):
     logger.info("Configuring CORS with ")
