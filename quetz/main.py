@@ -1132,7 +1132,6 @@ def post_api_key(
         package_member = custom_role_keys[0][1]
         channel_member = custom_role_keys[0][2]
         roles = []
-
         if package_member:
             roles.append(
                 CPRole(

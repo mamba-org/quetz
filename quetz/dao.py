@@ -593,6 +593,13 @@ class Dao:
         user_role_api_keys = user_role_api_keys.all()
         custom_role_api_keys = custom_role_api_keys.all()
 
+        if api_key_id:
+            user_role_api_keys = user_role_api_keys.filter(ApiKey.key == api_key_id)
+            custom_role_api_keys = custom_role_api_keys.filter(ApiKey.key == api_key_id)
+
+        user_role_api_keys = user_role_api_keys.all()
+        custom_role_api_keys = custom_role_api_keys.all()
+
         return user_role_api_keys, custom_role_api_keys
 
     def get_package_api_keys(self, user_id):
