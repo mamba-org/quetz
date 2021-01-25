@@ -53,6 +53,26 @@ def get_paginated_result(query: Query, skip: int, limit: int):
     }
 
 
+def _parse_sort_by(query, model, sortstr: str):
+    sorts = sortstr.split(',')
+
+    for s in sorts:
+        splitted = s.split(':')
+        if len(splitted) == 2:
+            field, order = splitted
+        else:
+            field = s
+            order = 'desc'
+
+        if hasattr(model, field):
+            field = getattr(model, field)
+            if order == 'desc':
+                query = query.order_by(field.desc())
+            else:
+                query = query.order_by(field.asc())
+    return query
+
+
 class Dao:
     db: Session
 
@@ -68,7 +88,7 @@ class Dao:
     def get_user(self, user_id):
         return self.db.query(User).filter(User.id == user_id).one()
 
-    def get_users(self, skip: int, limit: int, q: str):
+    def get_users(self, skip: int, limit: int, q: str, order_by: str = 'username:asc'):
         query = (
             self.db.query(User)
             .filter(User.username.isnot(None))
@@ -79,6 +99,9 @@ class Dao:
             query = query.filter(User.username.ilike(f'%{q}%'))
 
         query = query.options(joinedload(User.profile))
+
+        if order_by:
+            query = _parse_sort_by(query, User, order_by)
 
         if limit < 0:
             return query.all()
@@ -227,7 +250,14 @@ class Dao:
         self.db.delete(channel)
         self.db.commit()
 
-    def get_packages(self, channel_name: str, skip: int, limit: int, q: Optional[str]):
+    def get_packages(
+        self,
+        channel_name: str,
+        skip: int,
+        limit: int,
+        q: Optional[str],
+        order_by: str = 'name:asc',
+    ):
         query = self.db.query(Package).filter(Package.channel_name == channel_name)
 
         if q:
@@ -235,6 +265,18 @@ class Dao:
 
         if limit < 0:
             return query.all()
+
+        if order_by:
+            orders = order_by.split(',')
+            for o in orders:
+                if o.startswith('latest_change'):
+                    query = query.join(Package.current_package_version)
+                    if len(o.split(':')) == 2 and o.split(':') == 'desc':
+                        query = query.order_by(PackageVersion.time_created.desc())
+                    else:
+                        query = query.order_by(PackageVersion.time_created.asc())
+                else:
+                    query = _parse_sort_by(query, Package, order_by)
 
         return get_paginated_result(query, skip, limit)
 
@@ -255,6 +297,7 @@ class Dao:
         keywords: List[str],
         filters: Optional[List[tuple]],
         user_id: Optional[bytes],
+        order_by: str = 'name:asc',
     ):
         db = self.db.query(Package).join(Channel).join(PackageVersion).join(User)
         query = apply_custom_query('package', db, keywords, filters)
@@ -268,6 +311,9 @@ class Dao:
         else:
             query = query.filter(Channel.private == False)  # noqa
 
+        if order_by:
+            query = _parse_sort_by(query, Package, order_by)
+
         return query.all()
 
     def search_channels(
@@ -275,6 +321,7 @@ class Dao:
         keywords: List[str],
         filters: Optional[List[tuple]],
         user_id: Optional[bytes],
+        order_by: str = 'name:asc',
     ):
         db = self.db.query(Channel)
         query = apply_custom_query('channel', db, keywords, filters)
@@ -287,6 +334,9 @@ class Dao:
             )
         else:
             query = query.filter(Channel.private == False)  # noqa
+
+        if order_by:
+            query = _parse_sort_by(query, Package, order_by)
 
         return query.all()
 
