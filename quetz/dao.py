@@ -461,13 +461,13 @@ class Dao:
         self.db.add(member)
         self.db.commit()
 
-    def get_api_keys_with_members(self, user_id):
+    def get_api_keys_with_members(self, user_id, api_key_id=None):
+
         user_role_api_keys = (
             self.db.query(ApiKey)
             .filter(ApiKey.owner_id == user_id)
             .filter(ApiKey.user_id == user_id)
             .filter(~ApiKey.deleted)
-            .all()
         )
 
         custom_role_api_keys = (
@@ -478,8 +478,14 @@ class Dao:
             .filter(Profile.name.is_(None))
             .outerjoin(ChannelMember, ChannelMember.user_id == ApiKey.user_id)
             .outerjoin(PackageMember, PackageMember.user_id == ApiKey.user_id)
-            .all()
         )
+
+        if api_key_id:
+            user_role_api_keys = user_role_api_keys.filter(ApiKey.key == api_key_id)
+            custom_role_api_keys = custom_role_api_keys.filter(ApiKey.key == api_key_id)
+
+        user_role_api_keys = user_role_api_keys.all()
+        custom_role_api_keys = custom_role_api_keys.all()
 
         return user_role_api_keys, custom_role_api_keys
 
@@ -511,8 +517,14 @@ class Dao:
         else:
             user = User(id=uuid.uuid4().bytes)
             self.db.add(user)
+
         db_api_key = ApiKey(
-            key=key, description=api_key.description, user=user, owner=owner
+            key=key,
+            description=api_key.description,
+            created_at=datetime.utcnow(),
+            expire_at=api_key.expire_at,
+            user=user,
+            owner=owner,
         )
 
         self.db.add(db_api_key)

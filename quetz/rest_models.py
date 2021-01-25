@@ -237,6 +237,8 @@ class CPRole(BaseModel):
 
 class BaseApiKey(BaseModel):
     description: str
+    created_at: Optional[datetime]
+    expire_at: Optional[datetime]
     roles: Optional[List[CPRole]]
 
 
