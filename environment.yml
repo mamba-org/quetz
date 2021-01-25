@@ -35,3 +35,4 @@ dependencies:
   - aiofiles
   - pyyaml
   - ujson
+  - prometheus_client

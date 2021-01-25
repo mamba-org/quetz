@@ -43,7 +43,15 @@ from tenacity import (
     wait_exponential,
 )
 
-from quetz import authorization, db_models, errors, exceptions, frontend, rest_models
+from quetz import (
+    authorization,
+    db_models,
+    errors,
+    exceptions,
+    frontend,
+    metrics,
+    rest_models,
+)
 from quetz.authentication import AuthenticatorRegistry, BaseAuthenticator
 from quetz.authentication import github as auth_github
 from quetz.authentication import google as auth_google
@@ -86,6 +94,7 @@ app.add_middleware(
     https_only=config.session_https_only,
 )
 
+metrics.init(app)
 
 if config.configured_section("cors"):
     logger.info("Configuring CORS with ")
