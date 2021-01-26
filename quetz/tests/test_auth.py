@@ -507,7 +507,11 @@ def test_create_api_key(data, client):
 
     response = client.post(
         '/api/api-keys',
-        json={"description": "test-key", 'expire_at': '2024-01-26T08:42:42.273568', "roles": []},
+        json={
+            "description": "test-key",
+            'expire_at': '2024-01-26T08:42:42.273568',
+            "roles": [],
+        },
     )
 
     assert response.status_code == 201
@@ -516,7 +520,7 @@ def test_create_api_key(data, client):
         'created_at': mock.ANY,
         'expire_at': '2024-01-26T08:42:42.273568',
         "roles": None,
-        "key": mock.ANY
+        "key": mock.ANY,
     }
 
 

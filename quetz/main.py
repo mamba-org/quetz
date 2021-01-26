@@ -1034,7 +1034,7 @@ def get_api_keys(
                 description=key.description,
                 created_at=key.created_at,
                 expire_at=key.expire_at,
-                roles=None
+                roles=None,
             )
         )
 
@@ -1067,7 +1067,7 @@ def get_api_keys(
                 description=group_key.description,
                 created_at=group_key.created_at,
                 expire_at=group_key.expire_at,
-                roles=roles
+                roles=roles,
             )
         )
 
@@ -1089,25 +1089,25 @@ def post_api_key(
 
     key = generate_random_key(32)
     dao.create_api_key(user_id, api_key, key)
-    
+
     user_role_keys, custom_role_keys = dao.get_api_keys_with_members(user_id, key)
 
-    if len(user_role_keys) > 0 :
+    if len(user_role_keys) > 0:
         key = user_role_keys[0]
         return rest_models.ApiKey(
             key=key.key,
             description=key.description,
             created_at=key.created_at,
             expire_at=key.expire_at,
-            roles=None
+            roles=None,
         )
 
-    else :
+    else:
         key = custom_role_keys[0][0]
         package_member = custom_role_keys[0][1]
         channel_member = custom_role_keys[0][2]
         roles = []
-        
+
         if package_member:
             roles.append(
                 CPRole(
@@ -1131,7 +1131,7 @@ def post_api_key(
             description=key.description,
             created_at=key.created_at,
             expire_at=key.expire_at,
-            roles=roles
+            roles=roles,
         )
 
 
