@@ -23,7 +23,7 @@ def upgrade():
                 'created_at',
                 sa.DateTime(),
                 nullable=True,
-                server_default='2020-01-01 00:00',
+                server_default='2020-01-01 00:00:00',
             )
         )
         batch_op.add_column(sa.Column('expire_at', sa.DateTime(), nullable=True))
