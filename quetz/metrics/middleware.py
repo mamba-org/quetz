@@ -61,7 +61,7 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
             before_time = time.perf_counter()
             response = await call_next(request)
             after_time = time.perf_counter()
-            if response.status_code == 200:
+            if response.status_code < 400:
                 if request.method == 'GET' and request.url.path.startswith("/get"):
                     if request.url.path.endswith(
                         ".tar.bz2"
