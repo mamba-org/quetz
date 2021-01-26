@@ -24,7 +24,11 @@ def get_engine(db_url, echo: bool = False, reuse_engine=True, **kwargs) -> Engin
     global engine
 
     if not engine or not reuse_engine:
-        engine = create_engine(db_url, echo=echo, **kwargs)
+        # TODO make configurable!
+        if db_url.startswith('postgres'):
+            engine = create_engine(db_url, echo=echo, pool_size=32, max_overflow=100, **kwargs)
+        else:
+            engine = create_engine(db_url, echo=echo, **kwargs)
     return engine
 
 

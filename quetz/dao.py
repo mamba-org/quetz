@@ -336,7 +336,7 @@ class Dao:
             query = query.filter(Channel.private == False)  # noqa
 
         if order_by:
-            query = _parse_sort_by(query, Package, order_by)
+            query = _parse_sort_by(query, Channel, order_by)
 
         return query.all()
 
