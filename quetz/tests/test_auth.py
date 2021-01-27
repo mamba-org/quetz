@@ -465,7 +465,7 @@ def test_create_api_key(data, client):
     assert response.status_code == 201
     assert response.json() == {
         "description": "test-key",
-        'created_at': mock.ANY,
+        'time_created': mock.ANY,
         'expire_at': None,
         "roles": [{"channel": "privatechannel", "role": "member", "package": None}],
         "key": mock.ANY,
@@ -477,7 +477,7 @@ def test_create_api_key(data, client):
         '/api/api-keys',
         json={
             "description": "test-key",
-            'expire_at': '2024-01-26T08:42:42.273568',
+            'expire_at': '2024-01-26',
             "roles": [
                 {
                     "channel": "privatechannel",
@@ -491,8 +491,8 @@ def test_create_api_key(data, client):
     assert response.status_code == 201
     assert response.json() == {
         "description": "test-key",
-        'created_at': mock.ANY,
-        'expire_at': '2024-01-26T08:42:42.273568',
+        'time_created': mock.ANY,
+        'expire_at': '2024-01-26',
         "roles": [
             {
                 "role": "member",
@@ -509,7 +509,7 @@ def test_create_api_key(data, client):
         '/api/api-keys',
         json={
             "description": "test-key",
-            'expire_at': '2024-01-26T08:42:42.273568',
+            'expire_at': '2024-01-26',
             "roles": [],
         },
     )
@@ -517,8 +517,8 @@ def test_create_api_key(data, client):
     assert response.status_code == 201
     assert response.json() == {
         "description": "test-key",
-        'created_at': mock.ANY,
-        'expire_at': '2024-01-26T08:42:42.273568',
+        'time_created': mock.ANY,
+        'expire_at': '2024-01-26',
         "roles": None,
         "key": mock.ANY,
     }

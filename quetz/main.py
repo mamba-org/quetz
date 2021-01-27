@@ -1032,7 +1032,7 @@ def get_api_keys(
             rest_models.ApiKey(
                 key=key.key,
                 description=key.description,
-                created_at=key.created_at,
+                time_created=key.time_created,
                 expire_at=key.expire_at,
                 roles=None,
             )
@@ -1065,7 +1065,7 @@ def get_api_keys(
             rest_models.ApiKey(
                 key=group_key.key,
                 description=group_key.description,
-                created_at=group_key.created_at,
+                time_created=group_key.time_created,
                 expire_at=group_key.expire_at,
                 roles=roles,
             )
@@ -1097,7 +1097,7 @@ def post_api_key(
         return rest_models.ApiKey(
             key=key.key,
             description=key.description,
-            created_at=key.created_at,
+            time_created=key.time_created,
             expire_at=key.expire_at,
             roles=None,
         )
@@ -1129,7 +1129,7 @@ def post_api_key(
         return rest_models.ApiKey(
             key=key.key,
             description=key.description,
-            created_at=key.created_at,
+            time_created=key.time_created,
             expire_at=key.expire_at,
             roles=roles,
         )

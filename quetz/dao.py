@@ -6,7 +6,7 @@ import logging
 import pickle
 import uuid
 from collections import defaultdict
-from datetime import datetime
+from datetime import date, datetime
 from itertools import groupby
 from typing import Dict, List, Optional
 
@@ -468,7 +468,7 @@ class Dao:
         db_api_key = ApiKey(
             key=key,
             description=api_key.description,
-            created_at=datetime.utcnow(),
+            time_created=date.today(),
             expire_at=api_key.expire_at,
             user=user,
             owner=owner,
