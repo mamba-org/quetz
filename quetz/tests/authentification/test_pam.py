@@ -1,3 +1,4 @@
+import getpass
 from unittest import mock
 
 import pytest
@@ -68,3 +69,17 @@ def test_user_role(config, expected_role):
         assert role is None
     else:
         assert role == expected_role
+
+
+@pytest.mark.asyncio
+async def test_authenticate(config):
+
+    auth = PAMAuthenticator(config)
+    request = Request(scope={"type": "http"})
+    current_user = getpass.getuser()
+
+    result = await auth.authenticate(
+        request, {"username": current_user, "password": "test"}
+    )
+
+    assert result is None  # authentication failed due to incorrect password
