@@ -65,11 +65,11 @@ def _parse_sort_by(query, model, sortstr: str):
             order = 'desc'
 
         if hasattr(model, field):
-            field = getattr(model, field)
+            model_field = getattr(model, field)
             if order == 'desc':
-                query = query.order_by(field.desc())
+                query = query.order_by(model_field.desc())
             else:
-                query = query.order_by(field.asc())
+                query = query.order_by(model_field.asc())
     return query
 
 
@@ -256,8 +256,9 @@ class Dao:
         skip: int,
         limit: int,
         q: Optional[str],
-        order_by: str = 'name:asc',
+        order_by: Optional[str],
     ):
+
         query = self.db.query(Package).filter(Package.channel_name == channel_name)
 
         if q:
@@ -266,17 +267,19 @@ class Dao:
         if limit < 0:
             return query.all()
 
-        if order_by:
-            orders = order_by.split(',')
-            for o in orders:
-                if o.startswith('latest_change'):
-                    query = query.join(Package.current_package_version)
-                    if len(o.split(':')) == 2 and o.split(':') == 'desc':
-                        query = query.order_by(PackageVersion.time_created.desc())
-                    else:
-                        query = query.order_by(PackageVersion.time_created.asc())
+        if not order_by:
+            order_by = 'name:asc'
+
+        orders = order_by.split(',')
+        for o in orders:
+            if o.startswith('latest_change'):
+                query = query.join(Package.current_package_version)
+                if len(o.split(':')) == 2 and o.split(':') == 'desc':
+                    query = query.order_by(PackageVersion.time_created.desc())
                 else:
-                    query = _parse_sort_by(query, Package, order_by)
+                    query = query.order_by(PackageVersion.time_created.asc())
+            else:
+                query = _parse_sort_by(query, Package, order_by)
 
         return get_paginated_result(query, skip, limit)
 
