@@ -1,5 +1,6 @@
+import sys
 import uuid
-from typing import Dict, List, Optional, Type, TypedDict, Union
+from typing import Dict, List, Optional, Type, Union
 
 from fastapi import APIRouter, Depends, Request, Response
 from starlette.responses import RedirectResponse
@@ -7,6 +8,11 @@ from starlette.responses import RedirectResponse
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.deps import get_config, get_dao
+
+if sys.version_info >= (3, 8):
+    from typing import TypedDict  # pylint: disable=no-name-in-module
+else:
+    from typing_extensions import TypedDict
 
 from . import auth_dao
 

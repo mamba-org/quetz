@@ -177,8 +177,9 @@ class Package(BaseModel):
     summary: str = Field(None, title='The summary of the package')
     description: str = Field(None, title='The description of the package')
     url: str = Field(None, title="project url")
-    platforms: List[str] = Field(None, title="project url")
+    platforms: List[str] = Field(None, title="supported platforms")
     current_version: str = Field(None, title="latest version of any platform")
+    latest_change: datetime = Field(None, title="date of latest change")
 
     @validator("platforms", pre=True)
     def parse_list_of_platforms(cls, v):

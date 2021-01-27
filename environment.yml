@@ -37,3 +37,4 @@ dependencies:
   - ujson
   - prometheus_client
   - pamela
+  - typing_extensions

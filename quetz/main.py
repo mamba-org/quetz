@@ -769,6 +769,7 @@ def get_paginated_packages(
     skip: int = 0,
     limit: int = PAGINATION_LIMIT,
     q: Optional[str] = None,
+    order_by: Optional[str] = None,
 ):
     """
     Retrieve all packages in a channel.
@@ -776,7 +777,7 @@ def get_paginated_packages(
     is applied.
     """
 
-    return dao.get_packages(channel.name, skip, limit, q)
+    return dao.get_packages(channel.name, skip, limit, q, order_by)
 
 
 @api_router.get(

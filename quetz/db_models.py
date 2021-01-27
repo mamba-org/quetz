@@ -132,6 +132,10 @@ class Package(Base):
     def current_version(self):
         return self.current_package_version.version
 
+    @property
+    def latest_change(self):
+        return self.current_package_version.time_created
+
     def __repr__(self):
         return (
             f"<Package name={self.name}, summary={self.summary},"
