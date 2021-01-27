@@ -55,7 +55,6 @@ class PackageVersionMetric(Base):
     id = sa.Column(UUID, default=lambda: uuid.uuid4().bytes, primary_key=True)
 
     channel_name = sa.Column(sa.String)
-
     platform = sa.Column(sa.String)
 
     filename = sa.Column(sa.String)
@@ -64,6 +63,17 @@ class PackageVersionMetric(Base):
     period = sa.Column(sa.Enum(IntervalType))
     count = sa.Column(sa.Integer, server_default=sa.text("0"), nullable=False)
     timestamp = sa.Column(sa.DateTime(), nullable=False)
+
+    __table_args__ = (
+        sa.Index(
+            'package_version_metric_index',
+            channel_name,
+            platform,
+            filename,
+            metric_name,
+            period,
+        ),
+    )
 
     def __repr__(self):
         return (
