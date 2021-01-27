@@ -73,6 +73,7 @@ from quetz.deps import (
 )
 from quetz.jobs import api as jobs_api
 from quetz.metrics import api as metrics_api
+from quetz.metrics.middleware import DOWNLOAD_COUNT
 from quetz.rest_models import ChannelActionEnum, CPRole
 from quetz.tasks import indexing
 from quetz.tasks.common import Task
@@ -1395,6 +1396,15 @@ async def serve_path(
     if path.endswith(".tar.bz2") or path.endswith(".conda"):
         try:
             platform, filename = os.path.split(path)
+            package_name, version, hash_end = filename.rsplit('-', 2)
+            package_type = "tar.bz2" if hash_end.endswith(".tar.bz2") else "conda"
+            DOWNLOAD_COUNT.labels(
+                channel=channel.name,
+                platform=platform,
+                package_name=package_name,
+                version=version,
+                package_type=package_type,
+            ).inc()
             dao.incr_download_count(channel.name, filename, platform)
         except ValueError:
             pass

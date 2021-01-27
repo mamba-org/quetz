@@ -61,25 +61,6 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
             before_time = time.perf_counter()
             response = await call_next(request)
             after_time = time.perf_counter()
-            if response.status_code < 400:
-                if request.method == 'GET' and request.url.path.startswith("/get"):
-                    if request.url.path.endswith(
-                        ".tar.bz2"
-                    ) or request.url.path.endswith(".conda"):
-                        _, channel_name, platform, filename = request.url.path[
-                            1:
-                        ].split("/")
-                        package_name, version, hash_end = filename.rsplit('-', 2)
-                        package_type = (
-                            "tar.bz2" if hash_end.endswith(".tar.bz2") else "conda"
-                        )
-                        DOWNLOAD_COUNT.labels(
-                            channel=channel_name,
-                            platform=platform,
-                            package_name=package_name,
-                            version=version,
-                            package_type=package_type,
-                        ).inc()
         except Exception as e:
             EXCEPTIONS.labels(
                 method=method,
