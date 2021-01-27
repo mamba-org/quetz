@@ -268,18 +268,18 @@ class Dao:
             return query.all()
 
         if not order_by:
-            order_by = 'name:asc'
-
-        orders = order_by.split(',')
-        for o in orders:
-            if o.startswith('latest_change'):
-                query = query.join(Package.current_package_version)
-                if len(o.split(':')) == 2 and o.split(':') == 'desc':
-                    query = query.order_by(PackageVersion.time_created.desc())
+            query = query.order_by(Package.name.asc())
+        else:
+            orders = order_by.split(',')
+            for o in orders:
+                if o.startswith('latest_change'):
+                    query = query.join(Package.current_package_version)
+                    if len(o.split(':')) == 2 and o.split(':') == 'desc':
+                        query = query.order_by(PackageVersion.time_created.desc())
+                    else:
+                        query = query.order_by(PackageVersion.time_created.asc())
                 else:
-                    query = query.order_by(PackageVersion.time_created.asc())
-            else:
-                query = _parse_sort_by(query, Package, order_by)
+                    query = _parse_sort_by(query, Package, order_by)
 
         return get_paginated_result(query, skip, limit)
 
