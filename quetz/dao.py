@@ -255,8 +255,8 @@ class Dao:
         channel_name: str,
         skip: int,
         limit: int,
-        q: Optional[str],
-        order_by: Optional[str],
+        q: Optional[str] = None,
+        order_by: Optional[str] = None,
     ):
 
         query = self.db.query(Package).filter(Package.channel_name == channel_name)
