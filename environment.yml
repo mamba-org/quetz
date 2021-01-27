@@ -36,3 +36,4 @@ dependencies:
   - pyyaml
   - ujson
   - prometheus_client
+  - pamela

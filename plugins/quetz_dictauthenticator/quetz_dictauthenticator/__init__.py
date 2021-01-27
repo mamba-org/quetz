@@ -28,6 +28,10 @@ class DictionaryAuthenticator(SimpleAuthenticator):
         else:
             self.passwords = {}
 
+        # call the config of base class to configure default roles and
+        # channels
+        super().configure(config)
+
     async def authenticate(self, request, data, **kwargs):
         if self.passwords.get(data['username']) == data['password']:
             return data['username']

@@ -8,10 +8,10 @@ def test_get_user_by_identity_new_user(dao, config):
         "login": "bartosz",
         "name": "bartosz",
         "avatar_url": "url",
-        "provider": "github",
     }
+    provider = "github"
 
-    user = auth_dao.get_user_by_identity(dao, profile, config)
+    user = auth_dao.get_user_by_identity(dao, provider, profile, config)
 
     assert user.username == 'bartosz'
     assert user.identities[0].provider == 'github'
