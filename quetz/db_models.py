@@ -306,6 +306,14 @@ Index(
     PackageVersion.package_name,
 )
 
+Index(
+    'package_version_filename_index',
+    PackageVersion.channel_name,
+    PackageVersion.filename,
+    PackageVersion.platform,
+    unique=True,
+)
+
 UniqueConstraint(
     PackageVersion.channel_name,
     PackageVersion.package_name,

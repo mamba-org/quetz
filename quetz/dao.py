@@ -39,7 +39,42 @@ from .metrics.db_models import (
     round_timestamp,
 )
 
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql.expression import Executable, ClauseElement, Insert
+
+from sqlalchemy.dialects.postgresql import insert
+
 logger = logging.getLogger("quetz")
+
+
+class Upsert(Insert):
+    def __init__(self, table, values, index_elements, column, incr=1):
+        self.values = values
+        self.index_elements = index_elements
+        self.column = column
+        self._returning = None
+        self.table = table
+        self.incr = incr
+
+
+@compiles(Upsert, 'postgresql')
+def upsert_pg(element, compiler, **kw):
+
+    index_elements = element.index_elements
+    values = element.values
+    column = element.column
+    incr = element.incr
+
+    stmt = insert(PackageVersionMetric.__table__).values(values)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=index_elements,
+        set_={column.name: column + incr},
+    )
+
+    return compiler.visit_insert(stmt)
+
+
+# insert = Upsert(t1, select(t1).where(t1.c.x>5))
 
 
 def get_paginated_result(query: Query, skip: int, limit: int):
@@ -921,38 +956,44 @@ class Dao:
             {PackageVersion.download_count: PackageVersion.download_count + incr}
         )
 
-        q = (
-            self.db.query(PackageVersionMetric)
-            .filter(PackageVersionMetric.channel_name == channel)
-            .filter(PackageVersionMetric.platform == platform)
-            .filter(PackageVersionMetric.metric_name == metric_name)
-            .filter(PackageVersionMetric.filename == filename)
-        )
-
         if timestamp is None:
             timestamp = datetime.utcnow()
 
+        all_values = []
         for interval in IntervalType:
             now_interval = round_timestamp(timestamp, interval)
-            m = (
-                q.filter(PackageVersionMetric.period == interval)
-                .filter(PackageVersionMetric.timestamp == now_interval)
-                .one_or_none()
-            )
 
-            if m is None:
-                m = PackageVersionMetric(
-                    channel_name=channel,
-                    platform=platform,
-                    filename=filename,
-                    metric_name=metric_name,
-                    period=interval,
-                    timestamp=now_interval,
-                )
-                self.db.add(m)
-                self.db.flush()
+            pg_map = {"H": "hour", "D": "day", "M": "minute", "Y": "year"}
 
-            m.count += incr
+            values = {
+                'channel_name': channel,
+                'platform': platform,
+                'metric_name': metric_name,
+                'filename': filename,
+                "timestamp": func.date_trunc(pg_map[interval.value], now_interval),
+                "period": interval,
+                "count": incr,
+            }
+
+            all_values.append(values)
+
+        index_elements = [
+            'channel_name',
+            'platform',
+            'filename',
+            'metric_name',
+            'period',
+            'timestamp',
+        ]
+
+        stmt = Upsert(
+            PackageVersionMetric.__table__,
+            all_values,
+            index_elements,
+            PackageVersionMetric.count,
+            incr=incr,
+        )
+        self.db.execute(stmt)
 
         self.db.commit()
 

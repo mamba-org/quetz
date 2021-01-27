@@ -72,7 +72,16 @@ class PackageVersionMetric(Base):
             filename,
             metric_name,
             period,
+            timestamp,
         ),
+        sa.UniqueConstraint(
+            channel_name,
+            platform,
+            filename,
+            metric_name,
+            period,
+            timestamp,
+        )
     )
 
     def __repr__(self):

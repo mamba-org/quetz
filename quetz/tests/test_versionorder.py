@@ -246,16 +246,16 @@ def test_package_version(db, dao: Dao, user, channel_name, package_name):
         ("0.1.0", 5),
         ("0.1.0", 2),
     ]
-    for v in versions:
+    for ver, build_str in versions:
         dao.create_version(
             channel_name,
             package_name,
             package_format,
             "linux-64",
-            v[0],
-            v[1],
+            ver,
+            build_str,
             "",
-            "",
+            f"{package_name}-{ver}-{build_str}.tar.bz2",
             package_info,
             user.id,
             size=0,

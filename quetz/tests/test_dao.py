@@ -183,7 +183,7 @@ def test_update_channel_size(dao, channel, db, package_version):
     assert channel.size == package_version.size
 
 
-def test_increment_download_count(dao: Dao, channel, db, package_version):
+def test_increment_download_count(dao: Dao, channel, db, package_version, session_maker):
 
     assert package_version.download_count == 0
     now = datetime.datetime(2020, 10, 1, 10, 1, 10)
