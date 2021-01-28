@@ -47,6 +47,16 @@ logger = logging.getLogger("quetz")
 
 
 class date_trunc(FunctionElement):
+    """round timestamp to nearest starting edge of an interval
+
+    Arguments
+    ---------
+
+    interval: IntervalEnum
+
+    timestamp: datetime
+    """
+
     name = "date_trunc"
     type = DateTime()
 
@@ -70,6 +80,23 @@ def sqlite_date_trunc(element, compiler, **kw):
 
 
 class Upsert(Insert):
+    """Upsert for PackageVersionMetrics table. Requires a unique
+    constraint to be defined.
+
+    Arguments
+    ---------
+
+    table
+
+    values: values to insert
+
+    index_elements: columns of unique constraint
+
+    column: Column to be incremented
+
+    incr: increment
+    """
+
     def __init__(self, table, values, index_elements, column, incr=1):
         self.values = values
         self.index_elements = index_elements
@@ -86,8 +113,9 @@ def upsert_pg(element, compiler, **kw):
     values = element.values
     column = element.column
     incr = element.incr
+    table = element.table
 
-    stmt = pg_insert(PackageVersionMetric.__table__).values(values)
+    stmt = pg_insert(table).values(values)
     stmt = stmt.on_conflict_do_update(
         index_elements=index_elements,
         set_={column.name: column + incr},
@@ -109,8 +137,9 @@ def upsert_sql(element, compiler, **kw):
     values = element.values
     column = element.column
     incr = element.incr
+    table = element.table
 
-    stmt = insert(PackageVersionMetric.__table__).values(values)
+    stmt = insert(table).values(values)
     raw_sql = compiler.process(stmt)
     upsert_stmt = "ON CONFLICT ({}) DO UPDATE SET {}={}+{}".format(
         ",".join(index_elements), column.name, column.name, incr
