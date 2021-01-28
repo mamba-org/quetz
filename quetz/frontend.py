@@ -68,7 +68,7 @@ def render_index(config):
     logger.info("Rendering index.html!")
     static_dir = Path(static_dir)
     if (static_dir / ".." / "templates").exists():
-        with open(static_dir / ".." / "templates" / "index.html") as fi:
+        with open(static_dir / "index.html") as fi:
             index_template = jinja2.Template(fi.read())
 
         with open(static_dir / ".." / "templates" / "settings.json") as fi:
