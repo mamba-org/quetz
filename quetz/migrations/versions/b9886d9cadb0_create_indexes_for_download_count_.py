@@ -30,7 +30,7 @@ def upgrade():
             unique=False,
         )
         batch_op.create_unique_constraint(
-            None,
+            "package_version_metric_constraint",
             [
                 'channel_name',
                 'platform',
@@ -57,7 +57,7 @@ def downgrade():
         batch_op.drop_index('package_version_filename_index')
 
     with op.batch_alter_table('aggregated_metrics', schema=None) as batch_op:
-        batch_op.drop_constraint(None, type_='unique')
+        batch_op.drop_constraint("package_version_metric_constraint", type_='unique')
         batch_op.drop_index('package_version_metric_index')
 
     # ### end Alembic commands ###

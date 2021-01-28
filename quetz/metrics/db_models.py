@@ -81,7 +81,8 @@ class PackageVersionMetric(Base):
             metric_name,
             period,
             timestamp,
-        )
+            name="package_version_metric_constraint",
+        ),
     )
 
     def __repr__(self):

@@ -11,9 +11,13 @@ from itertools import groupby
 from typing import Dict, List, Optional
 
 import pkg_resources
-from sqlalchemy import and_, func, or_
+from sqlalchemy import and_, func, insert, or_
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import Query, Session, aliased, joinedload
+from sqlalchemy.sql.expression import FunctionElement, Insert
+from sqlalchemy.types import DateTime
 
 from quetz import channel_data, errors, rest_models, versionorder
 from quetz.database_extensions import version_match
@@ -39,12 +43,30 @@ from .metrics.db_models import (
     round_timestamp,
 )
 
-from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.sql.expression import Executable, ClauseElement, Insert
-
-from sqlalchemy.dialects.postgresql import insert
-
 logger = logging.getLogger("quetz")
+
+
+class date_trunc(FunctionElement):
+    name = "date_trunc"
+    type = DateTime()
+
+
+@compiles(date_trunc, 'postgresql')
+def pg_date_trunc(element, compiler, **kw):
+    pg_map = {"H": "hour", "D": "day", "M": "month", "Y": "year"}
+    period, date = list(element.clauses)
+    return "date_trunc('%s', %s)" % (
+        pg_map[period.value.value],
+        compiler.process(date, **kw),
+    )
+
+
+@compiles(date_trunc, 'sqlite')
+def sqlite_date_trunc(element, compiler, **kw):
+    period, date = list(element.clauses)
+    now_interval = round_timestamp(date.value, period.value)
+    date.value = now_interval
+    return compiler.process(date)
 
 
 class Upsert(Insert):
@@ -65,7 +87,7 @@ def upsert_pg(element, compiler, **kw):
     column = element.column
     incr = element.incr
 
-    stmt = insert(PackageVersionMetric.__table__).values(values)
+    stmt = pg_insert(PackageVersionMetric.__table__).values(values)
     stmt = stmt.on_conflict_do_update(
         index_elements=index_elements,
         set_={column.name: column + incr},
@@ -74,7 +96,27 @@ def upsert_pg(element, compiler, **kw):
     return compiler.visit_insert(stmt)
 
 
-# insert = Upsert(t1, select(t1).where(t1.c.x>5))
+@compiles(Upsert, 'sqlite')
+def upsert_sql(element, compiler, **kw):
+    # on_conflict_do_update does exist in sqlite
+    # but it was ported to sqlalchemy only in version 1.4
+    # which was not released at the time of implementing this
+    # so we treat it with raw SQL syntax
+    # sqlite ref: https://www.sqlite.org/lang_upsert.html
+    # sqlalchemy 1.4 ref: https://docs.sqlalchemy.org/en/14/dialects/sqlite.html#insert-on-conflict-upsert # noqa
+
+    index_elements = element.index_elements
+    values = element.values
+    column = element.column
+    incr = element.incr
+
+    stmt = insert(PackageVersionMetric.__table__).values(values)
+    raw_sql = compiler.process(stmt)
+    upsert_stmt = "ON CONFLICT ({}) DO UPDATE SET {}={}+{}".format(
+        ",".join(index_elements), column.name, column.name, incr
+    )
+
+    return raw_sql + " " + upsert_stmt
 
 
 def get_paginated_result(query: Query, skip: int, limit: int):
@@ -961,16 +1003,13 @@ class Dao:
 
         all_values = []
         for interval in IntervalType:
-            now_interval = round_timestamp(timestamp, interval)
-
-            pg_map = {"H": "hour", "D": "day", "M": "minute", "Y": "year"}
 
             values = {
                 'channel_name': channel,
                 'platform': platform,
                 'metric_name': metric_name,
                 'filename': filename,
-                "timestamp": func.date_trunc(pg_map[interval.value], now_interval),
+                "timestamp": date_trunc(interval, timestamp),
                 "period": interval,
                 "count": incr,
             }
@@ -993,6 +1032,7 @@ class Dao:
             PackageVersionMetric.count,
             incr=incr,
         )
+
         self.db.execute(stmt)
 
         self.db.commit()
