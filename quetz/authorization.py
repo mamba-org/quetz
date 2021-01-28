@@ -5,6 +5,7 @@ import enum
 import uuid
 from typing import Optional
 
+from datetime import date
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -42,6 +43,7 @@ class Rules:
             api_key = (
                 self.db.query(ApiKey)
                 .filter(ApiKey.key == self.API_key, ~ApiKey.deleted)
+                .filter(ApiKey.key == self.API_key, ApiKey.expire_at >= date.today())
                 .one_or_none()
             )
             if api_key:
