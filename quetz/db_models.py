@@ -171,11 +171,13 @@ class Channel(Base):
     members_count = column_property(
         select([func.count(ChannelMember.user_id)]).where(
             ChannelMember.channel_name == name
-        )
+        ),
+        deferred=True,
     )
 
     packages_count = column_property(
-        select([func.count(Package.name)]).where(Package.channel_name == name)
+        select([func.count(Package.name)]).where(Package.channel_name == name),
+        deferred=True,
     )
 
     def __repr__(self):
@@ -302,6 +304,14 @@ Index(
     'package_version_name_index',
     PackageVersion.channel_name,
     PackageVersion.package_name,
+)
+
+Index(
+    'package_version_filename_index',
+    PackageVersion.channel_name,
+    PackageVersion.filename,
+    PackageVersion.platform,
+    unique=True,
 )
 
 UniqueConstraint(
