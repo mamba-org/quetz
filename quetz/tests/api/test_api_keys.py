@@ -1,4 +1,5 @@
 import pytest
+from datetime import date
 
 from quetz.dao import Dao
 from quetz.db_models import ApiKey, ChannelMember, PackageMember
@@ -8,18 +9,18 @@ from quetz.utils import generate_random_key
 
 @pytest.fixture
 def api_keys(other_user, user, db, dao: Dao):
-    def key_factory(key_user, descr, roles):
+    def key_factory(key_user, descr, expire_at, roles):
         return dao.create_api_key(
             key_user.id,
-            BaseApiKey.parse_obj(dict(description=descr, roles=roles)),
+            BaseApiKey.parse_obj(dict(description=descr, expire_at=expire_at, roles=roles)),
             descr,
         )
 
     keys = [
-        key_factory(user, "key", []),
-        key_factory(other_user, "other_key", []),
-        key_factory(other_user, "other_user_is_user", []),
-        key_factory(user, "user_is_user", []),
+        key_factory(user, "key", '2030-01-01', []),
+        key_factory(other_user, "other_key", '2030-01-01', []),
+        key_factory(other_user, "other_user_is_user", '2030-01-01', []),
+        key_factory(user, "user_is_user", '2030-01-01', []),
     ]
 
     yield {k.description: k for k in keys}

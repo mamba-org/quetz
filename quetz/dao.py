@@ -15,7 +15,7 @@ from sqlalchemy import and_, func, insert, or_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.orm import Query, Session, aliased, joinedload
+from sqlalchemy.orm import Query, Session, aliased, joinedload, exc
 from sqlalchemy.sql.expression import FunctionElement, Insert
 from sqlalchemy.types import DateTime
 
@@ -189,10 +189,16 @@ class Dao:
         self.db.rollback()
 
     def get_profile(self, user_id):
-        return self.db.query(Profile).filter(Profile.user_id == user_id).one()
+        try:
+            return self.db.query(Profile).filter(Profile.user_id == user_id).one()
+        except exc.NoResultFound :
+            logger.error("User not found")
 
     def get_user(self, user_id):
-        return self.db.query(User).filter(User.id == user_id).one()
+        try:
+            return self.db.query(User).filter(User.id == user_id).one()
+        except exc.NoResultFound :
+            logger.error("User not found")
 
     def get_users(self, skip: int, limit: int, q: str, order_by: str = 'username:asc'):
         query = (
@@ -593,13 +599,6 @@ class Dao:
         user_role_api_keys = user_role_api_keys.all()
         custom_role_api_keys = custom_role_api_keys.all()
 
-        if api_key_id:
-            user_role_api_keys = user_role_api_keys.filter(ApiKey.key == api_key_id)
-            custom_role_api_keys = custom_role_api_keys.filter(ApiKey.key == api_key_id)
-
-        user_role_api_keys = user_role_api_keys.all()
-        custom_role_api_keys = custom_role_api_keys.all()
-
         return user_role_api_keys, custom_role_api_keys
 
     def get_package_api_keys(self, user_id):
@@ -631,6 +630,12 @@ class Dao:
             user = User(id=uuid.uuid4().bytes)
             self.db.add(user)
 
+        print(key)
+        print(api_key.description)
+        print(date.today())
+        print(api_key.expire_at)
+        print(user)
+        print(owner)
         db_api_key = ApiKey(
             key=key,
             description=api_key.description,
