@@ -1,10 +1,9 @@
 import os
 import shutil
 import uuid
+from datetime import date
 from unittest import mock
 from urllib.parse import quote
-
-from datetime import date
 
 from pytest import fixture
 
@@ -41,13 +40,23 @@ class Data:
         assert len(db.query(User).all()) == 3
 
         self.keya_obj = ApiKey(
-            key=self.keya, time_created=date.today(), expire_at=date(2030, 1, 1), user_id=self.usera.id, owner_id=self.usera.id
+            key=self.keya,
+            time_created=date.today(),
+            expire_at=date(2030, 1, 1),
+            user_id=self.usera.id,
+            owner_id=self.usera.id,
         )
 
         db.add(self.keya_obj)
-        db.add(ApiKey(
-            key=self.keyb, time_created=date.today(), expire_at=date(2030, 1, 1), user_id=self.userb.id, owner_id=self.userb.id
-            ))
+        db.add(
+            ApiKey(
+                key=self.keyb,
+                time_created=date.today(),
+                expire_at=date(2030, 1, 1),
+                user_id=self.userb.id,
+                owner_id=self.userb.id,
+            )
+        )
 
         self.channel1 = Channel(name="testchannel", private=False)
         self.channel2 = Channel(name="privatechannel", private=True)
@@ -635,6 +644,7 @@ def test_authorizations_with_deleted_api_key(data: Data, db):
 
     data.keya_obj.deleted = False
 
+
 def test_authorizations_with_expired_api_key(data, client):
 
     response = client.get(f"/api/dummylogin/{data.userc.username}")
@@ -659,5 +669,5 @@ def test_authorizations_with_expired_api_key(data, client):
     response = client.get(
         "/api/channels/privatechannel/members", headers={"X-API-Key": key}
     )
-    
+
     assert response.status_code == 401

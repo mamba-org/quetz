@@ -3,9 +3,9 @@
 
 import enum
 import uuid
+from datetime import date
 from typing import Optional
 
-from datetime import date
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 

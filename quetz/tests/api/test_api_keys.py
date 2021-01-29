@@ -1,5 +1,4 @@
 import pytest
-from datetime import date
 
 from quetz.dao import Dao
 from quetz.db_models import ApiKey, ChannelMember, PackageMember
@@ -12,7 +11,9 @@ def api_keys(other_user, user, db, dao: Dao):
     def key_factory(key_user, descr, expire_at, roles):
         return dao.create_api_key(
             key_user.id,
-            BaseApiKey.parse_obj(dict(description=descr, expire_at=expire_at, roles=roles)),
+            BaseApiKey.parse_obj(
+                dict(description=descr, expire_at=expire_at, roles=roles)
+            ),
             descr,
         )
 

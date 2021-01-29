@@ -191,13 +191,13 @@ class Dao:
     def get_profile(self, user_id):
         try:
             return self.db.query(Profile).filter(Profile.user_id == user_id).one()
-        except exc.NoResultFound :
+        except exc.NoResultFound:
             logger.error("User not found")
 
     def get_user(self, user_id):
         try:
             return self.db.query(User).filter(User.id == user_id).one()
-        except exc.NoResultFound :
+        except exc.NoResultFound:
             logger.error("User not found")
 
     def get_users(self, skip: int, limit: int, q: str, order_by: str = 'username:asc'):
