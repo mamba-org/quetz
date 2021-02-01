@@ -38,6 +38,11 @@ DOWNLOAD_COUNT = Counter(
     "Total count of package downloads",
     ["channel", "platform", "package_name", "version", "package_type"],
 )
+UPLOAD_COUNT = Counter(
+    "upload_count",
+    "Total count of package uploads",
+    ["channel", "platform", "package_name", "version", "package_type"],
+)
 
 
 class PrometheusMiddleware(BaseHTTPMiddleware):

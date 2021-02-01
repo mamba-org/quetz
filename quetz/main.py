@@ -73,7 +73,7 @@ from quetz.deps import (
 )
 from quetz.jobs import api as jobs_api
 from quetz.metrics import api as metrics_api
-from quetz.metrics.middleware import DOWNLOAD_COUNT
+from quetz.metrics.middleware import DOWNLOAD_COUNT, UPLOAD_COUNT
 from quetz.rest_models import ChannelActionEnum, CPRole
 from quetz.tasks import indexing
 from quetz.tasks.common import Task
@@ -1263,6 +1263,14 @@ def handle_package_files(
 
     for file, condainfo in zip(files, conda_infos):
         logger.debug(f"Handling {condainfo.info['name']} -> {file.filename}")
+        package_type = "tar.bz2" if file.filename.endswith(".tar.bz2") else "conda"
+        UPLOAD_COUNT.labels(
+            channel=channel_name,
+            platform=condainfo.info["subdir"],
+            package_name=condainfo.info["name"],
+            version=condainfo.info["version"],
+            package_type=package_type,
+        ).inc()
 
         package_name = condainfo.info["name"]
         parts = file.filename.rsplit("-", 2)
