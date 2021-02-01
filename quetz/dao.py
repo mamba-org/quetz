@@ -630,12 +630,6 @@ class Dao:
             user = User(id=uuid.uuid4().bytes)
             self.db.add(user)
 
-        print(key)
-        print(api_key.description)
-        print(date.today())
-        print(api_key.expire_at)
-        print(user)
-        print(owner)
         db_api_key = ApiKey(
             key=key,
             description=api_key.description,
