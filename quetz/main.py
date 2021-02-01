@@ -1,15 +1,18 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
+import asyncio
 import datetime
 import json
 import logging
 import os
 import re
 import uuid
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from email.utils import formatdate
 from tempfile import SpooledTemporaryFile
-from typing import List, Optional, Type
+from typing import List, Optional, Tuple, Type
 
 import pkg_resources
 import pydantic
@@ -32,6 +35,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse
@@ -111,6 +115,13 @@ if config.configured_section("cors"):
         allow_methods=config.cors_allow_methods,
         allow_headers=config.cors_allow_headers,
     )
+
+# global variables for batching download counts
+
+download_counts: Counter = Counter()
+
+DOWNLOAD_INCREMENT_DELAY_SECONDS = 10
+DOWNLOAD_INCREMENT_MAX_DOWNLOADS = 50
 
 
 class CondaTokenMiddleware(BaseHTTPMiddleware):
@@ -1225,7 +1236,7 @@ def handle_package_files(
         if len(parts) != 3:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"package file name has wrong format {file.filename}",
+                detail=f"package fiasyncile name has wrong format {file.filename}",
             )
         else:
             package_name = parts[0]
@@ -1379,6 +1390,64 @@ def invalid_api():
     return None
 
 
+@app.on_event("startup")
+def start_sync_download_counts():
+
+    global download_counts
+    wait_time = 1  # seconds
+
+    db_manager = contextmanager(get_db)
+
+    def commit_to_db(counts):
+        count: int
+        package = Tuple[str, str, str]
+
+        with TicToc("sync download counts"):
+            with db_manager(config) as db:
+                dao = get_dao(db)
+                for package, count in counts.items():
+                    dao.incr_download_count(*package, incr=count)
+
+    async def task():
+        last_download_sync = None
+        increment_delay = datetime.timedelta(seconds=DOWNLOAD_INCREMENT_DELAY_SECONDS)
+        try:
+            while True:
+                n_total_downloads = sum(download_counts.values())
+                now = datetime.datetime.utcnow()
+                if n_total_downloads < DOWNLOAD_INCREMENT_MAX_DOWNLOADS:
+                    if (
+                        last_download_sync
+                        and (last_download_sync + increment_delay) > now
+                    ):
+                        await asyncio.sleep(wait_time)
+                        continue
+                logger.debug(
+                    "Download counts: time since last sync %s, n/o downloads: %s",
+                    now - (last_download_sync or now),
+                    n_total_downloads,
+                )
+                new_items = download_counts.copy()
+                download_counts.clear()
+                await run_in_threadpool(commit_to_db, new_items)
+                last_download_sync = now
+        except asyncio.CancelledError:
+            commit_to_db(download_counts)
+            download_counts.clear()
+            raise
+
+    app.sync_download_task = asyncio.create_task(task())
+
+
+@app.on_event("shutdown")
+async def stop_sync_donwload_counts():
+    app.sync_download_task.cancel()
+    try:
+        await app.sync_download_task
+    except asyncio.CancelledError:
+        pass
+
+
 @app.get("/get/{channel_name}/{path:path}")
 async def serve_path(
     path,
@@ -1388,6 +1457,7 @@ async def serve_path(
     session=Depends(get_remote_session),
     dao: Dao = Depends(get_dao),
 ):
+
     if channel.mirror_channel_url and channel.mirror_mode == "proxy":
         repository = RemoteRepository(channel.mirror_channel_url, session)
         return get_from_cache_or_download(repository, cache, path)
@@ -1399,16 +1469,16 @@ async def serve_path(
             platform, filename = os.path.split(path)
             package_name, version, hash_end = filename.rsplit('-', 2)
             package_type = "tar.bz2" if hash_end.endswith(".tar.bz2") else "conda"
-            DOWNLOAD_COUNT.labels(
-                channel=channel.name,
-                platform=platform,
-                package_name=package_name,
-                version=version,
-                package_type=package_type,
-            ).inc()
-            dao.incr_download_count(channel.name, filename, platform)
         except ValueError:
             pass
+        DOWNLOAD_COUNT.labels(
+            channel=channel.name,
+            platform=platform,
+            package_name=package_name,
+            version=version,
+            package_type=package_type,
+        ).inc()
+        download_counts[(channel.name, filename, platform)] += 1
 
     if pkgstore_support_url and (path.endswith('.tar.bz2') or path.endswith('.conda')):
         # we have to ignore type checking here right now, sorry
