@@ -1236,7 +1236,7 @@ def handle_package_files(
         if len(parts) != 3:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"package fiasyncile name has wrong format {file.filename}",
+                detail=f"package file name has wrong format {file.filename}",
             )
         else:
             package_name = parts[0]

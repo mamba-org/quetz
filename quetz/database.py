@@ -16,6 +16,14 @@ engine = None
 logger = logging.getLogger("quetz")
 
 
+def set_metrics(*args):
+    checked_in = engine.pool.checkedin()
+    checked_out = engine.pool.checkedout()
+    pool_size = checked_in + checked_out
+    DATABASE_POOL_SIZE.set(pool_size)
+    DATABASE_CONNECTIONS_USED.set(checked_out)
+
+
 def get_engine(db_url, echo: bool = False, reuse_engine=True, **kwargs) -> Engine:
 
     if db_url.startswith('sqlite'):
@@ -34,6 +42,8 @@ def get_engine(db_url, echo: bool = False, reuse_engine=True, **kwargs) -> Engin
             engine = create_engine(
                 db_url, echo=echo, pool_size=200, max_overflow=100, **kwargs
             )
+            for event_name in ['connect', 'close', 'checkin', 'checkout']:
+                event.listen(engine, event_name, set_metrics)
         else:
             engine = create_engine(db_url, echo=echo, **kwargs)
 
@@ -43,19 +53,8 @@ def get_engine(db_url, echo: bool = False, reuse_engine=True, **kwargs) -> Engin
         def on_close(dbapi_conn, conn_record):
             logger.debug("connection closed: %s", engine.pool.status())
 
-        def set_metrics(*args):
-            checked_in = engine.pool.checkedin()
-            checked_out = engine.pool.checkedout()
-            pool_size = checked_in + checked_out
-            DATABASE_POOL_SIZE.set(pool_size)
-            DATABASE_CONNECTIONS_USED.set(checked_out)
-
         event.listen(engine, 'connect', on_connect)
         event.listen(engine, 'close', on_close)
-        event.listen(engine, 'connect', set_metrics)
-        event.listen(engine, 'close', set_metrics)
-        event.listen(engine, 'checkout', set_metrics)
-        event.listen(engine, 'checkin', set_metrics)
 
     return engine
 

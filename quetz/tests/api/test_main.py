@@ -94,6 +94,12 @@ def test_upload_wrong_file_type(auth_client, public_channel):
 def test_increment_download_count(
     auth_client, public_channel, package_version, db, mocker
 ):
+    def get_db(config):
+        yield db
+
+    mocker.patch("quetz.main.get_db", get_db)
+
+    assert not db.query(PackageVersionMetric).one_or_none()
 
     with auth_client:
         response = auth_client.get(
