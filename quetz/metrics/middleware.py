@@ -39,6 +39,14 @@ DOWNLOAD_COUNT = Counter(
     ["channel", "platform", "package_name", "version", "package_type"],
 )
 
+DATABASE_POOL_SIZE = Gauge(
+    "database_pool_size", "number of opened database connections"
+)
+
+DATABASE_CONNECTIONS_USED = Gauge(
+    "database_connections_used", "number of used database connections"
+)
+
 
 class PrometheusMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: ASGIApp, filter_unhandled_paths: bool = False) -> None:
