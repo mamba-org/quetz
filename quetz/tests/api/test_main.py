@@ -91,13 +91,21 @@ def test_upload_wrong_file_type(auth_client, public_channel):
     assert "not a bzip2 file" in response.json()['detail']
 
 
-def test_increment_download_count(auth_client, public_channel, package_version, db):
+def test_increment_download_count(
+    auth_client, public_channel, package_version, db, mocker
+):
+    def get_db(config):
+        yield db
 
-    response = auth_client.get(
-        f"/get/{public_channel.name}/linux-64/test-package-0.1-0.tar.bz2"
-    )
+    mocker.patch("quetz.main.get_db", get_db)
 
-    assert response.status_code == 200
+    assert not db.query(PackageVersionMetric).one_or_none()
+
+    with auth_client:
+        response = auth_client.get(
+            f"/get/{public_channel.name}/linux-64/test-package-0.1-0.tar.bz2"
+        )
+        assert response.status_code == 200
 
     metrics = (
         db.query(PackageVersionMetric)
@@ -112,9 +120,10 @@ def test_increment_download_count(auth_client, public_channel, package_version, 
     db.refresh(package_version)
     assert package_version.download_count == 1
 
-    response = auth_client.get(
-        f"/get/{public_channel.name}/linux-64/test-package-0.1-0.tar.bz2"
-    )
+    with auth_client:
+        response = auth_client.get(
+            f"/get/{public_channel.name}/linux-64/test-package-0.1-0.tar.bz2"
+        )
 
     assert response.status_code == 200
 

@@ -1,14 +1,27 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
+import logging
 from typing import Callable
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
 from sqlalchemy.pool import StaticPool
 
+from quetz.metrics.middleware import DATABASE_CONNECTIONS_USED, DATABASE_POOL_SIZE
+
 engine = None
+
+logger = logging.getLogger("quetz")
+
+
+def set_metrics(*args):
+    checked_in = engine.pool.checkedin()
+    checked_out = engine.pool.checkedout()
+    pool_size = checked_in + checked_out
+    DATABASE_POOL_SIZE.set(pool_size)
+    DATABASE_CONNECTIONS_USED.set(checked_out)
 
 
 def get_engine(db_url, echo: bool = False, reuse_engine=True, **kwargs) -> Engine:
@@ -27,10 +40,22 @@ def get_engine(db_url, echo: bool = False, reuse_engine=True, **kwargs) -> Engin
         # TODO make configurable!
         if db_url.startswith('postgres'):
             engine = create_engine(
-                db_url, echo=echo, pool_size=32, max_overflow=100, **kwargs
+                db_url, echo=echo, pool_size=200, max_overflow=100, **kwargs
             )
+            for event_name in ['connect', 'close', 'checkin', 'checkout']:
+                event.listen(engine, event_name, set_metrics)
         else:
             engine = create_engine(db_url, echo=echo, **kwargs)
+
+        def on_connect(dbapi_conn, conn_record):
+            logger.debug("connection opened: %s", engine.pool.status())
+
+        def on_close(dbapi_conn, conn_record):
+            logger.debug("connection closed: %s", engine.pool.status())
+
+        event.listen(engine, 'connect', on_connect)
+        event.listen(engine, 'close', on_close)
+
     return engine
 
 
