@@ -9,6 +9,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     Column,
+    Date,
     DateTime,
     Enum,
     ForeignKey,
@@ -230,6 +231,8 @@ class ApiKey(Base):
 
     key = Column(String, primary_key=True, index=True)
     description = Column(String)
+    time_created = Column(Date, nullable=False, server_default=func.now())
+    expire_at = Column(Date)
     deleted = Column(Boolean, default=False)
     user_id = Column(UUID, ForeignKey('users.id'))
     owner_id = Column(UUID, ForeignKey('users.id'))

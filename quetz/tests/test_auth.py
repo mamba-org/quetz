@@ -1,6 +1,7 @@
 import os
 import shutil
 import uuid
+from datetime import date
 from unittest import mock
 from urllib.parse import quote
 
@@ -39,11 +40,23 @@ class Data:
         assert len(db.query(User).all()) == 3
 
         self.keya_obj = ApiKey(
-            key=self.keya, user_id=self.usera.id, owner_id=self.usera.id
+            key=self.keya,
+            time_created=date.today(),
+            expire_at=date(2030, 1, 1),
+            user_id=self.usera.id,
+            owner_id=self.usera.id,
         )
 
         db.add(self.keya_obj)
-        db.add(ApiKey(key=self.keyb, user_id=self.userb.id, owner_id=self.userb.id))
+        db.add(
+            ApiKey(
+                key=self.keyb,
+                time_created=date.today(),
+                expire_at=date(2030, 1, 1),
+                user_id=self.userb.id,
+                owner_id=self.userb.id,
+            )
+        )
 
         self.channel1 = Channel(name="testchannel", private=False)
         self.channel2 = Channel(name="privatechannel", private=True)
@@ -465,6 +478,8 @@ def test_create_api_key(data, client):
     assert response.status_code == 201
     assert response.json() == {
         "description": "test-key",
+        'time_created': mock.ANY,
+        'expire_at': None,
         "roles": [{"channel": "privatechannel", "role": "member", "package": None}],
         "key": mock.ANY,
     }
@@ -475,6 +490,7 @@ def test_create_api_key(data, client):
         '/api/api-keys',
         json={
             "description": "test-key",
+            'expire_at': '2024-01-26',
             "roles": [
                 {
                     "channel": "privatechannel",
@@ -488,6 +504,8 @@ def test_create_api_key(data, client):
     assert response.status_code == 201
     assert response.json() == {
         "description": "test-key",
+        'time_created': mock.ANY,
+        'expire_at': '2024-01-26',
         "roles": [
             {
                 "role": "member",
@@ -502,11 +520,21 @@ def test_create_api_key(data, client):
 
     response = client.post(
         '/api/api-keys',
-        json={"description": "test-key", "roles": []},
+        json={
+            "description": "test-key",
+            'expire_at': '2024-01-26',
+            "roles": [],
+        },
     )
 
     assert response.status_code == 201
-    assert response.json() == {"description": "test-key", "roles": [], "key": mock.ANY}
+    assert response.json() == {
+        "description": "test-key",
+        'time_created': mock.ANY,
+        'expire_at': '2024-01-26',
+        "roles": None,
+        "key": mock.ANY,
+    }
 
 
 def test_use_wildcard_api_key_to_authenticate(data, client):
@@ -518,6 +546,7 @@ def test_use_wildcard_api_key_to_authenticate(data, client):
         '/api/api-keys',
         json={
             "description": "test-key",
+            'expire_at': '2030-01-01',
             "roles": [],
         },
     )
@@ -531,6 +560,7 @@ def test_use_wildcard_api_key_to_authenticate(data, client):
         '/api/api-keys',
         json={
             "description": "test-key",
+            'expire_at': '2030-01-01',
             "roles": [{"channel": "privatechannel", "role": "maintainer"}],
         },
     )
@@ -613,3 +643,31 @@ def test_authorizations_with_deleted_api_key(data: Data, db):
     assert not user_id
 
     data.keya_obj.deleted = False
+
+
+def test_authorizations_with_expired_api_key(data, client):
+
+    response = client.get(f"/api/dummylogin/{data.userc.username}")
+    assert response.status_code == 200
+
+    response = client.post(
+        '/api/api-keys',
+        json={
+            "description": "test-key",
+            'expire_at': '2020-01-01',
+            "roles": [],
+        },
+    )
+
+    assert response.status_code == 201
+
+    key = response.json()["key"]
+
+    # clear session cookies
+    client.cookies.clear()
+
+    response = client.get(
+        "/api/channels/privatechannel/members", headers={"X-API-Key": key}
+    )
+
+    assert response.status_code == 401

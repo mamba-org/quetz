@@ -5,3 +5,12 @@ quetz.sqlite
 xtensor/
 build
 dist/
+
+# Build files
+*.egg-info
+
+# Local setup
+test_quetz
+
+# Logs
+*.log

@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -42,7 +43,13 @@ def user(db, user_role):
 @pytest.fixture
 def api_key(db, user):
 
-    key = ApiKey(user_id=user.id, owner_id=user.id, key="apikey")
+    key = ApiKey(
+        key="apikey",
+        time_created=date.today(),
+        expire_at=date(2030, 1, 1),
+        user_id=user.id,
+        owner_id=user.id,
+    )
     db.add(key)
     db.commit()
     return key

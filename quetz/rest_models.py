@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 from typing import Generic, List, Optional, TypeVar
 
@@ -237,6 +237,8 @@ class CPRole(BaseModel):
 
 class BaseApiKey(BaseModel):
     description: str
+    time_created: Optional[date]
+    expire_at: Optional[date]
     roles: Optional[List[CPRole]]
 
 
