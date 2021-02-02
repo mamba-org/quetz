@@ -25,8 +25,16 @@ services:
       - ./docker_config.toml:/quetz-deployment/config.toml
   database:
     image: postgres
-    ports:
-      - 5932:5932
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+  grafana:
+    image: grafana/grafana
+    ports: 
+      - 3000:3000
+    volumes:
+      - ./graphana_datasources.yml:/etc/grafana/provisioning/datasources/datasource.yaml
 volumes:
   quetz_deployment:
 
