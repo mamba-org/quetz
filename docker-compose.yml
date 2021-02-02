@@ -13,6 +13,7 @@ services:
     volumes:
       - .:/code
       - quetz_deployment:/quetz-deployment
+      - ./docker_config.toml:/quetz-deployment/config.toml
   init-db:
     image: quetz_dev_image
     command: ["sh", "-c", "./wait-for-postgres.sh database quetz create /quetz-deployment --copy-conf /code/docker_config.toml --exists-ok & quetz init-db /quetz-deployment"]
@@ -21,6 +22,7 @@ services:
     volumes:
       - .:/code
       - quetz_deployment:/quetz-deployment
+      - ./docker_config.toml:/quetz-deployment/config.toml
   database:
     image: postgres
     ports:

@@ -28,4 +28,4 @@ RUN micromamba install -v -y -n base -c conda-forge -f environment.yml
 COPY . /code/
 RUN pip install -e .
 
-# RUN quetz create quetz-deploy --copy-conf docker_config.toml
+RUN useradd quetz --no-log-init -u 1000 -p "$(openssl passwd -1 mamba)" 

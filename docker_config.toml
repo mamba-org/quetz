@@ -11,9 +11,10 @@ level = "DEBUG"
 file = "quetz.log"
 
 [users]
-admins = ["pam:quetz"]
+admins = []
 maintainers = []
 users = []
 
 [pamauthenticator]
 provider = "pam"
+admin_groups = ["root", "quetz"]
