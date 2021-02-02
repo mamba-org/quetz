@@ -9,6 +9,7 @@ import os.path as path
 import shutil
 import tempfile
 from contextlib import contextmanager
+from datetime import datetime, timedelta
 from os import PathLike
 from typing import IO, BinaryIO, List, NoReturn, Tuple, Union
 
@@ -20,6 +21,13 @@ try:
     has_xattr = True
 except ImportError:
     has_xattr = False
+
+try:
+    import azure.storage.blob as azure
+
+    azure_available = True
+except ImportError:
+    azure_available = False
 
 from quetz.errors import ConfigError
 
@@ -271,3 +279,131 @@ class S3Store(PackageStore):
             etag = infodata['ETag']
 
             return (msize, mtime, etag)
+
+
+class AzureBlobStore(PackageStore):
+    def __init__(self, config):
+        try:
+            import adlfs
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError("Azure Blob package store requires adlfs module")
+        if not azure_available:
+            raise ModuleNotFoundError(
+                "Azure Blob package store requires azure-storage-blob module"
+            )
+
+        self.storage_account_name = config.get('account_name')
+        self.access_key = config.get("account_access_key")
+        self.conn_string = config.get("conn_str")
+
+        self.fs = adlfs.AzureBlobFileSystem(
+            account_name=self.storage_account_name, connection_string=self.conn_string
+        )
+
+        self.container_prefix = config['container_prefix']
+        self.container_suffix = config['container_suffix']
+
+    @contextlib.contextmanager
+    def _get_fs(self):
+        try:
+            yield self.fs
+        except PermissionError as e:
+            raise ConfigError(f"{e} - check configured Azure Blob credentials")
+
+    def _container_map(self, name):
+        return f"{self.container_prefix}{name}{self.container_suffix}"
+
+    def create_channel(self, name):
+        """Create the container if one doesn't already exist
+
+        Parameters
+        ----------
+        name : str
+            The name of the container to create on azure blob
+        """
+        with self._get_fs() as fs:
+            try:
+                fs.mkdir(self._container_map(name))
+            except FileExistsError:
+                pass
+
+    def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
+        with self._get_fs() as fs:
+            container = self._container_map(channel)
+            with fs.open(path.join(container, destination), "wb") as pkg:
+                # use a chunk size of 10 Megabytes
+                shutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
+
+    def add_file(
+        self, data: Union[str, bytes], channel: str, destination: StrPath
+    ) -> NoReturn:
+        if type(data) is str:
+            mode = "w"
+        else:
+            mode = "wb"
+
+        with self._get_fs() as fs:
+            container = self._container_map(channel)
+            with fs.transaction:
+                with fs.open(path.join(container, destination), mode) as f:
+                    f.write(data)
+
+    def serve_path(self, channel, src):
+        with self._get_fs() as fs:
+            return fs.open(path.join(self._container_map(channel), src))
+
+    def delete_file(self, channel: str, dest: str):
+        channel_container = self._container_map(channel)
+
+        with self._get_fs() as fs:
+            fs.delete(path.join(channel_container, dest))
+
+    def move_file(self, channel: str, source: str, destination: str):
+        channel_container = self._container_map(channel)
+
+        with self._get_fs() as fs:
+            fs.move(
+                path.join(channel_container, source),
+                path.join(channel_container, destination),
+            )
+
+    def list_files(self, channel: str):
+        def remove_prefix(text, prefix):
+            if text.startswith(prefix):
+                return text[len(prefix) :].lstrip("/")  # noqa: E203
+            return text
+
+        channel_container = self._container_map(channel)
+
+        with self._get_fs() as fs:
+            return [
+                remove_prefix(f, channel_container) for f in fs.find(channel_container)
+            ]
+
+    def url(self, channel: str, src: str, expires=3600):
+        # expires is in seconds, so the default is 60 minutes!
+        channel_container = self._container_map(channel)
+        sas_token = azure.generate_blob_sas(
+            account_name=self.storage_account_name,
+            container_name=channel_container,
+            blob_name=src,
+            account_key=self.access_key,
+            permission=azure.BlobSasPermissions(read=True),
+            expiry=datetime.utcnow() + timedelta(seconds=expires),
+        )
+
+        bsc = azure.BlobServiceClient.from_connection_string(self.conn_string)
+        blob = bsc.get_blob_client(channel_container, src)
+        return azure.BlobClient.from_blob_url(blob.url, credential=sas_token).url
+
+    def get_filemetadata(self, channel: str, src: str):
+        channel_container = self._container_map(channel)
+        bsc = azure.BlobServiceClient.from_connection_string(self.conn_string)
+        blob = bsc.get_blob_client(channel_container, src)
+        infodata = blob.get_blob_properties()
+
+        mtime = infodata['last_modified'].timestamp()
+        msize = infodata['size']
+        etag = infodata['etag']
+
+        return (msize, mtime, etag)

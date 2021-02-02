@@ -118,6 +118,17 @@ class Config:
             required=False,
         ),
         ConfigSection(
+            "azure_blob",
+            [
+                ConfigEntry("account_name", str, default=""),
+                ConfigEntry("account_access_key", str, default=""),
+                ConfigEntry("conn_str", str, default=""),
+                ConfigEntry("container_prefix", str, default=""),
+                ConfigEntry("container_suffix", str, default=""),
+            ],
+            required=False,
+        ),
+        ConfigSection(
             "google",
             [ConfigEntry("client_id", str), ConfigEntry("client_secret", str)],
             required=False,
@@ -335,6 +346,16 @@ class Config:
                     'region': self.s3_region,
                     'bucket_prefix': self.s3_bucket_prefix,
                     'bucket_suffix': self.s3_bucket_suffix,
+                }
+            )
+        elif self.config.get('azure_blob'):
+            return pkgstores.AzureBlobStore(
+                {
+                    'account_name': self.azure_blob_account_name,
+                    'account_access_key': self.azure_blob_account_access_key,
+                    'conn_str': self.azure_blob_conn_str,
+                    'container_prefix': self.azure_blob_container_prefix,
+                    'container_suffix': self.azure_blob_container_suffix,
                 }
             )
         else:

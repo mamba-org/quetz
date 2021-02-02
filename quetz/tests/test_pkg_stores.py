@@ -6,7 +6,7 @@ import uuid
 
 import pytest
 
-from quetz.pkgstores import LocalStore, S3Store, has_xattr
+from quetz.pkgstores import AzureBlobStore, LocalStore, S3Store, has_xattr
 
 s3_config = {
     'key': os.environ.get("S3_ACCESS_KEY"),
@@ -15,6 +15,14 @@ s3_config = {
     'region': os.environ.get("S3_REGION"),
     'bucket_prefix': "test",
     'bucket_suffix': "",
+}
+
+azure_config = {
+    'account_name': os.environ.get("AZURE_ACCOUNT_NAME"),
+    'account_access_key': os.environ.get("AZURE_ACCESS_KEY"),
+    'conn_str': os.environ.get("AZURE_CONN_STRING"),
+    'container_prefix': "test",
+    'container_suffix': "",
 }
 
 test_dir = os.path.dirname(__file__)
@@ -75,10 +83,49 @@ def s3_store(channel_name):
     pkg_store.fs.rmdir(pkg_store._bucket_map(channel_name))
 
 
+@pytest.fixture
+def azure_store(channel_name):
+    pkg_store = AzureBlobStore(azure_config)
+    pkg_store.create_channel(channel_name)
+
+    yield pkg_store
+
+    # cleanup
+    files = pkg_store.list_files(channel_name)
+    for f in files:
+        pkg_store.delete_file(channel_name, f)
+    pkg_store.fs.rmdir(pkg_store._container_map(channel_name))
+
+
 @pytest.mark.skipif(not s3_config['key'], reason="requires s3 credentials")
 def test_s3_store(s3_store, channel_name):
 
     pkg_store = s3_store
+
+    pkg_store.add_file("content", channel_name, "test.txt")
+    pkg_store.add_file("content", channel_name, "test_2.txt")
+
+    files = pkg_store.list_files(channel_name)
+
+    assert files == ["test.txt", "test_2.txt"]
+
+    pkg_store.delete_file(channel_name, "test.txt")
+
+    files = pkg_store.list_files(channel_name)
+    assert files == ["test_2.txt"]
+
+    metadata = pkg_store.get_filemetadata(channel_name, "test_2.txt")
+    assert metadata[0] > 0
+    assert type(metadata[1]) is float
+    assert type(metadata[2]) is str
+
+
+@pytest.mark.skipif(
+    not azure_config['account_access_key'], reason="requires azure credentials"
+)
+def test_azure_blob_store(azure_store, channel_name):
+
+    pkg_store = azure_store
 
     pkg_store.add_file("content", channel_name, "test.txt")
     pkg_store.add_file("content", channel_name, "test_2.txt")
