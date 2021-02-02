@@ -22,6 +22,13 @@ try:
 except ImportError:
     has_xattr = False
 
+try:
+    import azure.storage.blob as azure
+
+    azure_available = True
+except ImportError:
+    azure_available = False
+
 from quetz.errors import ConfigError
 
 File = BinaryIO
@@ -278,16 +285,11 @@ class AzureBlobStore(PackageStore):
     def __init__(self, config):
         try:
             import adlfs
-            from azure.storage.blob import (  # noqa: F401
-                BlobClient,
-                BlobSasPermissions,
-                BlobServiceClient,
-                generate_blob_sas,
-            )
         except ModuleNotFoundError:
+            raise ModuleNotFoundError("Azure Blob package store requires adlfs module")
+        if not azure_available:
             raise ModuleNotFoundError(
-                "Azure Blob package store requires adlfs module"
-                "and azure-storage-blob module"
+                "Azure Blob package store requires azure-storage-blob module"
             )
 
         self.storage_account_name = config.get('account_name')
@@ -381,24 +383,22 @@ class AzureBlobStore(PackageStore):
     def url(self, channel: str, src: str, expires=3600):
         # expires is in seconds, so the default is 60 minutes!
         channel_container = self._container_map(channel)
-        sas_token = generate_blob_sas(  # noqa: F821
+        sas_token = azure.generate_blob_sas(
             account_name=self.storage_account_name,
             container_name=channel_container,
             blob_name=src,
             account_key=self.access_key,
-            permission=BlobSasPermissions(read=True),  # noqa: F821
+            permission=azure.BlobSasPermissions(read=True),
             expiry=datetime.utcnow() + timedelta(seconds=expires),
         )
 
-        bsc = BlobServiceClient.from_connection_string(self.conn_string)  # noqa: F821
+        bsc = azure.BlobServiceClient.from_connection_string(self.conn_string)
         blob = bsc.get_blob_client(channel_container, src)
-        return BlobClient.from_blob_url(  # noqa: F821
-            blob.url, credential=sas_token
-        ).url
+        return azure.BlobClient.from_blob_url(blob.url, credential=sas_token).url
 
     def get_filemetadata(self, channel: str, src: str):
         channel_container = self._container_map(channel)
-        bsc = BlobServiceClient.from_connection_string(self.conn_string)  # noqa: F821
+        bsc = azure.BlobServiceClient.from_connection_string(self.conn_string)
         blob = bsc.get_blob_client(channel_container, src)
         infodata = blob.get_blob_properties()
 
