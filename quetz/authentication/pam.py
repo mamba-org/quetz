@@ -59,7 +59,7 @@ class PAMAuthenticator(SimpleAuthenticator):
 
     def _get_user_group_ids(self, username):
         user_gid = self._get_user_gid_by_name(username)
-        return [os.getgrouplist(username, user_gid)]
+        return os.getgrouplist(username, user_gid)
 
     def configure(self, config: Config):
 
@@ -80,7 +80,7 @@ class PAMAuthenticator(SimpleAuthenticator):
 
         super().configure(config)
 
-    def user_role(self, request: Request, profile: UserProfile):
+    async def user_role(self, request: Request, profile: UserProfile):
 
         mappings = [
             (ServerRole.OWNER, self.admin_groups),
@@ -93,7 +93,12 @@ class PAMAuthenticator(SimpleAuthenticator):
 
         for role, groups in mappings:
             role_gids = self._get_group_ids(groups)
-            if set(role_gids) & set(user_gids):
+            common = set(role_gids) & set(user_gids)
+            if common:
+                logger.info(
+                    "pam authenticator: user {username} found in group {common}"
+                    "setting {role} permissions"
+                )
                 return role.value
 
     async def authenticate(

@@ -1473,7 +1473,7 @@ def start_sync_download_counts():
                 n_total_downloads = sum(download_counts.values())
                 now = datetime.datetime.utcnow()
                 if n_total_downloads < DOWNLOAD_INCREMENT_MAX_DOWNLOADS:
-                    if (
+                    if not n_total_downloads or (
                         last_download_sync
                         and (last_download_sync + increment_delay) > now
                     ):

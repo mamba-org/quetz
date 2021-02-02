@@ -21,6 +21,7 @@ maintainer_groups = {groups.get('maintainers', [])}
 member_groups = {groups.get('members', [])}"""
 
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "groups,expected_role",
     [
@@ -51,7 +52,7 @@ member_groups = {groups.get('members', [])}"""
         ),
     ],
 )
-def test_user_role(config, expected_role):
+async def test_user_role(config, expected_role):
     auth = PAMAuthenticator(config)
     request = Request(scope={"type": "http"})
 
@@ -63,7 +64,7 @@ def test_user_role(config, expected_role):
         _get_group_id_by_name=lambda k: _group_ids[k],
         _get_user_group_ids=lambda k: _user_group_ids[k],
     ):
-        role = auth.user_role(request, {"login": "quetzuser"})
+        role = await auth.user_role(request, {"login": "quetzuser"})
 
     if expected_role is None:
         assert role is None
