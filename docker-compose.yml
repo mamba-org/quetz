@@ -1,0 +1,30 @@
+version: '3'
+
+services:
+  web:
+    image: quetz_dev_image
+    ports:
+      - "8000:8000"
+    build: .
+    command:  ["./wait-for-postgres.sh",  "database", "quetz",  "start" , "/quetz-deployment", "--host", "0.0.0.0", "--port",  "8000",  "--reload"]
+    depends_on: 
+      - database
+      - init-db
+    volumes:
+      - .:/code
+      - quetz_deployment:/quetz-deployment
+  init-db:
+    image: quetz_dev_image
+    command: ["sh", "-c", "./wait-for-postgres.sh database quetz create /quetz-deployment --copy-conf /code/docker_config.toml --exists-ok & quetz init-db /quetz-deployment"]
+    depends_on: 
+      - database
+    volumes:
+      - .:/code
+      - quetz_deployment:/quetz-deployment
+  database:
+    image: postgres
+    ports:
+      - 5932:5932
+volumes:
+  quetz_deployment:
+
