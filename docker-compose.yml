@@ -1,0 +1,45 @@
+version: '3'
+
+services:
+  web:
+    image: quetz_dev_image
+    ports:
+      - "8000:8000"
+    build: 
+      context: .
+      dockerfile: ./docker/Dockerfile
+    command:  ["./docker/wait-for-postgres.sh",  "database", "quetz",  "start" , "/quetz-deployment", "--host", "0.0.0.0", "--port",  "8000",  "--reload"]
+    depends_on: 
+      - database
+      - init-db
+    volumes:
+      - .:/code
+      - quetz_deployment:/quetz-deployment
+      - ./docker/docker_config.toml:/quetz-deployment/config.toml
+  init-db:
+    image: quetz_dev_image
+    command: ["sh", "-c", "./docker/wait-for-postgres.sh database quetz create /quetz-deployment --copy-conf /code/docker_config.toml --exists-ok & quetz init-db /quetz-deployment"]
+    depends_on: 
+      - database
+    volumes:
+      - .:/code
+      - quetz_deployment:/quetz-deployment
+      - ./docker/docker_config.toml:/quetz-deployment/config.toml
+  database:
+    image: postgres
+    volumes:
+      - ./docker/postgres.conf:/etc/postgresql/postgresql.conf
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml
+  grafana:
+    image: grafana/grafana
+    ports: 
+      - 3000:3000
+    volumes:
+      - ./docker/graphana_datasources.yml:/etc/grafana/provisioning/datasources/datasource.yaml
+
+volumes:
+  quetz_deployment:
+

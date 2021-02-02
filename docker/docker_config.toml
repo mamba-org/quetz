@@ -1,0 +1,20 @@
+[sqlalchemy]
+database_url = "postgresql://postgres@database:5432/postgres"
+
+[session]
+# openssl rand -hex 32
+secret = "b72376b88e6f249cb0921052ea8a092381ca17fd8bb0caf4d847e337b3d34cf8"
+https_only = false
+
+[logging]
+level = "DEBUG"
+file = "quetz.log"
+
+[users]
+admins = []
+maintainers = []
+users = []
+
+[pamauthenticator]
+provider = "pam"
+admin_groups = ["root", "quetz"]
