@@ -9,6 +9,7 @@ infrastructure.
    :maxdepth: 2
 
    configuration
+   authenticators
    database
    migrations
    frontend

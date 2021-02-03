@@ -34,7 +34,7 @@ class OAuthHandlers(BaseAuthenticationHandlers):
 
 
 class OAuthAuthenticator(BaseAuthenticator):
-    """Base class for authenticators using Oauth2 protocol and its variants"""
+    """Base class for authenticators using Oauth2 protocol and its variants."""
 
     oauth = OAuth()
     provider = "oauth"
