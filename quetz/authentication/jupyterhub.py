@@ -61,6 +61,53 @@ class JupyterConfigEntry:
 
 
 class JupyterhubAuthenticator(OAuthAuthenticator):
+    """Authenticate with jupyterhub server, which acts
+    as identity provider.
+
+    To activate add the following section to the config.toml:
+
+    .. code::
+
+      [jupyterhubauthenticator]
+
+      # client credentials, they need to be registered with
+      # jupyterhub by adding an external service
+      client_id = "quetz_client"
+      client_secret = "super-secret"
+
+      # token enpoint of Jupyterhub, needs to be accessible from Quetz server
+      access_token_url = "http://jupyterhub:8000/hub/api/oauth2/token"
+
+      # authorize endpoint of JupyterHub, needs to be accessible from users' browser
+      authorize_url = "http://localhost:8001/hub/api/oauth2/authorize"
+
+      # API root, needs to be accesible from Quetz server
+      api_base_url = "http://jupyterhub:8000/hub/api/"
+
+    To configure quetz as an oauth client in JupyterHub, you will need to define
+    a `JupyterHub service <https://jupyterhub.readthedocs.io/en/stable/reference/services.html#externally-managed-services>`_. You can achieve it by adding the following to your
+    `jupyterhub_config.py`:
+
+    .. code::
+
+      c.JupyterHub.services = [
+          {
+              # service name, it will be used to setup routers
+              'name': 'quetz',
+              # quetz URL to setup redirections, only required if you use
+              # JupyterHub url scheme
+              'url': 'http://web:8000',
+              # any secret >8 characters, you will also need to set
+              # the client_secret in the authenticator config with this
+              # string
+              'api_token': 'super-secret',
+              # client_id in the authenticator config
+              'oauth_client_id': 'quetz_client',
+              # URL of the callback endpoint on the quetz server
+              'oauth_redirect_uri': 'http://localhost:8000/auth/jupyterhub/authorize',
+          }
+      ]
+    """  # noqa
 
     provider = 'jupyterhub'
 
