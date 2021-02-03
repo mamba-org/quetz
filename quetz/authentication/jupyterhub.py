@@ -5,8 +5,6 @@ import json
 from typing import Any, List, overload
 from urllib.parse import quote
 
-import httpx
-
 from quetz.config import Config, ConfigEntry, ConfigSection
 
 from .oauth2 import OAuthAuthenticator
@@ -77,16 +75,17 @@ class JupyterhubAuthenticator(OAuthAuthenticator):
     authorize_url = JupyterConfigEntry(str, required=True)  # type: ignore
     api_base_url = JupyterConfigEntry(str, required=True)  # type: ignore
 
-    client_kwargs = {"token_endpoint_auth_method": "client_secret_post"}
+    client_kwargs = {
+        "token_endpoint_auth_method": "client_secret_post",
+        "token_placement": "uri",
+    }
 
     async def userinfo(self, request, token):
-        # profile = await self.client.parse_id_token(request, token)
-        access_token = token["access_token"]
-        response = await self._get_user_for_token(access_token)
+        response = await self._get_user_for_token(token)
         profile = response.json()
 
         github_profile = {
-            "id": profile["name"],
+            "id": profile["name"] + '_id',
             "name": profile["name"],
             "avatar_url": "",
             "login": profile["name"],
@@ -94,17 +93,23 @@ class JupyterhubAuthenticator(OAuthAuthenticator):
         return github_profile
 
     async def _get_user_for_token(self, token):
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                self.api_base_url
-                + self.validate_token_url.format(quote(token, safe='')),
-                headers={'Authorization': 'token {}'.format(self.client_secret)},
-            )
+        headers = {'Authorization': 'token {}'.format(self.client_secret)}
+        access_token = quote(token['access_token'], safe='')
+
+        # authlib client will be place token in query params
+        # which are ignored by jupyterhub
+        # this workaround is required to implement jupyterhub API
+        # which puts the token as path parameter
+        # https://jupyterhub.readthedocs.io/en/stable/_static/rest-api/index.html#path--authorizations-token--token-  # noqa
+        resp = await self.client.get(
+            f'authorizations/token/{access_token}', token=token, headers=headers
+        )
         return resp
 
     async def validate_token(self, token):
-        access_token = json.loads(token)["access_token"]
-        resp = await self._get_user_for_token(access_token)
+        # access_token = json.loads(token)["access_token"]
+        token = json.loads(token)
+        resp = await self._get_user_for_token(token)
         return resp.status_code == 200
 
     def configure(self, config: Config):

@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from quetz.authentication import github as auth_github
 from quetz.authentication import google as auth_google
+from quetz.authentication.jupyterhub import JupyterhubAuthenticator
 from quetz.authorization import SERVER_OWNER
 from quetz.dao import Dao
 from quetz.db_models import Channel, ChannelMember, Identity, Profile, User
@@ -44,6 +45,23 @@ def github_response(config, login):
     }
 
     return "test_github", response
+
+
+@pytest.fixture
+def jupyter_response(config, login):
+
+    response = {
+        '/hub/api/oauth2/token': {
+            'body': {'access_token': 'b', 'token_type': 'Bearer'}
+        },
+        '/hub/api/authorizations/token/b': {
+            "body": {
+                "name": login,
+            }
+        },
+    }
+
+    return "test_jupyter", response
 
 
 @pytest.fixture
@@ -112,6 +130,13 @@ client_secret = "bbb"
 [google]
 client_id = "aaa"
 client_secret = "bbb"
+
+[jupyterhubauthenticator]
+client_id = "test_client"
+client_secret = "test_secret"
+access_token_url = "http://jupyterhub/hub/api/oauth2/token"
+authorize_url = "http://jupyterhub/hub/api/oauth2/authorize"
+api_base_url = "http://jupyterhub/hub/api/"
 """
 
 
@@ -119,6 +144,7 @@ client_secret = "bbb"
     params=[
         "github_response",
         "google_response",
+        "jupyter_response",
     ]
 )
 def oauth_server(request, config, app):
@@ -133,6 +159,10 @@ def oauth_server(request, config, app):
         auth_module = auth_github.GithubAuthenticator
     elif provider == "test_google":
         auth_module = auth_google.GoogleAuthenticator
+    elif provider == 'test_jupyter':
+        auth_module = JupyterhubAuthenticator
+    else:
+        raise Exception(f"not recognised provider {provider}")
 
     module = auth_module(
         config,
