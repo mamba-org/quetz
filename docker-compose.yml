@@ -8,6 +8,8 @@ services:
     build: 
       context: .
       dockerfile: ./docker/Dockerfile
+    environment:
+      - HTTPX_LOG_LEVEL=TRACE
     command:  ["./docker/wait-for-postgres.sh",  "database", "quetz",  "start" , "/quetz-deployment", "--host", "0.0.0.0", "--port",  "8000",  "--reload"]
     depends_on: 
       - database
@@ -39,6 +41,13 @@ services:
       - 3000:3000
     volumes:
       - ./docker/graphana_datasources.yml:/etc/grafana/provisioning/datasources/datasource.yaml
+  jupyterhub:
+    build:
+      context: docker
+      dockerfile: Dockerfile.jupyterhub
+    command: jupyterhub --debug
+    ports:
+      - 8001:8000
 
 volumes:
   quetz_deployment:

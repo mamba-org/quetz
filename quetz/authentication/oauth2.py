@@ -53,6 +53,7 @@ class OAuthAuthenticator(BaseAuthenticator):
     scope: Optional[str] = None
     server_metadata_url: Optional[str] = None
     prompt: Optional[str] = None
+    client_kwargs: dict = {}
 
     # provider's api endpoint urls
     validate_token_url: Optional[str] = None
@@ -64,7 +65,8 @@ class OAuthAuthenticator(BaseAuthenticator):
 
     def __init__(self, config: Config, client_kwargs=None, provider=None, app=None):
         super().__init__(config, provider, app)
-        self.register(client_kwargs=client_kwargs)
+        if self.is_enabled:
+            self.register(client_kwargs=client_kwargs)
 
     async def userinfo(self, request, token):
         raise NotImplementedError("subclasses need to implement userinfo")
@@ -85,6 +87,8 @@ class OAuthAuthenticator(BaseAuthenticator):
 
         if self.scope:
             client_kwargs["scope"] = self.scope
+
+        client_kwargs.update(self.client_kwargs)
 
         self.client = self.oauth.register(
             name=self.provider,
