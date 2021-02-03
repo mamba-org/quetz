@@ -50,6 +50,7 @@ class JupyterConfigEntry:
         section = ConfigSection(
             cls.config_section,
             cls.registered_entries,
+            required=False,
         )
         return [section]
 
