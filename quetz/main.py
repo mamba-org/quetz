@@ -154,9 +154,12 @@ pkgstore_support_url = hasattr(pkgstore, 'url')
 
 # authenticators
 
+from quetz.authentication.jupyterhub import JupyterhubAuthenticator
+
 builtin_authenticators: List[Type[BaseAuthenticator]] = [
     auth_github.GithubAuthenticator,
     auth_google.GoogleAuthenticator,
+    JupyterhubAuthenticator,
     PAMAuthenticator,
 ]
 

@@ -86,6 +86,8 @@ class OAuthAuthenticator(BaseAuthenticator):
         if self.scope:
             client_kwargs["scope"] = self.scope
 
+        client_kwargs["token_endpoint_auth_method"] = "client_secret_post"
+
         self.client = self.oauth.register(
             name=self.provider,
             client_id=self.client_id,
