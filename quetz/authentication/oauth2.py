@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import json
-from typing import Optional, Union
+from typing import Optional
 
 from authlib.integrations.starlette_client import OAuth
 from fastapi import Request
@@ -31,11 +31,6 @@ class OAuthHandlers(BaseAuthenticationHandlers):
     async def revoke(self, request):
         client_id = self.client.client_id
         return RedirectResponse(self.revoke_url.format(client_id=client_id))
-
-
-from typing import Any, Generic, TypeVar, overload
-
-T = TypeVar("T")
 
 
 class OAuthAuthenticator(BaseAuthenticator):

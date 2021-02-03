@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import json
-from typing import Any, List, Union, overload
+from typing import Any, List, overload
 from urllib.parse import quote
 
 import httpx

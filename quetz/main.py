@@ -59,6 +59,7 @@ from quetz import (
 from quetz.authentication import AuthenticatorRegistry, BaseAuthenticator
 from quetz.authentication import github as auth_github
 from quetz.authentication import google as auth_google
+from quetz.authentication.jupyterhub import JupyterhubAuthenticator
 from quetz.authentication.pam import PAMAuthenticator
 from quetz.config import PAGINATION_LIMIT, Config, configure_logger, get_plugin_manager
 from quetz.dao import Dao
@@ -154,7 +155,6 @@ pkgstore_support_url = hasattr(pkgstore, 'url')
 
 # authenticators
 
-from quetz.authentication.jupyterhub import JupyterhubAuthenticator
 
 builtin_authenticators: List[Type[BaseAuthenticator]] = [
     auth_github.GithubAuthenticator,
