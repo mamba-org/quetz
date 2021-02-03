@@ -18,3 +18,10 @@ users = []
 [pamauthenticator]
 provider = "pam"
 admin_groups = ["root", "quetz"]
+
+[jupyterhubauthenticator]
+client_id = "quetz_client"
+client_secret = "super-secret"
+access_token_url = "http://jupyterhub:8000/hub/api/oauth2/token"
+authorize_url = "http://localhost:8001/hub/api/oauth2/authorize"
+api_base_url = "http://jupyterhub:8000/hub/api/"

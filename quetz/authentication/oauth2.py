@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import json
-from typing import Optional
+from typing import Optional, Union
 
 from authlib.integrations.starlette_client import OAuth
 from fastapi import Request
@@ -33,6 +33,11 @@ class OAuthHandlers(BaseAuthenticationHandlers):
         return RedirectResponse(self.revoke_url.format(client_id=client_id))
 
 
+from typing import Any, Generic, TypeVar, overload
+
+T = TypeVar("T")
+
+
 class OAuthAuthenticator(BaseAuthenticator):
     """Base class for authenticators using Oauth2 protocol and its variants"""
 
@@ -53,6 +58,7 @@ class OAuthAuthenticator(BaseAuthenticator):
     scope: Optional[str] = None
     server_metadata_url: Optional[str] = None
     prompt: Optional[str] = None
+    client_kwargs: dict = {}
 
     # provider's api endpoint urls
     validate_token_url: Optional[str] = None
@@ -86,7 +92,7 @@ class OAuthAuthenticator(BaseAuthenticator):
         if self.scope:
             client_kwargs["scope"] = self.scope
 
-        client_kwargs["token_endpoint_auth_method"] = "client_secret_post"
+        client_kwargs.update(self.client_kwargs)
 
         self.client = self.oauth.register(
             name=self.provider,
