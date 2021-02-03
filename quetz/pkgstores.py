@@ -238,11 +238,11 @@ class S3Store(PackageStore):
         with self._get_fs() as fs:
             return fs.open(path.join(self._bucket_map(channel), src))
 
-    def delete_file(self, channel: str, dest: str):
+    def delete_file(self, channel: str, destination: str):
         channel_bucket = self._bucket_map(channel)
 
         with self._get_fs() as fs:
-            fs.delete(path.join(channel_bucket, dest))
+            fs.delete(path.join(channel_bucket, destination))
 
     def move_file(self, channel: str, source: str, destination: str):
         channel_bucket = self._bucket_map(channel)
@@ -352,11 +352,11 @@ class AzureBlobStore(PackageStore):
         with self._get_fs() as fs:
             return fs.open(path.join(self._container_map(channel), src))
 
-    def delete_file(self, channel: str, dest: str):
+    def delete_file(self, channel: str, destination: str):
         channel_container = self._container_map(channel)
 
         with self._get_fs() as fs:
-            fs.delete(path.join(channel_container, dest))
+            fs.delete(path.join(channel_container, destination))
 
     def move_file(self, channel: str, source: str, destination: str):
         channel_container = self._container_map(channel)
