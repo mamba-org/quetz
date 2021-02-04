@@ -387,7 +387,7 @@ def initial_sync_mirror(
     packages = repodata.get("packages", {})
 
     version_methods = [
-        _check_timestamp(channel, dao),
+        # _check_timestamp(channel, dao),
         _check_checksum(dao, channel_name, arch, "sha256"),
         _check_checksum(dao, channel_name, arch, "md5"),
     ]
