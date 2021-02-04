@@ -388,6 +388,7 @@ def initial_sync_mirror(
 
     version_methods = [
         # _check_timestamp(channel, dao),
+        # disabled because it does not resync failed packages and multiple platforms
         _check_checksum(dao, channel_name, arch, "sha256"),
         _check_checksum(dao, channel_name, arch, "md5"),
     ]
