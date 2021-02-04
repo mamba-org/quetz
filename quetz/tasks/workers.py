@@ -70,7 +70,10 @@ def job_wrapper(
 
     kwargs.update(extra_kwargs)
 
-    callable_f(**kwargs)
+    try:
+        callable_f(**kwargs)
+    finally:
+        db.close()
 
 
 class AbstractWorker:
