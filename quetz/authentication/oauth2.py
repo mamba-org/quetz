@@ -34,7 +34,26 @@ class OAuthHandlers(BaseAuthenticationHandlers):
 
 
 class OAuthAuthenticator(BaseAuthenticator):
-    """Base class for authenticators using Oauth2 protocol and its variants"""
+    """Base class for authenticators using Oauth2 protocol and its variants.
+
+    The :py:meth:`authenticate` method is already implemented, but you will need to
+    override some of the following variables in sublasses to make it work:
+
+    :var str provider: name of the provider (it will be used in the url)
+    :var handler_cls: class with handlers for all oauth2
+      relevant endpoints in Quetz server
+    :type handler_cls: sublass of :py:class:`OauthHandlers`
+    :var client_id: required, client id registered with the provider
+    :var client_secret: required, likewise
+    :var bool is_enabled: True if authenticator is enabled, can be configured in
+      :py:meth:`configure` method
+
+    :var access_token_url: URL of the OAuth2 endpoint ot request a token
+    :var authorize_url: URL of the OAuth2 ``authorize`` endpoint
+    :var api_base_url: URL of the API root of the provider server
+    :var validate_token_url: path of endpoint to validate the token
+
+    """
 
     oauth = OAuth()
     provider = "oauth"

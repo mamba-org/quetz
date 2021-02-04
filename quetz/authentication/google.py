@@ -7,7 +7,20 @@ from .oauth2 import OAuthAuthenticator
 
 
 class GoogleAuthenticator(OAuthAuthenticator):
-    # Register the app here: https://console.developers.google.com/apis/credentials
+    """Use Google account to authenticate users with Quetz.
+
+    To enable add the following to the configuration file:
+
+    .. code::
+
+      [google]
+      client_id = "1111111111-dha39auqzp92110sdf.apps.googleusercontent.com"
+      client_secret = "03728444a12abff17e9444fd231b4379d58f0b"
+
+    You can obtain ``client_id`` and ``client_secret`` by registering your
+    application with Google platfrom at this URL:
+    `<https://console.developers.google.com/apis/credentials>`_.
+    """
 
     provider = 'google'
     server_metadata_url = 'https://accounts.google.com/.well-known/openid-configuration'

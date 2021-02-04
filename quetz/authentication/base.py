@@ -150,12 +150,13 @@ class BaseAuthenticator:
 
     Subclasses MUST implement:
 
-    - configure
-    - authenticate
+    - :py:meth:`authenticate`
 
     Subclasses SHOULD implement:
 
-    - validate_token
+    - :py:meth:`configure`
+    - :py:meth:`validate_token`
+
     """
 
     provider = "base"
@@ -209,10 +210,18 @@ class BaseAuthenticator:
     async def authenticate(
         self, request, data=None, dao=None, config=None, **kwargs
     ) -> AuthReturnType:
-        """return username or dictionary with keys 'username', 'profile', 'auth_state'.
-        See type annotation for detail.
+        """Authentication user with the data submitted.
 
-        Return None if login credentials are not correct"""
+        This method should return:
+
+        - ``None`` if the authentication failed,
+        - string with username for successful authentication
+        - or a dictionary with keys ``username``, ``profile`` (user profile data),
+          ``auth_state`` (extra authentication state to be stored in the browser
+          session).
+
+        """
+
         raise NotImplementedError("subclasses need to implement authenticate")
 
 
@@ -251,9 +260,12 @@ class FormHandlers(BaseAuthenticationHandlers):
 
 
 class SimpleAuthenticator(BaseAuthenticator):
-    """A demo of a possible implementation.
+    """A demo of a possible implementation. It redirects users to a
+    simple HTML form where they can type their username and password.
 
-    NOT FOR USE IN PRODUCTION."""
+    Note: Consider this an example. In your production setting you would
+    probably want to redirect to your custom login page. Make sure that
+    this page submits data to ``/auth/{provider}/authorize`` endpoint."""
 
     provider = "simple"
     handler_cls = FormHandlers

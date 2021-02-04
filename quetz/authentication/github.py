@@ -2,7 +2,20 @@ from .oauth2 import OAuthAuthenticator
 
 
 class GithubAuthenticator(OAuthAuthenticator):
-    # Register the app here: https://github.com/settings/applications/new
+    """Use Github account to authenticate users with Quetz.
+
+    To enable add the following to the configuration file:
+
+    .. code::
+
+      [github]
+      client_id = "fde330aef1fbe39991"
+      client_secret = "03728444a12abff17e9444fd231b4379d58f0b"
+
+    You can obtain ``client_id`` and ``client_secret`` by registering your
+    application with Github at this URL:
+    `<https://github.com/settings/applications/new>`_.
+    """
 
     provider = "github"
 

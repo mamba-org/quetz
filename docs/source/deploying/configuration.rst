@@ -1,6 +1,8 @@
 Configuration
 =============
 
+.. _configfile:
+
 Config file
 -----------
 

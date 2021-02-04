@@ -1,3 +1,5 @@
+.. _plugins_section:
+
 Plugins
 =======
 
