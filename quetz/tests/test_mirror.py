@@ -489,6 +489,7 @@ def test_synchronisation_no_checksums_in_db(
     assert len(versions) == n_new_packages + 1
 
 
+@pytest.mark.skip(reason="disabled since _check_timestamp() is buggy")
 @pytest.mark.parametrize(
     "repo_content,timestamp_mirror_sync,expected_timestamp,new_package",
     [
