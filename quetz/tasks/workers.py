@@ -4,7 +4,7 @@ import inspect
 import logging
 import time
 from abc import abstractmethod
-from typing import Callable, Optional, Union
+from typing import Callable, Union
 
 import requests
 from fastapi import BackgroundTasks
@@ -159,9 +159,6 @@ class FutureJob(AbstractJob):
 
 
 class SubprocessWorker(AbstractWorker):
-
-    _executor: Optional[concurrent.futures.Executor] = None
-
     def __init__(
         self,
         api_key: str,
@@ -170,11 +167,8 @@ class SubprocessWorker(AbstractWorker):
         executor_args: dict = {},
     ):
 
-        if SubprocessWorker._executor is None:
-            logger.debug("creating a new subprocess executor")
-            SubprocessWorker._executor = concurrent.futures.ProcessPoolExecutor(
-                **executor_args
-            )
+        logger.debug("creating a new subprocess executor")
+        self._executor = concurrent.futures.ProcessPoolExecutor(**executor_args)
         self.api_key = api_key
         self.browser_session = browser_session
         self.config = config
