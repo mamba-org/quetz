@@ -243,9 +243,8 @@ class S3Store(PackageStore):
 
         with self._get_fs() as fs:
             bucket = self._bucket_map(channel)
-            with fs.transaction:
-                with fs.open(path.join(bucket, destination), mode, acl="private") as f:
-                    f.write(data)
+            with fs.open(path.join(bucket, destination), mode, acl="private") as f:
+                f.write(data)
 
     def serve_path(self, channel, src):
         with self._get_fs() as fs:
@@ -363,9 +362,8 @@ class AzureBlobStore(PackageStore):
 
         with self._get_fs() as fs:
             container = self._container_map(channel)
-            with fs.transaction:
-                with fs.open(path.join(container, destination), mode) as f:
-                    f.write(data)
+            with fs.open(path.join(container, destination), mode) as f:
+                f.write(data)
 
     def serve_path(self, channel, src):
         with self._get_fs() as fs:
