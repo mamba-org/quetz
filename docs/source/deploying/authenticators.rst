@@ -57,8 +57,9 @@ The authenticator should derive from one of the base classes:
 Implement authentication logic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To implement the custom authentication logic, your class should override at least
-:py:meth:`~quetz.authentication.base.BaseAuthenticator.authenticate` method:
+To implement some custom authentication logic, your class should override at least
+:py:meth:`~quetz.authentication.base.BaseAuthenticator.authenticate` method (except
+for :py:class:`~quetz.authentication.oauth2.OAuthAuthenticator` subclasses):
 
 .. automethod:: quetz.authentication.base.BaseAuthenticator.authenticate
 
@@ -84,4 +85,32 @@ For example, the custom authenticator might be:
 Registering authenticator
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You can register an authenticator with an entry point.
+The standard way to register an authenticator with Quetz, is to distibute it as a plugin
+(see :ref:`plugins_section`). 
+To automatize the creation of a plugin, check out our cookiecutter `template`_.
+
+.. _template: https://github.com/mamba-org/quetz-plugin-cookiecutter
+
+If not using the cookiecutter, you can register an authenticator with Quetz by defining 
+an entry point.  You can create entry point with the following snippet in the ``setup.py``:
+
+.. code::
+
+    from setuptools import setup
+    
+    # you will need to adapt these variables
+    # to the names from your package
+    PACKAGE_NAME = quetz_dictauthenticator
+    AUTHENTICATOR_CLASS = "DictAuthenticator"
+    MODULE_NAME = authenticators
+
+    setup(
+        name="quetz-dictauthenticator",
+        install_requires="quetz",
+        entry_points={
+            "quetz.authenticator": [
+                f"{AUTHENTICATOR_CLASS.lower()} = {PACKAGE_NAME}:{MODULE_NAME}.{AUTHENTICATOR_CLASS}"
+            ]
+        },
+        packages=[PACKAGE_NAME],
+    )
