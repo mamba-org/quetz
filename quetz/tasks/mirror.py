@@ -336,6 +336,7 @@ def handle_repodata_package(
             )
             condainfo = CondaInfo(file, package_name, lazy=True)
             pm.hook.post_add_package_version(version=version, condainfo=condainfo)
+            file.file.close()
 
 
 def initial_sync_mirror(
