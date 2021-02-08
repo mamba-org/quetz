@@ -114,6 +114,8 @@ class RemoteFile:
         self.file = SpooledTemporaryFile()
         response.raw.decode_content = True  # for gzipped response content
         shutil.copyfileobj(response.raw, self.file)
+        response.close()
+        session.close()
 
         # workaround for https://github.com/python/cpython/pull/3249
         if not hasattr(self.file, "seekable"):
@@ -488,7 +490,7 @@ def initial_sync_mirror(
             if len(update_batch) >= max_batch_length or update_size >= max_batch_size:
                 logger.debug(f"Executing batch with {update_size}")
                 any_updated |= handle_batch(update_batch)
-                update_batch = []
+                update_batch.clear()
                 update_size = 0
 
         # handle final batch
