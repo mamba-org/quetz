@@ -671,3 +671,22 @@ def test_authorizations_with_expired_api_key(data, client):
     )
 
     assert response.status_code == 401
+
+
+def test_authorizations_with_api_key_no_expiry(data, client, db):
+    key = "noexpirykey"
+    keya_obj = ApiKey(
+        key=key,
+        time_created=date.today(),
+        expire_at=None,
+        user_id=data.usera.id,
+        owner_id=data.usera.id,
+    )
+    db.add(keya_obj)
+    db.commit()
+
+    response = client.get(
+        f"/api/channels/{data.channel2.name}/members", headers={"X-API-Key": key}
+    )
+
+    assert response.status_code == 200

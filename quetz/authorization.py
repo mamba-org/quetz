@@ -7,6 +7,7 @@ from datetime import date
 from typing import Optional
 
 from fastapi import HTTPException, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from .db_models import ApiKey, ChannelMember, PackageMember, User
@@ -43,7 +44,10 @@ class Rules:
             api_key = (
                 self.db.query(ApiKey)
                 .filter(ApiKey.key == self.API_key, ~ApiKey.deleted)
-                .filter(ApiKey.key == self.API_key, ApiKey.expire_at >= date.today())
+                .filter(
+                    ApiKey.key == self.API_key,
+                    or_(ApiKey.expire_at >= date.today(), ApiKey.expire_at.is_(None)),
+                )
                 .one_or_none()
             )
             if api_key:
