@@ -99,6 +99,9 @@ def dummy_response(repo_content, status_code):
             else:
                 self.status_code = status_code
 
+        def close(self):
+            pass
+
     return DummyResponse
 
 
@@ -115,6 +118,9 @@ def dummy_repo(app, dummy_response):
                 raise RemoteServerError()
             files.append(path)
             return dummy_response()
+
+        def close(self):
+            pass
 
     app.dependency_overrides[get_remote_session] = DummySession
 
@@ -401,6 +407,9 @@ def test_synchronisation_sha(
         def get(self, path, stream=False):
             return dummy_response()
 
+        def close(self):
+            pass
+
     # generate local repodata.json
     update_indexes(dao, pkgstore, mirror_channel.name)
 
@@ -464,6 +473,9 @@ def test_synchronisation_no_checksums_in_db(
     class DummySession:
         def get(self, path, stream=False):
             return dummy_response()
+
+        def close(self):
+            pass
 
     # generate local repodata.json
     update_indexes(dao, pkgstore, mirror_channel.name)
