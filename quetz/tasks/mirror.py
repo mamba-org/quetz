@@ -101,7 +101,10 @@ class RemoteFileNotFound(RemoteServerError):
 class RemoteFile:
     def __init__(self, host: str, path: str, session=None):
         if session is None:
+            session_as_param = False
             session = requests.Session()
+        else:
+            session_as_param = True
         remote_url = os.path.join(host, path)
         try:
             response = session.get(remote_url, stream=True)
@@ -115,7 +118,8 @@ class RemoteFile:
         response.raw.decode_content = True  # for gzipped response content
         shutil.copyfileobj(response.raw, self.file)
         response.close()
-        session.close()
+        if not session_as_param:
+            session.close()
 
         # workaround for https://github.com/python/cpython/pull/3249
         if not hasattr(self.file, "seekable"):
