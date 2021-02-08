@@ -3,7 +3,7 @@
 
 import json
 
-from conda.exports import VersionOrder
+from quetz.versionorder import VersionOrder
 
 CHANNELDATA_OPTIONAL_FIELDS = (
     "description",
