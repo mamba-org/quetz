@@ -7,8 +7,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from quetz import rest_models
+from quetz import hookimpl, rest_models
 from quetz.authorization import Rules
+from quetz.condainfo import CondaInfo
 from quetz.db_models import Channel, Package, PackageVersion, User
 from quetz.tasks.indexing import update_indexes
 from quetz.tasks.mirror import (
@@ -1204,11 +1205,13 @@ def dummy_package_file(config):
     filepath = OTHER_DUMMY_PACKAGE_V2
     fid = open(filepath, 'rb')
 
-    fid.filename = filepath.name
-    fid.content_type = "application/archive"
-    fid.file = fid
+    class DummyRemoteFile:
 
-    yield fid
+        filename = filepath.name
+        content_type = "application/archive"
+        file = fid
+
+    yield DummyRemoteFile()
 
     fid.close()
 
@@ -1246,3 +1249,43 @@ def test_handle_repodata_package(
     assert version
 
     pkgstore.serve_path(local_channel.name, f"linux-64/{package_name}")
+
+
+@pytest.fixture
+def plugin(app):
+    from quetz.main import pm
+
+    class Plugin:
+        about = None
+
+        @hookimpl
+        def post_add_package_version(
+            version,
+            condainfo: CondaInfo,
+        ):
+            Plugin.about = condainfo.about
+
+    plugin = Plugin()
+    pm.register(plugin)
+    yield plugin
+    pm.unregister(plugin)
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+def test_handle_repodata_package_with_plugin(
+    dao, local_channel, dummy_package_file, rules, config, db, plugin, user
+):
+    pkg = Package(name="other-package", channel=local_channel)
+    db.add(pkg)
+
+    repodata = json.loads(repodata_json)
+    package_name, package_data = list(repodata["packages"].items())[0]
+    pkgstore = config.get_package_store()
+
+    files_metadata = [(dummy_package_file, package_name, package_data)]
+
+    handle_repodata_package(
+        local_channel.name, files_metadata, dao, rules, False, pkgstore, config
+    )
+
+    assert plugin.about['conda_version'] == '4.8.4'
