@@ -25,13 +25,18 @@ def user_group():
 
 
 @pytest.fixture
-def config_extra(user_group):
-    if user_group is None:
-        return ""
-    else:
-        return f"""[users]
-                {user_group} = ["github:bartosz"]
-                """
+def default_role():
+    return None
+
+
+@pytest.fixture
+def config_extra(user_group, default_role):
+    config_values = ["[users]"]
+    if user_group is not None:
+        config_values.append(f'{user_group} = ["github:bartosz"]')
+    if default_role:
+        config_values.append(f"{default_role=}")
+    return "\n".join(config_values)
 
 
 @pytest.fixture
@@ -47,7 +52,7 @@ def get_user(db, config_dir, username="bartosz"):
         return db
 
     with mock.patch("quetz.cli.get_session", get_db):
-        cli.set_user_roles(config_dir)
+        cli.add_user_roles(config_dir)
 
     return db.query(User).filter(User.username == username).one_or_none()
 
@@ -93,17 +98,21 @@ def test_set_user_roles_user_exists(
     assert user.username == "bartosz"
 
 
+@pytest.mark.parametrize("default_role", [None, "member"])
 @pytest.mark.parametrize("current_role", ['owner', 'member', 'maintainer'])
 def test_set_user_roles_user_has_role(
-    db, config, config_dir, user, mocker, user_with_identity, current_role
+    db, config, config_dir, user, mocker, user_with_identity, current_role, default_role
 ):
     user.role = current_role
     db.commit()
     user = get_user(db, config_dir)
     assert user
 
-    # role shouldn't be changed
-    assert user.role == current_role
+    # role shouldn't be changed unless it's default role
+    if current_role != default_role:
+        assert user.role == current_role
+    else:
+        assert user.role == "owner"
     assert user.username == "bartosz"
 
 
