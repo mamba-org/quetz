@@ -192,6 +192,10 @@ def _set_user_roles(db: Session, config: Config):
                         f"could not find user '{username}' "
                         f"with identity from provider '{provider}'"
                     )
+                elif user.role is not None:
+                    logger.warning(
+                        f"user has already role {user.role}" f"not assigning new role"
+                    )
                 else:
                     user.role = role
 

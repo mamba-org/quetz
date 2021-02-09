@@ -74,18 +74,36 @@ def test_create_user_from_config(
 
 
 @pytest.mark.parametrize("user_group", [None])
-def test_init_db_no_user(db, config, config_dir, user_group, mocker: MockerFixture):
+def test_set_user_roles_no_user(
+    db, config, config_dir, user_group, mocker: MockerFixture
+):
 
     user = get_user(db, config_dir)
 
     assert user is None
 
 
-def test_init_db_user_exists(db, config, config_dir, user, mocker, user_with_identity):
+def test_set_user_roles_user_exists(
+    db, config, config_dir, user, mocker, user_with_identity
+):
     user = get_user(db, config_dir)
     assert user
 
     assert user.role == 'owner'
+    assert user.username == "bartosz"
+
+
+@pytest.mark.parametrize("current_role", ['owner', 'member', 'maintainer'])
+def test_set_user_roles_user_has_role(
+    db, config, config_dir, user, mocker, user_with_identity, current_role
+):
+    user.role = current_role
+    db.commit()
+    user = get_user(db, config_dir)
+    assert user
+
+    # role shouldn't be changed
+    assert user.role == current_role
     assert user.username == "bartosz"
 
 
