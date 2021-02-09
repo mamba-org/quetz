@@ -608,9 +608,12 @@ def delete_channel(
 
     auth.assert_delete_channel(channel)
     dao.delete_channel(channel.name)
-    files = pkgstore.list_files(channel.name)
-    for f in files:
-        pkgstore.delete_file(channel.name, destination=f)
+    try:
+        pkgstore.remove_channel(channel.name)
+    except FileNotFoundError:
+        logger.warning(
+            f"trying to remove non-existent package store for channel {channel.name}"
+        )
 
 
 @api_router.put("/channels/{channel_name}/actions", tags=["channels"])
