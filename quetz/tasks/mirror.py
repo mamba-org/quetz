@@ -340,7 +340,7 @@ def handle_repodata_package(
             version = create_version_from_metadata(
                 channel_name, user_id, package_name, metadata, dao
             )
-            condainfo = CondaInfo(file, package_name, lazy=True)
+            condainfo = CondaInfo(file.file, package_name, lazy=True)
             pm.hook.post_add_package_version(version=version, condainfo=condainfo)
             file.file.close()
 
