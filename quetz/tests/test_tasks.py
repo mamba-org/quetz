@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from quetz.db_models import Channel
 from quetz.pkgstores import PackageStore
+from quetz.rest_models import Channel
 from quetz.tasks.indexing import validate_packages
 from quetz.tasks.reindexing import reindex_packages_from_store
 
