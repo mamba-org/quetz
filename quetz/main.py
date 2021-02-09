@@ -664,13 +664,13 @@ def post_channel(
     if is_proxy:
         auth.assert_create_proxy_channel()
 
-    if new_channel.metadata.actions is None:
+    if new_channel.actions is None:
         if is_mirror:
             actions = [ChannelActionEnum.synchronize_repodata]
         else:
             actions = []
     else:
-        actions = new_channel.metadata.actions
+        actions = new_channel.actions
 
     includelist = new_channel.metadata.includelist
     excludelist = new_channel.metadata.excludelist
@@ -742,7 +742,7 @@ def patch_channel(
     if "size_limit" in user_attrs:
         auth.assert_set_channel_size_limit()
 
-    changeable_attrs = ["private", "size_limit"]
+    changeable_attrs = ["private", "size_limit", "metadata"]
 
     for attr_ in user_attrs.keys():
         if attr_ not in changeable_attrs:
@@ -752,7 +752,12 @@ def patch_channel(
             )
 
     for attr_, value_ in user_attrs.items():
-        setattr(channel, attr_, value_)
+        if attr_ == "metadata":
+            metadata = json.loads(channel.channel_metadata)
+            metadata.update(value_)
+            setattr(channel, "channel_metadata", json.dumps(metadata))
+        else:
+            setattr(channel, attr_, value_)
     db.commit()
 
     return channel

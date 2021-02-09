@@ -121,11 +121,6 @@ class ChannelActionEnum(str, Enum):
 
 class ChannelMetadata(BaseModel):
 
-    actions: Optional[List[ChannelActionEnum]] = Field(
-        None,
-        title="list of actions to run after channel creation "
-        "(see /channels/{}/actions for description)",
-    )
     includelist: Optional[List[str]] = Field(
         None, title="list of packages to include while creating a channel"
     )
@@ -138,6 +133,12 @@ class Channel(ChannelBase):
 
     metadata: ChannelMetadata = Field(
         default_factory=ChannelMetadata, title="channel metadata", example={}
+    )
+
+    actions: Optional[List[ChannelActionEnum]] = Field(
+        None,
+        title="list of actions to run after channel creation "
+        "(see /channels/{}/actions for description)",
     )
 
     @root_validator

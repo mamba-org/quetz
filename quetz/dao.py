@@ -308,12 +308,14 @@ class Dao:
             raise errors.ValidationError(
                 "only ASCII characters should be used in channel name"
             )
+
         channel = Channel(
             name=data.name,
             description=data.description,
             mirror_channel_url=data.mirror_channel_url,
             mirror_mode=data.mirror_mode,
             private=data.private,
+            channel_metadata=json.dumps(data.metadata.__dict__),
             size_limit=size_limit,
         )
 
