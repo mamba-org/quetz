@@ -158,7 +158,7 @@ def _make_migrations(
         )
 
 
-def _init_db(db: Session, config: Config):
+def _set_user_roles(db: Session, config: Config):
     """Initialize the database and add users from config."""
     if config.configured_section("users"):
 
@@ -311,9 +311,22 @@ def init_db(
     config = _get_config(path)
 
     with working_directory(path):
-        db = get_session(config.sqlalchemy_database_url)
         _run_migrations(config.sqlalchemy_database_url)
-        _init_db(db, config)
+
+
+@app.command()
+def set_user_roles(
+    path: str = typer.Argument(None, help="The path of the deployment"),
+):
+    """init database and fill users from config file [users] sections"""
+
+    logger.info("setting up user roles")
+
+    config = _get_config(path)
+
+    with working_directory(path):
+        db = get_session(config.sqlalchemy_database_url)
+        _set_user_roles(db, config)
 
 
 @app.command()
@@ -431,7 +444,7 @@ def create(
         _run_migrations(config.sqlalchemy_database_url)
         if dev:
             _fill_test_database(db)
-        _init_db(db, config)
+        _set_user_roles(db, config)
 
 
 def _get_config(path: Union[Path, str]) -> Config:

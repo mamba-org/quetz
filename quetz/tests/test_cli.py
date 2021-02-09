@@ -47,45 +47,46 @@ def get_user(db, config_dir, username="bartosz"):
         return db
 
     with mock.patch("quetz.cli.get_session", get_db):
-        cli.init_db(config_dir)
+        cli.set_user_roles(config_dir)
 
     return db.query(User).filter(User.username == username).one_or_none()
+
+
+def test_init_db(db, config, config_dir, mocker):
+    _run_migrations: MagicMock = mocker.patch("quetz.cli._run_migrations")
+    cli.init_db(config_dir)
+    _run_migrations.assert_called_once()
 
 
 @pytest.mark.parametrize(
     "user_group,expected_role",
     [("admins", "owner"), ("maintainers", "maintainer"), ("members", "member")],
 )
-def test_init_db(
+def test_create_user_from_config(
     db, config, config_dir, user_group, expected_role, mocker, user_with_identity
 ):
-    _run_migrations: MagicMock = mocker.patch("quetz.cli._run_migrations")
+
     user = get_user(db, config_dir)
     assert user
 
     assert user.role == expected_role
     assert user.username == "bartosz"
-    _run_migrations.assert_called_once()
 
 
 @pytest.mark.parametrize("user_group", [None])
 def test_init_db_no_user(db, config, config_dir, user_group, mocker: MockerFixture):
 
-    _run_migrations: MagicMock = mocker.patch("quetz.cli._run_migrations")
     user = get_user(db, config_dir)
 
     assert user is None
-    _run_migrations.assert_called_once()
 
 
 def test_init_db_user_exists(db, config, config_dir, user, mocker, user_with_identity):
-    _run_migrations: MagicMock = mocker.patch("quetz.cli._run_migrations")
     user = get_user(db, config_dir)
     assert user
 
     assert user.role == 'owner'
     assert user.username == "bartosz"
-    _run_migrations.assert_called_once()
 
 
 @pytest.mark.parametrize("config_extra", ['[users]\nadmins = ["dummy:alice"]\n'])
