@@ -90,6 +90,13 @@ def local_store():
                 not s3_config['key'], reason="requires s3 credentials"
             ),
         ),
+        pytest.param(
+            "azure_store",
+            marks=pytest.mark.skipif(
+                not azure_config['account_access_key'],
+                reason="requires azure credentials",
+            ),
+        ),
     ]
 )
 def any_store(request):
@@ -118,17 +125,10 @@ def s3_store():
 
 
 @pytest.fixture
-def azure_store(channel_name):
+def azure_store():
     pkg_store = AzureBlobStore(azure_config)
-    pkg_store.create_channel(channel_name)
 
     yield pkg_store
-
-    # cleanup
-    files = pkg_store.list_files(channel_name)
-    for f in files:
-        pkg_store.delete_file(channel_name, f)
-    pkg_store.fs.rmdir(pkg_store._container_map(channel_name))
 
 
 @pytest.fixture
@@ -145,31 +145,6 @@ def channel(any_store, channel_name):
 def test_store_add_list_files(any_store, channel, channel_name):
 
     pkg_store = any_store
-
-    pkg_store.add_file("content", channel_name, "test.txt")
-    pkg_store.add_file("content", channel_name, "test_2.txt")
-
-    files = pkg_store.list_files(channel_name)
-
-    assert files == ["test.txt", "test_2.txt"]
-
-    pkg_store.delete_file(channel_name, "test.txt")
-
-    files = pkg_store.list_files(channel_name)
-    assert files == ["test_2.txt"]
-
-    metadata = pkg_store.get_filemetadata(channel_name, "test_2.txt")
-    assert metadata[0] > 0
-    assert type(metadata[1]) is float
-    assert type(metadata[2]) is str
-
-
-@pytest.mark.skipif(
-    not azure_config['account_access_key'], reason="requires azure credentials"
-)
-def test_azure_blob_store(azure_store, channel_name):
-
-    pkg_store = azure_store
 
     pkg_store.add_file("content", channel_name, "test.txt")
     pkg_store.add_file("content", channel_name, "test_2.txt")

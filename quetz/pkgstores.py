@@ -341,6 +341,11 @@ class AzureBlobStore(PackageStore):
             except FileExistsError:
                 pass
 
+    def remove_channel(self, name):
+        channel_path = self._container_map(name)
+        with self._get_fs() as fs:
+            fs.rm(channel_path, recursive=True)
+
     def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
         with self._get_fs() as fs:
             container = self._container_map(channel)
