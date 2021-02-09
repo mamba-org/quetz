@@ -20,8 +20,19 @@ def default_role():
 
 
 @pytest.fixture
-def config_extra(default_role):
-    return f'[users]\ndefault_role = "{default_role}"\n' if default_role else ""
+def user_roles():
+    return {"admins": [], "members": [], "maintainers": []}
+
+
+@pytest.fixture
+def config_extra(default_role, user_roles):
+    config_values = ["[users]"]
+    if default_role:
+        config_values.append(f'default_role = "{default_role}"')
+    for group in ['admins', 'members', 'maintainers']:
+        group_users = user_roles.get(group, [])
+        config_values.append(f'{group} = {group_users}')
+    return "\n".join(config_values)
 
 
 @pytest.fixture
@@ -205,6 +216,34 @@ def test_config_create_default_channel(routed_client, db, oauth_server, config):
 
     assert channel
     assert user == channel.members[0].user
+
+
+@pytest.mark.parametrize("default_role", [None, 'member'])
+@pytest.mark.parametrize(
+    "user_roles,expected_role",
+    [
+        ({"admins": ["test_github:user-with-role"]}, "owner"),
+        ({"maintainers": ["test_github:user-with-role"]}, "maintainer"),
+        ({"members": ["test_github:user-with-role"]}, "member"),
+    ],
+)
+def test_config_create_user_with_role(
+    routed_client, db, oauth_server, config, default_role, expected_role
+):
+
+    response = routed_client.get(f'/auth/{oauth_server.provider}/authorize')
+
+    assert response.status_code == 200
+
+    user = db.query(User).filter(User.username == "user-with-role").one_or_none()
+    assert user
+
+    if oauth_server.provider == 'test_github':
+        assert user.role == expected_role
+    elif default_role:
+        assert user.role == default_role
+    else:
+        assert user.role is None
 
 
 @pytest.fixture
