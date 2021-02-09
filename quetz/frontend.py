@@ -103,8 +103,13 @@ def static(
             return FileResponse(path=os.path.join(frontend_dir, "index.html"))
         else:
             profile = dao.get_profile(user_id)
-            index_rendered = get_rendered_index(config_data, profile, index_template)
-            return HTMLResponse(content=index_rendered, status_code=200)
+            if profile is not None:
+                index_rendered = get_rendered_index(
+                    config_data, profile, index_template
+                )
+                return HTMLResponse(content=index_rendered, status_code=200)
+            else:
+                return FileResponse(path=os.path.join(frontend_dir, "index.html"))
     else:
         return FileResponse(path=os.path.join(frontend_dir, resource))
 

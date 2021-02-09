@@ -735,7 +735,7 @@ def test_add_mirror_without_sync(auth_client, dummy_repo):
             "private": False,
             "mirror_channel_url": host,
             "mirror_mode": "mirror",
-            "metadata": {"actions": []},
+            "actions": [],
         },
     )
     assert response.status_code == 201
@@ -772,7 +772,7 @@ def test_add_and_register_mirror(auth_client, dummy_session_mock):
             "private": False,
             "mirror_channel_url": host,
             "mirror_mode": "mirror",
-            "metadata": {"actions": []},
+            "actions": [],
         },
     )
     assert response.status_code == 201
