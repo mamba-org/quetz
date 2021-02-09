@@ -156,7 +156,7 @@ class Channel(Base):
     private = Column(Boolean, default=False)
     mirror_channel_url = Column(String)
     mirror_mode = Column(String)
-    channel_metadata = Column(String)
+    channel_metadata = Column(String, server_default='{}', nullable=False)
     timestamp_mirror_sync = Column(Integer, default=0)
     size = Column(BigInteger, default=0)
     size_limit = Column(BigInteger, default=None)

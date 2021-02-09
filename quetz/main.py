@@ -750,7 +750,9 @@ def patch_channel(
 
     for attr_, value_ in user_attrs.items():
         if attr_ == "metadata":
-            setattr(channel, "channel_metadata", json.dumps(value_))
+            metadata = json.loads(channel.channel_metadata)
+            metadata.update(value_)
+            setattr(channel, "channel_metadata", json.dumps(metadata))
         else:
             setattr(channel, attr_, value_)
     db.commit()
