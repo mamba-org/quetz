@@ -70,17 +70,51 @@ def channel_name():
 
 
 @pytest.fixture
-def s3_store(channel_name):
-    pkg_store = S3Store(s3_config)
-    pkg_store.create_channel(channel_name)
+def local_store():
+    temp_dir = os.path.join(test_dir, "test_pkg_store_" + str(int(time.time())))
+    os.makedirs(temp_dir, exist_ok=False)
+
+    pkg_store = LocalStore({'channels_dir': temp_dir})
 
     yield pkg_store
 
-    # cleanup
-    files = pkg_store.list_files(channel_name)
-    for f in files:
-        pkg_store.delete_file(channel_name, f)
-    pkg_store.fs.rmdir(pkg_store._bucket_map(channel_name))
+    shutil.rmtree(temp_dir)
+
+
+@pytest.fixture(
+    params=[
+        "local_store",
+        pytest.param(
+            "s3_store",
+            marks=pytest.mark.skipif(
+                not s3_config['key'], reason="requires s3 credentials"
+            ),
+        ),
+    ]
+)
+def any_store(request):
+    val = request.getfixturevalue(request.param)
+    return val
+
+
+def test_remove_dirs(any_store, channel_name):
+    any_store.create_channel(channel_name)
+    any_store.add_file("content", channel_name, "test.txt")
+
+    with any_store.serve_path(channel_name, "test.txt") as f:
+        assert f.read().decode('utf-8') == "content"
+
+    any_store.remove_channel(channel_name)
+
+    with pytest.raises(FileNotFoundError):
+        with any_store.serve_path(channel_name, "test.txt") as f:
+            f.read()
+
+
+@pytest.fixture
+def s3_store():
+    pkg_store = S3Store(s3_config)
+    return pkg_store
 
 
 @pytest.fixture
@@ -97,10 +131,20 @@ def azure_store(channel_name):
     pkg_store.fs.rmdir(pkg_store._container_map(channel_name))
 
 
-@pytest.mark.skipif(not s3_config['key'], reason="requires s3 credentials")
-def test_s3_store(s3_store, channel_name):
+@pytest.fixture
+def channel(any_store, channel_name):
 
-    pkg_store = s3_store
+    any_store.create_channel(channel_name)
+
+    yield
+
+    # cleanup
+    any_store.remove_channel(channel_name)
+
+
+def test_store_add_list_files(any_store, channel, channel_name):
+
+    pkg_store = any_store
 
     pkg_store.add_file("content", channel_name, "test.txt")
     pkg_store.add_file("content", channel_name, "test_2.txt")
