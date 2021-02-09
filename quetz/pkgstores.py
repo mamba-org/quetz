@@ -46,6 +46,11 @@ class PackageStore(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def remove_channel(self, name):
+        """remove channel recursively"""
+        pass
+
+    @abc.abstractmethod
     def list_files(self, channel: str) -> List[str]:
         pass
 
@@ -103,6 +108,10 @@ class LocalStore(PackageStore):
 
     def create_channel(self, name):
         self.fs.makedirs(path.join(self.channels_dir, name), exist_ok=True)
+
+    def remove_channel(self, name):
+        channel_path = path.join(self.channels_dir, name)
+        self.fs.rm(channel_path, recursive=True)
 
     def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
 
@@ -212,6 +221,10 @@ class S3Store(PackageStore):
                 fs.mkdir(self._bucket_map(name), acl="private")
             except FileExistsError:
                 pass
+
+    def remove_channel(self, name):
+        channel_path = self._bucket_map(name)
+        self.fs.rm(channel_path, recursive=True, acl="private")
 
     def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
         with self._get_fs() as fs:
@@ -327,6 +340,11 @@ class AzureBlobStore(PackageStore):
                 fs.mkdir(self._container_map(name))
             except FileExistsError:
                 pass
+
+    def remove_channel(self, name):
+        channel_path = self._container_map(name)
+        with self._get_fs() as fs:
+            fs.rm(channel_path, recursive=True)
 
     def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
         with self._get_fs() as fs:
