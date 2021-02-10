@@ -1,8 +1,10 @@
 import hashlib
 import os
 import shutil
+import tempfile
 import time
 import uuid
+from pathlib import Path
 
 import pytest
 
@@ -170,3 +172,39 @@ def test_store_add_list_files(any_store, channel, channel_name):
     assert metadata[0] > 0
     assert type(metadata[1]) is float
     assert type(metadata[2]) is str
+
+
+@pytest.fixture
+def local_file():
+    tempdir = tempfile.TemporaryDirectory()
+    tempdir_path = Path(tempdir.name)
+
+    file_path = tempdir_path / 'test_file.txt'
+
+    with open(file_path, 'wb') as fid:
+        fid.write(b"binary")
+
+    yield file_path
+
+    tempdir.cleanup()
+
+
+def test_move_file(any_store, channel, channel_name, local_file):
+    def assert_files(expected_files, n_retries=3):
+        n_retries = 3
+
+        for i in range(n_retries):
+            try:
+                files = pkg_store.list_files(channel_name)
+                assert files == expected_files
+            except AssertionError:
+                continue
+            break
+        assert files == expected_files
+
+    pkg_store = any_store
+
+    pkg_store.add_file("content", channel_name, "test.txt")
+    pkg_store.move_file(channel_name, "test.txt", "test_2.txt")
+
+    assert_files(['test_2.txt'])
