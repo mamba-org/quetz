@@ -91,9 +91,10 @@ def validate_packages(dao, pkgstore, channel_name):
     if type(pkgstore).__name__ == "S3Store":
         fs_chan = pkgstore._bucket_map(channel_name)
     elif type(pkgstore).__name__ == "LocalStore":
-        print(pkgstore.channels_dir)
-        fs_chan = os.path.join(pkgstore.channels_dir, channel_name)
-    ls_dirs = pkgstore.fs.ls(f"./{fs_chan}/", detail=True)
+        fs_chan = os.path.abspath(os.path.join(pkgstore.channels_dir, channel_name))
+
+    logger.info(f"Checking {fs_chan}")
+    ls_dirs = pkgstore.fs.ls(f"{fs_chan}", detail=True)
     dirs = [d['name'].rsplit('/', 1)[1] for d in ls_dirs if d['type'] == 'directory']
 
     for subdir in dirs:
