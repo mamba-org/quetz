@@ -416,7 +416,7 @@ class Dao:
         user_id: Optional[bytes],
         order_by: str = 'name:asc',
     ):
-        db = self.db.query(Package).join(Channel).join(PackageVersion).join(User)
+        db = self.db.query(Package).join(Channel)
         query = apply_custom_query('package', db, keywords, filters)
         if user_id:
             query = query.filter(
