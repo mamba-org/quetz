@@ -277,7 +277,6 @@ class S3Store(PackageStore):
         channel_bucket = self._bucket_map(channel)
 
         with self._get_fs() as fs:
-            fs.dircache.clear()
             return [remove_prefix(f, channel_bucket) for f in fs.find(channel_bucket)]
 
     def url(self, channel: str, src: str, expires=3600):
