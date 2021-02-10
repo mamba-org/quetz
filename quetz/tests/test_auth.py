@@ -329,22 +329,24 @@ def test_private_channels(data, client):
     assert len(response.json()) == 1
 
     # Package Search #
-    query = f"channel:test -format:conda uploader:{data.usera.username}"
+    # query = f"channel:test -format:conda uploader:{data.usera.username}"
+    query = "channel:test"
     query = quote(query)
     response = client.get(f'/api/packages/search/?q={query}')
     assert response.status_code == 200
     assert len(response.json()) == 1
     assert response.json()[0]['name'] == data.package1.name
 
-    query = f"format:conda platform:linux-64,noarch uploader:{data.userb.username}"
-    query = quote(query)
-    response = client.get(
-        f'/api/packages/search/?q={query}', headers={"X-Api-Key": data.keyb}
-    )
-    assert response.status_code == 200
-    assert len(response.json()) == 0
+    # query = f"format:conda platform:linux-64,noarch uploader:{data.userb.username}"
+    # query = quote(query)
+    # response = client.get(
+    #     f'/api/packages/search/?q={query}', headers={"X-Api-Key": data.keyb}
+    # )
+    # assert response.status_code == 200
+    # assert len(response.json()) == 0
 
-    query = f"-channel:{data.channel2.name} format:tarbz2,conda -platform:osx-64"
+    # query = f"-channel:{data.channel2.name} format:tarbz2,conda -platform:osx-64"
+    query = f"-channel:{data.channel2.name}"
     query = quote(query)
     response = client.get(
         f'/api/packages/search/?q={query}', headers={"X-Api-Key": data.keyb}
