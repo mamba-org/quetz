@@ -113,10 +113,10 @@ def parse_query(search_type, query):
             'channel',
             'description',
             'summary',
-            'format',
-            'platform',
-            'version',
-            'uploader',
+            # 'format',
+            # 'platform',
+            # 'version',
+            # 'uploader',
         ]
     elif search_type == 'channel':
         accepted_filters = ['description', 'private']
