@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Type, Union
 from fastapi import APIRouter, Depends, Request, Response
 from starlette.responses import RedirectResponse
 
+from quetz.authorization import ServerRole
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.deps import get_config, get_dao
@@ -185,10 +186,16 @@ class BaseAuthenticator:
         # whether to create a default channel
         if config.configured_section("users"):
             self.default_role = config.users_default_role
+            self._admins = config.users_admins
+            self._maintainers = config.users_maintainers
+            self._members = config.users_members
             self.create_default_channel = config.users_create_default_channel
         else:
             self.default_role = None
             self.create_default_channel = False
+            self._admins = []
+            self._maintainers = []
+            self._members = []
 
     async def validate_token(self, token):
         "check token validity"
@@ -196,7 +203,17 @@ class BaseAuthenticator:
 
     async def user_role(self, request: Request, profile: UserProfile) -> Optional[str]:
         """return default role of the new user"""
-        return self.default_role
+        login = profile['login']
+        user_str = f"{self.provider}:{login}"
+
+        if user_str in self._admins:
+            return ServerRole.OWNER
+        elif user_str in self._maintainers:
+            return ServerRole.MAINTAINER
+        elif user_str in self._members:
+            return ServerRole.MEMBER
+        else:
+            return self.default_role
 
     async def user_channels(
         self, request: Request, profile: UserProfile

@@ -158,7 +158,7 @@ def _make_migrations(
         )
 
 
-def _init_db(db: Session, config: Config):
+def _set_user_roles(db: Session, config: Config):
     """Initialize the database and add users from config."""
     if config.configured_section("users"):
 
@@ -167,6 +167,8 @@ def _init_db(db: Session, config: Config):
             (config.users_maintainers, "maintainer"),
             (config.users_members, "member"),
         ]
+
+        default_role = config.users_default_role
 
         for users, role in role_map:
             for username in users:
@@ -191,6 +193,10 @@ def _init_db(db: Session, config: Config):
                     logger.warning(
                         f"could not find user '{username}' "
                         f"with identity from provider '{provider}'"
+                    )
+                elif user.role is not None and user.role != default_role:
+                    logger.warning(
+                        f"user has already role {user.role} not assigning a new role"
                     )
                 else:
                     user.role = role
@@ -311,9 +317,31 @@ def init_db(
     config = _get_config(path)
 
     with working_directory(path):
-        db = get_session(config.sqlalchemy_database_url)
         _run_migrations(config.sqlalchemy_database_url)
-        _init_db(db, config)
+
+
+@app.command()
+def add_user_roles(
+    path: str = typer.Argument(None, help="The path of the deployment"),
+):
+    """Set user roles according to the values from config file [users] sections.
+
+    This command will assign roles only if they were not set before
+    (for example using API or an earlier setting in config). The only exception
+    is that users who already have a role defined as default_role will have a
+    new role set from the config.
+
+    This command will NOT remove roles of existing roles, even if they were
+    removed from the config file.
+    """
+
+    logger.info("setting up user roles")
+
+    config = _get_config(path)
+
+    with working_directory(path):
+        db = get_session(config.sqlalchemy_database_url)
+        _set_user_roles(db, config)
 
 
 @app.command()
@@ -431,7 +459,7 @@ def create(
         _run_migrations(config.sqlalchemy_database_url)
         if dev:
             _fill_test_database(db)
-        _init_db(db, config)
+        _set_user_roles(db, config)
 
 
 def _get_config(path: Union[Path, str]) -> Config:

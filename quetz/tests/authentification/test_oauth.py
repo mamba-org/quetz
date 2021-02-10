@@ -20,8 +20,31 @@ def default_role():
 
 
 @pytest.fixture
-def config_extra(default_role):
-    return f'[users]\ndefault_role = "{default_role}"\n' if default_role else ""
+def user_group():
+    return None
+
+
+@pytest.fixture
+def user_roles(provider_spec, login, user_group):
+    # add user login identified with provider provider_spec to
+    # group user_group
+    provider_name, _ = provider_spec
+    roles = {"admins": [], "members": [], "maintainers": []}
+
+    if user_group:
+        roles[user_group].append(f"{provider_name}:{login}")
+    return roles
+
+
+@pytest.fixture
+def config_extra(default_role, user_roles):
+    config_values = ["[users]"]
+    if default_role:
+        config_values.append(f'default_role = "{default_role}"')
+    for group in ['admins', 'members', 'maintainers']:
+        group_users = user_roles.get(group, [])
+        config_values.append(f'{group} = {group_users}')
+    return "\n".join(config_values)
 
 
 @pytest.fixture
@@ -30,7 +53,7 @@ def login():
 
 
 @pytest.fixture
-def github_response(config, login):
+def github_response(login):
 
     response = {
         '/login/oauth/access_token': {'body': {'access_token': 'b'}},
@@ -48,7 +71,7 @@ def github_response(config, login):
 
 
 @pytest.fixture
-def jupyter_response(config, login):
+def jupyter_response(login):
 
     response = {
         '/hub/api/oauth2/token': {
@@ -64,8 +87,64 @@ def jupyter_response(config, login):
     return "test_jupyter", response
 
 
+GOOGLE_CERT = """-----BEGIN CERTIFICATE-----
+MIIDazCCAlOgAwIBAgIUHFhnnOpbCrKVxDGjpRBhXMolH/kwDQYJKoZIhvcNAQEL
+BQAwRTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoM
+GEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDAeFw0yMTAxMTgxNDI4NTJaFw0yNDAx
+MTgxNDI4NTJaMEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEw
+HwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEB
+AQUAA4IBDwAwggEKAoIBAQDH/ZUbewS+Tukx50UjRZ4bWij1tzoaQTo1NDWCwv7S
+OGKY083dFR567aag1rhUHjiniuf8UVv935Ydq4VWmwV6N6XHoSLNXQSHcAN7VFos
+We5ENAfBz4JmfZnZfG+QBB0nGtd7hjE/xtOUsOhuzposi8fP+FXwPMVMmgfuWS6Z
+1SNODuwmtwobhe7x8ez6l70lWUIhac5SAQwUicsdqlH1gBFkcGMmFRj9DrslpYvu
+8bq1UcGE3NhzHkIo4ssAE2NlHtzbDnxYpXGC3aEPtWHL/mFVneud2a6ZcEVDc1Nq
+cwcWliUwK6FI/wVcNYbCX6AozSor2+XCtUTyXdGoj+spAgMBAAGjUzBRMB0GA1Ud
+DgQWBBRV8o2cbHAis+yj0dzP1j25bCOjkjAfBgNVHSMEGDAWgBRV8o2cbHAis+yj
+0dzP1j25bCOjkjAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQAA
+8fT4OiTn1zPBBV702LP3cxJd+iOtfTxBFTOB9QATYpKmaQvgf6gRLHgzgFJSpn0e
+e/NH9wEllLqwbZbmz9kOH/LxaY8WD8eWbWTR0+2dcaxG0qjitlijnHfEsVANvv9O
+FK+exD3aCdMK/WUr5Shae2jRhDzLcGYdMeCD9Nxc1ShmHDA/4eUqk+SOso+O5v6i
+ZqmzBWk/u9Z7JvQ41R0OG1tJoNrD02ctH2lel/ZX/7Ff4HxK6QyzBNtEnvJBXy/R
+3qXwz4/xMdlqU0GKGpYLBvm180Nvmuohdtvzt8A8/nUKyNDJwzLHp7BjoyK9JxYy
+xT/6TQKFDnCKt1Mzg1Py
+-----END CERTIFICATE-----"""
+
+GOOGLE_PRIVATE_KEY = """-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEAx/2VG3sEvk7pMedFI0WeG1oo9bc6GkE6NTQ1gsL+0jhimNPN
+3RUeeu2moNa4VB44p4rn/FFb/d+WHauFVpsFejelx6EizV0Eh3ADe1RaLFnuRDQH
+wc+CZn2Z2XxvkAQdJxrXe4YxP8bTlLDobs6aLIvHz/hV8DzFTJoH7lkumdUjTg7s
+JrcKG4Xu8fHs+pe9JVlCIWnOUgEMFInLHapR9YARZHBjJhUY/Q67JaWL7vG6tVHB
+hNzYcx5CKOLLABNjZR7c2w58WKVxgt2hD7Vhy/5hVZ3rndmumXBFQ3NTanMHFpYl
+MCuhSP8FXDWGwl+gKM0qK9vlwrVE8l3RqI/rKQIDAQABAoIBAB48JDLHYmwzGeZF
+hJpUiBayhsa/MLWPbvFkN0LRoBzAEYfxXYozCyyiiTJ/w9ZTy1TpFzF6S2IST2uk
+5r+1KBrWFuYbYluR2IFxWdVnZ0qVPgRpqVKPwLMmAgBzY5puRMoIsNMn8oIl2Q79
+v+YgrgZWC5tRfAyZ42o1T0WljfoLjqImry1gEFpfmKXmoKbcJhd0fTfobuG6lxY6
+fkySEDeYuq4t15bjSBzqgzLD7fqSRS55yukUpSucQETB/grtLykVdHFAXP/KHWy3
+06Mj3oJAciHTwmIKV0+9QgTU77bYAupLaRX6/pgpLSXt9XUwbI0/I+xq8Fo8RBrt
+uxtCFgECgYEA5cideXxexpc3zXjg3dkC9x4ktVh4LHyQp/Ua+kRQDvHtf7E/44Bd
+GDpQnxrJ3jfhyXfdLshlI8EouT7STyC0cjtmME5WhleGBokAvdp8EEuGpArCR8iK
+1uKiFzUvszv2brr50K6s6/YPaRIGbQTFLfs7hZQYXjabx2PXwHmqJ1kCgYEA3s7J
+x07mHqkz56k/MONyVUhaW+PFvUTqolGe3D3nULd7XBbOX3yCzZjRVHBfBKv/Tyqs
+CWl9BZy8SBZX7ieiEO+5xX2bypfUxGeWznYJoYs+RDW5vEfnxFVvJ7KD/8lqq4WC
+0YY/PGziCah2iCQumypFB51FUXbljEDcGxROOFECgYEAkxu1nYI/FvrW0efyZnU5
+jcWxkJv8C9cPsUedJt43Nuoxt49drKOQdiNXXBUFagvytE3Vv86x2YsfLEGI2PnC
+LGPUz1ZH1KgR+PsbC3Dl/nSr1TfCG7zLDjl3tk3ppODdqxRvPOenc0VLpmPQ01i7
+d+2gtKsUUrS5VJSaGvKJObkCgYEAzuWlV6+7XvNuYIu4QzSiAfGa/sNG5tetLieu
+5gOR3lFTexMudlrPuA1VLRzgDx2Mij4s3NyZHPILoMEmy97/zsxdbLeUSI+vIuay
+kmvny5vaqUpefCklXhqbinhpvMeTh00GSnxoEjtltuQ5lXhL0whwa36uVNScmh3M
+hlTXwdECgYAwqpJKC2Ls7i+3lSPomCNK1VtbVZzfHl1YrNy7y2Eo8DsFkcnHWZJ+
+qPCpHZ4sbgfziCRxOaGa+1kOXjhgXITPA/tkkhh4cglOvhHNBEVzdfHBMDxZd3HF
+mD1rl6xev7GRoqUYdKYdt9NJyDGEULZ6NbIWyXo3kTp7HdQLRn0BJg==
+-----END RSA PRIVATE KEY-----
+"""
+
+
 @pytest.fixture
-def google_response(config, login):
+def google_response(login):
+
+    google_client_id = 'aaa'
+    key = GOOGLE_PRIVATE_KEY
+    cert = GOOGLE_CERT
 
     user_claims = {
         "picture": "http://avatar",
@@ -74,7 +153,7 @@ def google_response(config, login):
     access_token = "b"
     payload = {
         "iss": "https://accounts.google.com",
-        "azp": config.google_client_id,
+        "azp": google_client_id,
         "aud": "1234987819200.apps.googleusercontent.com",
         "sub": login + "_id",
         "at_hash": create_half_hash(access_token, "RS256").decode("ascii"),
@@ -88,10 +167,7 @@ def google_response(config, login):
     }
 
     header = {"alg": "RS256", "kid": "1"}
-    with open("private.pem") as fid:
-        key = fid.read()
-    with open("cert.pem") as fid:
-        cert = fid.read()
+
     id_token = jwt.encode(header, payload, key).decode('ascii')
     response = {
         '/token': {'body': {'access_token': access_token, "id_token": id_token}},
@@ -147,8 +223,14 @@ api_base_url = "http://jupyterhub/hub/api/"
         "jupyter_response",
     ]
 )
-def oauth_server(request, config, app):
+def provider_spec(request):
     provider, response = request.getfixturevalue(request.param)
+    return provider, response
+
+
+@pytest.fixture
+def oauth_server(request, config, app, provider_spec):
+    provider, response = provider_spec
 
     server_app = AsyncPathMapDispatch(response)
 
@@ -205,6 +287,56 @@ def test_config_create_default_channel(routed_client, db, oauth_server, config):
 
     assert channel
     assert user == channel.members[0].user
+
+
+@pytest.mark.parametrize("default_role", [None, 'member'])
+@pytest.mark.parametrize(
+    "user_group,expected_role",
+    [
+        ("admins", "owner"),
+        ("maintainers", "maintainer"),
+        ("members", "member"),
+        (None, None),
+    ],
+)
+def test_config_create_user_with_role(
+    routed_client, db, oauth_server, config, default_role, expected_role, login
+):
+
+    response = routed_client.get(f'/auth/{oauth_server.provider}/authorize')
+
+    assert response.status_code == 200
+
+    user = db.query(User).filter(User.username == login).one_or_none()
+    assert user
+
+    if expected_role:
+        assert user.role == expected_role
+    elif default_role:
+        assert user.role == default_role
+    else:
+        assert user.role is None
+
+
+@pytest.mark.parametrize("default_role", [None, 'member'])
+@pytest.mark.parametrize("user_roles", [{"admins": ["other_provider:user-with-role"]}])
+def test_config_create_user_with_role_in_different_provider(
+    routed_client, db, oauth_server, config, default_role, login
+):
+    # if the user logins from a different provider than the one specified
+    # in config, default_role should be assumed
+
+    response = routed_client.get(f'/auth/{oauth_server.provider}/authorize')
+
+    assert response.status_code == 200
+
+    user = db.query(User).filter(User.username == login).one_or_none()
+    assert user
+
+    if default_role:
+        assert user.role == default_role
+    else:
+        assert user.role is None
 
 
 @pytest.fixture
