@@ -2,6 +2,7 @@ import asyncio
 import concurrent.futures
 import inspect
 import logging
+import pickle
 import time
 from abc import abstractmethod
 from typing import Callable, Union
@@ -36,8 +37,23 @@ def prepare_arguments(func: Callable, **resources):
 
 
 def job_wrapper(
-    func: Union[Callable, bytes], api_key, browser_session, config, **kwargs
+    func: Union[Callable, bytes],
+    api_key,
+    browser_session,
+    config,
+    fork_process=True,
+    **kwargs
 ):
+
+    import os
+
+    if fork_process:
+
+        child_pid = os.fork()
+
+        if child_pid > 0:
+            pid, stat = os.waitpid(child_pid)
+            return
 
     # database connections etc. are not serializable
     # so we need to recreate them in the process.
@@ -74,6 +90,7 @@ def job_wrapper(
         callable_f(**kwargs)
     finally:
         db.close()
+    os._exit(0)
 
 
 class AbstractWorker:
@@ -136,6 +153,7 @@ class ThreadingWorker(AbstractWorker):
                 self.auth.session,
                 self.config,
                 *args,
+                fork_process=False,
                 **kwargs,
             )
             return
@@ -179,6 +197,8 @@ class FutureJob(AbstractJob):
 
 
 class SubprocessWorker(AbstractWorker):
+    _executor = None
+
     def __init__(
         self,
         api_key: str,
@@ -187,21 +207,27 @@ class SubprocessWorker(AbstractWorker):
         executor_args: dict = {},
     ):
 
-        logger.debug("creating a new subprocess executor")
-        self._executor = concurrent.futures.ProcessPoolExecutor(**executor_args)
+        if self._executor is None:
+            logger.debug("creating a new subprocess executor")
+            SubprocessWorker._executor = concurrent.futures.ProcessPoolExecutor(
+                max_workers=1, **executor_args
+            )
+
         self.api_key = api_key
         self.browser_session = browser_session
         self.config = config
         self.future = None
 
     def execute(self, func, *args, **kwargs):
+        pickled_func = pickle.dumps(func)
         self.future = self._executor.submit(
             job_wrapper,
-            func,
+            pickled_func,
             self.api_key,
             self.browser_session,
             self.config,
             *args,
+            fork_process=True,
             **kwargs,
         )
         return FutureJob(self.future)
