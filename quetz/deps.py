@@ -2,6 +2,8 @@
 Define common dependencies for fastapi depenendcy-injection system
 """
 
+import logging
+
 import requests
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
 from requests.adapters import HTTPAdapter
@@ -22,6 +24,8 @@ from quetz.tasks.workers import (
 
 DEFAULT_TIMEOUT = 5  # seconds
 MAX_RETRIES = 3
+
+logger = logging.getLogger("quetz")
 
 
 class TimeoutHTTPAdapter(HTTPAdapter):
@@ -116,6 +120,7 @@ def get_tasks_worker(
     else:
         raise ValueError("wrong configuration in worker.type")
 
+    logger.debug(f"created worker of class {worker.__class__.__name__}")
     return Task(auth, worker)
 
 

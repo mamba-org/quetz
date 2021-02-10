@@ -112,6 +112,7 @@ class ThreadingWorker(AbstractWorker):
 
     def execute(self, func: Callable, *args, **kwargs):
 
+        dialect = self.dao.db.bind.name
         resources = {
             "dao": self.dao,
             "auth": self.auth,
@@ -122,6 +123,22 @@ class ThreadingWorker(AbstractWorker):
 
         extra_kwargs = prepare_arguments(func, **resources)
         kwargs.update(extra_kwargs)
+
+        # sqlite is not thread safe so we can't reuse
+        # the db connection
+
+        if dialect == 'sqlite':
+            logger.debug("using sqlite backend - create a new connection for thread")
+            self.background_tasks.add_task(
+                job_wrapper,
+                func,
+                self.auth.API_key,
+                self.auth.session,
+                self.config,
+                *args,
+                **kwargs,
+            )
+            return
 
         self.background_tasks.add_task(
             func,
