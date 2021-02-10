@@ -143,20 +143,28 @@ def channel(any_store, channel_name):
 
 
 def test_store_add_list_files(any_store, channel, channel_name):
+    def assert_files(expected_files, n_retries=3):
+        n_retries = 3
+
+        for i in range(n_retries):
+            try:
+                files = pkg_store.list_files(channel_name)
+                assert files == expected_files
+            except AssertionError:
+                continue
+            break
+        assert files == expected_files
 
     pkg_store = any_store
 
     pkg_store.add_file("content", channel_name, "test.txt")
     pkg_store.add_file("content", channel_name, "test_2.txt")
 
-    files = pkg_store.list_files(channel_name)
-
-    assert files == ["test.txt", "test_2.txt"]
+    assert_files(["test.txt", "test_2.txt"])
 
     pkg_store.delete_file(channel_name, "test.txt")
 
-    files = pkg_store.list_files(channel_name)
-    assert files == ["test_2.txt"]
+    assert_files(["test_2.txt"])
 
     metadata = pkg_store.get_filemetadata(channel_name, "test_2.txt")
     assert metadata[0] > 0

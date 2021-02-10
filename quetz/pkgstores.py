@@ -14,6 +14,7 @@ from os import PathLike
 from typing import IO, BinaryIO, List, NoReturn, Tuple, Union
 
 import fsspec
+from tenacity import retry, retry_if_exception_type, stop_after_attempt
 
 try:
     import xattr
@@ -222,6 +223,8 @@ class S3Store(PackageStore):
             except FileExistsError:
                 pass
 
+    # we need to retry due to eventual (vs strong) consistency on Openstack Swift
+    @retry(stop=stop_after_attempt(5), retry=retry_if_exception_type(OSError))
     def remove_channel(self, name):
         channel_path = self._bucket_map(name)
         self.fs.rm(channel_path, recursive=True, acl="private")
@@ -274,7 +277,6 @@ class S3Store(PackageStore):
         channel_bucket = self._bucket_map(channel)
 
         with self._get_fs() as fs:
-            fs.dircache.clear()
             return [remove_prefix(f, channel_bucket) for f in fs.find(channel_bucket)]
 
     def url(self, channel: str, src: str, expires=3600):
