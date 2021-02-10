@@ -58,7 +58,7 @@ def use_migrations() -> bool:
         return True
     else:
         raise ValueError(
-            f"QUETZ_TESET_DBINIT should be either {CREATE_TABLES} or {USE_MIGRATIONS}"
+            f"QUETZ_TEST_DBINIT should be either {CREATE_TABLES} or {USE_MIGRATIONS}"
         )
 
 
@@ -116,6 +116,7 @@ def session_maker(sql_connection, create_tables, auto_rollback):
     if auto_rollback:
         trans = sql_connection.begin()
 
+    sql_connection.name = 'sqlite-test'
     yield get_session_maker(sql_connection)
 
     if auto_rollback:
