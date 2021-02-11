@@ -243,10 +243,13 @@ class SubprocessWorker(AbstractWorker):
         executor_args: dict = {},
     ):
 
+        if 'max_workers' not in executor_args:
+            executor_args['max_workers'] = 2
+
         if self._executor is None:
             logger.debug("creating a new subprocess executor")
             SubprocessWorker._executor = concurrent.futures.ProcessPoolExecutor(
-                max_workers=2, **executor_args
+                **executor_args
             )
 
         self.api_key = api_key
