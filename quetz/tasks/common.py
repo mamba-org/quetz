@@ -4,7 +4,6 @@ from fastapi import HTTPException, status
 
 from quetz import authorization, db_models
 from quetz.jobs.dao import JobsDao
-from quetz.jobs.runner import add_task_to_queue
 from quetz.metrics import tasks as metrics_tasks
 from quetz.rest_models import ChannelActionEnum
 
