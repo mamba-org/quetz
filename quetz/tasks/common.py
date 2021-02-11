@@ -81,14 +81,9 @@ class Task:
         elif action == ChannelActionEnum.generate_indexes:
             auth.assert_reindex_channel(channel_name)
             task = self.jobs_dao.create_task(b"synchronize_metadata", user_id)
-            add_task_to_queue(
-                self.db,
-                self.worker,
-                task,
-                func=indexing.update_indexes,
-                channel_name=channel.name,
+            self.worker.execute(
+                indexing.update_indexes, channel_name=channel.name, task_id=task.id
             )
-            # self.worker.execute(indexing.update_indexes, channel_name=channel.name)
         elif action == ChannelActionEnum.reindex:
             auth.assert_reindex_channel(channel_name)
             self.worker.execute(

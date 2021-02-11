@@ -14,6 +14,7 @@ from fastapi import BackgroundTasks
 from quetz import authorization
 from quetz.config import Config
 from quetz.dao import Dao
+from quetz.jobs.models import Job, JobStatus, Task, TaskStatus
 
 try:
     import redis
@@ -88,8 +89,8 @@ def job_wrapper(
     api_key,
     browser_session,
     config,
-    fork_process=True,
-    **kwargs
+    task_id=None,
+    **kwargs,
 ):
 
     # database connections etc. are not serializable
@@ -110,6 +111,14 @@ def job_wrapper(
     auth = Rules(api_key, browser_session, db)
     session = get_remote_session()
 
+    if task_id:
+        print(f"task {task_id} running")
+        task = db.query(Task).filter(Task.id == task_id).one_or_none()
+        task.status = TaskStatus.running
+        db.commit()
+    else:
+        task = None
+
     callable_f: Callable = pickle.loads(func) if isinstance(func, bytes) else func
 
     extra_kwargs = prepare_arguments(
@@ -125,7 +134,29 @@ def job_wrapper(
 
     try:
         callable_f(**kwargs)
+        if task:
+            task.status = TaskStatus.success
+    except Exception:
+        if task:
+            task.status = TaskStatus.failed
     finally:
+        db.commit()
+
+        running_tasks = (
+            db.query(Task.status)
+            .join(Job)
+            .filter(Job.id == task.job_id)
+            .filter(
+                Task.status.in_(
+                    [TaskStatus.running, TaskStatus.pending, TaskStatus.created]
+                )
+            )
+            .first()
+        )
+
+        if not running_tasks:
+            task.job.status = JobStatus.success
+        db.commit()
         db.close()
 
 
