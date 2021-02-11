@@ -716,9 +716,7 @@ def post_channel(
             logger.warning(f"could not register mirror due to error {response.text}")
 
     for action in actions:
-        task.execute_channel_action(
-            action, channel, includelist=includelist, excludelist=excludelist
-        )
+        task.execute_channel_action(action, channel)
 
 
 @api_router.patch(
@@ -1218,7 +1216,7 @@ def post_file_to_package(
         ChannelChecker(allow_proxy=False, allow_mirror=False),
     ),
 ):
-    handle_package_files(package.channel.name, files, dao, auth, force, package=package)
+    handle_package_files(package.channel, files, dao, auth, force, package=package)
     dao.update_channel_size(package.channel_name)
 
 
@@ -1233,7 +1231,7 @@ def post_file_to_channel(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
-    handle_package_files(channel.name, files, dao, auth, force)
+    handle_package_files(channel, files, dao, auth, force)
 
     dao.update_channel_size(channel.name)
 
@@ -1247,7 +1245,7 @@ def post_file_to_channel(
     wait=wait_exponential(multiplier=1, min=4, max=10),
     after=after_log(logger, logging.WARNING),
 )
-def _extract_and_upload_package(file, channel_name):
+def _extract_and_upload_package(file, channel_name, proxylist):
     try:
         conda_info = CondaInfo(file.file, file.filename)
     except Exception as e:
@@ -1265,10 +1263,15 @@ def _extract_and_upload_package(file, channel_name):
             detail=f"package file name and info files do not match {file.filename}",
         )
 
+    if conda_info.info["name"] in proxylist:
+        # do not upload files that are proxied
+        logger.info(f"Skip upload of proxied file {file.filename}")
+        return conda_info
+
     try:
         file.file.seek(0)
         logger.debug(
-            f"uploading file {dest} from channel {channel_name} to package store"
+            f"Uploading file {dest} from channel {channel_name} to package store"
         )
         pkgstore.add_package(file.file, channel_name, dest)
     except AttributeError as e:
@@ -1279,12 +1282,13 @@ def _extract_and_upload_package(file, channel_name):
 
 
 def handle_package_files(
-    channel_name,
+    channel,
     files,
     dao,
     auth,
     force,
     package=None,
+    is_mirror_op=False,
 ):
     user_id = auth.assert_user()
 
@@ -1300,9 +1304,9 @@ def handle_package_files(
             )
         else:
             package_name = parts[0]
-        auth.assert_upload_file(channel_name, package_name)
+        auth.assert_upload_file(channel.name, package_name)
         if force:
-            auth.assert_overwrite_package_version(channel_name, package_name)
+            auth.assert_overwrite_package_version(channel.name, package_name)
 
         # workaround for https://github.com/python/cpython/pull/3249
         if type(file.file) is SpooledTemporaryFile and not hasattr(file, "seekable"):
@@ -1313,30 +1317,43 @@ def handle_package_files(
         total_size += size
         file.file.seek(0)
 
-    dao.assert_size_limits(channel_name, total_size)
+    dao.assert_size_limits(channel.name, total_size)
 
-    with TicToc("extract conda-info and upload file"):
-        pkgstore.create_channel(channel_name)
-        nthreads = config.general_package_unpack_threads
-        with ThreadPoolExecutor(max_workers=nthreads) as executor:
-            try:
-                conda_infos = [
-                    ci
-                    for ci in executor.map(
-                        _extract_and_upload_package, files, (channel_name,) * len(files)
-                    )
-                ]
-            except exceptions.PackageError as e:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, detail=e.detail
+    proxylist = []
+    if channel.mirror_mode:
+        if not is_mirror_op:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot upload packages to mirror channel",
+            )
+        else:
+            proxylist = json.loads(channel.channel_metadata).get('proxylist', [])
+
+    pkgstore.create_channel(channel.name)
+    nthreads = config.general_package_unpack_threads
+    with ThreadPoolExecutor(max_workers=nthreads) as executor:
+        try:
+            conda_infos = [
+                ci
+                for ci in executor.map(
+                    _extract_and_upload_package,
+                    files,
+                    (channel.name,) * len(files),
+                    (proxylist,) * len(files),
                 )
+            ]
+        except exceptions.PackageError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail=e.detail
+            )
+
     conda_infos = [ci for ci in conda_infos if ci is not None]
 
     for file, condainfo in zip(files, conda_infos):
         logger.debug(f"Handling {condainfo.info['name']} -> {file.filename}")
         package_type = "tar.bz2" if file.filename.endswith(".tar.bz2") else "conda"
         UPLOAD_COUNT.labels(
-            channel=channel_name,
+            channel=channel.name,
             platform=condainfo.info["subdir"],
             package_name=condainfo.info["name"],
             version=condainfo.info["version"],
@@ -1364,32 +1381,33 @@ def handle_package_files(
 
         def _delete_file(condainfo, filename):
             dest = os.path.join(condainfo.info["subdir"], file.filename)
-            pkgstore.delete_file(channel_name, dest)
+            pkgstore.delete_file(channel.name, dest)
 
-        if not package and not dao.get_package(channel_name, package_name):
+        if not package and not dao.get_package(channel.name, package_name):
 
             try:
-                pm.hook.validate_new_package(
-                    channel_name=channel_name,
-                    package_name=package_name,
-                    file_handler=file.file,
-                    condainfo=condainfo,
-                )
-                # validate uploaded package size and existence
-                try:
-                    pkgsize, _, _ = pkgstore.get_filemetadata(
-                        channel_name, f"{condainfo.info['subdir']}/{file.filename}"
+                if package_name not in proxylist:
+                    pm.hook.validate_new_package(
+                        channel_name=channel.name,
+                        package_name=package_name,
+                        file_handler=file.file,
+                        condainfo=condainfo,
                     )
-                    if pkgsize != condainfo.info['size']:
+                    # validate uploaded package size and existence
+                    try:
+                        pkgsize, _, _ = pkgstore.get_filemetadata(
+                            channel.name, f"{condainfo.info['subdir']}/{file.filename}"
+                        )
+                        if pkgsize != condainfo.info['size']:
+                            raise errors.ValidationError(
+                                f"Uploaded package {file.filename} "
+                                "file size is wrong! Deleting"
+                            )
+                    except FileNotFoundError:
                         raise errors.ValidationError(
                             f"Uploaded package {file.filename} "
-                            "file size is wrong! Deleting"
+                            "file did not upload correctly!"
                         )
-                except FileNotFoundError:
-                    raise errors.ValidationError(
-                        f"Uploaded package {file.filename} "
-                        "file did not upload correctly!"
-                    )
 
                 package_data = rest_models.Package(
                     name=package_name,
@@ -1400,17 +1418,17 @@ def handle_package_files(
                 _delete_file(condainfo, file.filename)
                 raise errors.ValidationError(
                     "Validation Error for package: "
-                    + f"{channel_name}/{file.filename}: {str(err)}"
+                    + f"{channel.name}/{file.filename}: {str(err)}"
                 )
             except errors.ValidationError as err:
                 _delete_file(condainfo, file.filename)
                 logger.error(
-                    f"Validation error in: {channel_name}/{file.filename}: {str(err)}"
+                    f"Validation error in: {channel.name}/{file.filename}: {str(err)}"
                 )
                 raise err
 
             dao.create_package(
-                channel_name,
+                channel.name,
                 package_data,
                 user_id,
                 authorization.OWNER,
@@ -1418,12 +1436,12 @@ def handle_package_files(
 
         # Update channeldata info
         dao.update_package_channeldata(
-            channel_name, package_name, condainfo.channeldata
+            channel.name, package_name, condainfo.channeldata
         )
 
         try:
             version = dao.create_version(
-                channel_name=channel_name,
+                channel_name=channel.name,
                 package_name=package_name,
                 package_format=condainfo.package_format,
                 platform=condainfo.info["subdir"],
@@ -1438,7 +1456,7 @@ def handle_package_files(
             )
         except IntegrityError:
             logger.error(
-                f"duplicate package '{package_name}' in channel '{channel_name}'"
+                f"duplicate package '{package_name}' in channel '{channel.name}'"
             )
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT, detail="Duplicate"
@@ -1532,7 +1550,9 @@ async def serve_path(
 
     chunk_size = 10_000
 
-    if path.endswith(".tar.bz2") or path.endswith(".conda"):
+    is_package_request = path.endswith((".tar.bz2", ".conda"))
+
+    if is_package_request:
         try:
             platform, filename = os.path.split(path)
             package_name, version, hash_end = filename.rsplit('-', 2)
@@ -1548,7 +1568,13 @@ async def serve_path(
         ).inc()
         download_counts[(channel.name, filename, platform)] += 1
 
-    if pkgstore_support_url and (path.endswith('.tar.bz2') or path.endswith('.conda')):
+    if is_package_request and channel.mirror_channel_url:
+        # if we exclude the package from syncing, redirect to original URL
+        proxylist = json.loads(channel.channel_metadata).get('proxylist')
+        if proxylist and package_name in proxylist:
+            return RedirectResponse(f"{channel.mirror_channel_url}/{path}")
+
+    if is_package_request and pkgstore_support_url:
         # we have to ignore type checking here right now, sorry
         return RedirectResponse(pkgstore.url(channel.name, path))  # type: ignore
 

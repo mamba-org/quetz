@@ -440,7 +440,7 @@ def initial_sync_mirror(
             try:
                 if use_repodata:
                     handle_repodata_package(
-                        channel_name,
+                        channel,
                         remote_packages_with_metadata,
                         dao,
                         auth,
@@ -451,11 +451,12 @@ def initial_sync_mirror(
 
                 else:
                     handle_package_files(
-                        channel_name,
+                        channel,
                         remote_packages,
                         dao,
                         auth,
                         force,
+                        is_mirror_op=True,
                     )
                 return True
 
