@@ -52,7 +52,7 @@ def job_wrapper(
         child_pid = os.fork()
 
         if child_pid > 0:
-            pid, stat = os.waitpid(child_pid)
+            pid, stat = os.waitpid(child_pid, 0)
             return
 
     # database connections etc. are not serializable
@@ -210,7 +210,7 @@ class SubprocessWorker(AbstractWorker):
         if self._executor is None:
             logger.debug("creating a new subprocess executor")
             SubprocessWorker._executor = concurrent.futures.ProcessPoolExecutor(
-                max_workers=1, **executor_args
+                max_workers=2, **executor_args
             )
 
         self.api_key = api_key
