@@ -751,7 +751,7 @@ def patch_channel(
 
     for attr_, value_ in user_attrs.items():
         if attr_ == "metadata":
-            metadata = json.loads(channel.channel_metadata)
+            metadata = channel.load_channel_metadata()
             metadata.update(value_)
             setattr(channel, "channel_metadata", json.dumps(metadata))
         else:
@@ -1245,7 +1245,7 @@ def post_file_to_channel(
     wait=wait_exponential(multiplier=1, min=4, max=10),
     after=after_log(logger, logging.WARNING),
 )
-def _extract_and_upload_package(file, channel_name, proxylist):
+def _extract_and_upload_package(file, channel_name, channel_proxylist):
     try:
         conda_info = CondaInfo(file.file, file.filename)
     except Exception as e:
@@ -1263,7 +1263,7 @@ def _extract_and_upload_package(file, channel_name, proxylist):
             detail=f"package file name and info files do not match {file.filename}",
         )
 
-    if conda_info.info["name"] in proxylist:
+    if channel_proxylist and conda_info.info["name"] in channel_proxylist:
         # do not upload files that are proxied
         logger.info(f"Skip upload of proxied file {file.filename}")
         return conda_info
@@ -1319,7 +1319,7 @@ def handle_package_files(
 
     dao.assert_size_limits(channel.name, total_size)
 
-    proxylist = []
+    channel_proxylist = []
     if channel.mirror_mode:
         if not is_mirror_op:
             raise HTTPException(
@@ -1327,7 +1327,9 @@ def handle_package_files(
                 detail="Cannot upload packages to mirror channel",
             )
         else:
-            proxylist = json.loads(channel.channel_metadata).get('proxylist', [])
+            channel_proxylist = json.loads(channel.channel_metadata).get(
+                'proxylist', []
+            )
 
     pkgstore.create_channel(channel.name)
     nthreads = config.general_package_unpack_threads
@@ -1339,7 +1341,7 @@ def handle_package_files(
                     _extract_and_upload_package,
                     files,
                     (channel.name,) * len(files),
-                    (proxylist,) * len(files),
+                    (channel_proxylist,) * len(files),
                 )
             ]
         except exceptions.PackageError as e:
@@ -1386,7 +1388,7 @@ def handle_package_files(
         if not package and not dao.get_package(channel.name, package_name):
 
             try:
-                if package_name not in proxylist:
+                if not channel_proxylist or package_name not in channel_proxylist:
                     pm.hook.validate_new_package(
                         channel_name=channel.name,
                         package_name=package_name,
@@ -1570,8 +1572,10 @@ async def serve_path(
 
     if is_package_request and channel.mirror_channel_url:
         # if we exclude the package from syncing, redirect to original URL
-        proxylist = json.loads(channel.channel_metadata).get('proxylist')
-        if proxylist and package_name in proxylist:
+        channel_proxylist = json.loads(channel.channel_metadata).get(
+            'channel_proxylist', []
+        )
+        if package_name in channel_proxylist:
             return RedirectResponse(f"{channel.mirror_channel_url}/{path}")
 
     if is_package_request and pkgstore_support_url:

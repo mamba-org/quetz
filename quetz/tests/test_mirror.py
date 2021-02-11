@@ -1238,7 +1238,7 @@ def test_handle_repodata_package(
     files_metadata = [(dummy_package_file, package_name, package_data)]
 
     handle_repodata_package(
-        local_channel.name, files_metadata, dao, rules, False, pkgstore, config
+        local_channel, files_metadata, dao, rules, False, pkgstore, config
     )
     version = (
         db.query(PackageVersion)
@@ -1285,7 +1285,7 @@ def test_handle_repodata_package_with_plugin(
     files_metadata = [(dummy_package_file, package_name, package_data)]
 
     handle_repodata_package(
-        local_channel.name, files_metadata, dao, rules, False, pkgstore, config
+        local_channel, files_metadata, dao, rules, False, pkgstore, config
     )
 
     assert plugin.about['conda_version'] == '4.8.4'

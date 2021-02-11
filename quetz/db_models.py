@@ -2,6 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import enum
+import json
 import uuid
 
 from sqlalchemy import (
@@ -176,6 +177,13 @@ class Channel(Base):
         ),
         deferred=True,
     )
+
+    def load_channel_metadata(self):
+        if self.channel_metadata and len(self.channel_metadata) > 2:
+            j = json.loads(self.channel_metadata)
+            return j
+        else:
+            return {}
 
     packages_count = column_property(
         select([func.count(Package.name)]).where(Package.channel_name == name),

@@ -1,4 +1,3 @@
-import json
 import logging
 
 from fastapi import HTTPException, status
@@ -49,7 +48,7 @@ class Task:
         auth = self.auth
 
         channel_name = channel.name
-        channel_metadata = json.loads(channel.channel_metadata)
+        channel_metadata = channel.load_channel_metadata()
         assert_channel_action(action, channel)
 
         user_id = auth.assert_user()
