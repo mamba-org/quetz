@@ -155,6 +155,19 @@ def run_jobs(db, job_id=None, force=False):
     db.commit()
 
 
+def add_task_to_queue(db, manager, task, *args, func=None, **kwargs):
+    """add task to the queue"""
+
+    if func is None:
+        func = task.job.manifest
+
+    job = manager.execute(func, *args, **kwargs)
+    _process_cache[task.id] = job
+    task.status = TaskStatus.pending
+    task.job.status = JobStatus.running
+    return job
+
+
 def run_tasks(db, manager):
 
     tasks = db.query(Task).filter(Task.status == TaskStatus.created)
@@ -175,11 +188,8 @@ def run_tasks(db, manager):
             "info": task.package_version.info,
             "uploader_id": task.package_version.uploader_id,
         }
-        job = manager.execute(task.job.manifest, package_version=version_dict)
-        _process_cache[task.id] = job
+        job = add_task_to_queue(db, manager, task, package_version=version_dict)
         jobs.append(job)
-        task.status = TaskStatus.pending
-        task.job.status = JobStatus.running
     db.commit()
     return jobs
 

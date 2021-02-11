@@ -121,7 +121,7 @@ def get_tasks_worker(
         raise ValueError("wrong configuration in worker.type")
 
     logger.debug(f"created worker of class {worker.__class__.__name__}")
-    return Task(auth, worker)
+    return Task(auth, worker, dao.db)
 
 
 class ChannelChecker:

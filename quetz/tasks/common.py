@@ -3,6 +3,8 @@ import logging
 from fastapi import HTTPException, status
 
 from quetz import authorization, db_models
+from quetz.jobs.dao import JobsDao
+from quetz.jobs.runner import add_task_to_queue
 from quetz.metrics import tasks as metrics_tasks
 from quetz.rest_models import ChannelActionEnum
 
@@ -40,9 +42,12 @@ class Task:
         self,
         auth: authorization.Rules,
         worker: AbstractWorker,
+        db,
     ):
         self.auth = auth
         self.worker = worker
+        self.db = db
+        self.jobs_dao = JobsDao(db)
 
     def execute_channel_action(self, action: str, channel: db_models.Channel):
         auth = self.auth
@@ -75,7 +80,15 @@ class Task:
             self.worker.execute(indexing.validate_packages, channel_name=channel.name)
         elif action == ChannelActionEnum.generate_indexes:
             auth.assert_reindex_channel(channel_name)
-            self.worker.execute(indexing.update_indexes, channel_name=channel.name)
+            task = self.jobs_dao.create_task(b"synchronize_metadata", user_id)
+            add_task_to_queue(
+                self.db,
+                self.worker,
+                task,
+                func=indexing.update_indexes,
+                channel_name=channel.name,
+            )
+            # self.worker.execute(indexing.update_indexes, channel_name=channel.name)
         elif action == ChannelActionEnum.reindex:
             auth.assert_reindex_channel(channel_name)
             self.worker.execute(

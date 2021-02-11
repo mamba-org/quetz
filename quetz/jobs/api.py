@@ -54,8 +54,11 @@ class Job(JobBase):
     @validator("manifest", pre=True)
     def convert_name(cls, v):
         try:
-            func = pickle.loads(v)
-            return f"{func.__module__}:{func.__name__}"
+            try:
+                func = pickle.loads(v)
+                return f"{func.__module__}:{func.__name__}"
+            except pickle.UnpicklingError:
+                return v.decode('ascii')
         except ModuleNotFoundError as e:
             logger.error(f"job function not found: could not import module {e.name}")
             return e.name + ":undefined"
@@ -73,7 +76,10 @@ class Task(BaseModel):
 
     @validator("package_version", pre=True)
     def convert_package_version(cls, v):
-        return {'filename': v.filename, 'id': uuid.UUID(bytes=v.id).hex}
+        if v:
+            return {'filename': v.filename, 'id': uuid.UUID(bytes=v.id).hex}
+        else:
+            return {}
 
     class Config:
         orm_mode = True
