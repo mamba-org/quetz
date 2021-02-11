@@ -2,6 +2,7 @@ import asyncio
 import concurrent.futures
 import inspect
 import logging
+import os
 import pickle
 import time
 from abc import abstractmethod
@@ -36,6 +37,41 @@ def prepare_arguments(func: Callable, **resources):
     return kwargs
 
 
+class WorkerProcess:
+    def __init__(self, func, *args, **kwargs):
+        self.func = func
+        if isinstance(func, Callable):
+            self._pickled_func = pickle.dumps(func)
+        else:
+            self._pickled_func = func
+        self.func_args = args
+        self.func_kwargs = kwargs
+
+    def fork_job(self):
+        child_pid = os.fork()
+
+        if child_pid == 0:
+            try:
+                self._result = job_wrapper(
+                    self._pickled_func, *self.func_args, **self.func_kwargs
+                )
+            except Exception:
+                raise
+                os._exit(1)
+            os._exit(0)
+
+        self._child_pid = child_pid
+        return child_pid
+
+    def wait_for_job(self):
+        pid, stat = os.waitpid(self._child_pid, 0)
+        return pid, stat
+
+    def __call__(self):
+        self.fork_job()
+        self.wait_for_job()
+
+
 def job_wrapper(
     func: Union[Callable, bytes],
     api_key,
@@ -44,16 +80,6 @@ def job_wrapper(
     fork_process=True,
     **kwargs
 ):
-
-    import os
-
-    if fork_process:
-
-        child_pid = os.fork()
-
-        if child_pid > 0:
-            pid, stat = os.waitpid(child_pid, 0)
-            return
 
     # database connections etc. are not serializable
     # so we need to recreate them in the process.
@@ -90,7 +116,6 @@ def job_wrapper(
         callable_f(**kwargs)
     finally:
         db.close()
-    os._exit(0)
 
 
 class AbstractWorker:
@@ -219,17 +244,10 @@ class SubprocessWorker(AbstractWorker):
         self.future = None
 
     def execute(self, func, *args, **kwargs):
-        pickled_func = pickle.dumps(func)
-        self.future = self._executor.submit(
-            job_wrapper,
-            pickled_func,
-            self.api_key,
-            self.browser_session,
-            self.config,
-            *args,
-            fork_process=True,
-            **kwargs,
+        process = WorkerProcess(
+            func, self.api_key, self.browser_session, self.config, *args, **kwargs
         )
+        self.future = self._executor.submit(process)
         return FutureJob(self.future)
 
     async def wait(self):
