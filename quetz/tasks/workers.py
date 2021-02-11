@@ -2,10 +2,10 @@ import asyncio
 import concurrent.futures
 import inspect
 import logging
-import os
 import pickle
 import time
 from abc import abstractmethod
+from multiprocessing import Pipe, Process
 from typing import Callable, Union
 
 import requests
@@ -39,6 +39,8 @@ def prepare_arguments(func: Callable, **resources):
 
 class WorkerProcess:
     def __init__(self, func, *args, **kwargs):
+        self._exception = None
+        self._connection = None
         self.func = func
         if isinstance(func, Callable):
             self._pickled_func = pickle.dumps(func)
@@ -48,24 +50,33 @@ class WorkerProcess:
         self.func_kwargs = kwargs
 
     def fork_job(self):
-        child_pid = os.fork()
+        parent_conn, child_conn = Pipe(duplex=False)
+        self._parent_conn = parent_conn
 
-        if child_pid == 0:
+        def jobexecutor(conn, pickled_func, *args, **kwargs):
+            """function executed in child process"""
             try:
                 self._result = job_wrapper(
                     self._pickled_func, *self.func_args, **self.func_kwargs
                 )
-            except Exception:
+            except Exception as exc:
+                conn.send(exc)
                 raise
-                os._exit(1)
-            os._exit(0)
+            conn.send(None)
 
-        self._child_pid = child_pid
-        return child_pid
+        self._process = Process(
+            target=jobexecutor,
+            args=(child_conn,) + self.func_args,
+            kwargs=self.func_kwargs,
+        )
+        self._process.start()
 
     def wait_for_job(self):
-        pid, stat = os.waitpid(self._child_pid, 0)
-        return pid, stat
+        exc = self._parent_conn.recv()
+        self._process.join()
+        if self._process.exitcode > 0:
+            raise exc
+        return
 
     def __call__(self):
         self.fork_job()
