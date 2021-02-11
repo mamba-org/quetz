@@ -269,7 +269,7 @@ def download_file(remote_repository, path_metadata):
 
 
 def handle_repodata_package(
-    channel_name,
+    channel,
     files_metadata,
     dao,
     auth,
@@ -279,6 +279,8 @@ def handle_repodata_package(
 ):
     from quetz.main import pm
 
+    channel_name = channel.name
+    proxylist = channel.load_channel_metadata().get('proxylist', [])
     user_id = auth.assert_user()
 
     total_size = 0
@@ -332,6 +334,9 @@ def handle_repodata_package(
     with TicToc("upload file without extracting"):
         with ThreadPoolExecutor(max_workers=nthreads) as executor:
             for file, package_name, metadata in files_metadata:
+                if proxylist and package_name in proxylist:
+                    # skip packages that should only ever be proxied
+                    continue
                 subdir = get_subdir_compat(metadata)
                 executor.submit(_upload_package, file, channel_name, subdir)
 
@@ -440,7 +445,7 @@ def initial_sync_mirror(
             try:
                 if use_repodata:
                     handle_repodata_package(
-                        channel_name,
+                        channel,
                         remote_packages_with_metadata,
                         dao,
                         auth,
@@ -451,11 +456,12 @@ def initial_sync_mirror(
 
                 else:
                     handle_package_files(
-                        channel_name,
+                        channel,
                         remote_packages,
                         dao,
                         auth,
                         force,
+                        is_mirror_op=True,
                     )
                 return True
 

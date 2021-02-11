@@ -44,35 +44,31 @@ class Task:
         self.auth = auth
         self.worker = worker
 
-    def execute_channel_action(self, action: str, channel: db_models.Channel, **kwargs):
+    def execute_channel_action(self, action: str, channel: db_models.Channel):
         auth = self.auth
 
         channel_name = channel.name
-
+        channel_metadata = channel.load_channel_metadata()
         assert_channel_action(action, channel)
 
         user_id = auth.assert_user()
 
         if action == ChannelActionEnum.synchronize:
             auth.assert_synchronize_mirror(channel_name)
-            includelist = kwargs.get('includelist')
-            excludelist = kwargs.get('excludelist')
             self.worker.execute(
                 mirror.synchronize_packages,
                 channel_name=channel_name,
-                includelist=includelist,
-                excludelist=excludelist,
+                includelist=channel_metadata.get('includelist', None),
+                excludelist=channel_metadata.get('excludelist', None),
             )
         elif action == ChannelActionEnum.synchronize_repodata:
             auth.assert_synchronize_mirror(channel_name)
-            includelist = kwargs.get('includelist')
-            excludelist = kwargs.get('excludelist')
             self.worker.execute(
                 mirror.synchronize_packages,
                 channel_name=channel_name,
                 use_repodata=True,
-                includelist=includelist,
-                excludelist=excludelist,
+                includelist=channel_metadata.get('includelist', None),
+                excludelist=channel_metadata.get('excludelist', None),
             )
         elif action == ChannelActionEnum.validate_packages:
             auth.assert_validate_package_cache(channel_name)

@@ -127,6 +127,11 @@ class ChannelMetadata(BaseModel):
     excludelist: Optional[List[str]] = Field(
         None, title="list of packages to exclude while creating a channel"
     )
+    proxylist: Optional[List[str]] = Field(
+        None,
+        title="list of packages that should only be proxied (not copied, "
+        "stored and redistributed)",
+    )
 
 
 class Channel(ChannelBase):
