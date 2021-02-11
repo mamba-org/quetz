@@ -176,11 +176,8 @@ def validate_packages(dao, pkgstore, channel_name):
 
 
 def update_indexes(dao, pkgstore, channel_name, subdirs=None):
-    return
     jinjaenv = _jinjaenv()
     channeldata = channel_data.export(dao, channel_name)
-
-    subdirs = ['linux-64']
 
     if subdirs is None:
         subdirs = sorted(channeldata["subdirs"], key=_subdir_key)
