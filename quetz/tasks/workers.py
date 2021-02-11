@@ -2,8 +2,10 @@ import asyncio
 import concurrent.futures
 import inspect
 import logging
+import pickle
 import time
 from abc import abstractmethod
+from multiprocessing import Pipe, Process
 from typing import Callable, Union
 
 import requests
@@ -35,8 +37,59 @@ def prepare_arguments(func: Callable, **resources):
     return kwargs
 
 
+class WorkerProcess:
+    def __init__(self, func, *args, **kwargs):
+        self._exception = None
+        self._connection = None
+        self.func = func
+        if isinstance(func, Callable):
+            self._pickled_func = pickle.dumps(func)
+        else:
+            self._pickled_func = func
+        self.func_args = args
+        self.func_kwargs = kwargs
+
+    def fork_job(self):
+        parent_conn, child_conn = Pipe(duplex=False)
+        self._parent_conn = parent_conn
+
+        def jobexecutor(conn, pickled_func, *args, **kwargs):
+            """function executed in child process"""
+            try:
+                self._result = job_wrapper(
+                    self._pickled_func, *self.func_args, **self.func_kwargs
+                )
+            except Exception as exc:
+                conn.send(exc)
+                raise
+            conn.send(None)
+
+        self._process = Process(
+            target=jobexecutor,
+            args=(child_conn,) + self.func_args,
+            kwargs=self.func_kwargs,
+        )
+        self._process.start()
+
+    def wait_for_job(self):
+        exc = self._parent_conn.recv()
+        self._process.join()
+        if self._process.exitcode > 0:
+            raise exc
+        return
+
+    def __call__(self):
+        self.fork_job()
+        self.wait_for_job()
+
+
 def job_wrapper(
-    func: Union[Callable, bytes], api_key, browser_session, config, **kwargs
+    func: Union[Callable, bytes],
+    api_key,
+    browser_session,
+    config,
+    fork_process=True,
+    **kwargs
 ):
 
     # database connections etc. are not serializable
@@ -136,6 +189,7 @@ class ThreadingWorker(AbstractWorker):
                 self.auth.session,
                 self.config,
                 *args,
+                fork_process=False,
                 **kwargs,
             )
             return
@@ -179,6 +233,8 @@ class FutureJob(AbstractJob):
 
 
 class SubprocessWorker(AbstractWorker):
+    _executor = None
+
     def __init__(
         self,
         api_key: str,
@@ -187,23 +243,25 @@ class SubprocessWorker(AbstractWorker):
         executor_args: dict = {},
     ):
 
-        logger.debug("creating a new subprocess executor")
-        self._executor = concurrent.futures.ProcessPoolExecutor(**executor_args)
+        if 'max_workers' not in executor_args:
+            executor_args['max_workers'] = 2
+
+        if self._executor is None:
+            logger.debug("creating a new subprocess executor")
+            SubprocessWorker._executor = concurrent.futures.ProcessPoolExecutor(
+                **executor_args
+            )
+
         self.api_key = api_key
         self.browser_session = browser_session
         self.config = config
         self.future = None
 
     def execute(self, func, *args, **kwargs):
-        self.future = self._executor.submit(
-            job_wrapper,
-            func,
-            self.api_key,
-            self.browser_session,
-            self.config,
-            *args,
-            **kwargs,
+        process = WorkerProcess(
+            func, self.api_key, self.browser_session, self.config, *args, **kwargs
         )
+        self.future = self._executor.submit(process)
         return FutureJob(self.future)
 
     async def wait(self):
