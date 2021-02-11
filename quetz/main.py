@@ -1573,7 +1573,7 @@ async def serve_path(
     if is_package_request and channel.mirror_channel_url:
         # if we exclude the package from syncing, redirect to original URL
         channel_proxylist = json.loads(channel.channel_metadata).get(
-            'channel_proxylist', []
+            'proxylist', []
         )
         if package_name in channel_proxylist:
             return RedirectResponse(f"{channel.mirror_channel_url}/{path}")
