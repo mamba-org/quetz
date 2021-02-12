@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from quetz.db_models import UUID, Base
 
 
-class JobStatus(Enum):
+class JobStatus(str, Enum):
     pending = "pending"
     queued = "queued"
     running = "running"
@@ -19,7 +19,7 @@ class JobStatus(Enum):
     cancelled = "cancelled"
 
 
-class TaskStatus(Enum):
+class TaskStatus(str, Enum):
     created = "created"
     pending = "pending"
     running = "running"

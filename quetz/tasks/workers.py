@@ -113,11 +113,13 @@ def job_wrapper(
 
     if task_id:
         task = db.query(Task).filter(Task.id == task_id).one_or_none()
+    else:
+        task = None
+
+    if task:
         task.status = TaskStatus.running
         task.job.status = JobStatus.running
         db.commit()
-    else:
-        task = None
 
     callable_f: Callable = pickle.loads(func) if isinstance(func, bytes) else func
 
