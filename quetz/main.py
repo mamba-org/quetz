@@ -77,6 +77,7 @@ from quetz.deps import (
     get_tasks_worker,
 )
 from quetz.jobs import api as jobs_api
+from quetz.jobs import rest_models as jobs_rest
 from quetz.metrics import api as metrics_api
 from quetz.metrics.middleware import DOWNLOAD_COUNT, UPLOAD_COUNT
 from quetz.rest_models import ChannelActionEnum, CPRole
@@ -616,7 +617,9 @@ def delete_channel(
         )
 
 
-@api_router.put("/channels/{channel_name}/actions", tags=["channels"])
+@api_router.put(
+    "/channels/{channel_name}/actions", tags=["channels"], response_model=jobs_rest.Task
+)
 def put_mirror_channel_actions(
     action: rest_models.ChannelAction,
     channel: db_models.Channel = Depends(get_channel_allow_proxy),
@@ -624,7 +627,8 @@ def put_mirror_channel_actions(
     task: Task = Depends(get_tasks_worker),
 ):
 
-    task.execute_channel_action(action.action, channel)
+    new_task = task.execute_channel_action(action.action, channel)
+    return new_task
 
 
 @api_router.post("/channels", status_code=201, tags=["channels"])

@@ -116,3 +116,4 @@ class Task:
                     f"Action {action} on channel {channel.name} is not implemented"
                 ),
             )
+        return task

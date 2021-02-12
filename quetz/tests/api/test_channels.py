@@ -138,6 +138,14 @@ def test_channel_action_reindex(auth_client, public_channel, expected_code):
     )
 
     assert response.status_code == expected_code
+    if expected_code == 200:
+        assert response.json() == {
+            "job_id": 1,
+            'created': ANY,
+            'id': 1,
+            'package_version': {},
+            'status': 'created',
+        }
 
 
 @pytest.mark.parametrize(
