@@ -140,9 +140,9 @@ def test_channel_action_reindex(auth_client, public_channel, expected_code):
     assert response.status_code == expected_code
     if expected_code == 200:
         assert response.json() == {
-            "job_id": 1,
+            "job_id": ANY,
             'created': ANY,
-            'id': 1,
+            'id': ANY,
             'package_version': {},
             'status': 'created',
         }
