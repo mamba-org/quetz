@@ -1,6 +1,7 @@
 import os
 import pickle
 import time
+import uuid
 from pathlib import Path
 from unittest import mock
 
@@ -9,6 +10,7 @@ import pytest
 
 from quetz.config import Config
 from quetz.dao import Dao
+from quetz.db_models import User
 from quetz.jobs.models import Job, JobStatus, Task, TaskStatus
 from quetz.jobs.runner import (
     _process_cache,
@@ -729,3 +731,21 @@ def test_get_tasks(
     if expected_task_count > 0:
         assert data['result'][0]['id'] == task.id
         assert data['result'][0]['job_id'] == job.id
+
+
+@pytest.mark.parametrize("user_role", ["member"])
+def test_get_user_jobs(auth_client, db, user, package_version):
+    job = Job(items_spec="*", owner=user, manifest=pickle.dumps(dummy_func))
+    db.add(job)
+
+    other_user = User(id=uuid.uuid4().bytes, username='otheruser')
+
+    other_job = Job(items_spec="*", owner=other_user, manifest=pickle.dumps(dummy_func))
+    db.add(other_job)
+
+    db.commit()
+
+    response = auth_client.get("/api/jobs")
+    assert response.status_code == 200
+    data = response.json()['result']
+    assert len(data) == 1
