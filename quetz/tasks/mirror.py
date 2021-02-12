@@ -17,7 +17,7 @@ from quetz import authorization, rest_models
 from quetz.condainfo import CondaInfo, get_subdir_compat
 from quetz.config import Config
 from quetz.dao import Dao
-from quetz.db_models import Channel, PackageVersion
+from quetz.db_models import PackageVersion
 from quetz.errors import DBError
 from quetz.pkgstores import PackageStore
 from quetz.tasks import indexing
@@ -166,42 +166,6 @@ class LocalCache:
             raise KeyError
 
         return cache_path
-
-
-@contextlib.contextmanager
-def _check_timestamp(channel: Channel, dao: Dao):
-    """context manager for comparing the package timestamp
-    last synchroninsation timestamp saved in quetz database."""
-
-    last_synchronization = channel.timestamp_mirror_sync
-    last_timestamp = 0
-
-    def _func(package_name, metadata):
-
-        if "time_modified" not in metadata:
-            return None
-
-        # use nonlocal to be able to modified last_timestamp in the
-        # outer scope
-        nonlocal last_timestamp
-        time_modified = metadata["time_modified"]
-        last_timestamp = max(time_modified, last_timestamp)
-
-        # if channel was never synchronised we can't determine
-        # whether the package is up-to-date from the timestamp
-        is_uptodate = (
-            time_modified <= last_synchronization if last_synchronization else None
-        )
-        if is_uptodate is not None:
-            logger.debug(f"comparing synchronisation timestamps of {package_name}")
-        return is_uptodate
-
-    yield _func
-
-    # after we are done, we need to update the last_synchronisation
-    # in the db
-    sync_timestamp = max(last_synchronization, last_timestamp)
-    dao.update_channel(channel.name, {"timestamp_mirror_sync": sync_timestamp})
 
 
 @contextlib.contextmanager
@@ -399,8 +363,6 @@ def initial_sync_mirror(
     packages = repodata.get("packages", {})
 
     version_methods = [
-        # _check_timestamp(channel, dao),
-        # disabled because it does not resync failed packages and multiple platforms
         _check_checksum(dao, channel_name, arch, "sha256"),
         _check_checksum(dao, channel_name, arch, "md5"),
     ]

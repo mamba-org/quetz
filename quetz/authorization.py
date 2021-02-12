@@ -304,10 +304,11 @@ class Rules:
             package.channel_name, [OWNER, MAINTAINER], package.name, [OWNER, MAINTAINER]
         )
 
-    def assert_jobs(self):
+    def assert_jobs(self, owner_id: Optional[bytes] = None):
         user_id = self.assert_user()
         if not self.is_user_elevated(user_id):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Not allowed",
-            )
+            if not owner_id or user_id != owner_id:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Not allowed",
+                )

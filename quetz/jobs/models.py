@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from quetz.db_models import UUID, Base
 
 
-class JobStatus(Enum):
+class JobStatus(str, Enum):
     pending = "pending"
     queued = "queued"
     running = "running"
@@ -19,7 +19,7 @@ class JobStatus(Enum):
     cancelled = "cancelled"
 
 
-class TaskStatus(Enum):
+class TaskStatus(str, Enum):
     created = "created"
     pending = "pending"
     running = "running"
@@ -94,7 +94,11 @@ class Task(Base):
     )
 
     def __repr__(self):
+        if self.package_version:
+            filename = self.package_version.filename
+        else:
+            filename = None
         return (
-            f"Task(id={self.id}, package_version='{self.package_version.filename},"
+            f"Task(id={self.id}, package_version='{filename},"
             f" job_id={self.job_id}')"
         )

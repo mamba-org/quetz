@@ -960,12 +960,18 @@ class Dao:
         return user
 
     def get_jobs(
-        self, states: Optional[List[JobStatus]] = None, skip: int = 0, limit: int = -1
+        self,
+        states: Optional[List[JobStatus]] = None,
+        skip: int = 0,
+        limit: int = -1,
+        owner_id: Optional[bytes] = None,
     ):
         jobs = self.db.query(Job)
 
         if states:
             jobs = jobs.filter(Job.status.in_(states))
+        if owner_id:
+            jobs = jobs.filter(Job.owner_id == owner_id)
 
         return get_paginated_result(jobs, skip, limit)
 

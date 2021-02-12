@@ -128,16 +128,50 @@ def test_permissions_channel_endpoints(
 
 
 @pytest.mark.parametrize(
+    "action", ['reindex', 'generate_indexes', 'synchronize_metrics']
+)
+@pytest.mark.parametrize(
     "channel_role,expected_code",
     [("owner", 200), ("maintainer", 200), ("member", 403), (None, 403)],
 )
-def test_channel_action_reindex(auth_client, public_channel, expected_code):
+def test_channel_action_reindex(auth_client, public_channel, expected_code, action):
 
     response = auth_client.put(
-        f"/api/channels/{public_channel.name}/actions", json={"action": "reindex"}
+        f"/api/channels/{public_channel.name}/actions", json={"action": action}
     )
 
     assert response.status_code == expected_code
+    if expected_code == 200:
+        task = response.json()
+        assert task == {
+            "job_id": ANY,
+            'created': ANY,
+            'id': ANY,
+            'package_version': {},
+            'status': 'created',
+        }
+    else:
+        return
+
+    job_id = task['job_id']
+
+    response = auth_client.get(
+        f"/api/jobs/{job_id}/tasks?"
+        "status=created&status=running&status=pending&status=success"
+    )
+
+    assert response.status_code == 200
+    all_tasks = response.json()['result']
+
+    assert all_tasks == [
+        {
+            "job_id": job_id,
+            'created': task['created'],
+            'id': task['id'],
+            'package_version': {},
+            'status': ANY,
+        }
+    ]
 
 
 @pytest.mark.parametrize(
