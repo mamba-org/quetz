@@ -94,7 +94,11 @@ class Task(Base):
     )
 
     def __repr__(self):
+        if self.package_version:
+            filename = self.package_version.filename
+        else:
+            filename = None
         return (
-            f"Task(id={self.id}, package_version='{self.package_version.filename},"
+            f"Task(id={self.id}, package_version='{filename},"
             f" job_id={self.job_id}')"
         )

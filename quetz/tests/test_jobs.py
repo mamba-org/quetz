@@ -347,8 +347,8 @@ def test_empty_package_spec(db, user, package_version, caplog, items_spec):
     task = db.query(Task).one_or_none()
 
     assert "empty" in caplog.text
-    assert "skipping" in caplog.text
-    assert job.status == JobStatus.success
+    # could be job triggered from actions so we don't change state
+    assert job.status == JobStatus.pending
     assert task is None
 
 
@@ -533,6 +533,7 @@ def test_refresh_job(auth_client, user, db, package_version, manager):
     assert len(job.tasks) == 1
 
     run_jobs(db)
+    check_status(db)
     assert job.status == JobStatus.success
     assert len(job.tasks) == 1
 

@@ -110,7 +110,6 @@ def run_jobs(db, job_id=None, force=False):
     if job_id:
         jobs = jobs.filter(Job.id == job_id)
     for job in jobs:
-        job.status = JobStatus.running
         if job.items == ItemsSelection.all:
             if force:
                 q = db.query(PackageVersion)
@@ -141,7 +140,9 @@ def run_jobs(db, job_id=None, force=False):
             q = q.filter(filter_expr)
         else:
             logger.warning("empty package spec returns no results")
-            q = []
+            # it might be also job created in actions
+            # so skipping here
+            continue
 
         task = None
         for version in q:
@@ -151,7 +152,8 @@ def run_jobs(db, job_id=None, force=False):
             logger.warning(
                 f"no versions matching the package spec {job.items_spec}. skipping."
             )
-            job.status = JobStatus.success
+            # job.status = JobStatus.success
+        job.status = JobStatus.running
     db.commit()
 
 
@@ -170,11 +172,18 @@ def add_task_to_queue(db, manager, task, *args, func=None, **kwargs):
 
 def run_tasks(db, manager):
 
-    tasks = db.query(Task).filter(Task.status == TaskStatus.created)
+    tasks = (
+        db.query(Task)
+        .filter(Task.status == TaskStatus.created)
+        .filter(Task.package_version_id.isnot(None))
+    )
     task: Task
     logger.info(f"Got pending tasks: {tasks.count()}")
     jobs = []
     for task in tasks:
+        if not task.package_version:
+            # task was launched from actions
+            continue
         version_dict = {
             "filename": task.package_version.filename,
             "channel_name": task.package_version.channel_name,
@@ -200,6 +209,9 @@ def check_status(db):
     )
     try:
         for task in tasks:
+            if not task.package_version:
+                # task was launched from actions
+                continue
             try:
                 process = _process_cache[task.id]
             except KeyError:
@@ -221,7 +233,7 @@ def check_status(db):
         # update jobs with all tasks finished
         (
             db.query(Job)
-            .filter(Job.status == JobStatus.running)
+            .filter(Job.status.in_([JobStatus.running, JobStatus.pending]))
             .filter(
                 ~Job.tasks.any(
                     Task.status.in_(
