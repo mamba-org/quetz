@@ -33,7 +33,8 @@ def compare_pkg_rec(a, b):
         ax = a[key]
         if key not in b:
             print(
-                f"Quetz does not have key {key} for {a['name']} {a['version']} {a['build']}"
+                f"Quetz does not have key {key} for"
+                f"{a['name']} {a['version']} {a['build']}"
             )
             continue
 
@@ -43,7 +44,9 @@ def compare_pkg_rec(a, b):
             bx = sorted(bx)
 
         if a[key] != b[key]:
-            print(f"Quetz has difference for {a['name']} {a['version']} {a['build']}:")
+            print(
+                "Quetz has difference for " f"{a['name']} {a['version']} {a['build']}:"
+            )
             print(a[key])
             print(b[key])
 
