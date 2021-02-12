@@ -105,11 +105,22 @@ def job_wrapper(
     from quetz.database import get_session
     from quetz.deps import get_remote_session
 
-    pkgstore = config.get_package_store()
-    db = get_session(config.sqlalchemy_database_url)
-    dao = Dao(db)
-    auth = Rules(api_key, browser_session, db)
-    session = get_remote_session()
+    pkgstore = kwargs.pop("pkgstore", None)
+    db = kwargs.pop("db", None)
+    dao = kwargs.pop("dao", None)
+    auth = kwargs.pop("auth", None)
+    session = kwargs.pop("session", None)
+
+    if not pkgstore:
+        pkgstore = config.get_package_store()
+    if not db:
+        db = get_session(config.sqlalchemy_database_url)
+    if not dao:
+        dao = Dao(db)
+    if not auth:
+        auth = Rules(api_key, browser_session, db)
+    if not session:
+        session = get_remote_session()
 
     if task_id:
         task = db.query(Task).filter(Task.id == task_id).one_or_none()
@@ -202,37 +213,31 @@ class ThreadingWorker(AbstractWorker):
 
     def execute(self, func: Callable, *args, **kwargs):
 
-        dialect = self.dao.db.bind.name
         resources = {
             "dao": self.dao,
             "auth": self.auth,
             "session": self.session,
-            "config": self.config,
             "pkgstore": self.config.get_package_store(),
         }
+        dialect = self.dao.db.bind.name
+
+        if dialect == 'sqlite':
+            # sqlite is not thread safe so we can't reuse
+            # the db connection
+            # however we still want to reuse the patched db sessosion with sqlite-test
+            logger.debug("using sqlite backend - create a new connection for thread")
+            del resources['dao']
 
         extra_kwargs = prepare_arguments(func, **resources)
         kwargs.update(extra_kwargs)
 
-        # sqlite is not thread safe so we can't reuse
-        # the db connection
-
-        if dialect == 'sqlite':
-            logger.debug("using sqlite backend - create a new connection for thread")
-            self.background_tasks.add_task(
-                job_wrapper,
-                func,
-                self.auth.API_key,
-                self.auth.session,
-                self.config,
-                *args,
-                fork_process=False,
-                **kwargs,
-            )
-            return
-
         self.background_tasks.add_task(
+            job_wrapper,
             func,
+            self.auth.API_key,
+            self.auth.session,
+            self.config,
+            *args,
             **kwargs,
         )
 

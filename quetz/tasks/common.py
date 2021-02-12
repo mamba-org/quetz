@@ -59,42 +59,55 @@ class Task:
 
         if action == ChannelActionEnum.synchronize:
             auth.assert_synchronize_mirror(channel_name)
+            task = self.jobs_dao.create_task(action.encode('ascii'), user_id)
             self.worker.execute(
                 mirror.synchronize_packages,
                 channel_name=channel_name,
                 includelist=channel_metadata.get('includelist', None),
                 excludelist=channel_metadata.get('excludelist', None),
+                task_id=task.id,
             )
         elif action == ChannelActionEnum.synchronize_repodata:
             auth.assert_synchronize_mirror(channel_name)
+            task = self.jobs_dao.create_task(action.encode('ascii'), user_id)
             self.worker.execute(
                 mirror.synchronize_packages,
                 channel_name=channel_name,
                 use_repodata=True,
                 includelist=channel_metadata.get('includelist', None),
                 excludelist=channel_metadata.get('excludelist', None),
+                task_id=task.id,
             )
         elif action == ChannelActionEnum.validate_packages:
             auth.assert_validate_package_cache(channel_name)
-            self.worker.execute(indexing.validate_packages, channel_name=channel.name)
+            task = self.jobs_dao.create_task(action.encode('ascii'), user_id)
+            self.worker.execute(
+                indexing.validate_packages,
+                channel_name=channel.name,
+                task_id=task.id,
+            )
         elif action == ChannelActionEnum.generate_indexes:
             auth.assert_reindex_channel(channel_name)
-            task = self.jobs_dao.create_task(b"synchronize_metadata", user_id)
+            task = self.jobs_dao.create_task(action.encode('ascii'), user_id)
             self.worker.execute(
                 indexing.update_indexes, channel_name=channel.name, task_id=task.id
             )
         elif action == ChannelActionEnum.reindex:
             auth.assert_reindex_channel(channel_name)
+            task = self.jobs_dao.create_task(action.encode('ascii'), user_id)
             self.worker.execute(
                 reindexing.reindex_packages_from_store,
                 channel_name=channel_name,
                 user_id=user_id,
+                task_id=task.id,
             )
         elif action == ChannelActionEnum.synchronize_metrics:
             auth.assert_reindex_channel(channel_name)
+            task = self.jobs_dao.create_task(action.encode('ascii'), user_id)
             self.worker.execute(
                 metrics_tasks.synchronize_metrics_from_mirrors,
                 channel_name=channel_name,
+                task_id=task.id,
             )
         else:
             raise HTTPException(
