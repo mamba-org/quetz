@@ -39,4 +39,3 @@ dependencies:
   - pamela
   - typing_extensions
   - adlfs
-  - azure-storage-blob
