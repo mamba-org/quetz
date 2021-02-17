@@ -378,6 +378,31 @@ class Dao:
         self.db.commit()
         logger.info(f"Done cleaning up db for {channel_name}")
 
+        # Re-sort all PackageVersions
+        all_packages = self.db.query(Package).filter(
+            Package.channel_name == channel_name
+        )
+        for x, each_package in enumerate(all_packages):
+            all_versions_for_each_package = (
+                self.db.query(PackageVersion)
+                .filter(PackageVersion.channel_name == channel_name)
+                .filter(PackageVersion.package_name == each_package.name)
+                .order_by(PackageVersion.version_order.asc())
+            ).all()
+
+            v_dict = {}
+            for each_package_version in all_versions_for_each_package:
+                v_dict[each_package_version] = versionorder.VersionOrder(
+                    each_package_version.version
+                )
+            sorted_v = sorted(v_dict.items(), key=lambda item: item[1], reverse=True)
+
+            for i, (each_package_version, version) in enumerate(sorted_v.items()):
+                each_package_version.version_order = i
+
+        self.db.commit()
+        logger.info(f"Done sorting package versions for {channel_name}")
+
     def create_channel_mirror(
         self, channel_name: str, url: str, api_endpoint: str, metrics_endpoint: str
     ):

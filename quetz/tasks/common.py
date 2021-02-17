@@ -2,15 +2,14 @@ import logging
 
 from fastapi import HTTPException, status
 from quetz import authorization, dao, db_models
-from quetz.config import Config
 from quetz.jobs.dao import JobsDao
+from quetz.main import pkgstore
 from quetz.metrics import tasks as metrics_tasks
 from quetz.rest_models import ChannelActionEnum
 
 from . import assertions, indexing, mirror, reindexing
 from .workers import AbstractWorker
 
-config = Config()
 logger = logging.getLogger("quetz")
 
 
@@ -51,7 +50,7 @@ class Task:
         self.db = db
         self.jobs_dao = JobsDao(db)
         self.dao = dao.Dao(db)
-        self.pkgstore = config.get_package_store()
+        self.pkgstore = pkgstore
 
     def execute_channel_action(self, action: str, channel: db_models.Channel):
         auth = self.auth
