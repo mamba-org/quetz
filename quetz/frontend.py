@@ -11,13 +11,19 @@ from starlette.staticfiles import StaticFiles
 
 from quetz import authorization, rest_models
 from quetz.authentication import AuthenticatorRegistry
-from quetz.config import Config
+from quetz.config import Config, get_plugin_manager
 from quetz.dao import Dao
 from quetz.deps import get_dao, get_rules, get_session
+
+pm = get_plugin_manager()
 
 config = Config()
 
 logger = logging.getLogger('quetz')
+
+plugin_js = []
+for js in pm.hook.js_plugin_paths():
+    plugin_js.append(js)
 
 mock_router = APIRouter()
 catchall_router = APIRouter()
@@ -142,6 +148,11 @@ def register(app):
         "gitlab_login_available": gitlab_login_available,
         "google_login_available": google_login_available,
     }
+
+
+    if plugin_js:
+        logger.info(f"Found frontend plugin paths: {plugin_js}")
+        config_data["pluginJs"] = plugin_js
 
     logger.info(f"Frontend config: {config_data}")
 
