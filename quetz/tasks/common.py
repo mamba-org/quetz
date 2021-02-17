@@ -1,8 +1,8 @@
 import logging
 
 from fastapi import HTTPException, status
-
-from quetz import authorization, db_models
+from quetz import authorization, dao, db_models
+from quetz.config import Config
 from quetz.jobs.dao import JobsDao
 from quetz.metrics import tasks as metrics_tasks
 from quetz.rest_models import ChannelActionEnum
@@ -10,6 +10,7 @@ from quetz.rest_models import ChannelActionEnum
 from . import assertions, indexing, mirror, reindexing
 from .workers import AbstractWorker
 
+config = Config()
 logger = logging.getLogger("quetz")
 
 
@@ -26,6 +27,8 @@ def assert_channel_action(action, channel):
         action_allowed = assertions.can_channel_reindex(channel)
     elif action == ChannelActionEnum.synchronize_metrics:
         action_allowed = assertions.can_channel_synchronize_metrics(channel)
+    elif action == ChannelActionEnum.cleanup:
+        action_allowed = assertions.can_cleanup(channel)
     else:
         action_allowed = False
 
@@ -47,6 +50,8 @@ class Task:
         self.worker = worker
         self.db = db
         self.jobs_dao = JobsDao(db)
+        self.dao = dao.Dao(db)
+        self.pkgstore = config.get_package_store()
 
     def execute_channel_action(self, action: str, channel: db_models.Channel):
         auth = self.auth
@@ -107,6 +112,22 @@ class Task:
             self.worker.execute(
                 metrics_tasks.synchronize_metrics_from_mirrors,
                 channel_name=channel_name,
+                task_id=task.id,
+            )
+        elif action == ChannelActionEnum.cleanup:
+            auth.assert_channel_db_cleanup(channel_name)
+            task = self.jobs_dao.create_task(f"db_{action}".encode('ascii'), user_id)
+            self.worker.execute(
+                self.dao.cleanup_channel_db,
+                channel_name=channel_name,
+                task_id=task.id,
+            )
+            task = self.jobs_dao.create_task(
+                f"pkgstore_{action}".encode('ascii'), user_id
+            )
+            self.worker.execute(
+                self.pkgstore.cleanup_temp_files,
+                channel=channel_name,
                 task_id=task.id,
             )
         else:

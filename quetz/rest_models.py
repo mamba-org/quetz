@@ -109,6 +109,7 @@ class ChannelActionEnum(str, Enum):
     * `generate_indexes` -- generate indexes (repodata.json and other) from data in db
     * `validate_packages` -- validate package files
     * `synchronize_metrics` -- _non-mirror_, pull download metrics from known mirrors
+    * `cleanup` -- fix inconsistencies in database and pkgstore
     """
 
     synchronize = 'synchronize'
@@ -117,6 +118,7 @@ class ChannelActionEnum(str, Enum):
     generate_indexes = 'generate_indexes'
     validate_packages = 'validate_packages'
     synchronize_metrics = 'synchronize_metrics'
+    cleanup = 'cleanup'
 
 
 class ChannelMetadata(BaseModel):

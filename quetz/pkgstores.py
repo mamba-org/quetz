@@ -4,6 +4,7 @@
 import abc
 import contextlib
 import hashlib
+import logging
 import os
 import os.path as path
 import shutil
@@ -35,6 +36,8 @@ from quetz.errors import ConfigError
 File = BinaryIO
 
 StrPath = Union[str, PathLike]
+
+logger = logging.getLogger("quetz")
 
 
 class PackageStore(abc.ABC):
@@ -174,6 +177,19 @@ class LocalStore(PackageStore):
 
         return (msize, mtime, etag)
 
+    def cleanup_temp_files(self, channel: str):
+        temp_files = []
+        for each_end in [".bz2", ".gz"]:
+            temp_files.extend(
+                self.fs.glob(
+                    f"{path.join(self.channels_dir, channel)}/**/*.json?*{each_end}"
+                )
+            )
+
+        for each_temp_file in temp_files:
+            logger.info(f"removing {each_temp_file} from pkgstore")
+            self.fs.delete(each_temp_file)
+
 
 class S3Store(PackageStore):
     def __init__(self, config):
@@ -294,6 +310,18 @@ class S3Store(PackageStore):
             etag = infodata['ETag']
 
             return (msize, mtime, etag)
+
+    def cleanup_temp_files(self, channel: str):
+        with self._get_fs() as fs:
+            temp_files = []
+            for each_end in [".bz2", ".gz"]:
+                temp_files.extend(
+                    fs.glob(f"{self._bucket_map(channel)}/**/*.json?*{each_end}")
+                )
+
+        for each_temp_file in temp_files:
+            logger.info(f"removing {each_temp_file} from pkgstore")
+            self.fs.delete(each_temp_file)
 
 
 class AzureBlobStore(PackageStore):
@@ -426,3 +454,15 @@ class AzureBlobStore(PackageStore):
         etag = infodata['etag']
 
         return (msize, mtime, etag)
+
+    def cleanup_temp_files(self, channel: str):
+        with self._get_fs() as fs:
+            temp_files = []
+            for each_end in [".bz2", ".gz"]:
+                temp_files.extend(
+                    fs.glob(f"{self._container_map(channel)}/**/*.json?*{each_end}")
+                )
+
+        for each_temp_file in temp_files:
+            logger.info(f"removing {each_temp_file} from pkgstore")
+            self.fs.delete(each_temp_file)

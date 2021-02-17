@@ -285,6 +285,9 @@ class Rules:
             msg="only server maintainer or owner can set channel size limit",
         )
 
+    def assert_channel_db_cleanup(self, channel_name):
+        self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])
+
     def assert_package_read(self, package):
         if package.channel.private:
             self.assert_channel_or_package_roles(

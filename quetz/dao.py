@@ -11,6 +11,9 @@ from itertools import groupby
 from typing import Dict, List, Optional
 
 import pkg_resources
+from quetz import channel_data, errors, rest_models, versionorder
+from quetz.database_extensions import version_match
+from quetz.utils import apply_custom_query
 from sqlalchemy import and_, func, insert, or_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
@@ -18,10 +21,6 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import Query, Session, aliased, exc, joinedload
 from sqlalchemy.sql.expression import FunctionElement, Insert
 from sqlalchemy.types import DateTime
-
-from quetz import channel_data, errors, rest_models, versionorder
-from quetz.database_extensions import version_match
-from quetz.utils import apply_custom_query
 
 from .db_models import (
     ApiKey,
@@ -328,6 +327,56 @@ class Dao:
         self.db.commit()
 
         return channel
+
+    def cleanup_channel_db(self, channel_name: str):
+        # remove all Packages without PackageVersions
+        package_without_package_versions = []
+        all_packages = self.db.query(Package).filter(
+            Package.channel_name == channel_name
+        )
+        for each_package in all_packages:
+            all_package_versions = (
+                self.db.query(PackageVersion)
+                .filter(PackageVersion.channel_name == channel_name)
+                .filter(PackageVersion.package_name == each_package.name)
+            )
+            if all_package_versions.count() == 0:
+                package_without_package_versions.append(each_package.name)
+
+        for each_package in package_without_package_versions:
+            self.db.query(PackageMember).filter(
+                PackageMember.channel_name == channel_name
+            ).filter(PackageMember.package_name == each_package).delete()
+
+            self.db.query(Package).filter(Package.channel_name == channel_name).filter(
+                Package.name == each_package
+            ).delete()
+
+            logger.info(
+                f"removing Package {channel_name}/{each_package.name} from db as \
+                  it has no PackageVersions"
+            )
+
+        self.db.commit()
+
+        # clean platforms / channeldata for Packages
+        all_packages = self.db.query(Package).filter(
+            Package.channel_name == channel_name
+        )
+        for each_package in all_packages:
+            each_package_channeldata = json.loads(each_package.channeldata)
+            subdirs = each_package_channeldata["subdirs"]
+            if subdirs:
+                subdirs = sorted(list(set(subdirs)))
+                each_package_channeldata["subdirs"] = subdirs
+                each_package.channeldata = json.dumps(each_package_channeldata)
+                each_package.url = each_package_channeldata.get("home", "")
+                each_package.platforms = ":".join(
+                    each_package_channeldata.get("subdirs", [])
+                )
+
+        self.db.commit()
+        logger.info(f"Done cleaning up db for {channel_name}")
 
     def create_channel_mirror(
         self, channel_name: str, url: str, api_endpoint: str, metrics_endpoint: str
