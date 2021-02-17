@@ -89,3 +89,9 @@ def validate_new_package(
        CondaInfo instance with package metadata, it can be None if file was not
        uploaded
     """
+
+@hookspec
+def js_plugin_paths() -> List[str]:
+    """
+    register javascript frontend plugins
+    """
