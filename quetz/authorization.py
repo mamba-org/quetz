@@ -286,7 +286,7 @@ class Rules:
         )
 
     def assert_channel_db_cleanup(self, channel_name):
-        self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])
+        self.assert_channel_roles(channel_name, [OWNER])
 
     def assert_package_read(self, package):
         if package.channel.private:

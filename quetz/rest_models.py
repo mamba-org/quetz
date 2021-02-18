@@ -110,6 +110,7 @@ class ChannelActionEnum(str, Enum):
     * `validate_packages` -- validate package files
     * `synchronize_metrics` -- _non-mirror_, pull download metrics from known mirrors
     * `cleanup` -- fix inconsistencies in database and pkgstore
+    * `cleanup_dry_run` -- display what changes `cleanup` would do
     """
 
     synchronize = 'synchronize'
@@ -119,6 +120,7 @@ class ChannelActionEnum(str, Enum):
     validate_packages = 'validate_packages'
     synchronize_metrics = 'synchronize_metrics'
     cleanup = 'cleanup'
+    cleanup_dry_run = 'cleanup_dry_run'
 
 
 class ChannelMetadata(BaseModel):
