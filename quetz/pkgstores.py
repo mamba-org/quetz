@@ -4,6 +4,7 @@
 import abc
 import contextlib
 import hashlib
+import logging
 import os
 import os.path as path
 import shutil
@@ -35,6 +36,8 @@ from quetz.errors import ConfigError
 File = BinaryIO
 
 StrPath = Union[str, PathLike]
+
+logger = logging.getLogger("quetz")
 
 
 class PackageStore(abc.ABC):
@@ -80,6 +83,10 @@ class PackageStore(abc.ABC):
     @abc.abstractmethod
     def get_filemetadata(self, channel: str, src: str) -> Tuple[int, int, str]:
         """get file metadata: returns (file size, last modified time, etag)"""
+
+    @abc.abstractclassmethod
+    def cleanup_temp_files(self, channel: str, dry_run: bool = False):
+        """clean up temporary `*.json{HASH}.[bz2|gz]` files from pkgstore"""
 
 
 class LocalStore(PackageStore):
@@ -173,6 +180,20 @@ class LocalStore(PackageStore):
             etag = hashlib.md5(etag_base.encode()).hexdigest()
 
         return (msize, mtime, etag)
+
+    def cleanup_temp_files(self, channel: str, dry_run: bool = False):
+        temp_files = []
+        for each_end in [".bz2", ".gz"]:
+            temp_files.extend(
+                self.fs.glob(
+                    f"{path.join(self.channels_dir, channel)}/**/*.json?*{each_end}"
+                )
+            )
+
+        for each_temp_file in temp_files:
+            logger.info(f"removing {each_temp_file} from pkgstore")
+            if not dry_run:
+                self.fs.delete(each_temp_file)
 
 
 class S3Store(PackageStore):
@@ -294,6 +315,19 @@ class S3Store(PackageStore):
             etag = infodata['ETag']
 
             return (msize, mtime, etag)
+
+    def cleanup_temp_files(self, channel: str, dry_run: bool = False):
+        with self._get_fs() as fs:
+            temp_files = []
+            for each_end in [".bz2", ".gz"]:
+                temp_files.extend(
+                    fs.glob(f"{self._bucket_map(channel)}/**/*.json?*{each_end}")
+                )
+
+            for each_temp_file in temp_files:
+                logger.info(f"removing {each_temp_file} from pkgstore")
+                if not dry_run:
+                    fs.delete(each_temp_file)
 
 
 class AzureBlobStore(PackageStore):
@@ -426,3 +460,16 @@ class AzureBlobStore(PackageStore):
         etag = infodata['etag']
 
         return (msize, mtime, etag)
+
+    def cleanup_temp_files(self, channel: str, dry_run: bool = False):
+        with self._get_fs() as fs:
+            temp_files = []
+            for each_end in [".bz2", ".gz"]:
+                temp_files.extend(
+                    fs.glob(f"{self._container_map(channel)}/**/*.json?*{each_end}")
+                )
+
+            for each_temp_file in temp_files:
+                logger.info(f"removing {each_temp_file} from pkgstore")
+                if not dry_run:
+                    fs.delete(each_temp_file)

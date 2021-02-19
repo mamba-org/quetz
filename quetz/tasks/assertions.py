@@ -16,3 +16,7 @@ def can_channel_validate_package_cache(channel):
 
 def can_channel_reindex(channel):
     return True
+
+
+def can_cleanup(channel):
+    return True

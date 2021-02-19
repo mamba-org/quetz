@@ -114,7 +114,7 @@ def parse_query(search_type, query):
             'description',
             'summary',
             # 'format',
-            # 'platform',
+            'platform',
             # 'version',
             # 'uploader',
         ]
@@ -186,9 +186,7 @@ def apply_custom_query(search_type, db, keywords, filters):
                         PackageVersion.package_format, String
                     ).ilike(f'%{(each_val)}%')
                 elif key == 'platform':
-                    each_val_condition = PackageVersion.platform.ilike(
-                        f'%{(each_val)}%'
-                    )
+                    each_val_condition = Package.platforms.ilike(f'%{(each_val)}%')
                 elif key == 'version':
                     each_val_condition = PackageVersion.version.ilike(f'%{(each_val)}%')
                 elif key == 'uploader':
