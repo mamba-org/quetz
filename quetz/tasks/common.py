@@ -1,12 +1,13 @@
 import logging
 
 from fastapi import HTTPException, status
+
 from quetz import authorization, dao, db_models
 from quetz.jobs.dao import JobsDao
 from quetz.metrics import tasks as metrics_tasks
 from quetz.rest_models import ChannelActionEnum
 
-from . import assertions, indexing, mirror, reindexing
+from . import assertions, cleanup, indexing, mirror, reindexing
 from .workers import AbstractWorker
 
 logger = logging.getLogger("quetz")
@@ -47,6 +48,7 @@ class Task:
         db,
     ):
         from quetz.deps import get_config
+
         self.auth = auth
         self.worker = worker
         self.db = db
@@ -119,7 +121,7 @@ class Task:
             auth.assert_channel_db_cleanup(channel_name)
             task = self.jobs_dao.create_task(f"db_{action}".encode('ascii'), user_id)
             self.worker.execute(
-                self.dao.cleanup_channel_db,
+                cleanup.cleanup_channel_db,
                 channel_name=channel_name,
                 dry_run=False,
                 task_id=task.id,
@@ -128,7 +130,7 @@ class Task:
                 f"pkgstore_{action}".encode('ascii'), user_id
             )
             self.worker.execute(
-                self.pkgstore.cleanup_temp_files,
+                cleanup.cleanup_temp_files,
                 channel=channel_name,
                 dry_run=False,
                 task_id=task.id,
@@ -137,7 +139,7 @@ class Task:
             auth.assert_channel_db_cleanup(channel_name)
             task = self.jobs_dao.create_task(f"db_{action}".encode('ascii'), user_id)
             self.worker.execute(
-                self.dao.cleanup_channel_db,
+                cleanup.cleanup_channel_db,
                 channel_name=channel_name,
                 dry_run=True,
                 task_id=task.id,
@@ -146,7 +148,7 @@ class Task:
                 f"pkgstore_{action}".encode('ascii'), user_id
             )
             self.worker.execute(
-                self.pkgstore.cleanup_temp_files,
+                cleanup.cleanup_temp_files,
                 channel=channel_name,
                 dry_run=True,
                 task_id=task.id,
