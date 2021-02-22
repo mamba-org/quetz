@@ -79,7 +79,7 @@ Mirror channels are read only (you can not add or change packages in these chann
 
    curl http://localhost:8000/api/channels/mirror-channel/packages
 
-You can also postpone the synchronising the channel by adding ``{"metadata": {"actions": []}}`` to the request:
+You can also postpone the synchronising the channel by adding ``{"actions": []}`` to the request:
 
 .. code:: bash
 
@@ -91,7 +91,7 @@ You can also postpone the synchronising the channel by adding ``{"metadata": {"a
             "private":false,
             "mirror_channel_url":"https://conda.anaconda.org/btel",
             "mirror_mode":"mirror",
-            "metadata": {"actions": []}}'
+            "actions": []}'
 
 
 Synchronising mirror channel
@@ -121,8 +121,7 @@ If for some reason the database was deleted, but the package files are still in 
      "private":false,
      "mirror_channel_url":"ORIGINAL-URL",
      "mirror_mode":"mirror",
-      "metadata": {
-        "actions": ["reindex"]}
+     "actions": ["reindex"],
    }
 
 For example, to re-index the ``mirror-channel`` from previous example, you would use:
@@ -137,7 +136,7 @@ For example, to re-index the ``mirror-channel`` from previous example, you would
             "private":false,
             "mirror_channel_url":"https://conda.anaconda.org/btel",
             "mirror_mode":"mirror",
-            "metadata": {"actions": ["reindex"]}}'
+            "actions": ["reindex"]}'
 
 This request will add existing package files to the repository, but it won't trigger a new synchronisation. If you want to synchronise the channel you can follow the example from the previous section. This synchronisation should only attempt to download the files that were not present in the package store.
 
