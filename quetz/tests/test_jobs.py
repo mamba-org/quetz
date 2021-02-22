@@ -104,12 +104,15 @@ def package_role():
 
 
 @pytest.fixture
-def public_channel(dao: Dao, user, channel_role, channel_name):
+def public_channel(dao: Dao, user, channel_role, channel_name, db):
 
     channel_data = Channel(name=channel_name, private=False)
     channel = dao.create_channel(channel_data, user.id, channel_role)
 
-    return channel
+    yield channel
+
+    db.delete(channel)
+    db.commit()
 
 
 @pytest.fixture
@@ -125,11 +128,19 @@ def public_package(db, user, public_channel, dao, package_role, package_name):
 
 
 @pytest.fixture
-def manager(config):
+def auto_rollback():
+    return False
+
+
+@pytest.fixture
+def manager(config, db):
 
     manager = SubprocessWorker("", {}, config)
     yield manager
+    manager._executor.shutdown()
     SubprocessWorker._executor = None
+    db.query(Job).delete()
+    db.commit()
 
 
 def test_create_task(db, user, package_version):
@@ -254,7 +265,7 @@ async def test_running_task(db, user, package_version, manager):
 
     assert task.status == TaskStatus.pending
 
-    time.sleep(0.01)
+    time.sleep(0.05)
     check_status(db)
 
     db.refresh(task)
@@ -286,7 +297,7 @@ async def test_restart_worker_process(db, user, package_version, manager, caplog
 
     assert task.status == TaskStatus.pending
 
-    time.sleep(0.01)
+    time.sleep(0.05)
     check_status(db)
 
     db.refresh(task)
@@ -333,7 +344,7 @@ async def test_failed_task(db, user, package_version, manager):
     assert task.status == TaskStatus.failed
 
     db.refresh(job)
-    assert job.status == JobStatus.success
+    assert job.status == JobStatus.failed
 
 
 @pytest.mark.parametrize("items_spec", ["", None])
@@ -735,12 +746,23 @@ def test_get_tasks(
         assert data['result'][0]['job_id'] == job.id
 
 
-@pytest.mark.parametrize("user_role", ["member"])
-def test_get_user_jobs(auth_client, db, user, package_version):
-    job = Job(items_spec="*", owner=user, manifest=pickle.dumps(dummy_func))
-    db.add(job)
+@pytest.fixture()
+def other_user(db):
 
     other_user = User(id=uuid.uuid4().bytes, username='otheruser')
+
+    db.add(other_user)
+
+    yield other_user
+
+    db.delete(other_user)
+    db.commit()
+
+
+@pytest.mark.parametrize("user_role", ["member"])
+def test_get_user_jobs(auth_client, db, user, package_version, other_user):
+    job = Job(items_spec="*", owner=user, manifest=pickle.dumps(dummy_func))
+    db.add(job)
 
     other_job = Job(items_spec="*", owner=other_user, manifest=pickle.dumps(dummy_func))
     db.add(other_job)

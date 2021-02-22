@@ -144,6 +144,8 @@ def run_jobs(db, job_id=None, force=False):
             # so skipping here
             continue
 
+        job.status = JobStatus.running
+
         task = None
         for version in q:
             task = Task(job=job, package_version=version)
@@ -152,8 +154,9 @@ def run_jobs(db, job_id=None, force=False):
             logger.warning(
                 f"no versions matching the package spec {job.items_spec}. skipping."
             )
-            # job.status = JobStatus.success
-        job.status = JobStatus.running
+            if job.items_spec:
+                # actions have no related package versions
+                job.status = JobStatus.success
     db.commit()
 
 
@@ -162,11 +165,12 @@ def add_task_to_queue(db, manager, task, *args, func=None, **kwargs):
 
     if func is None:
         func = task.job.manifest
-
-    job = manager.execute(func, *args, **kwargs)
-    _process_cache[task.id] = job
     task.status = TaskStatus.pending
     task.job.status = JobStatus.running
+    db.add(task)
+    db.commit()
+    job = manager.execute(func, *args, task_id=task.id, **kwargs)
+    _process_cache[task.id] = job
     return job
 
 
@@ -207,6 +211,7 @@ def check_status(db):
     tasks = db.query(Task).filter(
         Task.status.in_([TaskStatus.running, TaskStatus.pending])
     )
+    return
     try:
         for task in tasks:
             if not task.package_version:

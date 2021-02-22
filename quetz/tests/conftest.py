@@ -32,6 +32,9 @@ def user_without_profile(db, user_role):
 
     yield new_user
 
+    db.delete(new_user)
+    db.commit()
+
 
 @fixture
 def user(db, user_without_profile):
