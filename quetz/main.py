@@ -1558,26 +1558,27 @@ async def serve_path(
 
     is_package_request = path.endswith((".tar.bz2", ".conda"))
 
+    package_name = None
     if is_package_request:
         try:
             platform, filename = os.path.split(path)
             package_name, version, hash_end = filename.rsplit('-', 2)
             package_type = "tar.bz2" if hash_end.endswith(".tar.bz2") else "conda"
+            DOWNLOAD_COUNT.labels(
+                channel=channel.name,
+                platform=platform,
+                package_name=package_name,
+                version=version,
+                package_type=package_type,
+            ).inc()
+            download_counts[(channel.name, filename, platform)] += 1
         except ValueError:
             pass
-        DOWNLOAD_COUNT.labels(
-            channel=channel.name,
-            platform=platform,
-            package_name=package_name,
-            version=version,
-            package_type=package_type,
-        ).inc()
-        download_counts[(channel.name, filename, platform)] += 1
 
     if is_package_request and channel.mirror_channel_url:
         # if we exclude the package from syncing, redirect to original URL
         channel_proxylist = json.loads(channel.channel_metadata).get('proxylist', [])
-        if package_name in channel_proxylist:
+        if channel_proxylist and package_name and package_name in channel_proxylist:
             return RedirectResponse(f"{channel.mirror_channel_url}/{path}")
 
     if is_package_request and pkgstore_support_url:
