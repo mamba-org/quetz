@@ -50,24 +50,26 @@ class WorkerProcess:
         self.func_args = args
         self.func_kwargs = kwargs
 
+    @staticmethod
+    def jobexecutor(conn, pickled_func, *args, **kwargs):
+        """function executed in child process"""
+        try:
+            job_wrapper(pickled_func, *args, **kwargs)
+        except Exception as exc:
+            conn.send(exc)
+            raise
+        else:
+            conn.send('ok')
+        finally:
+            conn.close()
+
     def fork_job(self):
         parent_conn, child_conn = Pipe(duplex=False)
         self._parent_conn = parent_conn
 
-        def jobexecutor(conn, pickled_func, *args, **kwargs):
-            """function executed in child process"""
-            try:
-                self._result = job_wrapper(
-                    self._pickled_func, *self.func_args, **self.func_kwargs
-                )
-            except Exception as exc:
-                conn.send(exc)
-                raise
-            conn.send(None)
-
         self._process = Process(
-            target=jobexecutor,
-            args=(child_conn,) + self.func_args,
+            target=self.jobexecutor,
+            args=(child_conn, self._pickled_func) + self.func_args,
             kwargs=self.func_kwargs,
         )
         self._process.start()
@@ -172,7 +174,17 @@ def job_wrapper(
             )
 
             if not running_tasks:
-                task.job.status = JobStatus.success
+                failed_task = (
+                    db.query(Task.status)
+                    .join(Job)
+                    .filter(Job.id == task.job_id)
+                    .filter(Task.status == TaskStatus.failed)
+                    .first()
+                )
+                if failed_task:
+                    task.job.status = JobStatus.failed
+                else:
+                    task.job.status = JobStatus.success
             db.commit()
             db.close()
 
