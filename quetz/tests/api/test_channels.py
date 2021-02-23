@@ -185,7 +185,15 @@ def test_get_channel_members(auth_client, public_channel, expected_code):
     assert response.status_code == expected_code
 
 
-def test_channel_names_are_case_insensitive(auth_client, maintainer):
+@pytest.fixture
+def remove_package_versions(db):
+    yield
+    db.query(db_models.PackageVersion).delete()
+
+
+def test_channel_names_are_case_insensitive(
+    auth_client, maintainer, remove_package_versions
+):
 
     channel_name = "MyChanneL"
 
@@ -333,7 +341,12 @@ def test_accents_make_unique_channel_names(auth_client, maintainer):
 
 
 def test_upload_package_version_to_channel(
-    auth_client, public_channel, maintainer, db, config
+    auth_client,
+    public_channel,
+    maintainer,
+    db,
+    config,
+    remove_package_versions,
 ):
     pkgstore = config.get_package_store()
 

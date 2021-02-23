@@ -132,11 +132,13 @@ def test_get_download_count(auth_client, public_channel, package_version, db, da
 
 
 @pytest.fixture
-def package_version_factory(channel_name, user, dao, public_package):
+def package_version_factory(channel_name, user, dao, public_package, db):
 
     package_format = "tarbz2"
     package_info = "{}"
     package_name = public_package.name
+
+    versions = []
 
     def factory(version, build_str=0, platform="linux-64"):
 
@@ -155,9 +157,14 @@ def package_version_factory(channel_name, user, dao, public_package):
             user.id,
             size=11,
         )
+        versions.append(version)
         return version
 
-    return factory
+    yield factory
+
+    for version in versions:
+        db.delete(version)
+    db.commit()
 
 
 def test_get_channel_download_count(

@@ -161,7 +161,7 @@ def failed_func(package_version: dict):
 
 
 def long_running(package_version: dict):
-    time.sleep(0.1)
+    time.sleep(0.25)
 
 
 def dummy_func(package_version: dict):
@@ -265,10 +265,14 @@ async def test_running_task(db, user, package_version, manager):
 
     assert task.status == TaskStatus.pending
 
-    time.sleep(0.05)
-    check_status(db)
+    # wait for task status to change
+    for i in range(10):
+        time.sleep(0.05)
 
-    db.refresh(task)
+        db.refresh(task)
+        if task.status != TaskStatus.pending:
+            break
+
     assert task.status == TaskStatus.running
 
     # wait for job to finish
@@ -686,10 +690,11 @@ def test_validate_query_string(auth_client, query_str, ok):
         assert response.status_code == 422
 
 
-@pytest.mark.parametrize("user_role", ["owner"])
-@pytest.mark.parametrize("skip,limit", [(0, 2), (1, -1), (2, 1), (2, 5)])
-def test_jobs_pagination(auth_client, db, user, skip, limit):
+@pytest.fixture
+def many_jobs(db, user):
+
     n_jobs = 5
+    jobs = []
     for i in range(n_jobs):
         job = Job(
             id=i,
@@ -699,6 +704,20 @@ def test_jobs_pagination(auth_client, db, user, skip, limit):
             owner=user,
         )
         db.add(job)
+        jobs.append(job)
+
+    yield jobs
+
+    for job in jobs:
+        db.delete(job)
+    db.commit()
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+@pytest.mark.parametrize("skip,limit", [(0, 2), (1, -1), (2, 1), (2, 5)])
+def test_jobs_pagination(auth_client, skip, limit, many_jobs):
+
+    n_jobs = len(many_jobs)
 
     response = auth_client.get(f"/api/jobs?skip={skip}&limit={limit}")
     assert response.status_code == 200

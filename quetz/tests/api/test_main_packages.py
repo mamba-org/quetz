@@ -227,9 +227,21 @@ def test_get_non_existing_package_version(
     assert response.status_code == 404
 
 
+@pytest.fixture
+def remove_package_versions(db):
+    yield
+    db.query(PackageVersion).delete()
+
+
 @pytest.mark.parametrize("package_name", ["test-package", "my-package"])
 def test_upload_package_version(
-    auth_client, public_channel, public_package, package_name, db, config
+    auth_client,
+    public_channel,
+    public_package,
+    package_name,
+    db,
+    config,
+    remove_package_versions,
 ):
     pkgstore = config.get_package_store()
 
@@ -332,7 +344,7 @@ def test_package_name_length_limit(auth_client, public_channel, db):
     assert pkg is not None
 
 
-def test_validate_package_names(auth_client, public_channel):
+def test_validate_package_names(auth_client, public_channel, remove_package_versions):
 
     valid_package_names = [
         "interesting-package",
@@ -374,7 +386,13 @@ def test_validate_package_names(auth_client, public_channel):
     ],
 )
 def test_validate_package_names_files_endpoint(
-    auth_client, public_channel, mocker, package_name, msg, config: Config
+    auth_client,
+    public_channel,
+    mocker,
+    package_name,
+    msg,
+    config: Config,
+    remove_package_versions,
 ):
 
     pkgstore = config.get_package_store()
@@ -508,7 +526,10 @@ def test_get_package_with_versions(
 
 @pytest.mark.parametrize("package_name", ["test-package"])
 def test_package_channel_data_attributes(
-    auth_client, make_package_version, channel_name
+    auth_client,
+    make_package_version,
+    channel_name,
+    remove_package_versions,
 ):
     # test attributes derived from channel data
     for package_filename in Path(".").glob("*.tar.bz2"):

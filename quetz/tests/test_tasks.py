@@ -2,6 +2,7 @@ import json
 
 import pytest
 
+from quetz.db_models import PackageVersion
 from quetz.pkgstores import PackageStore
 from quetz.rest_models import Channel
 from quetz.tasks.indexing import validate_packages
@@ -42,6 +43,16 @@ def channel(dao, user, channel_name):
     return channel
 
 
+@pytest.fixture
+def remove_package_versions(db):
+    # clean up the created package versions after the test
+
+    yield
+
+    db.query(PackageVersion).delete()
+    db.commit()
+
+
 def test_reindex_package_files(
     config,
     user,
@@ -51,6 +62,7 @@ def test_reindex_package_files(
     dao,
     pkgstore: PackageStore,
     package_filenames,
+    remove_package_versions,
 ):
     user_id = user.id
     reindex_packages_from_store(dao, config, channel.name, user_id)

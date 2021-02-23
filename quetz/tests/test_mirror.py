@@ -38,6 +38,14 @@ def proxy_channel(db):
     db.commit()
 
 
+@pytest.fixture(autouse=True)
+def remove_package_versions(db, user):
+    # we need to run this fixture before use, hence the dependency
+    # on user fixture
+    yield
+    db.query(PackageVersion).delete()
+
+
 @pytest.fixture
 def mirror_channel(dao, user, db):
 

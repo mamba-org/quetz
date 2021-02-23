@@ -84,6 +84,8 @@ def make_package_version(
 
     pkgstore = config.get_package_store()
 
+    versions = []
+
     def _make_package_version(filename, version_number, platform="linux-64"):
         filename = Path(filename)
         with open(filename, "rb") as fid:
@@ -106,19 +108,22 @@ def make_package_version(
 
         dao.update_channel_size(channel_name)
 
+        versions.append(version)
+
         return version
 
     yield _make_package_version
+
+    for version in versions:
+        db.delete(version)
+    db.commit()
 
 
 @pytest.fixture
 def package_version(db, make_package_version):
     version = make_package_version("test-package-0.1-0.tar.bz2", "0.1")
 
-    yield version
-
-    db.delete(version)
-    db.commit()
+    return version
 
 
 @pytest.fixture()
