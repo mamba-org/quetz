@@ -208,45 +208,13 @@ def run_tasks(db, manager):
 
 
 def check_status(db):
-    tasks = db.query(Task).filter(
-        Task.status.in_([TaskStatus.running, TaskStatus.pending])
+    tasks = (
+        db.query(Task)
+        .filter(Task.status.in_([TaskStatus.running, TaskStatus.pending]))
+        .filter(Task.package_version_id.isnot(None))
     )
-    return
-    try:
-        for task in tasks:
-            if not task.package_version:
-                # task was launched from actions
-                continue
-            try:
-                process = _process_cache[task.id]
-            except KeyError:
-                logger.warning(f"running process for task {task} is lost, restarting")
-                task.status = TaskStatus.created
-                continue
-            status = process.status
-            if status == "pending":
-                task.status = TaskStatus.pending
-            elif status == "running":
-                task.status = TaskStatus.running
-            elif status == "failed":
-                task.status = TaskStatus.failed
-                _process_cache.pop(task.id)
-            elif status == "success":
-                task.status = TaskStatus.success
-                _process_cache.pop(task.id)
-
-        # update jobs with all tasks finished
-        (
-            db.query(Job)
-            .filter(Job.status.in_([JobStatus.running, JobStatus.pending]))
-            .filter(
-                ~Job.tasks.any(
-                    Task.status.in_(
-                        [TaskStatus.running, TaskStatus.pending, TaskStatus.created]
-                    )
-                )
-            )
-            .update({"status": JobStatus.success}, synchronize_session=False)
-        )
-    finally:
-        db.commit()
+    for task in tasks:
+        if task.id not in _process_cache:
+            logger.warning(f"running process for task {task} is lost, restarting")
+            task.status = TaskStatus.created
+    db.commit()

@@ -27,6 +27,16 @@ pytest_plugins = ("pytest_asyncio",)
 
 
 @pytest.fixture
+def auto_rollback():
+    return False
+
+
+@pytest.fixture
+def sqlite_in_memory():
+    return False
+
+
+@pytest.fixture
 def package_name():
     return "my-package"
 
@@ -125,11 +135,6 @@ def public_package(db, user, public_channel, dao, package_role, package_name):
     )
 
     return package
-
-
-@pytest.fixture
-def auto_rollback():
-    return False
 
 
 @pytest.fixture
@@ -266,7 +271,7 @@ async def test_running_task(db, user, package_version, manager):
     assert task.status == TaskStatus.pending
 
     # wait for task status to change
-    for i in range(10):
+    for i in range(50):
         time.sleep(0.05)
 
         db.refresh(task)
@@ -301,8 +306,13 @@ async def test_restart_worker_process(db, user, package_version, manager, caplog
 
     assert task.status == TaskStatus.pending
 
-    time.sleep(0.05)
-    check_status(db)
+    # wait for task status to change
+    for i in range(50):
+        time.sleep(0.05)
+
+        db.refresh(task)
+        if task.status != TaskStatus.pending:
+            break
 
     db.refresh(task)
     assert task.status == TaskStatus.running
