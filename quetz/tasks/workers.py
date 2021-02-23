@@ -5,7 +5,7 @@ import logging
 import pickle
 import time
 from abc import abstractmethod
-from multiprocessing import Pipe, Process
+from multiprocessing import get_context
 from typing import Callable, Union
 
 import requests
@@ -64,10 +64,11 @@ class WorkerProcess:
             conn.close()
 
     def fork_job(self):
-        parent_conn, child_conn = Pipe(duplex=False)
+        self.ctx = get_context("spawn")
+        parent_conn, child_conn = self.ctx.Pipe(duplex=False)
         self._parent_conn = parent_conn
 
-        self._process = Process(
+        self._process = self.ctx.Process(
             target=self.jobexecutor,
             args=(child_conn, self._pickled_func) + self.func_args,
             kwargs=self.func_kwargs,
