@@ -128,7 +128,8 @@ def public_package(db, user, public_channel, dao, package_role, package_name):
 def manager(config):
 
     manager = SubprocessWorker("", {}, config)
-    return manager
+    yield manager
+    SubprocessWorker._executor = None
 
 
 def test_create_task(db, user, package_version):
