@@ -9,6 +9,7 @@ import subprocess
 import uuid
 from distutils.spawn import find_executable
 from enum import Enum
+from multiprocessing import get_context
 from pathlib import Path
 from typing import NoReturn, Optional, Union
 
@@ -492,6 +493,10 @@ def start(
             "Enable/disable automatic reloading of the server when sources are modified"
         ),
     ),
+    start_supervisor: bool = typer.Option(
+        False,
+        help="Start job supervisor with quetz",
+    ),
 ) -> NoReturn:
     """Start a Quetz deployment.
 
@@ -512,6 +517,15 @@ def start(
         )
         raise typer.Abort()
 
+    if start_supervisor:
+        logger.info("starting supervisor")
+        ctx = get_context("spawn")
+        supervisor_process = ctx.Process(
+            target=start_supervisor_daemon,
+            args=(deployment_folder,),
+        )
+        supervisor_process.start()
+
     with working_directory(path):
         import quetz
 
@@ -525,6 +539,10 @@ def start(
             host=host,
             log_level=log_level,
         )
+
+    if start_supervisor:
+        supervisor_process.terminate()
+        supervisor_process.join()
 
 
 @app.command()
@@ -634,6 +652,24 @@ def plugin(
         print(f"Command '{cmd}' not yet understood.")
 
 
+def start_supervisor_daemon(path, num_procs=None):
+    from quetz.jobs.runner import Supervisor
+    from quetz.tasks.workers import SubprocessWorker
+
+    configure_logger(loggers=("quetz",))
+    config = _get_config(path)
+    manager = SubprocessWorker("", {}, config, {'max_workers': num_procs})
+    with working_directory(path):
+        db = get_session(config.sqlalchemy_database_url)
+        supervisor = Supervisor(db, manager)
+        try:
+            supervisor.run()
+        except KeyboardInterrupt:
+            logger.info("stopping supervisor")
+        finally:
+            db.close()
+
+
 @app.command()
 def watch_job_queue(
     path: str = typer.Argument(None, help="Path to the plugin folder"),
@@ -642,20 +678,7 @@ def watch_job_queue(
     ),
 ) -> None:
 
-    configure_logger(loggers=("quetz",))
-
-    from quetz.jobs.runner import Supervisor
-    from quetz.tasks.workers import SubprocessWorker
-
-    config = _get_config(path)
-    manager = SubprocessWorker("", {}, config, {'max_workers': num_procs})
-    with working_directory(path):
-        db = get_session(config.sqlalchemy_database_url)
-        supervisor = Supervisor(db, manager)
-        try:
-            supervisor.run()
-        finally:
-            db.close()
+    start_supervisor_daemon(path, num_procs)
 
 
 if __name__ == "__main__":

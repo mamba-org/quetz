@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from quetz.db_models import PackageVersion
 from quetz.jobs.models import ItemsSelection, Job, JobStatus, Task, TaskStatus
 
-logger = logging.getLogger('quetz-cli')
+logger = logging.getLogger('quetz.tasks')
 # manager = RQManager("127.0.0.1", 6379, 0, "", {}, config)
 
 
