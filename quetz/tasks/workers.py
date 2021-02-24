@@ -4,6 +4,7 @@ import inspect
 import logging
 import pickle
 import time
+import uuid
 from abc import abstractmethod
 from multiprocessing import get_context
 from typing import Callable, Dict, Union
@@ -129,8 +130,9 @@ def job_wrapper(
     if not auth:
         browser_session: Dict[str, str] = {}
         api_key = None
-        if task:
-            browser_session['user_id'] = task.job.owner_id
+        if task and task.job.owner_id:
+            user_id = str(uuid.UUID(bytes=task.job.owner_id))
+            browser_session['user_id'] = user_id
         auth = Rules(api_key, browser_session, db)
     if not session:
         session = get_remote_session()
