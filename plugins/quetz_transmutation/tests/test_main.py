@@ -11,12 +11,11 @@ from quetz.authorization import (
 )
 from quetz.db_models import PackageVersion
 from quetz.jobs.models import Job, Task, TaskStatus
-from quetz.jobs.runner import check_status, run_jobs, run_tasks
 
 
 @pytest.mark.asyncio
 async def test_transmutation_endpoint(
-    api_key, db, config, work_manager, package_version, app, channel_name
+    api_key, db, config, supervisor, package_version, app, channel_name
 ):
 
     # we need to use asynchronous http client because the test is async
@@ -28,11 +27,11 @@ async def test_transmutation_endpoint(
         )
 
     assert response.status_code == 201
-    run_jobs(db)
-    new_jobs = run_tasks(db, work_manager)
+    supervisor.run_jobs()
+    new_jobs = supervisor.run_tasks()
     await new_jobs[0].wait()
 
-    check_status(db)
+    supervisor.check_status()
 
     task = db.query(Task).one()
     db.refresh(task)
@@ -76,7 +75,7 @@ async def test_transmutation_endpoint(
     ],
 )
 def test_package_specs(
-    auth_client, db, config, work_manager, package_version, spec, n_tasks
+    auth_client, db, config, supervisor, package_version, spec, n_tasks
 ):
 
     response = auth_client.post(
@@ -85,10 +84,10 @@ def test_package_specs(
     )
 
     assert response.status_code == 201
-    run_jobs(db)
-    run_tasks(db, work_manager)
+    supervisor.run_jobs()
+    supervisor.run_tasks()
 
-    check_status(db)
+    supervisor.check_status()
 
     n_created_task = db.query(Task).count()
 

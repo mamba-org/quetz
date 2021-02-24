@@ -8,6 +8,7 @@ from quetz.authorization import SERVER_OWNER
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.db_models import ApiKey, Profile, User
+from quetz.jobs.runner import Supervisor
 from quetz.rest_models import Channel, Package
 from quetz.tasks.workers import SubprocessWorker
 
@@ -64,9 +65,10 @@ def auth_client(client, user):
 
 
 @pytest.fixture
-def work_manager(config):
+def supervisor(config, db):
     manager = SubprocessWorker("", {}, config)
-    return manager
+    supervisor = Supervisor(db, manager)
+    return supervisor
 
 
 @pytest.fixture
