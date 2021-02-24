@@ -18,7 +18,6 @@ from quetz.rest_models import PaginatedResponse
 
 from .models import JobStatus, TaskStatus
 from .rest_models import Job, JobBase, JobUpdateModel, Task
-from .runner import run_jobs
 
 api_router = APIRouter()
 
@@ -98,8 +97,9 @@ def update_job(
     job.status = job_data.status  # type: ignore
 
     # ignore tasks that have already been run
-    if job_data.force:
-        run_jobs(db, job_id=job.id, force=True)
+    # if job_data.force:
+    #    run_jobs(db, job_id=job.id, force=True)
+    # change status to 'created' instead
 
     db.commit()
 

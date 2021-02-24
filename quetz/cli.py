@@ -641,24 +641,20 @@ def watch_job_queue(
         None, help="Number of processes to use. Default: number of CPU cores"
     ),
 ) -> None:
-    import time
 
     configure_logger(loggers=("quetz",))
 
-    from quetz.jobs.runner import check_status, run_jobs, run_tasks
+    from quetz.jobs.runner import Supervisor
     from quetz.tasks.workers import SubprocessWorker
 
     config = _get_config(path)
     manager = SubprocessWorker("", {}, config, {'max_workers': num_procs})
     with working_directory(path):
         db = get_session(config.sqlalchemy_database_url)
+        supervisor = Supervisor(db, manager)
         try:
-            while True:
-                run_jobs(db)
-                run_tasks(db, manager)
-                check_status(db)
-                time.sleep(5)
-        except KeyboardInterrupt:
+            supervisor.run()
+        finally:
             db.close()
 
 
