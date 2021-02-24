@@ -96,10 +96,13 @@ def update_job(
     auth.assert_jobs(owner_id=job.owner_id)
     job.status = job_data.status  # type: ignore
 
-    # ignore tasks that have already been run
-    # if job_data.force:
-    #    run_jobs(db, job_id=job.id, force=True)
-    # change status to 'created' instead
+    if job_data.force and job.status in [
+        JobStatus.running,
+        JobStatus.pending,
+    ]:
+        # restart tasks that have already been run
+        for task in job.tasks:
+            task.status = "skipped"
 
     db.commit()
 

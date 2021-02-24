@@ -125,6 +125,7 @@ class Supervisor:
                     existing_task = (
                         db.query(Task.package_version_id, Task.id.label("task_id"))
                         .filter(Task.job_id == job.id)
+                        .filter(Task.status != TaskStatus.skipped)
                         .subquery()
                     )
                     q = (
