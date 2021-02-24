@@ -1,6 +1,7 @@
 import asyncio
 import concurrent.futures
 import inspect
+import json
 import logging
 import pickle
 import time
@@ -118,8 +119,17 @@ def job_wrapper(
 
     if task_id:
         task = db.query(Task).filter(Task.id == task_id).one_or_none()
+        # take extra arguments from job definition
+        if task.job.extra_args:
+            job_extra_args = json.loads(task.job.extra_args)
+            kwargs.update(job_extra_args)
+        if task.job.owner_id:
+            user_id = str(uuid.UUID(bytes=task.job.owner_id))
+        else:
+            user_id = None
     else:
         task = None
+        user_id = None
 
     if not pkgstore:
         pkgstore = config.get_package_store()
@@ -130,8 +140,7 @@ def job_wrapper(
     if not auth:
         browser_session: Dict[str, str] = {}
         api_key = None
-        if task and task.job.owner_id:
-            user_id = str(uuid.UUID(bytes=task.job.owner_id))
+        if user_id:
             browser_session['user_id'] = user_id
         auth = Rules(api_key, browser_session, db)
     if not session:
@@ -151,6 +160,7 @@ def job_wrapper(
         session=session,
         config=config,
         pkgstore=pkgstore,
+        user_id=user_id,
     )
 
     kwargs.update(extra_kwargs)
