@@ -32,7 +32,7 @@ class ServerRole(str, enum.Enum):
 
 
 class Rules:
-    def __init__(self, API_key: str, session: dict, db: Session):
+    def __init__(self, API_key: Optional[str], session: dict, db: Session):
         self.API_key = API_key
         self.session = session
         self.db = db

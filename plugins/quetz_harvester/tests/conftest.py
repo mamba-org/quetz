@@ -50,7 +50,7 @@ def auth_client(client, user):
 
 @pytest.fixture
 def supervisor(config, db):
-    manager = SubprocessWorker("", {}, config)
+    manager = SubprocessWorker(config)
     supervisor = Supervisor(db, manager)
     return supervisor
 

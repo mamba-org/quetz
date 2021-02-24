@@ -133,7 +133,7 @@ def public_package(db, user, public_channel, dao, package_role, package_name):
 @pytest.fixture
 def manager(config, db):
 
-    manager = SubprocessWorker("", {}, config)
+    manager = SubprocessWorker(config)
     yield manager
     manager._executor.shutdown()
     SubprocessWorker._executor = None
