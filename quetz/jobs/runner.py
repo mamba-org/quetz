@@ -144,6 +144,8 @@ def run_jobs(db, job_id=None, force=False):
             # so skipping here
             continue
 
+        job.status = JobStatus.running
+
         task = None
         for version in q:
             task = Task(job=job, package_version=version)
@@ -152,8 +154,9 @@ def run_jobs(db, job_id=None, force=False):
             logger.warning(
                 f"no versions matching the package spec {job.items_spec}. skipping."
             )
-            # job.status = JobStatus.success
-        job.status = JobStatus.running
+            if job.items_spec:
+                # actions have no related package versions
+                job.status = JobStatus.success
     db.commit()
 
 
@@ -162,11 +165,12 @@ def add_task_to_queue(db, manager, task, *args, func=None, **kwargs):
 
     if func is None:
         func = task.job.manifest
-
-    job = manager.execute(func, *args, **kwargs)
-    _process_cache[task.id] = job
     task.status = TaskStatus.pending
     task.job.status = JobStatus.running
+    db.add(task)
+    db.commit()
+    job = manager.execute(func, *args, task_id=task.id, **kwargs)
+    _process_cache[task.id] = job
     return job
 
 
@@ -204,44 +208,13 @@ def run_tasks(db, manager):
 
 
 def check_status(db):
-    tasks = db.query(Task).filter(
-        Task.status.in_([TaskStatus.running, TaskStatus.pending])
+    tasks = (
+        db.query(Task)
+        .filter(Task.status.in_([TaskStatus.running, TaskStatus.pending]))
+        .filter(Task.package_version_id.isnot(None))
     )
-    try:
-        for task in tasks:
-            if not task.package_version:
-                # task was launched from actions
-                continue
-            try:
-                process = _process_cache[task.id]
-            except KeyError:
-                logger.warning(f"running process for task {task} is lost, restarting")
-                task.status = TaskStatus.created
-                continue
-            status = process.status
-            if status == "pending":
-                task.status = TaskStatus.pending
-            elif status == "running":
-                task.status = TaskStatus.running
-            elif status == "failed":
-                task.status = TaskStatus.failed
-                _process_cache.pop(task.id)
-            elif status == "success":
-                task.status = TaskStatus.success
-                _process_cache.pop(task.id)
-
-        # update jobs with all tasks finished
-        (
-            db.query(Job)
-            .filter(Job.status.in_([JobStatus.running, JobStatus.pending]))
-            .filter(
-                ~Job.tasks.any(
-                    Task.status.in_(
-                        [TaskStatus.running, TaskStatus.pending, TaskStatus.created]
-                    )
-                )
-            )
-            .update({"status": JobStatus.success}, synchronize_session=False)
-        )
-    finally:
-        db.commit()
+    for task in tasks:
+        if task.id not in _process_cache:
+            logger.warning(f"running process for task {task} is lost, restarting")
+            task.status = TaskStatus.created
+    db.commit()

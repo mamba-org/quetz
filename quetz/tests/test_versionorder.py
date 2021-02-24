@@ -226,7 +226,9 @@ def test_hexrd():
     assert sorted(vos) == vos
 
 
-def test_package_version(db, dao: Dao, user, channel_name, package_name):
+@pytest.fixture
+def package_with_versions(channel_name, package_name, dao, user, db):
+
     channel_data = Channel(name=channel_name, private=False)
     package_data = Package(name=package_name)
 
@@ -246,8 +248,9 @@ def test_package_version(db, dao: Dao, user, channel_name, package_name):
         ("0.1.0", 5),
         ("0.1.0", 2),
     ]
+    package_versions = []
     for ver, build_str in versions:
-        dao.create_version(
+        package_version = dao.create_version(
             channel_name,
             package_name,
             package_format,
@@ -260,7 +263,19 @@ def test_package_version(db, dao: Dao, user, channel_name, package_name):
             user.id,
             size=0,
         )
-    res = dao.get_package_versions(package)
+        package_versions.append(package_version)
+
+    yield package
+
+    for package_version in package_versions:
+        db.delete(package_version)
+        db.commit()
+
+
+def test_package_version(
+    db, dao: Dao, channel_name, package_name, package_with_versions
+):
+    res = dao.get_package_versions(package_with_versions)
     res_versions = [(VersionOrder(x[0].version), x[0].build_number) for x in res]
 
     assert sorted(res_versions, reverse=True) == res_versions
