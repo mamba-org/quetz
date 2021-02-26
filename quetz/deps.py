@@ -15,12 +15,6 @@ from quetz.config import Config
 from quetz.dao import Dao
 from quetz.database import get_session as get_db_session
 from quetz.tasks.common import Task
-from quetz.tasks.workers import (
-    RQManager,
-    SubprocessWorker,
-    ThreadingWorker,
-    rq_available,
-)
 
 DEFAULT_TIMEOUT = 5  # seconds
 MAX_RETRIES = 3
@@ -96,30 +90,29 @@ def get_tasks_worker(
     config: Config = Depends(get_config),
 ) -> Task:
 
-    if config.configured_section("worker"):
-        worker = config.worker_type
-    else:
-        worker = "thread"
+    # if config.configured_section("worker"):
+    #    worker = config.worker_type
+    # else:
+    #    worker = "thread"
 
-    if worker == "thread":
-        worker = ThreadingWorker(background_tasks, dao, auth, session, config)
-    elif worker == "subprocess":
-        worker = SubprocessWorker(config)
-    elif worker == "redis":
-        if rq_available:
-            worker = RQManager(
-                config.worker_redis_ip,
-                config.worker_redis_port,
-                config.worker_redis_db,
-                config,
-            )
-        else:
-            raise ValueError("redis and rq not installed on machine")
-    else:
-        raise ValueError("wrong configuration in worker.type")
-
-    logger.debug(f"created worker of class {worker.__class__.__name__}")
-    return Task(auth, worker, dao.db)
+    # if worker == "thread":
+    #    worker = ThreadingWorker(background_tasks, dao, auth, session, config)
+    # elif worker == "subprocess":
+    #    worker = SubprocessWorker(config)
+    # elif worker == "redis":
+    #    if rq_available:
+    #        worker = RQManager(
+    #            config.worker_redis_ip,
+    #            config.worker_redis_port,
+    #            config.worker_redis_db,
+    #            config,
+    #        )
+    #    else:
+    #        raise ValueError("redis and rq not installed on machine")
+    # else:
+    #    raise ValueError("wrong configuration in worker.type")
+    # logger.debug(f"created worker of class {worker.__class__.__name__}")
+    return Task(auth, dao.db)
 
 
 class ChannelChecker:

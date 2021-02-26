@@ -104,9 +104,12 @@ def job_wrapper(
     import pickle
 
     from quetz.authorization import Rules
+    from quetz.config import configure_logger
     from quetz.dao import Dao
     from quetz.database import get_session
     from quetz.deps import get_remote_session
+
+    configure_logger(config)
 
     pkgstore = kwargs.pop("pkgstore", None)
     db = kwargs.pop("db", None)
