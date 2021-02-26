@@ -3,18 +3,14 @@ import os
 import uuid
 from io import BytesIO
 from pathlib import Path
-from typing import Callable
 from unittest.mock import MagicMock
 from urllib.parse import urlparse
 
 import pytest
-import requests
 
 from quetz import hookimpl, rest_models
 from quetz.authorization import Rules
 from quetz.condainfo import CondaInfo
-from quetz.config import Config
-from quetz.dao import Dao
 from quetz.db_models import Channel, Package, PackageVersion, User
 from quetz.jobs.runner import Supervisor
 from quetz.tasks.indexing import update_indexes
@@ -27,41 +23,12 @@ from quetz.tasks.mirror import (
     handle_repodata_package,
     initial_sync_mirror,
 )
-from quetz.tasks.workers import AbstractWorker, job_wrapper, prepare_arguments
-
-
-class TestWorker(AbstractWorker):
-    "synchronous worker for testing"
-
-    def __init__(
-        self,
-        db,
-        dao: Dao,
-        session: requests.Session,
-        config: Config,
-    ):
-        self.db = db
-        self.dao = dao
-        self.session = session
-        self.config = config
-
-    def execute(self, func: Callable, *args, **kwargs):
-
-        resources = {
-            "db": self.db,
-            "dao": self.dao,
-            "session": self.session,
-            "pkgstore": self.config.get_package_store(),
-        }
-
-        extra_kwargs = prepare_arguments(func, **resources)
-        kwargs.update(extra_kwargs)
-        job_wrapper(func, self.config, *args, **kwargs)
+from quetz.testing.mockups import TestWorker
 
 
 @pytest.fixture
 def job_supervisor(db, config, dao, dummy_remote_session_object):
-    manager = TestWorker(db, dao, dummy_remote_session_object, config)
+    manager = TestWorker(config, db, dao, dummy_remote_session_object)
     supervisor = Supervisor(db, manager)
     return supervisor
 
