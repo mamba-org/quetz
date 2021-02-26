@@ -8,7 +8,7 @@ import time
 import uuid
 from abc import abstractmethod
 from multiprocessing import get_context
-from typing import Callable, Dict, Union
+from typing import Callable, Dict, Optional, Union
 
 from quetz.config import Config
 from quetz.jobs.models import Job, JobStatus, Task, TaskStatus
@@ -150,6 +150,7 @@ def job_wrapper(
         db = get_session(config.sqlalchemy_database_url)
         close_session = True
 
+    user_id: Optional[str]
     if task_id:
         task = db.query(Task).filter(Task.id == task_id).one_or_none()
         # take extra arguments from job definition
