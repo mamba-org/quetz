@@ -61,8 +61,8 @@ def redis_db():
 
 
 @pytest.fixture
-def threading_worker(background_tasks, dao, auth, http_session, config):
-    worker = ThreadingWorker(background_tasks, dao, auth, http_session, config)
+def threading_worker(config):
+    worker = ThreadingWorker(config)
     return worker
 
 

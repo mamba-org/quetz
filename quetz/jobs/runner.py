@@ -10,6 +10,7 @@ import sqlalchemy as sa
 
 from quetz.db_models import PackageVersion
 from quetz.jobs.models import ItemsSelection, Job, JobStatus, Task, TaskStatus
+from quetz.tasks.common import ACTION_HANDLERS
 
 logger = logging.getLogger('quetz.tasks')
 # manager = RQManager("127.0.0.1", 6379, 0, "", {}, config)
@@ -167,7 +168,7 @@ class Supervisor:
                     job.status = JobStatus.success
         db.commit()
 
-    def add_task_to_queue(self, db, manager, task, *args, func=None, **kwargs):
+    def add_task_to_queue(self, db, task, *args, func=None, **kwargs):
         """add task to the queue"""
 
         db = self.db
@@ -188,36 +189,37 @@ class Supervisor:
         """dispatch tasks"""
 
         db = self.db
-        manager = self.manager
 
-        tasks = (
-            db.query(Task)
-            .filter(Task.status == TaskStatus.created)
-            .filter(Task.package_version_id.isnot(None))
-        )
+        tasks = db.query(Task).filter(Task.status == TaskStatus.created)
         task: Task
         logger.info(f"Got pending tasks: {tasks.count()}")
         jobs = []
         for task in tasks:
             if not task.package_version:
-                # task was launched from actions
-                continue
-            version_dict = {
-                "filename": task.package_version.filename,
-                "channel_name": task.package_version.channel_name,
-                "package_format": task.package_version.package_format,
-                "platform": task.package_version.platform,
-                "version": task.package_version.version,
-                "build_string": task.package_version.build_string,
-                "build_number": task.package_version.build_number,
-                "size": task.package_version.size,
-                "package_name": task.package_version.package_name,
-                "info": task.package_version.info,
-                "uploader_id": task.package_version.uploader_id,
-            }
-            job = self.add_task_to_queue(
-                db, manager, task, package_version=version_dict
-            )
+                action_name = task.job.manifest.decode('ascii')
+                try:
+                    action_func = ACTION_HANDLERS[action_name]
+                except KeyError:
+                    logger.error(f"action {action_name} not known")
+                    continue
+                kwargs = {"func": action_func}
+            else:
+                kwargs = {
+                    'package_version': {
+                        "filename": task.package_version.filename,
+                        "channel_name": task.package_version.channel_name,
+                        "package_format": task.package_version.package_format,
+                        "platform": task.package_version.platform,
+                        "version": task.package_version.version,
+                        "build_string": task.package_version.build_string,
+                        "build_number": task.package_version.build_number,
+                        "size": task.package_version.size,
+                        "package_name": task.package_version.package_name,
+                        "info": task.package_version.info,
+                        "uploader_id": task.package_version.uploader_id,
+                    }
+                }
+            job = self.add_task_to_queue(db, task, **kwargs)
             jobs.append(job)
         db.commit()
         return jobs
@@ -235,11 +237,14 @@ class Supervisor:
                 task.status = TaskStatus.created
         self.db.commit()
 
+    def run_once(self):
+        self.run_jobs()
+        self.run_tasks()
+        self.check_status()
+
     def run(self):
         """main loop"""
 
         while True:
-            self.run_jobs()
-            self.run_tasks()
-            self.check_status()
+            self.run_once()
             time.sleep(5)

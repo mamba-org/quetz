@@ -11,10 +11,12 @@ import pytest
 from quetz.config import Config
 from quetz.dao import Dao
 from quetz.db_models import User
+from quetz.jobs.dao import JobsDao
 from quetz.jobs.models import Job, JobStatus, Task, TaskStatus
 from quetz.jobs.runner import Supervisor, mk_sql_expr, parse_conda_spec
 from quetz.rest_models import Channel, Package
 from quetz.tasks.workers import SubprocessWorker
+from quetz.testing.mockups import TestWorker
 
 pytest_plugins = ("pytest_asyncio",)
 
@@ -800,3 +802,31 @@ def test_get_user_jobs(auth_client, db, user, package_version, other_user):
     assert response.status_code == 200
     data = response.json()['result']
     assert len(data) == 1
+
+
+@pytest.fixture
+def action_task(db, user):
+    job_dao = JobsDao(db)
+    task = job_dao.create_task(b"test_action", user.id, extra_args={"my_arg": 1})
+    yield task
+    job = task.job
+
+    db.delete(task)
+    db.delete(job)
+    db.commit()
+
+
+@pytest.fixture
+def sync_supervisor(db, dao, config):
+    "supervisor with synchronous test worker"
+    manager = TestWorker(config, db, dao)
+    supervisor = Supervisor(db, manager)
+    return supervisor
+
+
+def test_run_action_handler(sync_supervisor, db, action_task, caplog, mocker):
+    func = mocker.Mock()
+    mocker.patch("quetz.jobs.runner.ACTION_HANDLERS", {"test_action": func})
+    sync_supervisor.run_once()
+    assert "ERROR" not in caplog.text
+    func.assert_called_with(my_arg=1)

@@ -1,20 +1,16 @@
 import asyncio
 import concurrent.futures
 import inspect
+import json
 import logging
 import pickle
 import time
 import uuid
 from abc import abstractmethod
 from multiprocessing import get_context
-from typing import Callable, Dict, Union
+from typing import Callable, Dict, Optional, Union
 
-import requests
-from fastapi import BackgroundTasks
-
-from quetz import authorization
 from quetz.config import Config
-from quetz.dao import Dao
 from quetz.jobs.models import Job, JobStatus, Task, TaskStatus
 
 try:
@@ -39,6 +35,31 @@ def prepare_arguments(func: Callable, **resources):
     return kwargs
 
 
+def get_worker(config, num_procs=None):
+    if config.configured_section("worker"):
+        worker = config.worker_type
+    else:
+        worker = "thread"
+    if worker == "thread":
+        worker = ThreadingWorker(config)
+    elif worker == "subprocess":
+        worker = SubprocessWorker(config, executor_args={'max_workers': num_procs})
+    elif worker == "redis":
+        if rq_available:
+            worker = RQManager(
+                config.worker_redis_ip,
+                config.worker_redis_port,
+                config.worker_redis_db,
+                config,
+            )
+        else:
+            raise ValueError("redis and rq not installed on machine")
+    else:
+        raise ValueError("wrong configuration in worker.type")
+    logger.debug(f"created worker of class {worker.__class__.__name__}")
+    return worker
+
+
 class WorkerProcess:
     def __init__(self, func, *args, **kwargs):
         self._exception = None
@@ -55,7 +76,7 @@ class WorkerProcess:
     def jobexecutor(conn, pickled_func, *args, **kwargs):
         """function executed in child process"""
         try:
-            job_wrapper(pickled_func, *args, **kwargs)
+            job_wrapper(pickled_func, *args, exc_passthrou=True, **kwargs)
         except Exception as exc:
             conn.send(exc)
             raise
@@ -92,6 +113,7 @@ def job_wrapper(
     func: Union[Callable, bytes],
     config,
     task_id=None,
+    exc_passthrou=False,
     **kwargs,
 ):
 
@@ -100,12 +122,18 @@ def job_wrapper(
     # This allows us to manage database connectivity prior
     # to running a job.
 
+    import logging
     import pickle
 
     from quetz.authorization import Rules
+    from quetz.config import configure_logger
     from quetz.dao import Dao
     from quetz.database import get_session
     from quetz.deps import get_remote_session
+
+    configure_logger(config)
+
+    logger = logging.getLogger("quetz.worker")
 
     pkgstore = kwargs.pop("pkgstore", None)
     db = kwargs.pop("db", None)
@@ -113,25 +141,39 @@ def job_wrapper(
     auth = kwargs.pop("auth", None)
     session = kwargs.pop("session", None)
 
-    if not db:
+    if db:
+        close_session = False
+    elif dao:
+        db = dao.db
+        close_session = False
+    else:
         db = get_session(config.sqlalchemy_database_url)
+        close_session = True
 
+    user_id: Optional[str]
     if task_id:
         task = db.query(Task).filter(Task.id == task_id).one_or_none()
+        # take extra arguments from job definition
+        if task.job.extra_args:
+            job_extra_args = json.loads(task.job.extra_args)
+            kwargs.update(job_extra_args)
+        if task.job.owner_id:
+            user_id = str(uuid.UUID(bytes=task.job.owner_id))
+        else:
+            user_id = None
     else:
         task = None
+        user_id = None
 
     if not pkgstore:
         pkgstore = config.get_package_store()
 
-    if not dao:
-        dao = Dao(db)
+    dao = Dao(db)
 
     if not auth:
         browser_session: Dict[str, str] = {}
         api_key = None
-        if task and task.job.owner_id:
-            user_id = str(uuid.UUID(bytes=task.job.owner_id))
+        if user_id:
             browser_session['user_id'] = user_id
         auth = Rules(api_key, browser_session, db)
     if not session:
@@ -151,6 +193,7 @@ def job_wrapper(
         session=session,
         config=config,
         pkgstore=pkgstore,
+        user_id=user_id,
     )
 
     kwargs.update(extra_kwargs)
@@ -160,7 +203,11 @@ def job_wrapper(
     except Exception as exc:
         if task:
             task.status = TaskStatus.failed
-        raise exc
+        logger.error(
+            f"exception occurred when evaluating function {callable_f.__name__}:{exc}"
+        )
+        if exc_passthrou:
+            raise exc
     else:
         if task:
             task.status = TaskStatus.success
@@ -194,6 +241,8 @@ def job_wrapper(
                 else:
                     task.job.status = JobStatus.success
             db.commit()
+
+        if close_session:
             db.close()
 
 
@@ -214,53 +263,6 @@ class AbstractJob:
     @abstractmethod
     def done(self):
         """job status"""
-
-
-class ThreadingWorker(AbstractWorker):
-    def __init__(
-        self,
-        background_tasks: BackgroundTasks,
-        dao: Dao,
-        auth: authorization.Rules,
-        session: requests.Session,
-        config: Config,
-    ):
-        self.dao = dao
-        self.auth = auth
-        self.background_tasks = background_tasks
-        self.session = session
-        self.config = config
-
-    def execute(self, func: Callable, *args, **kwargs):
-
-        resources = {
-            "dao": self.dao,
-            "auth": self.auth,
-            "session": self.session,
-            "pkgstore": self.config.get_package_store(),
-        }
-        dialect = self.dao.db.bind.name
-
-        if dialect == 'sqlite':
-            # sqlite is not thread safe so we can't reuse
-            # the db connection
-            # however we still want to reuse the patched db sessosion with sqlite-test
-            logger.debug("using sqlite backend - create a new connection for thread")
-            del resources['dao']
-
-        extra_kwargs = prepare_arguments(func, **resources)
-        kwargs.update(extra_kwargs)
-
-        self.background_tasks.add_task(
-            job_wrapper,
-            func,
-            self.config,
-            *args,
-            **kwargs,
-        )
-
-    async def wait(self):
-        await self.background_tasks()
 
 
 class FutureJob(AbstractJob):
@@ -292,8 +294,9 @@ class FutureJob(AbstractJob):
             raise self._future.exception()
 
 
-class SubprocessWorker(AbstractWorker):
+class PoolExecutorWorker(AbstractWorker):
     _executor = None
+    executor_cls: type
 
     def __init__(
         self,
@@ -301,27 +304,49 @@ class SubprocessWorker(AbstractWorker):
         executor_args: dict = {},
     ):
 
-        if 'max_workers' not in executor_args:
-            executor_args['max_workers'] = 2
-
         if self._executor is None:
-            logger.debug("creating a new subprocess executor")
-            SubprocessWorker._executor = concurrent.futures.ProcessPoolExecutor(
-                **executor_args
-            )
+            logger.debug(f"creating a new executor of class {self.executor_cls}")
+            type(self)._executor = self.executor_cls(**executor_args)
 
         self.config = config
         self.future = None
 
     def execute(self, func, *args, **kwargs):
-        process = WorkerProcess(func, self.config, *args, **kwargs)
-        self.future = self._executor.submit(process)
+
+        self.future = self._executor.submit(
+            job_wrapper, func, self.config, *args, **kwargs
+        )
         return FutureJob(self.future)
 
     async def wait(self):
+        "helper function mainly used in tests"
         loop = asyncio.get_event_loop()
         if self.future:
             return await loop.run_in_executor(None, self.future.result)
+
+
+class ThreadingWorker(PoolExecutorWorker):
+    """simple worker that runs jobs in threads"""
+
+    executor_cls = concurrent.futures.ThreadPoolExecutor
+
+
+class SubprocessWorker(PoolExecutorWorker):
+    """subprocess worker runs each job in a subprocess and destroys it after
+    the job is finished to release resources
+    """
+
+    executor_cls = concurrent.futures.ProcessPoolExecutor
+
+    def __init__(self, config: Config, executor_args: dict = {}):
+        if 'max_workers' not in executor_args:
+            executor_args['max_workers'] = 2
+        super().__init__(config, executor_args)
+
+    def execute(self, func, *args, **kwargs):
+        process = WorkerProcess(func, self.config, *args, **kwargs)
+        self.future = self._executor.submit(process)
+        return FutureJob(self.future)
 
 
 class RQManager(AbstractWorker):

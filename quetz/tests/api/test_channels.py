@@ -1,3 +1,4 @@
+import uuid
 from pathlib import Path
 from unittest.mock import ANY
 
@@ -134,7 +135,9 @@ def test_permissions_channel_endpoints(
     "channel_role,expected_code",
     [("owner", 200), ("maintainer", 200), ("member", 403), (None, 403)],
 )
-def test_channel_action_reindex(auth_client, public_channel, expected_code, action):
+def test_channel_action_reindex(
+    auth_client, public_channel, expected_code, action, user
+):
 
     response = auth_client.put(
         f"/api/channels/{public_channel.name}/actions", json={"action": action}
@@ -154,6 +157,18 @@ def test_channel_action_reindex(auth_client, public_channel, expected_code, acti
         return
 
     job_id = task['job_id']
+
+    response = auth_client.get(f"/api/jobs/{job_id}")
+    assert response.status_code == 200
+    job_data = response.json()
+    assert job_data == {
+        "created": ANY,
+        "id": job_id,
+        "items_spec": None,
+        "manifest": action,
+        "owner_id": str(uuid.UUID(bytes=user.id)),
+        "status": "pending",
+    }
 
     response = auth_client.get(
         f"/api/jobs/{job_id}/tasks?"

@@ -8,9 +8,21 @@ from quetz.metrics import tasks as metrics_tasks
 from quetz.rest_models import ChannelActionEnum
 
 from . import assertions, cleanup, indexing, mirror, reindexing
-from .workers import AbstractWorker
 
 logger = logging.getLogger("quetz")
+
+ACTION_HANDLERS = {
+    "synchronize": mirror.synchronize_packages,
+    "synchronize_repodata": mirror.synchronize_packages,
+    "validate_packages": indexing.validate_packages,
+    "generate_indexes": indexing.update_indexes,
+    "reindex": reindexing.reindex_packages_from_store,
+    "synchronize_metrics": metrics_tasks.synchronize_metrics_from_mirrors,
+    "pkgstore_cleanup": cleanup.cleanup_channel_db,
+    "db_cleanup": cleanup.cleanup_temp_files,
+    "pkgstore_cleanup_dry_run": cleanup.cleanup_channel_db,
+    "db_cleanup_dry_run": cleanup.cleanup_temp_files,
+}
 
 
 def assert_channel_action(action, channel):
@@ -44,13 +56,11 @@ class Task:
     def __init__(
         self,
         auth: authorization.Rules,
-        worker: AbstractWorker,
         db,
     ):
         from quetz.deps import get_config
 
         self.auth = auth
-        self.worker = worker
         self.db = db
         self.jobs_dao = JobsDao(db)
         self.dao = dao.Dao(db)
@@ -67,91 +77,65 @@ class Task:
 
         if action == ChannelActionEnum.synchronize:
             auth.assert_synchronize_mirror(channel_name)
-            task = self.jobs_dao.create_task(action.encode('ascii'), user_id)
-            self.worker.execute(
-                mirror.synchronize_packages,
+            extra_args = dict(
                 channel_name=channel_name,
                 includelist=channel_metadata.get('includelist', None),
                 excludelist=channel_metadata.get('excludelist', None),
-                task_id=task.id,
+            )
+            task = self.jobs_dao.create_task(
+                action.encode('ascii'), user_id, extra_args=extra_args
             )
         elif action == ChannelActionEnum.synchronize_repodata:
             auth.assert_synchronize_mirror(channel_name)
-            task = self.jobs_dao.create_task(action.encode('ascii'), user_id)
-            self.worker.execute(
-                mirror.synchronize_packages,
+            extra_args = dict(
                 channel_name=channel_name,
                 use_repodata=True,
                 includelist=channel_metadata.get('includelist', None),
                 excludelist=channel_metadata.get('excludelist', None),
-                task_id=task.id,
+            )
+            task = self.jobs_dao.create_task(
+                action.encode('ascii'), user_id, extra_args=extra_args
             )
         elif action == ChannelActionEnum.validate_packages:
             auth.assert_validate_package_cache(channel_name)
-            task = self.jobs_dao.create_task(action.encode('ascii'), user_id)
-            self.worker.execute(
-                indexing.validate_packages,
-                channel_name=channel.name,
-                task_id=task.id,
+            extra_args = dict(channel_name=channel.name)
+            task = self.jobs_dao.create_task(
+                action.encode('ascii'), user_id, extra_args=extra_args
             )
         elif action == ChannelActionEnum.generate_indexes:
             auth.assert_reindex_channel(channel_name)
-            task = self.jobs_dao.create_task(action.encode('ascii'), user_id)
-            self.worker.execute(
-                indexing.update_indexes, channel_name=channel.name, task_id=task.id
+            extra_args = dict(channel_name=channel.name)
+            task = self.jobs_dao.create_task(
+                action.encode('ascii'), user_id, extra_args=extra_args
             )
         elif action == ChannelActionEnum.reindex:
             auth.assert_reindex_channel(channel_name)
-            task = self.jobs_dao.create_task(action.encode('ascii'), user_id)
-            self.worker.execute(
-                reindexing.reindex_packages_from_store,
+            extra_args = dict(
                 channel_name=channel_name,
-                user_id=user_id,
-                task_id=task.id,
+            )
+            task = self.jobs_dao.create_task(
+                action.encode('ascii'), user_id, extra_args=extra_args
             )
         elif action == ChannelActionEnum.synchronize_metrics:
             auth.assert_reindex_channel(channel_name)
-            task = self.jobs_dao.create_task(action.encode('ascii'), user_id)
-            self.worker.execute(
-                metrics_tasks.synchronize_metrics_from_mirrors,
-                channel_name=channel_name,
-                task_id=task.id,
+            extra_args = dict(channel_name=channel.name)
+            task = self.jobs_dao.create_task(
+                action.encode('ascii'), user_id, extra_args=extra_args
             )
-        elif action == ChannelActionEnum.cleanup:
+        elif action in [ChannelActionEnum.cleanup, ChannelActionEnum.cleanup_dry_run]:
             auth.assert_channel_db_cleanup(channel_name)
-            task = self.jobs_dao.create_task(f"db_{action}".encode('ascii'), user_id)
-            self.worker.execute(
-                cleanup.cleanup_channel_db,
+            dry_run = action == ChannelActionEnum.cleanup_dry_run
+            extra_args = dict(
                 channel_name=channel_name,
-                dry_run=False,
-                task_id=task.id,
+                dry_run=dry_run,
             )
             task = self.jobs_dao.create_task(
-                f"pkgstore_{action}".encode('ascii'), user_id
-            )
-            self.worker.execute(
-                cleanup.cleanup_temp_files,
-                channel=channel_name,
-                dry_run=False,
-                task_id=task.id,
-            )
-        elif action == ChannelActionEnum.cleanup_dry_run:
-            auth.assert_channel_db_cleanup(channel_name)
-            task = self.jobs_dao.create_task(f"db_{action}".encode('ascii'), user_id)
-            self.worker.execute(
-                cleanup.cleanup_channel_db,
-                channel_name=channel_name,
-                dry_run=True,
-                task_id=task.id,
+                f"db_{action}".encode('ascii'), user_id, extra_args=extra_args
             )
             task = self.jobs_dao.create_task(
-                f"pkgstore_{action}".encode('ascii'), user_id
-            )
-            self.worker.execute(
-                cleanup.cleanup_temp_files,
-                channel=channel_name,
-                dry_run=True,
-                task_id=task.id,
+                f"pkgstore_{action}".encode('ascii'),
+                user_id,
+                extra_args=extra_args,
             )
         else:
             raise HTTPException(

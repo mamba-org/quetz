@@ -493,8 +493,8 @@ def start(
             "Enable/disable automatic reloading of the server when sources are modified"
         ),
     ),
-    start_supervisor: bool = typer.Option(
-        False,
+    supervisor: bool = typer.Option(
+        True,
         help="Start job supervisor with quetz",
     ),
 ) -> NoReturn:
@@ -517,7 +517,7 @@ def start(
         )
         raise typer.Abort()
 
-    if start_supervisor:
+    if supervisor:
         logger.info("starting supervisor")
         ctx = get_context("spawn")
         supervisor_process = ctx.Process(
@@ -540,7 +540,7 @@ def start(
             log_level=log_level,
         )
 
-    if start_supervisor:
+    if supervisor:
         supervisor_process.terminate()
         supervisor_process.join()
 
@@ -654,11 +654,11 @@ def plugin(
 
 def start_supervisor_daemon(path, num_procs=None):
     from quetz.jobs.runner import Supervisor
-    from quetz.tasks.workers import SubprocessWorker
+    from quetz.tasks.workers import get_worker
 
     configure_logger(loggers=("quetz",))
     config = _get_config(path)
-    manager = SubprocessWorker(config, {'max_workers': num_procs})
+    manager = get_worker(config, num_procs=num_procs)
     with working_directory(path):
         db = get_session(config.sqlalchemy_database_url)
         supervisor = Supervisor(db, manager)
