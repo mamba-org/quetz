@@ -66,7 +66,7 @@ class Job(Base):
         default=JobStatus.pending,
     )
 
-    tasks = sa.orm.relationship('Task', cascade="all,delete-orphan")
+    tasks = sa.orm.relationship('Task', cascade="all,delete-orphan", uselist=True)
 
 
 class Task(Base):

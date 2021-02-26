@@ -12,14 +12,7 @@ from quetz.config import Config
 from quetz.dao import Dao
 from quetz.db_models import User
 from quetz.jobs.models import Job, JobStatus, Task, TaskStatus
-from quetz.jobs.runner import (
-    _process_cache,
-    check_status,
-    mk_sql_expr,
-    parse_conda_spec,
-    run_jobs,
-    run_tasks,
-)
+from quetz.jobs.runner import Supervisor, mk_sql_expr, parse_conda_spec
 from quetz.rest_models import Channel, Package
 from quetz.tasks.workers import SubprocessWorker
 
@@ -140,12 +133,18 @@ def public_package(db, user, public_channel, dao, package_role, package_name):
 @pytest.fixture
 def manager(config, db):
 
-    manager = SubprocessWorker("", {}, config)
+    manager = SubprocessWorker(config)
     yield manager
     manager._executor.shutdown()
     SubprocessWorker._executor = None
     db.query(Job).delete()
     db.commit()
+
+
+@pytest.fixture
+def supervisor(db, config, manager):
+    supervisor = Supervisor(db, manager)
+    return supervisor
 
 
 def test_create_task(db, user, package_version):
@@ -174,14 +173,14 @@ def dummy_func(package_version: dict):
 
 
 @pytest.mark.asyncio
-async def test_create_job(db, user, package_version, manager):
+async def test_create_job(db, user, package_version, supervisor):
 
     func_serialized = pickle.dumps(func)
     job = Job(owner_id=user.id, manifest=func_serialized, items_spec="*")
     db.add(job)
     db.commit()
-    run_jobs(db)
-    new_jobs = run_tasks(db, manager)
+    supervisor.run_jobs()
+    new_jobs = supervisor.run_tasks()
     db.refresh(job)
     task = db.query(Task).one()
 
@@ -192,7 +191,7 @@ async def test_create_job(db, user, package_version, manager):
     # wait for job to finish
     await new_jobs[0].wait()
 
-    check_status(db)
+    supervisor.check_status()
 
     db.refresh(task)
     assert task.status == TaskStatus.success
@@ -204,20 +203,20 @@ async def test_create_job(db, user, package_version, manager):
 
 @pytest.mark.asyncio
 async def test_run_tasks_only_on_new_versions(
-    db, user, package_version, manager, dao, channel_name, package_name
+    db, user, package_version, dao, channel_name, package_name, supervisor
 ):
 
     func_serialized = pickle.dumps(dummy_func)
     job = Job(owner_id=user.id, manifest=func_serialized, items_spec="*")
     db.add(job)
     db.commit()
-    run_jobs(db)
-    new_jobs = run_tasks(db, manager)
+    supervisor.run_jobs()
+    new_jobs = supervisor.run_tasks()
     db.refresh(job)
     task = db.query(Task).one()
 
     await new_jobs[0].wait()
-    check_status(db)
+    supervisor.check_status()
     db.refresh(task)
     db.refresh(job)
     assert task.status == TaskStatus.success
@@ -225,9 +224,9 @@ async def test_run_tasks_only_on_new_versions(
 
     job.status = JobStatus.pending
     db.commit()
-    run_jobs(db)
-    new_jobs = run_tasks(db, manager)
-    check_status(db)
+    supervisor.run_jobs()
+    new_jobs = supervisor.run_tasks()
+    supervisor.check_status()
     db.refresh(job)
     assert not new_jobs
     assert job.status == JobStatus.success
@@ -237,8 +236,8 @@ async def test_run_tasks_only_on_new_versions(
 
     job.status = JobStatus.pending
     db.commit()
-    run_jobs(db)
-    new_jobs = run_tasks(db, manager)
+    supervisor.run_jobs()
+    new_jobs = supervisor.run_tasks()
     assert len(new_jobs) == 1
     assert job.status == JobStatus.running
     assert len(job.tasks) == 2
@@ -247,22 +246,22 @@ async def test_run_tasks_only_on_new_versions(
 
     # force rerunning
     job.status = JobStatus.pending
-    run_jobs(db, force=True)
+    supervisor.run_jobs(force=True)
     db.refresh(job)
-    new_jobs = run_tasks(db, manager)
+    new_jobs = supervisor.run_tasks()
     assert len(job.tasks) == 4
     assert len(new_jobs) == 2
 
 
 @pytest.mark.asyncio
-async def test_running_task(db, user, package_version, manager):
+async def test_running_task(db, user, package_version, supervisor):
 
     func_serialized = pickle.dumps(long_running)
     job = Job(owner_id=user.id, manifest=func_serialized, items_spec="*")
     db.add(job)
     db.commit()
-    run_jobs(db)
-    processes = run_tasks(db, manager)
+    supervisor.run_jobs()
+    processes = supervisor.run_tasks()
     db.refresh(job)
     task = db.query(Task).one()
 
@@ -283,22 +282,22 @@ async def test_running_task(db, user, package_version, manager):
     # wait for job to finish
     await processes[0].wait()
 
-    check_status(db)
+    supervisor.check_status()
 
     db.refresh(task)
     assert task.status == TaskStatus.success
 
 
 @pytest.mark.asyncio
-async def test_restart_worker_process(db, user, package_version, manager, caplog):
+async def test_restart_worker_process(db, user, package_version, supervisor, caplog):
     # test if we can resume jobs if a worker was killed/restarted
     func_serialized = pickle.dumps(long_running)
 
     job = Job(owner_id=user.id, manifest=func_serialized, items_spec="*")
     db.add(job)
     db.commit()
-    run_jobs(db)
-    run_tasks(db, manager)
+    supervisor.run_jobs()
+    supervisor.run_tasks()
     db.refresh(job)
     task = db.query(Task).one()
 
@@ -317,22 +316,22 @@ async def test_restart_worker_process(db, user, package_version, manager, caplog
     db.refresh(task)
     assert task.status == TaskStatus.running
 
-    _process_cache.clear()
+    supervisor._process_cache.clear()
 
-    check_status(db)
+    supervisor.check_status()
     assert task.status == TaskStatus.created
     assert "lost" in caplog.text
 
-    new_processes = run_tasks(db, manager)
+    new_processes = supervisor.run_tasks()
     db.refresh(task)
 
     assert len(new_processes) == 1
     assert task.status == TaskStatus.pending
 
-    more_processes = run_tasks(db, manager)
+    more_processes = supervisor.run_tasks()
     await new_processes[0].wait()
-    even_more_processes = run_tasks(db, manager)
-    check_status(db)
+    even_more_processes = supervisor.run_tasks()
+    supervisor.check_status()
     db.refresh(task)
     assert not more_processes
     assert not even_more_processes
@@ -340,19 +339,19 @@ async def test_restart_worker_process(db, user, package_version, manager, caplog
 
 
 @pytest.mark.asyncio
-async def test_failed_task(db, user, package_version, manager):
+async def test_failed_task(db, user, package_version, supervisor):
 
     func_serialized = pickle.dumps(failed_func)
     job = Job(owner_id=user.id, manifest=func_serialized, items_spec="*")
     db.add(job)
     db.commit()
-    run_jobs(db)
-    new_jobs = run_tasks(db, manager)
+    supervisor.run_jobs()
+    new_jobs = supervisor.run_tasks()
     task = db.query(Task).one()
     with pytest.raises(Exception, match="some exception"):
         await new_jobs[0].wait()
 
-    check_status(db)
+    supervisor.check_status()
 
     db.refresh(task)
     assert task.status == TaskStatus.failed
@@ -362,18 +361,16 @@ async def test_failed_task(db, user, package_version, manager):
 
 
 @pytest.mark.parametrize("items_spec", ["", None])
-def test_empty_package_spec(db, user, package_version, caplog, items_spec):
+def test_empty_package_spec(db, user, package_version, caplog, items_spec, supervisor):
 
     func_serialized = pickle.dumps(func)
     job = Job(owner_id=user.id, manifest=func_serialized, items_spec=items_spec)
     db.add(job)
     db.commit()
-    run_jobs(db)
+    supervisor.run_jobs()
     db.refresh(job)
     task = db.query(Task).one_or_none()
 
-    assert "empty" in caplog.text
-    # could be job triggered from actions so we don't change state
     assert job.status == JobStatus.pending
     assert task is None
 
@@ -514,7 +511,7 @@ def test_parse_conda_spec():
         ("*", 1),
     ],
 )
-def test_filter_versions(db, user, package_version, spec, n_tasks, manager):
+def test_filter_versions(db, user, package_version, spec, n_tasks, supervisor):
 
     func_serialized = pickle.dumps(func)
     job = Job(
@@ -524,8 +521,8 @@ def test_filter_versions(db, user, package_version, spec, n_tasks, manager):
     )
     db.add(job)
     db.commit()
-    run_jobs(db)
-    run_tasks(db, manager)
+    supervisor.run_jobs()
+    supervisor.run_tasks()
     db.refresh(job)
     n_created_tasks = db.query(Task).count()
 
@@ -533,7 +530,7 @@ def test_filter_versions(db, user, package_version, spec, n_tasks, manager):
 
 
 @pytest.mark.parametrize("user_role", ["owner"])
-def test_refresh_job(auth_client, user, db, package_version, manager):
+def test_refresh_job(auth_client, user, db, package_version, supervisor):
 
     func_serialized = pickle.dumps(dummy_func)
     job = Job(
@@ -558,14 +555,15 @@ def test_refresh_job(auth_client, user, db, package_version, manager):
     assert job.status == JobStatus.pending
     assert len(job.tasks) == 1
 
-    run_jobs(db)
-    check_status(db)
+    supervisor.run_jobs()
+    supervisor.check_status()
     assert job.status == JobStatus.success
     assert len(job.tasks) == 1
 
     response = auth_client.patch(
         f"/api/jobs/{job.id}", json={"status": "pending", "force": True}
     )
+    supervisor.run_jobs()
     db.refresh(job)
     assert job.status == JobStatus.running
     assert len(job.tasks) == 2

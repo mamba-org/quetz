@@ -69,7 +69,7 @@ def threading_worker(background_tasks, dao, auth, http_session, config):
 @pytest.fixture
 def subprocess_worker(api_key, browser_session, db, config):
     SubprocessWorker._executor = None
-    worker = SubprocessWorker(api_key, browser_session, config)
+    worker = SubprocessWorker(config)
     return worker
 
 
@@ -79,8 +79,6 @@ def redis_worker(redis_ip, redis_port, redis_db, api_key, browser_session, db, c
         redis_ip,
         redis_port,
         redis_db,
-        api_key,
-        browser_session,
         config,
         no_testing=False,
     )

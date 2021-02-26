@@ -4,9 +4,10 @@ import inspect
 import logging
 import pickle
 import time
+import uuid
 from abc import abstractmethod
 from multiprocessing import get_context
-from typing import Callable, Union
+from typing import Callable, Dict, Union
 
 import requests
 from fastapi import BackgroundTasks
@@ -89,8 +90,6 @@ class WorkerProcess:
 
 def job_wrapper(
     func: Union[Callable, bytes],
-    api_key,
-    browser_session,
     config,
     task_id=None,
     **kwargs,
@@ -114,21 +113,29 @@ def job_wrapper(
     auth = kwargs.pop("auth", None)
     session = kwargs.pop("session", None)
 
-    if not pkgstore:
-        pkgstore = config.get_package_store()
     if not db:
         db = get_session(config.sqlalchemy_database_url)
-    if not dao:
-        dao = Dao(db)
-    if not auth:
-        auth = Rules(api_key, browser_session, db)
-    if not session:
-        session = get_remote_session()
 
     if task_id:
         task = db.query(Task).filter(Task.id == task_id).one_or_none()
     else:
         task = None
+
+    if not pkgstore:
+        pkgstore = config.get_package_store()
+
+    if not dao:
+        dao = Dao(db)
+
+    if not auth:
+        browser_session: Dict[str, str] = {}
+        api_key = None
+        if task and task.job.owner_id:
+            user_id = str(uuid.UUID(bytes=task.job.owner_id))
+            browser_session['user_id'] = user_id
+        auth = Rules(api_key, browser_session, db)
+    if not session:
+        session = get_remote_session()
 
     if task:
         task.status = TaskStatus.running
@@ -247,8 +254,6 @@ class ThreadingWorker(AbstractWorker):
         self.background_tasks.add_task(
             job_wrapper,
             func,
-            self.auth.API_key,
-            self.auth.session,
             self.config,
             *args,
             **kwargs,
@@ -292,8 +297,6 @@ class SubprocessWorker(AbstractWorker):
 
     def __init__(
         self,
-        api_key: str,
-        browser_session: dict,
         config: Config,
         executor_args: dict = {},
     ):
@@ -307,15 +310,11 @@ class SubprocessWorker(AbstractWorker):
                 **executor_args
             )
 
-        self.api_key = api_key
-        self.browser_session = browser_session
         self.config = config
         self.future = None
 
     def execute(self, func, *args, **kwargs):
-        process = WorkerProcess(
-            func, self.api_key, self.browser_session, self.config, *args, **kwargs
-        )
+        process = WorkerProcess(func, self.config, *args, **kwargs)
         self.future = self._executor.submit(process)
         return FutureJob(self.future)
 
@@ -331,16 +330,12 @@ class RQManager(AbstractWorker):
         host,
         port,
         db,
-        api_key: str,
-        browser_session: dict,
         config: Config,
         no_testing=True,
     ):
         self.host = host
         self.port = port
         self.db = db
-        self.api_key = api_key
-        self.browser_session = browser_session
         self.config = config
         self.conn = redis.StrictRedis(host=self.host, port=self.port, db=self.db)
         self.queue = Queue(connection=self.conn, is_async=no_testing)
@@ -349,8 +344,6 @@ class RQManager(AbstractWorker):
         self.job = self.queue.enqueue(
             job_wrapper,
             func,
-            self.api_key,
-            self.browser_session,
             self.config,
             *args,
             **kwargs,

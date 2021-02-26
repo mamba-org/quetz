@@ -104,15 +104,13 @@ def get_tasks_worker(
     if worker == "thread":
         worker = ThreadingWorker(background_tasks, dao, auth, session, config)
     elif worker == "subprocess":
-        worker = SubprocessWorker(auth.API_key, auth.session, config)
+        worker = SubprocessWorker(config)
     elif worker == "redis":
         if rq_available:
             worker = RQManager(
                 config.worker_redis_ip,
                 config.worker_redis_port,
                 config.worker_redis_db,
-                auth.API_key,
-                auth.session,
                 config,
             )
         else:

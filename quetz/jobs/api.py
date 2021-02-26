@@ -18,7 +18,6 @@ from quetz.rest_models import PaginatedResponse
 
 from .models import JobStatus, TaskStatus
 from .rest_models import Job, JobBase, JobUpdateModel, Task
-from .runner import run_jobs
 
 api_router = APIRouter()
 
@@ -97,9 +96,13 @@ def update_job(
     auth.assert_jobs(owner_id=job.owner_id)
     job.status = job_data.status  # type: ignore
 
-    # ignore tasks that have already been run
-    if job_data.force:
-        run_jobs(db, job_id=job.id, force=True)
+    if job_data.force and job.status in [
+        JobStatus.running,
+        JobStatus.pending,
+    ]:
+        # restart tasks that have already been run
+        for task in job.tasks:
+            task.status = "skipped"
 
     db.commit()
 

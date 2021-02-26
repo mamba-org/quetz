@@ -3,6 +3,7 @@
 
 import logging
 import re
+import time
 from typing import Dict, List
 
 import sqlalchemy as sa
@@ -10,11 +11,8 @@ import sqlalchemy as sa
 from quetz.db_models import PackageVersion
 from quetz.jobs.models import ItemsSelection, Job, JobStatus, Task, TaskStatus
 
-logger = logging.getLogger('quetz-cli')
+logger = logging.getLogger('quetz.tasks')
 # manager = RQManager("127.0.0.1", 6379, 0, "", {}, config)
-
-
-_process_cache = {}
 
 
 def build_queue(job):
@@ -105,116 +103,143 @@ def build_sql_from_package_spec(selector: str):
     return sql_expr
 
 
-def run_jobs(db, job_id=None, force=False):
-    jobs = db.query(Job).filter(Job.status == JobStatus.pending)
-    if job_id:
-        jobs = jobs.filter(Job.id == job_id)
-    for job in jobs:
-        if job.items == ItemsSelection.all:
-            if force:
-                q = db.query(PackageVersion)
-            else:
-                existing_task = (
-                    db.query(Task.package_version_id, Task.id.label("task_id"))
-                    .filter(Task.job_id == job.id)
-                    .subquery()
-                )
-                q = (
-                    db.query(PackageVersion)
-                    .outerjoin(
-                        existing_task,
-                        PackageVersion.id == existing_task.c.package_version_id,
+class Supervisor:
+    """Watches for new jobs and dispatches tasks."""
+
+    def __init__(self, db, manager):
+        self.db = db
+        self.manager = manager
+        self._process_cache = {}
+        pass
+
+    def run_jobs(self, job_id=None, force=False):
+        db = self.db
+        jobs = db.query(Job).filter(Job.status == JobStatus.pending)
+        if job_id:
+            jobs = jobs.filter(Job.id == job_id)
+        for job in jobs:
+            if job.items == ItemsSelection.all:
+                if force:
+                    q = db.query(PackageVersion)
+                else:
+                    existing_task = (
+                        db.query(Task.package_version_id, Task.id.label("task_id"))
+                        .filter(Task.job_id == job.id)
+                        .filter(Task.status != TaskStatus.skipped)
+                        .subquery()
                     )
-                    .filter(existing_task.c.task_id.is_(None))
-                )
-        else:
-            raise NotImplementedError(f"selection {job.items} is not implemented")
+                    q = (
+                        db.query(PackageVersion)
+                        .outerjoin(
+                            existing_task,
+                            PackageVersion.id == existing_task.c.package_version_id,
+                        )
+                        .filter(existing_task.c.task_id.is_(None))
+                    )
+            else:
+                raise NotImplementedError(f"selection {job.items} is not implemented")
 
-        if job.items_spec:
-            try:
-                filter_expr = build_sql_from_package_spec(job.items_spec)
-            except Exception as e:
-                logger.error(f"got error when parsing package spec: {e}")
-                job.status = JobStatus.failed
-                continue
-            q = q.filter(filter_expr)
-        else:
-            logger.warning("empty package spec returns no results")
-            # it might be also job created in actions
-            # so skipping here
-            continue
-
-        job.status = JobStatus.running
-
-        task = None
-        for version in q:
-            task = Task(job=job, package_version=version)
-            db.add(task)
-        if not task:
-            logger.warning(
-                f"no versions matching the package spec {job.items_spec}. skipping."
-            )
             if job.items_spec:
-                # actions have no related package versions
-                job.status = JobStatus.success
-    db.commit()
+                try:
+                    filter_expr = build_sql_from_package_spec(job.items_spec)
+                except Exception as e:
+                    logger.error(f"got error when parsing package spec: {e}")
+                    job.status = JobStatus.failed
+                    continue
+                q = q.filter(filter_expr)
+            else:
+                # it might be also job created in actions
+                # so skipping here
+                continue
 
+            job.status = JobStatus.running
 
-def add_task_to_queue(db, manager, task, *args, func=None, **kwargs):
-    """add task to the queue"""
+            task = None
+            for version in q:
+                task = Task(job=job, package_version=version)
+                db.add(task)
+            if not task:
+                logger.warning(
+                    f"no versions matching the package spec {job.items_spec}. skipping."
+                )
+                if job.items_spec:
+                    # actions have no related package versions
+                    job.status = JobStatus.success
+        db.commit()
 
-    if func is None:
-        func = task.job.manifest
-    task.status = TaskStatus.pending
-    task.job.status = JobStatus.running
-    db.add(task)
-    db.commit()
-    job = manager.execute(func, *args, task_id=task.id, **kwargs)
-    _process_cache[task.id] = job
-    return job
+    def add_task_to_queue(self, db, manager, task, *args, func=None, **kwargs):
+        """add task to the queue"""
 
+        db = self.db
+        manager = self.manager
+        _process_cache = self._process_cache
 
-def run_tasks(db, manager):
+        if func is None:
+            func = task.job.manifest
+        task.status = TaskStatus.pending
+        task.job.status = JobStatus.running
+        db.add(task)
+        db.commit()
+        job = manager.execute(func, *args, task_id=task.id, **kwargs)
+        _process_cache[task.id] = job
+        return job
 
-    tasks = (
-        db.query(Task)
-        .filter(Task.status == TaskStatus.created)
-        .filter(Task.package_version_id.isnot(None))
-    )
-    task: Task
-    logger.info(f"Got pending tasks: {tasks.count()}")
-    jobs = []
-    for task in tasks:
-        if not task.package_version:
-            # task was launched from actions
-            continue
-        version_dict = {
-            "filename": task.package_version.filename,
-            "channel_name": task.package_version.channel_name,
-            "package_format": task.package_version.package_format,
-            "platform": task.package_version.platform,
-            "version": task.package_version.version,
-            "build_string": task.package_version.build_string,
-            "build_number": task.package_version.build_number,
-            "size": task.package_version.size,
-            "package_name": task.package_version.package_name,
-            "info": task.package_version.info,
-            "uploader_id": task.package_version.uploader_id,
-        }
-        job = add_task_to_queue(db, manager, task, package_version=version_dict)
-        jobs.append(job)
-    db.commit()
-    return jobs
+    def run_tasks(self):
+        """dispatch tasks"""
 
+        db = self.db
+        manager = self.manager
 
-def check_status(db):
-    tasks = (
-        db.query(Task)
-        .filter(Task.status.in_([TaskStatus.running, TaskStatus.pending]))
-        .filter(Task.package_version_id.isnot(None))
-    )
-    for task in tasks:
-        if task.id not in _process_cache:
-            logger.warning(f"running process for task {task} is lost, restarting")
-            task.status = TaskStatus.created
-    db.commit()
+        tasks = (
+            db.query(Task)
+            .filter(Task.status == TaskStatus.created)
+            .filter(Task.package_version_id.isnot(None))
+        )
+        task: Task
+        logger.info(f"Got pending tasks: {tasks.count()}")
+        jobs = []
+        for task in tasks:
+            if not task.package_version:
+                # task was launched from actions
+                continue
+            version_dict = {
+                "filename": task.package_version.filename,
+                "channel_name": task.package_version.channel_name,
+                "package_format": task.package_version.package_format,
+                "platform": task.package_version.platform,
+                "version": task.package_version.version,
+                "build_string": task.package_version.build_string,
+                "build_number": task.package_version.build_number,
+                "size": task.package_version.size,
+                "package_name": task.package_version.package_name,
+                "info": task.package_version.info,
+                "uploader_id": task.package_version.uploader_id,
+            }
+            job = self.add_task_to_queue(
+                db, manager, task, package_version=version_dict
+            )
+            jobs.append(job)
+        db.commit()
+        return jobs
+
+    def check_status(self):
+
+        tasks = (
+            self.db.query(Task)
+            .filter(Task.status.in_([TaskStatus.running, TaskStatus.pending]))
+            .filter(Task.package_version_id.isnot(None))
+        )
+        for task in tasks:
+            if task.id not in self._process_cache:
+                logger.warning(f"running process for task {task} is lost, restarting")
+                task.status = TaskStatus.created
+        self.db.commit()
+
+    def run(self):
+        """main loop"""
+
+        while True:
+            self.run_jobs()
+            self.run_tasks()
+            self.check_status()
+            time.sleep(5)
