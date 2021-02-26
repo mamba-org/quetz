@@ -455,6 +455,8 @@ def get_logger_config(config, loggers):
         "timestamp": {"format": '%(asctime)s %(levelname)s %(name)s  %(message)s'},
     }
 
+    curdir = os.getcwd()
+
     LOG_HANDLERS = {
         "console": {
             "class": "logging.StreamHandler",
@@ -465,7 +467,7 @@ def get_logger_config(config, loggers):
         "file": {
             "class": "logging.FileHandler",
             "formatter": "timestamp",
-            "filename": filename or "quetz.log",
+            "filename": filename or os.path.join(curdir, "quetz.log"),
             "level": log_level,
         },
     }

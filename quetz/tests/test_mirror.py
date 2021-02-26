@@ -5,10 +5,10 @@ from io import BytesIO
 from pathlib import Path
 from typing import Callable
 from unittest.mock import MagicMock
+from urllib.parse import urlparse
 
 import pytest
 import requests
-from urllib.parse import urlparse
 
 from quetz import hookimpl, rest_models
 from quetz.authorization import Rules

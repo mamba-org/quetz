@@ -654,11 +654,11 @@ def plugin(
 
 def start_supervisor_daemon(path, num_procs=None):
     from quetz.jobs.runner import Supervisor
-    from quetz.tasks.workers import SubprocessWorker
+    from quetz.tasks.workers import get_worker
 
     configure_logger(loggers=("quetz",))
     config = _get_config(path)
-    manager = SubprocessWorker(config, {'max_workers': num_procs})
+    manager = get_worker(config, num_procs=num_procs)
     with working_directory(path):
         db = get_session(config.sqlalchemy_database_url)
         supervisor = Supervisor(db, manager)
