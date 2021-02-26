@@ -168,7 +168,7 @@ class Supervisor:
                     job.status = JobStatus.success
         db.commit()
 
-    def add_task_to_queue(self, db, manager, task, *args, func=None, **kwargs):
+    def add_task_to_queue(self, db, task, *args, func=None, **kwargs):
         """add task to the queue"""
 
         db = self.db
@@ -189,7 +189,6 @@ class Supervisor:
         """dispatch tasks"""
 
         db = self.db
-        manager = self.manager
 
         tasks = db.query(Task).filter(Task.status == TaskStatus.created)
         task: Task
@@ -220,7 +219,7 @@ class Supervisor:
                         "uploader_id": task.package_version.uploader_id,
                     }
                 }
-            job = self.add_task_to_queue(db, manager, task, **kwargs)
+            job = self.add_task_to_queue(db, task, **kwargs)
             jobs.append(job)
         db.commit()
         return jobs
@@ -238,11 +237,14 @@ class Supervisor:
                 task.status = TaskStatus.created
         self.db.commit()
 
+    def run_once(self):
+        self.run_jobs()
+        self.run_tasks()
+        self.check_status()
+
     def run(self):
         """main loop"""
 
         while True:
-            self.run_jobs()
-            self.run_tasks()
-            self.check_status()
+            self.run_once()
             time.sleep(5)

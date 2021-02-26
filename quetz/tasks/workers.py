@@ -40,6 +40,31 @@ def prepare_arguments(func: Callable, **resources):
     return kwargs
 
 
+def get_worker(config):
+    if config.configured_section("worker"):
+        worker = config.worker_type
+    else:
+        worker = "thread"
+    if worker == "thread":
+        worker = ThreadingWorker(background_tasks, dao, auth, session, config)
+    elif worker == "subprocess":
+        worker = SubprocessWorker(config)
+    elif worker == "redis":
+        if rq_available:
+            worker = RQManager(
+                config.worker_redis_ip,
+                config.worker_redis_port,
+                config.worker_redis_db,
+                config,
+            )
+        else:
+            raise ValueError("redis and rq not installed on machine")
+    else:
+        raise ValueError("wrong configuration in worker.type")
+    logger.debug(f"created worker of class {worker.__class__.__name__}")
+    return worker
+
+
 class WorkerProcess:
     def __init__(self, func, *args, **kwargs):
         self._exception = None
@@ -117,8 +142,14 @@ def job_wrapper(
     auth = kwargs.pop("auth", None)
     session = kwargs.pop("session", None)
 
-    if not db:
+    if db:
+        close_session = False
+    elif dao:
+        db = dao.db
+        close_session = False
+    else:
         db = get_session(config.sqlalchemy_database_url)
+        close_session = True
 
     if task_id:
         task = db.query(Task).filter(Task.id == task_id).one_or_none()
@@ -137,8 +168,7 @@ def job_wrapper(
     if not pkgstore:
         pkgstore = config.get_package_store()
 
-    if not dao:
-        dao = Dao(db)
+    dao = Dao(db)
 
     if not auth:
         browser_session: Dict[str, str] = {}
@@ -207,6 +237,8 @@ def job_wrapper(
                 else:
                     task.job.status = JobStatus.success
             db.commit()
+
+        if close_session:
             db.close()
 
 

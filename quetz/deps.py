@@ -90,28 +90,6 @@ def get_tasks_worker(
     config: Config = Depends(get_config),
 ) -> Task:
 
-    # if config.configured_section("worker"):
-    #    worker = config.worker_type
-    # else:
-    #    worker = "thread"
-
-    # if worker == "thread":
-    #    worker = ThreadingWorker(background_tasks, dao, auth, session, config)
-    # elif worker == "subprocess":
-    #    worker = SubprocessWorker(config)
-    # elif worker == "redis":
-    #    if rq_available:
-    #        worker = RQManager(
-    #            config.worker_redis_ip,
-    #            config.worker_redis_port,
-    #            config.worker_redis_db,
-    #            config,
-    #        )
-    #    else:
-    #        raise ValueError("redis and rq not installed on machine")
-    # else:
-    #    raise ValueError("wrong configuration in worker.type")
-    # logger.debug(f"created worker of class {worker.__class__.__name__}")
     return Task(auth, dao.db)
 
 

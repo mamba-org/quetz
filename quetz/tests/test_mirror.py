@@ -3,14 +3,20 @@ import os
 import uuid
 from io import BytesIO
 from pathlib import Path
+from typing import Callable
 from unittest.mock import MagicMock
 
 import pytest
+import requests
+from urllib.parse import urlparse
 
 from quetz import hookimpl, rest_models
 from quetz.authorization import Rules
 from quetz.condainfo import CondaInfo
+from quetz.config import Config
+from quetz.dao import Dao
 from quetz.db_models import Channel, Package, PackageVersion, User
+from quetz.jobs.runner import Supervisor
 from quetz.tasks.indexing import update_indexes
 from quetz.tasks.mirror import (
     KNOWN_SUBDIRS,
@@ -21,6 +27,43 @@ from quetz.tasks.mirror import (
     handle_repodata_package,
     initial_sync_mirror,
 )
+from quetz.tasks.workers import AbstractWorker, job_wrapper, prepare_arguments
+
+
+class TestWorker(AbstractWorker):
+    "synchronous worker for testing"
+
+    def __init__(
+        self,
+        db,
+        dao: Dao,
+        session: requests.Session,
+        config: Config,
+    ):
+        self.db = db
+        self.dao = dao
+        self.session = session
+        self.config = config
+
+    def execute(self, func: Callable, *args, **kwargs):
+
+        resources = {
+            "db": self.db,
+            "dao": self.dao,
+            "session": self.session,
+            "pkgstore": self.config.get_package_store(),
+        }
+
+        extra_kwargs = prepare_arguments(func, **resources)
+        kwargs.update(extra_kwargs)
+        job_wrapper(func, self.config, *args, **kwargs)
+
+
+@pytest.fixture
+def job_supervisor(db, config, dao, dummy_remote_session_object):
+    manager = TestWorker(db, dao, dummy_remote_session_object, config)
+    supervisor = Supervisor(db, manager)
+    return supervisor
 
 
 @pytest.fixture
@@ -87,6 +130,19 @@ def status_code():
     return 200
 
 
+class DummyResponse:
+    def __init__(self, content, status_code=200):
+        if isinstance(content, Path):
+            with open(content.absolute(), "rb") as fid:
+                content = fid.read()
+        self.raw = BytesIO(content)
+        self.headers = {"content-type": "application/json"}
+        self.status_code = status_code
+
+    def close(self):
+        pass
+
+
 @pytest.fixture
 def dummy_response(repo_content, status_code):
     if isinstance(repo_content, list):
@@ -115,27 +171,49 @@ def dummy_response(repo_content, status_code):
 
 
 @pytest.fixture
-def dummy_repo(app, dummy_response):
+def dummy_remote_session_object(app, dummy_response, repo_content, status_code):
+
+    if isinstance(repo_content, list):
+        repo_content = repo_content.copy()
 
     from quetz.main import get_remote_session
 
-    files = []
-
     class DummySession:
+        files = []
+
         def get(self, path, stream=False):
             if path.startswith("http://fantasy_host"):
                 raise RemoteServerError()
-            files.append(path)
-            return dummy_response()
+
+            self.files.append(path)
+            if isinstance(repo_content, dict):
+                parts = urlparse(path)
+                content = repo_content[parts.path]
+            elif isinstance(repo_content, list):
+                content = repo_content.pop(0)
+            else:
+                content = repo_content
+
+            if isinstance(status_code, list):
+                code = status_code.pop(0)
+            else:
+                code = status_code
+
+            return DummyResponse(content, code)
 
         def close(self):
             pass
 
     app.dependency_overrides[get_remote_session] = DummySession
 
-    yield files
+    return DummySession()
 
     app.dependency_overrides.pop(get_remote_session)
+
+
+@pytest.fixture
+def dummy_repo(dummy_remote_session_object):
+    return dummy_remote_session_object.files
 
 
 @pytest.fixture
@@ -634,7 +712,7 @@ def test_api_methods_for_mirror_channels(client, mirror_channel):
         ),
     ],
 )
-def test_mirror_initial_sync(client, dummy_repo, owner, expected_paths):
+def test_mirror_initial_sync(client, dummy_repo, owner, expected_paths, job_supervisor):
 
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -650,6 +728,7 @@ def test_mirror_initial_sync(client, dummy_repo, owner, expected_paths):
         },
     )
     assert response.status_code == 201
+    job_supervisor.run_once()
 
     assert dummy_repo == [os.path.join(host, p) for p in expected_paths]
 
@@ -735,7 +814,7 @@ empty_archive = b""
         ]
     ],
 )
-def test_wrong_package_format(client, dummy_repo, owner):
+def test_wrong_package_format(client, dummy_repo, owner, job_supervisor):
 
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -753,6 +832,8 @@ def test_wrong_package_format(client, dummy_repo, owner):
     )
 
     assert response.status_code == 201
+
+    job_supervisor.run_once()
 
     assert dummy_repo == [
         "http://mirror3_host/channeldata.json",
@@ -860,7 +941,9 @@ def test_disabled_methods_for_mirror_channels(
         (b'{"subdirs":["wonder-arch"], "packages":{}}', 200, ["wonder-arch"]),
     ],
 )
-def test_repo_without_channeldata(owner, client, dummy_repo, expected_archs):
+def test_repo_without_channeldata(
+    owner, client, dummy_repo, expected_archs, job_supervisor
+):
 
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -874,6 +957,8 @@ def test_repo_without_channeldata(owner, client, dummy_repo, expected_archs):
             "mirror_mode": "mirror",
         },
     )
+
+    job_supervisor.run_once()
 
     assert dummy_repo[0] == "http://mirror3_host/channeldata.json"
     for arch in expected_archs:
@@ -906,12 +991,30 @@ def test_sync_mirror_channel(mirror_channel, user, client, dummy_repo):
     assert response.status_code == 200
 
 
+BTEL_REPODATA = b"""
+{"info":{"platform":"linux","arch":"x86_64","subdir":"linux-64"},"packages":{"nrnpython-7.3-0.tar.bz2":{"build_number":0,"name":"nrnpython","requires":[],"platform":"linux","depends":[],"version":"7.3","build":"0","md5":"6286273402de01d408fc042c22c4eaf9","arch":"x86_64","size":5726829},"test-package-0.1-0.tar.bz2":{"timestamp":1599839787252,"depends":[],"arch":"x86_64","size":2630,"build_number":0,"name":"test-package","platform":"linux","version":"0.1","build":"0","md5":"83db5a378ba1997aa0bb05f60721ffd7","requires":[],"subdir":"linux-64"},"test-package-0.2-0.tar.bz2":{"timestamp":1599839787300,"depends":[],"arch":"x86_64","size":2692,"build_number":0,"name":"test-package","platform":"linux","version":"0.2","build":"0","md5":"33107eeed8011e2d8a97a569366ae7ed","requires":[],"subdir":"linux-64"}}}
+"""
+
+
 @pytest.mark.parametrize(
-    "package_list_type, expected_package",
+    "repo_content",
+    [
+        {
+            "/btel/channeldata.json": b'{"subdirs": ["linux-64"]}',
+            "/btel/linux-64/repodata_from_packages.json": b'<html/>',
+            "/btel/linux-64/repodata.json": BTEL_REPODATA,
+            "/btel/linux-64/test-package-0.1-0.tar.bz2": DUMMY_PACKAGE,
+            "/btel/linux-64/test-package-0.2-0.tar.bz2": DUMMY_PACKAGE_V2,
+            "/btel/linux-64/nrnpython-7.3-0.tar.bz2": OTHER_DUMMY_PACKAGE,
+        }
+    ],
+)
+@pytest.mark.parametrize(
+    "package_list_type,expected_package",
     [("includelist", "nrnpython"), ("excludelist", "test-package")],
 )
 def test_packagelist_mirror_channel(
-    owner, client, package_list_type, expected_package, db
+    owner, client, package_list_type, expected_package, db, job_supervisor
 ):
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -927,6 +1030,7 @@ def test_packagelist_mirror_channel(
         },
     )
     assert response.status_code == 201
+    job_supervisor.run_once()
 
     response = client.get("/api/channels/mirror-channel-btel/packages")
     assert response.status_code == 200
