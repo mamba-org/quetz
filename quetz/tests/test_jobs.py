@@ -318,9 +318,9 @@ async def test_restart_worker_process(db, user, package_version, supervisor, cap
     db.refresh(task)
     assert task.status == TaskStatus.running
 
-    supervisor._process_cache.clear()
+    # simulate restart
+    supervisor = Supervisor(db, supervisor.manager)
 
-    supervisor.check_status()
     assert task.status == TaskStatus.created
     assert "lost" in caplog.text
 

@@ -7,6 +7,7 @@ import time
 from typing import Dict, List
 
 import sqlalchemy as sa
+from sqlalchemy.sql import func
 
 from quetz.db_models import PackageVersion
 from quetz.jobs.models import ItemsSelection, Job, JobStatus, Task, TaskStatus
@@ -111,6 +112,7 @@ class Supervisor:
         self.db = db
         self.manager = manager
         self._process_cache = {}
+        self._reset_tasks_after_restart()
         pass
 
     def run_jobs(self, job_id=None, force=False):
@@ -224,18 +226,43 @@ class Supervisor:
         db.commit()
         return jobs
 
-    def check_status(self):
+    def _reset_tasks_after_restart(self):
 
-        tasks = (
+        # tasks lost after restart
+        n_updated = (
             self.db.query(Task)
             .filter(Task.status.in_([TaskStatus.running, TaskStatus.pending]))
             .filter(Task.package_version_id.isnot(None))
+            .update({Task.status: TaskStatus.created}, synchronize_session=False)
         )
-        for task in tasks:
-            if task.id not in self._process_cache:
-                logger.warning(f"running process for task {task} is lost, restarting")
-                task.status = TaskStatus.created
         self.db.commit()
+
+        if n_updated > 0:
+            logger.warning(
+                f"restarting {n_updated} tasks lost due to supervisor restart"
+            )
+
+    def _update_running_jobs(self):
+        """Update status of running jobs."""
+        task_done = Task.status.in_([TaskStatus.failed, TaskStatus.success])
+        results = (
+            self.db.query(
+                Task.job_id, func.max(Task.status == TaskStatus.failed).label("failed")
+            )
+            .join(Job)
+            .filter(Job.status == JobStatus.running)
+            .group_by(Task.job_id)
+            .having(func.max(task_done) == 1)
+            .all()
+        )
+        for job_id, failed in results:
+            self.db.query(Job).filter(Job.id == job_id).update(
+                {Job.status: JobStatus.failed if failed else JobStatus.success}
+            )
+        self.db.commit()
+
+    def check_status(self):
+        self._update_running_jobs()
 
     def run_once(self):
         self.run_jobs()

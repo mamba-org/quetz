@@ -11,7 +11,7 @@ from multiprocessing import get_context
 from typing import Callable, Dict, Optional, Union
 
 from quetz.config import Config
-from quetz.jobs.models import Job, JobStatus, Task, TaskStatus
+from quetz.jobs.models import JobStatus, Task, TaskStatus
 
 try:
     import redis
@@ -213,35 +213,6 @@ def job_wrapper(
             task.status = TaskStatus.success
     finally:
         db.commit()
-
-        if task:
-
-            running_tasks = (
-                db.query(Task.status)
-                .join(Job)
-                .filter(Job.id == task.job_id)
-                .filter(
-                    Task.status.in_(
-                        [TaskStatus.running, TaskStatus.pending, TaskStatus.created]
-                    )
-                )
-                .first()
-            )
-
-            if not running_tasks:
-                failed_task = (
-                    db.query(Task.status)
-                    .join(Job)
-                    .filter(Job.id == task.job_id)
-                    .filter(Task.status == TaskStatus.failed)
-                    .first()
-                )
-                if failed_task:
-                    task.job.status = JobStatus.failed
-                else:
-                    task.job.status = JobStatus.success
-            db.commit()
-
         if close_session:
             db.close()
 
