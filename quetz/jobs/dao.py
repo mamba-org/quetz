@@ -1,6 +1,6 @@
 import json
 
-from quetz.jobs.models import Job, Task
+from quetz.jobs.models import Job, JobStatus, Task
 
 
 class JobsDao:
@@ -12,7 +12,12 @@ class JobsDao:
             extra_args_json = json.dumps(extra_args)
         else:
             extra_args_json = None
-        job = Job(manifest=job_manifest, owner_id=user_id, extra_args=extra_args_json)
+        job = Job(
+            manifest=job_manifest,
+            owner_id=user_id,
+            extra_args=extra_args_json,
+            status=JobStatus.running,
+        )
         task = Task(job=job)
         self.db.add(job)
         self.db.add(task)

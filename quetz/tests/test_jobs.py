@@ -2,7 +2,7 @@ import os
 import pickle
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest import mock
 
@@ -363,10 +363,8 @@ async def test_failed_task(db, user, package_version, supervisor):
     assert job.status == JobStatus.failed
 
 
-@pytest.mark.parametrize("items_spec", ["", None])
+@pytest.mark.parametrize("items_spec", [""])
 def test_empty_package_spec(db, user, package_version, caplog, items_spec, supervisor):
-    # pending job without tasks and start_at and repeat values should be automatically
-    # success
 
     func_serialized = pickle.dumps(func)
     job = Job(owner_id=user.id, manifest=func_serialized, items_spec=items_spec)
@@ -446,8 +444,15 @@ def test_mk_query():
 
     assert sql_expr == ("lower(package_versions.package_name) LIKE lower('my-%')")
 
+    spec = [{"package_name": ("like", "*")}]
+    sql_expr = compile(spec)
+
+    assert sql_expr == ("lower(package_versions.package_name) LIKE lower('%')")
+
 
 def test_parse_conda_spec():
+    dict_spec = parse_conda_spec("*")
+    assert dict_spec == [{"package_name": ("like", "*")}]
 
     dict_spec = parse_conda_spec("my-package==0.1.1")
     assert dict_spec == [
@@ -930,3 +935,33 @@ def test_run_action_after_delay(sync_supervisor, db, action_job, mock_action, mo
     sync_supervisor.run_once()
     assert len(action_job.tasks) == 1
     assert action_job.status == JobStatus.success
+
+
+@pytest.mark.parametrize("start_date", [datetime(1960, 1, 1, 10, 0, 0), None])
+def test_run_periodic_action(
+    sync_supervisor, db, action_job, mock_action, mocker, start_date
+):
+
+    action_job.repeat_every_seconds = 10
+    action_job.start_date = start_date
+    now = datetime.utcnow()
+    delta = timedelta(seconds=11)
+
+    db.commit()
+
+    sync_supervisor.run_once()
+
+    assert len(action_job.tasks) == 1
+    assert action_job.status == JobStatus.pending
+
+    sync_supervisor.run_once()
+
+    assert len(action_job.tasks) == 1
+    assert action_job.status == JobStatus.pending
+
+    mock_datetime = mocker.patch("quetz.jobs.runner.datetime")
+    mock_datetime.utcnow.return_value = now + delta
+
+    sync_supervisor.run_once()
+    assert len(action_job.tasks) == 2
+    assert action_job.status == JobStatus.pending

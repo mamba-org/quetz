@@ -4,7 +4,7 @@
 import logging
 import re
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List
 
 import sqlalchemy as sa
@@ -23,7 +23,8 @@ def build_queue(job):
 
 
 def parse_conda_spec(conda_spec: str):
-    pattern = r'(\w[^ =<>!~]+)([><!=~,\.0-9]+[0-9])?'
+
+    pattern = r'([a-zA-Z\*][^ =<>!~]*)([><!=~,\.0-9]+[0-9])?'
     exprs_list = re.findall(pattern, conda_spec)
 
     package_specs = []
@@ -87,6 +88,9 @@ def mk_sql_expr(dict_spec: List[Dict]):
         else:
             raise NotImplementedError(f"operator '{op}' not known")
 
+    if not dict_spec:
+        return False
+
     or_elements = []
     for el in dict_spec:
         and_elements = []
@@ -147,7 +151,8 @@ class Supervisor:
                 raise NotImplementedError(f"selection {job.items} is not implemented")
 
             task = None
-            if job.items_spec:
+            if job.items_spec is not None:
+                # it's a per-package job
                 try:
                     filter_expr = build_sql_from_package_spec(job.items_spec)
                 except Exception as e:
@@ -165,20 +170,23 @@ class Supervisor:
                         f"No versions matching the package spec {job.items_spec}. "
                         f"Skipping  job {job.id}."
                     )
+                    job.status = JobStatus.success
+                else:
+                    job.status = JobStatus.running
 
             else:
                 # it's a channel action job
-                if job.tasks:
-                    task = job.tasks[0]
-                else:
+                if not job.tasks or (
+                    job.repeat_every_seconds
+                    and (job.updated + timedelta(seconds=job.repeat_every_seconds))
+                    < now
+                ):
                     task = Task(job=job)
                     db.add(task)
+                    job.updated = now
+                    job.status = JobStatus.running
 
-            if not task:
-                job.status = JobStatus.success
-            else:
-                job.status = JobStatus.running
-        db.commit()
+            db.commit()
 
     def add_task_to_queue(self, db, task, *args, func=None, **kwargs):
         """add task to the queue"""
