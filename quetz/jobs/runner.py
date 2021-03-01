@@ -120,6 +120,35 @@ class Supervisor:
         self._reset_tasks_after_restart()
         pass
 
+    def _select_package_versions(self, job, force=False):
+        db = self.db
+
+        if job.items == ItemsSelection.all:
+            if force:
+                q = db.query(PackageVersion)
+            else:
+                existing_task = (
+                    db.query(Task.package_version_id, Task.id.label("task_id"))
+                    .filter(Task.job_id == job.id)
+                    .filter(Task.status != TaskStatus.skipped)
+                    .subquery()
+                )
+                q = (
+                    db.query(PackageVersion)
+                    .outerjoin(
+                        existing_task,
+                        PackageVersion.id == existing_task.c.package_version_id,
+                    )
+                    .filter(existing_task.c.task_id.is_(None))
+                )
+        else:
+            raise NotImplementedError(f"selection {job.items} is not implemented")
+
+        filter_expr = build_sql_from_package_spec(job.items_spec)
+        q = q.filter(filter_expr)
+
+        return q
+
     def run_jobs(self, job_id=None, force=False):
         now = datetime.utcnow()
         db = self.db
@@ -129,58 +158,41 @@ class Supervisor:
         for job in jobs:
             if job.start_at and job.start_at > now:
                 continue
-            if job.items == ItemsSelection.all:
-                if force:
-                    q = db.query(PackageVersion)
-                else:
-                    existing_task = (
-                        db.query(Task.package_version_id, Task.id.label("task_id"))
-                        .filter(Task.job_id == job.id)
-                        .filter(Task.status != TaskStatus.skipped)
-                        .subquery()
-                    )
-                    q = (
-                        db.query(PackageVersion)
-                        .outerjoin(
-                            existing_task,
-                            PackageVersion.id == existing_task.c.package_version_id,
-                        )
-                        .filter(existing_task.c.task_id.is_(None))
-                    )
-            else:
-                raise NotImplementedError(f"selection {job.items} is not implemented")
 
-            task = None
+            should_repeat = (
+                job.repeat_every_seconds
+                and (job.updated + timedelta(seconds=job.repeat_every_seconds)) < now
+            )
+
             if job.items_spec is not None:
-                # it's a per-package job
-                try:
-                    filter_expr = build_sql_from_package_spec(job.items_spec)
-                except Exception as e:
-                    logger.error(f"got error when parsing package spec: {e}")
-                    job.status = JobStatus.failed
-                    continue
-                q = q.filter(filter_expr)
+                # it's a "package-version job"
 
+                try:
+                    force = force or should_repeat
+                    q = self._select_package_versions(job, force=force)
+                except Exception as e:
+                    job.status = JobStatus.failed
+                    logger.error(f"got error when parsing package spec: {e}")
+                    continue
+
+                task = None
                 for version in q:
                     task = Task(job=job, package_version=version)
                     db.add(task)
 
-                if not task:
-                    logger.warning(
-                        f"No versions matching the package spec {job.items_spec}. "
-                        f"Skipping  job {job.id}."
+                if not task and not job.repeat_every_seconds:
+                    logger.info(
+                        f"No new versions matching the package spec {job.items_spec}. "
+                        f"Skipping job {job.id}."
                     )
                     job.status = JobStatus.success
                 else:
                     job.status = JobStatus.running
+                    job.updated = now
 
             else:
-                # it's a channel action job
-                if not job.tasks or (
-                    job.repeat_every_seconds
-                    and (job.updated + timedelta(seconds=job.repeat_every_seconds))
-                    < now
-                ):
+                # it's a "channel action job"
+                if not job.tasks or should_repeat:
                     task = Task(job=job)
                     db.add(task)
                     job.updated = now

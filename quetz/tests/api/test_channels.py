@@ -143,20 +143,23 @@ def test_channel_action_reindex(
         f"/api/channels/{public_channel.name}/actions", json={"action": action}
     )
 
+    job_id = 1
+
     assert response.status_code == expected_code
     if expected_code == 200:
-        task = response.json()
-        assert task == {
-            "job_id": ANY,
-            'created': ANY,
-            'id': ANY,
-            'package_version': {},
-            'status': 'created',
+        job_data = response.json()
+        assert job_data == {
+            "created": ANY,
+            "id": job_id,
+            "items_spec": None,
+            "manifest": action,
+            "owner_id": str(uuid.UUID(bytes=user.id)),
+            "status": "running",
+            "repeat_every_seconds": None,
+            "start_at": None,
         }
     else:
         return
-
-    job_id = task['job_id']
 
     response = auth_client.get(f"/api/jobs/{job_id}")
     assert response.status_code == 200
@@ -167,7 +170,9 @@ def test_channel_action_reindex(
         "items_spec": None,
         "manifest": action,
         "owner_id": str(uuid.UUID(bytes=user.id)),
-        "status": "pending",
+        "status": "running",
+        "repeat_every_seconds": None,
+        "start_at": None,
     }
 
     response = auth_client.get(
@@ -181,10 +186,10 @@ def test_channel_action_reindex(
     assert all_tasks == [
         {
             "job_id": job_id,
-            'created': task['created'],
-            'id': task['id'],
+            'created': ANY,
+            'id': 1,
             'package_version': {},
-            'status': ANY,
+            'status': 'created',
         }
     ]
 

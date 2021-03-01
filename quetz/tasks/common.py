@@ -1,4 +1,6 @@
 import logging
+from datetime import datetime
+from typing import Optional
 
 from fastapi import HTTPException, status
 
@@ -66,7 +68,13 @@ class Task:
         self.dao = dao.Dao(db)
         self.pkgstore = get_config().get_package_store()
 
-    def execute_channel_action(self, action: str, channel: db_models.Channel):
+    def execute_channel_action(
+        self,
+        action: str,
+        channel: db_models.Channel,
+        start_at: Optional[datetime] = None,
+        repeat_every_seconds: Optional[int] = None,
+    ):
         auth = self.auth
 
         channel_name = channel.name
@@ -83,7 +91,11 @@ class Task:
                 excludelist=channel_metadata.get('excludelist', None),
             )
             task = self.jobs_dao.create_task(
-                action.encode('ascii'), user_id, extra_args=extra_args
+                action.encode('ascii'),
+                user_id,
+                extra_args=extra_args,
+                start_at=start_at,
+                repeat_every_seconds=repeat_every_seconds,
             )
         elif action == ChannelActionEnum.synchronize_repodata:
             auth.assert_synchronize_mirror(channel_name)
@@ -94,19 +106,31 @@ class Task:
                 excludelist=channel_metadata.get('excludelist', None),
             )
             task = self.jobs_dao.create_task(
-                action.encode('ascii'), user_id, extra_args=extra_args
+                action.encode('ascii'),
+                user_id,
+                extra_args=extra_args,
+                start_at=start_at,
+                repeat_every_seconds=repeat_every_seconds,
             )
         elif action == ChannelActionEnum.validate_packages:
             auth.assert_validate_package_cache(channel_name)
             extra_args = dict(channel_name=channel.name)
             task = self.jobs_dao.create_task(
-                action.encode('ascii'), user_id, extra_args=extra_args
+                action.encode('ascii'),
+                user_id,
+                extra_args=extra_args,
+                start_at=start_at,
+                repeat_every_seconds=repeat_every_seconds,
             )
         elif action == ChannelActionEnum.generate_indexes:
             auth.assert_reindex_channel(channel_name)
             extra_args = dict(channel_name=channel.name)
             task = self.jobs_dao.create_task(
-                action.encode('ascii'), user_id, extra_args=extra_args
+                action.encode('ascii'),
+                user_id,
+                extra_args=extra_args,
+                start_at=start_at,
+                repeat_every_seconds=repeat_every_seconds,
             )
         elif action == ChannelActionEnum.reindex:
             auth.assert_reindex_channel(channel_name)
@@ -114,13 +138,21 @@ class Task:
                 channel_name=channel_name,
             )
             task = self.jobs_dao.create_task(
-                action.encode('ascii'), user_id, extra_args=extra_args
+                action.encode('ascii'),
+                user_id,
+                extra_args=extra_args,
+                start_at=start_at,
+                repeat_every_seconds=repeat_every_seconds,
             )
         elif action == ChannelActionEnum.synchronize_metrics:
             auth.assert_reindex_channel(channel_name)
             extra_args = dict(channel_name=channel.name)
             task = self.jobs_dao.create_task(
-                action.encode('ascii'), user_id, extra_args=extra_args
+                action.encode('ascii'),
+                user_id,
+                extra_args=extra_args,
+                start_at=start_at,
+                repeat_every_seconds=repeat_every_seconds,
             )
         elif action in [ChannelActionEnum.cleanup, ChannelActionEnum.cleanup_dry_run]:
             auth.assert_channel_db_cleanup(channel_name)
@@ -130,12 +162,18 @@ class Task:
                 dry_run=dry_run,
             )
             task = self.jobs_dao.create_task(
-                f"db_{action}".encode('ascii'), user_id, extra_args=extra_args
+                f"db_{action}".encode('ascii'),
+                user_id,
+                extra_args=extra_args,
+                start_at=start_at,
+                repeat_every_seconds=repeat_every_seconds,
             )
             task = self.jobs_dao.create_task(
                 f"pkgstore_{action}".encode('ascii'),
                 user_id,
                 extra_args=extra_args,
+                start_at=start_at,
+                repeat_every_seconds=repeat_every_seconds,
             )
         else:
             raise HTTPException(

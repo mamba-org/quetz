@@ -836,6 +836,18 @@ def action_job(db, user):
 
 
 @pytest.fixture
+def package_version_job(db, user, package_version):
+    func_serialized = pickle.dumps(dummy_func)
+    job = Job(owner=user, manifest=func_serialized, items_spec="*")
+    db.add(job)
+    db.commit()
+    yield job
+
+    db.delete(job)
+    db.commit()
+
+
+@pytest.fixture
 def sync_supervisor(db, dao, config):
     "supervisor with synchronous test worker"
     manager = TestWorker(config, db, dao)
@@ -965,3 +977,42 @@ def test_run_periodic_action(
     sync_supervisor.run_once()
     assert len(action_job.tasks) == 2
     assert action_job.status == JobStatus.pending
+
+    sync_supervisor.run_once()
+    assert len(action_job.tasks) == 2
+    assert action_job.status == JobStatus.pending
+
+
+@pytest.mark.parametrize("start_date", [datetime(1960, 1, 1, 10, 0, 0), None])
+def test_run_periodic_package_version_job(
+    sync_supervisor, db, package_version_job, mocker, start_date
+):
+    package_version_job.repeat_every_seconds = 10
+    package_version_job.start_date = start_date
+
+    now = datetime.utcnow()
+    delta = timedelta(seconds=11)
+
+    db.commit()
+
+    sync_supervisor.run_once()
+
+    assert len(package_version_job.tasks) == 1
+    assert package_version_job.tasks[0].status == TaskStatus.success
+    assert package_version_job.status == JobStatus.pending
+
+    sync_supervisor.run_once()
+    assert len(package_version_job.tasks) == 1
+    assert package_version_job.tasks[0].status == TaskStatus.success
+    assert package_version_job.status == JobStatus.pending
+
+    mock_datetime = mocker.patch("quetz.jobs.runner.datetime")
+    mock_datetime.utcnow.return_value = now + delta
+
+    sync_supervisor.run_once()
+    assert len(package_version_job.tasks) == 2
+    assert package_version_job.status == JobStatus.pending
+
+    sync_supervisor.run_once()
+    assert len(package_version_job.tasks) == 2
+    assert package_version_job.status == JobStatus.pending

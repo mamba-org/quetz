@@ -2,6 +2,7 @@ import logging
 import pickle
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, Field, validator
 
@@ -32,6 +33,17 @@ class Job(JobBase):
     created: datetime = Field(None, title='Created at')
 
     status: JobStatus = Field(None, title='Status of the job (running, paused, ...)')
+
+    start_at: Optional[str] = Field(
+        None, title="date and time the job should start, if None it starts immediately"
+    )
+    repeat_every_seconds: Optional[int] = Field(
+        None,
+        title=(
+            "interval in seconds at which the job should be repeated, "
+            "if None it is a one-off job"
+        ),
+    )
 
     @validator("manifest", pre=True)
     def convert_name(cls, v):

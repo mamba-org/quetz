@@ -618,7 +618,7 @@ def delete_channel(
 
 
 @api_router.put(
-    "/channels/{channel_name}/actions", tags=["channels"], response_model=jobs_rest.Task
+    "/channels/{channel_name}/actions", tags=["channels"], response_model=jobs_rest.Job
 )
 def put_mirror_channel_actions(
     action: rest_models.ChannelAction,
@@ -627,8 +627,13 @@ def put_mirror_channel_actions(
     task: Task = Depends(get_tasks_worker),
 ):
 
-    new_task = task.execute_channel_action(action.action, channel)
-    return new_task
+    new_task = task.execute_channel_action(
+        action.action,
+        channel,
+        start_at=action.start_at,
+        repeat_every_seconds=action.repeat_every_seconds,
+    )
+    return new_task.job
 
 
 @api_router.post("/channels", status_code=201, tags=["channels"])
@@ -720,7 +725,10 @@ def post_channel(
             logger.warning(f"could not register mirror due to error {response.text}")
 
     for action in actions:
-        task.execute_channel_action(action, channel)
+        task.execute_channel_action(
+            action,
+            channel,
+        )
 
 
 @api_router.patch(
