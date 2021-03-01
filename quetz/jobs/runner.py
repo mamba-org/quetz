@@ -4,6 +4,7 @@
 import logging
 import re
 import time
+from datetime import datetime
 from typing import Dict, List
 
 import sqlalchemy as sa
@@ -116,11 +117,14 @@ class Supervisor:
         pass
 
     def run_jobs(self, job_id=None, force=False):
+        now = datetime.utcnow()
         db = self.db
         jobs = db.query(Job).filter(Job.status == JobStatus.pending)
         if job_id:
             jobs = jobs.filter(Job.id == job_id)
         for job in jobs:
+            if job.start_at and job.start_at > now:
+                continue
             if job.items == ItemsSelection.all:
                 if force:
                     q = db.query(PackageVersion)
@@ -142,6 +146,7 @@ class Supervisor:
             else:
                 raise NotImplementedError(f"selection {job.items} is not implemented")
 
+            task = None
             if job.items_spec:
                 try:
                     filter_expr = build_sql_from_package_spec(job.items_spec)
@@ -150,24 +155,29 @@ class Supervisor:
                     job.status = JobStatus.failed
                     continue
                 q = q.filter(filter_expr)
+
+                for version in q:
+                    task = Task(job=job, package_version=version)
+                    db.add(task)
+
+                if not task:
+                    logger.warning(
+                        f"No versions matching the package spec {job.items_spec}. "
+                        f"Skipping  job {job.id}."
+                    )
+
             else:
-                # it might be also job created in actions
-                # so skipping here
-                continue
+                # it's a channel action job
+                if job.tasks:
+                    task = job.tasks[0]
+                else:
+                    task = Task(job=job)
+                    db.add(task)
 
-            job.status = JobStatus.running
-
-            task = None
-            for version in q:
-                task = Task(job=job, package_version=version)
-                db.add(task)
             if not task:
-                logger.warning(
-                    f"no versions matching the package spec {job.items_spec}. skipping."
-                )
-                if job.items_spec:
-                    # actions have no related package versions
-                    job.status = JobStatus.success
+                job.status = JobStatus.success
+            else:
+                job.status = JobStatus.running
         db.commit()
 
     def add_task_to_queue(self, db, task, *args, func=None, **kwargs):
@@ -243,22 +253,35 @@ class Supervisor:
             )
 
     def _update_running_jobs(self):
-        """Update status of running jobs."""
+        """Update status of running/pending jobs."""
+
         task_done = Task.status.in_([TaskStatus.failed, TaskStatus.success])
+        running_job = Job.status.in_([JobStatus.running, JobStatus.pending])
+        # we are using func.min/max to implement all/any aggregate functions
         results = (
             self.db.query(
-                Task.job_id, func.max(Task.status == TaskStatus.failed).label("failed")
+                Task.job_id,
+                Job.repeat_every_seconds,
+                # flag if any task failed
+                func.max(Task.status == TaskStatus.failed).label("failed"),
             )
-            .join(Job)
-            .filter(Job.status == JobStatus.running)
+            .outerjoin(Job)
+            .filter(running_job)
             .group_by(Task.job_id)
-            .having(func.max(task_done) == 1)
+            # select jobs where all tasks are finsihed
+            .having(func.min(task_done) == 1)
             .all()
         )
-        for job_id, failed in results:
-            self.db.query(Job).filter(Job.id == job_id).update(
-                {Job.status: JobStatus.failed if failed else JobStatus.success}
-            )
+        for job_id, repeat, failed in results:
+            if repeat:
+                # job with repeat non-null repeat column should be
+                # kept runing until cancelled
+                status = JobStatus.pending
+            elif failed:
+                status = JobStatus.failed
+            else:
+                status = JobStatus.success
+            self.db.query(Job).filter(Job.id == job_id).update({Job.status: status})
         self.db.commit()
 
     def check_status(self):

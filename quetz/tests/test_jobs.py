@@ -2,6 +2,7 @@ import os
 import pickle
 import time
 import uuid
+from datetime import datetime
 from pathlib import Path
 from unittest import mock
 
@@ -364,6 +365,8 @@ async def test_failed_task(db, user, package_version, supervisor):
 
 @pytest.mark.parametrize("items_spec", ["", None])
 def test_empty_package_spec(db, user, package_version, caplog, items_spec, supervisor):
+    # pending job without tasks and start_at and repeat values should be automatically
+    # success
 
     func_serialized = pickle.dumps(func)
     job = Job(owner_id=user.id, manifest=func_serialized, items_spec=items_spec)
@@ -373,7 +376,7 @@ def test_empty_package_spec(db, user, package_version, caplog, items_spec, super
     db.refresh(job)
     task = db.query(Task).one_or_none()
 
-    assert job.status == JobStatus.pending
+    assert job.status == JobStatus.success
     assert task is None
 
 
@@ -817,6 +820,17 @@ def action_task(db, user):
 
 
 @pytest.fixture
+def action_job(db, user):
+    job = Job(manifest=b"test_action", owner=user)
+    db.add(job)
+    db.commit()
+    yield job
+
+    db.delete(job)
+    db.commit()
+
+
+@pytest.fixture
 def sync_supervisor(db, dao, config):
     "supervisor with synchronous test worker"
     manager = TestWorker(config, db, dao)
@@ -824,9 +838,95 @@ def sync_supervisor(db, dao, config):
     return supervisor
 
 
-def test_run_action_handler(sync_supervisor, db, action_task, caplog, mocker):
+@pytest.fixture
+def mock_action(mocker):
     func = mocker.Mock()
     mocker.patch("quetz.jobs.runner.ACTION_HANDLERS", {"test_action": func})
+    return func
+
+
+def test_update_job_status(sync_supervisor, db, action_job):
+    running_task = Task(status=TaskStatus.running)
+    finished_task = Task(status=TaskStatus.success)
+    action_job.tasks.append(running_task)
+    action_job.tasks.append(finished_task)
+    action_job.status = JobStatus.running
+
+    db.commit()
+
+    sync_supervisor.run_once()
+
+    db.refresh(action_job)
+    db.refresh(running_task)
+    db.refresh(finished_task)
+
+    assert finished_task.status == TaskStatus.success
+    assert running_task.status == TaskStatus.running
+    assert action_job.status == JobStatus.running
+
+
+def test_run_action_handler(sync_supervisor, db, action_task, caplog, mock_action):
     sync_supervisor.run_once()
     assert "ERROR" not in caplog.text
-    func.assert_called_with(my_arg=1)
+    mock_action.assert_called_with(my_arg=1)
+    db.refresh(action_task)
+    assert action_task.status == TaskStatus.success
+    assert action_task.job.status == JobStatus.success
+
+
+def test_update_periodic_action(sync_supervisor, db, action_task, mock_action):
+    job = action_task.job
+    job.repeat_every_seconds = 10
+    db.commit()
+
+    sync_supervisor.run_once()
+    db.refresh(action_task)
+    assert action_task.status == TaskStatus.success
+    assert job.status == JobStatus.pending
+
+
+@pytest.mark.parametrize("start_date", [datetime(1960, 1, 1, 10, 0, 0), None])
+def test_run_action_once(sync_supervisor, db, action_job, mock_action, start_date):
+
+    # job should start immediatedly
+    action_job.start_at = start_date
+    db.commit()
+
+    assert action_job.status == JobStatus.pending
+
+    sync_supervisor.run_once()
+
+    db.refresh(action_job)
+
+    assert len(action_job.tasks) == 1
+    assert action_job.status == JobStatus.success
+
+    sync_supervisor.run_once()
+
+    db.refresh(action_job)
+    assert len(action_job.tasks) == 1
+    assert action_job.status == JobStatus.success
+
+
+def test_run_action_after_delay(sync_supervisor, db, action_job, mock_action, mocker):
+
+    action_job.start_at = datetime(3020, 1, 1, 10, 0)
+    db.commit()
+
+    assert action_job.status == JobStatus.pending
+
+    sync_supervisor.run_once()
+
+    db.refresh(action_job)
+
+    assert len(action_job.tasks) == 0
+    assert action_job.status == JobStatus.pending
+
+    sync_supervisor.run_once()
+
+    mock_datetime = mocker.patch("quetz.jobs.runner.datetime")
+    mock_datetime.utcnow.return_value = datetime(3020, 1, 1, 10, 1)
+
+    sync_supervisor.run_once()
+    assert len(action_job.tasks) == 1
+    assert action_job.status == JobStatus.success
