@@ -631,6 +631,19 @@ def test_post_new_job_manifest_validation(
 
 
 @pytest.mark.parametrize("user_role", ["owner"])
+def test_post_new_job_invalid_items_spec(auth_client, user, db, dummy_plugin):
+    # items_spec=None is not allowed for jobs
+    # (but it works with actions)
+    manifest = "quetz-dummyplugin:dummy_func"
+    response = auth_client.post(
+        "/api/jobs", json={"items_spec": None, "manifest": manifest}
+    )
+    assert response.status_code == 422
+    msg = response.json()['detail']
+    assert "not an allowed value" in msg[0]['msg']
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
 @pytest.mark.parametrize(
     "manifest", ["quetz-dummyplugin:dummy_func", "quetz-dummyplugin:dummy_job"]
 )

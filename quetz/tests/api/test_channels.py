@@ -15,6 +15,7 @@ from quetz.authorization import (
 )
 from quetz.condainfo import CondaInfo
 from quetz.config import Config
+from quetz.jobs.models import Job
 
 
 @pytest.fixture
@@ -136,21 +137,24 @@ def test_permissions_channel_endpoints(
     [("owner", 200), ("maintainer", 200), ("member", 403), (None, 403)],
 )
 def test_channel_action_reindex(
-    auth_client, public_channel, expected_code, action, user
+    auth_client,
+    public_channel,
+    expected_code,
+    action,
+    user,
+    remove_jobs,
 ):
 
     response = auth_client.put(
         f"/api/channels/{public_channel.name}/actions", json={"action": action}
     )
 
-    job_id = 1
-
     assert response.status_code == expected_code
     if expected_code == 200:
         job_data = response.json()
         assert job_data == {
             "created": ANY,
-            "id": job_id,
+            "id": ANY,
             "items_spec": None,
             "manifest": action,
             "owner_id": str(uuid.UUID(bytes=user.id)),
@@ -158,6 +162,7 @@ def test_channel_action_reindex(
             "repeat_every_seconds": None,
             "start_at": None,
         }
+        job_id = job_data['id']
     else:
         return
 
@@ -187,7 +192,7 @@ def test_channel_action_reindex(
         {
             "job_id": job_id,
             'created': ANY,
-            'id': 1,
+            'id': ANY,
             'package_version': {},
             'status': 'created',
         }
@@ -209,6 +214,12 @@ def test_get_channel_members(auth_client, public_channel, expected_code):
 def remove_package_versions(db):
     yield
     db.query(db_models.PackageVersion).delete()
+
+
+@pytest.fixture
+def remove_jobs(db):
+    yield
+    db.query(Job).delete()
 
 
 def test_channel_names_are_case_insensitive(

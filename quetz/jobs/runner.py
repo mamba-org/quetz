@@ -8,14 +8,46 @@ from datetime import datetime, timedelta
 from typing import Dict, List
 
 import sqlalchemy as sa
+from sqlalchemy import Boolean
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import func
+from sqlalchemy.sql.expression import FunctionElement
 
 from quetz.db_models import PackageVersion
 from quetz.jobs.models import ItemsSelection, Job, JobStatus, Task, TaskStatus
 from quetz.tasks.common import ACTION_HANDLERS
 
 logger = logging.getLogger('quetz.tasks')
-# manager = RQManager("127.0.0.1", 6379, 0, "", {}, config)
+
+
+class any_true(FunctionElement):
+    name = "anytrue"
+    type = Boolean()
+
+
+@compiles(any_true, 'sqlite')
+def sqlite_any(element, compiler, **kw):
+    return 'max(%s)' % compiler.process(element.clauses, **kw)
+
+
+@compiles(any_true, 'postgresql')
+def pg_any(element, compiler, **kw):
+    return 'bool_or(%s)' % compiler.process(element.clauses, **kw)
+
+
+class all_true(FunctionElement):
+    name = "alltrue"
+    type = Boolean()
+
+
+@compiles(all_true, 'sqlite')
+def sqlite_all(element, compiler, **kw):
+    return 'min(%s)' % compiler.process(element.clauses, **kw)
+
+
+@compiles(all_true, 'postgresql')
+def pg_all(element, compiler, **kw):
+    return 'bool_and(%s)' % compiler.process(element.clauses, **kw)
 
 
 def build_queue(job):
@@ -281,15 +313,15 @@ class Supervisor:
         results = (
             self.db.query(
                 Task.job_id,
-                Job.repeat_every_seconds,
+                func.min(Job.repeat_every_seconds),
                 # flag if any task failed
-                func.max(Task.status == TaskStatus.failed).label("failed"),
+                any_true(Task.status == TaskStatus.failed).label("failed"),
             )
             .outerjoin(Job)
             .filter(running_job)
             .group_by(Task.job_id)
             # select jobs where all tasks are finsihed
-            .having(func.min(task_done) == 1)
+            .having(all_true(task_done))
             .all()
         )
         for job_id, repeat, failed in results:

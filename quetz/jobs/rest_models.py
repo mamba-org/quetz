@@ -14,7 +14,7 @@ logger = logging.getLogger("quetz")
 class JobBase(BaseModel):
     """New job spec"""
 
-    items_spec: str = Field(None, title='Item selector spec')
+    items_spec: str = Field(..., title='Item selector spec')
     manifest: str = Field(None, title='Name of the function')
 
 
@@ -44,6 +44,8 @@ class Job(JobBase):
             "if None it is a one-off job"
         ),
     )
+
+    items_spec: str = Field(None, title='Item selector spec')
 
     @validator("manifest", pre=True)
     def convert_name(cls, v):
