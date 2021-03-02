@@ -826,22 +826,10 @@ def test_get_user_jobs(auth_client, db, user, package_version, other_user):
 
 
 @pytest.fixture
-def action_task(db, user):
-    job_dao = JobsDao(db)
-    task = job_dao.create_task(b"test_action", user.id, extra_args={"my_arg": 1})
-    yield task
-    job = task.job
-
-    db.delete(task)
-    db.delete(job)
-    db.commit()
-
-
-@pytest.fixture
 def action_job(db, user):
-    job = Job(manifest=b"test_action", owner=user)
-    db.add(job)
-    db.commit()
+    job_dao = JobsDao(db)
+    job = job_dao.create_job(b"test_action", user.id, extra_args={"my_arg": 1})
+
     yield job
 
     db.delete(job)
@@ -895,23 +883,23 @@ def test_update_job_status(sync_supervisor, db, action_job):
     assert action_job.status == JobStatus.running
 
 
-def test_run_action_handler(sync_supervisor, db, action_task, caplog, mock_action):
+def test_run_action_handler(sync_supervisor, db, caplog, action_job, mock_action):
     sync_supervisor.run_once()
     assert "ERROR" not in caplog.text
     mock_action.assert_called_with(my_arg=1)
-    db.refresh(action_task)
-    assert action_task.status == TaskStatus.success
-    assert action_task.job.status == JobStatus.success
+    db.refresh(action_job)
+    assert action_job.tasks[0].status == TaskStatus.success
+    assert action_job.status == JobStatus.success
 
 
-def test_update_periodic_action(sync_supervisor, db, action_task, mock_action):
-    job = action_task.job
+def test_update_periodic_action(sync_supervisor, db, action_job, mock_action):
+    job = action_job
     job.repeat_every_seconds = 10
     db.commit()
 
     sync_supervisor.run_once()
-    db.refresh(action_task)
-    assert action_task.status == TaskStatus.success
+    db.refresh(action_job)
+    assert job.tasks[0].status == TaskStatus.success
     assert job.status == JobStatus.pending
 
 

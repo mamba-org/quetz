@@ -17,6 +17,17 @@ class JobBase(BaseModel):
     items_spec: str = Field(..., title='Item selector spec')
     manifest: str = Field(None, title='Name of the function')
 
+    start_at: Optional[datetime] = Field(
+        None, title="date and time the job should start, if None it starts immediately"
+    )
+    repeat_every_seconds: Optional[int] = Field(
+        None,
+        title=(
+            "interval in seconds at which the job should be repeated, "
+            "if None it is a one-off job"
+        ),
+    )
+
 
 class JobUpdateModel(BaseModel):
     """Modify job spec items (status and items_spec)"""
@@ -33,17 +44,6 @@ class Job(JobBase):
     created: datetime = Field(None, title='Created at')
 
     status: JobStatus = Field(None, title='Status of the job (running, paused, ...)')
-
-    start_at: Optional[str] = Field(
-        None, title="date and time the job should start, if None it starts immediately"
-    )
-    repeat_every_seconds: Optional[int] = Field(
-        None,
-        title=(
-            "interval in seconds at which the job should be repeated, "
-            "if None it is a one-off job"
-        ),
-    )
 
     items_spec: str = Field(None, title='Item selector spec')
 

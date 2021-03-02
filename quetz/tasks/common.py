@@ -90,7 +90,7 @@ class Task:
                 includelist=channel_metadata.get('includelist', None),
                 excludelist=channel_metadata.get('excludelist', None),
             )
-            task = self.jobs_dao.create_task(
+            task = self.jobs_dao.create_job(
                 action.encode('ascii'),
                 user_id,
                 extra_args=extra_args,
@@ -105,7 +105,7 @@ class Task:
                 includelist=channel_metadata.get('includelist', None),
                 excludelist=channel_metadata.get('excludelist', None),
             )
-            task = self.jobs_dao.create_task(
+            task = self.jobs_dao.create_job(
                 action.encode('ascii'),
                 user_id,
                 extra_args=extra_args,
@@ -115,7 +115,7 @@ class Task:
         elif action == ChannelActionEnum.validate_packages:
             auth.assert_validate_package_cache(channel_name)
             extra_args = dict(channel_name=channel.name)
-            task = self.jobs_dao.create_task(
+            task = self.jobs_dao.create_job(
                 action.encode('ascii'),
                 user_id,
                 extra_args=extra_args,
@@ -125,7 +125,7 @@ class Task:
         elif action == ChannelActionEnum.generate_indexes:
             auth.assert_reindex_channel(channel_name)
             extra_args = dict(channel_name=channel.name)
-            task = self.jobs_dao.create_task(
+            task = self.jobs_dao.create_job(
                 action.encode('ascii'),
                 user_id,
                 extra_args=extra_args,
@@ -137,7 +137,7 @@ class Task:
             extra_args = dict(
                 channel_name=channel_name,
             )
-            task = self.jobs_dao.create_task(
+            task = self.jobs_dao.create_job(
                 action.encode('ascii'),
                 user_id,
                 extra_args=extra_args,
@@ -147,7 +147,7 @@ class Task:
         elif action == ChannelActionEnum.synchronize_metrics:
             auth.assert_reindex_channel(channel_name)
             extra_args = dict(channel_name=channel.name)
-            task = self.jobs_dao.create_task(
+            task = self.jobs_dao.create_job(
                 action.encode('ascii'),
                 user_id,
                 extra_args=extra_args,
@@ -161,14 +161,14 @@ class Task:
                 channel_name=channel_name,
                 dry_run=dry_run,
             )
-            task = self.jobs_dao.create_task(
+            task = self.jobs_dao.create_job(
                 f"db_{action}".encode('ascii'),
                 user_id,
                 extra_args=extra_args,
                 start_at=start_at,
                 repeat_every_seconds=repeat_every_seconds,
             )
-            task = self.jobs_dao.create_task(
+            task = self.jobs_dao.create_job(
                 f"pkgstore_{action}".encode('ascii'),
                 user_id,
                 extra_args=extra_args,

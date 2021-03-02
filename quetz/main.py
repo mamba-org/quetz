@@ -627,13 +627,13 @@ def put_mirror_channel_actions(
     task: Task = Depends(get_tasks_worker),
 ):
 
-    new_task = task.execute_channel_action(
+    new_job = task.execute_channel_action(
         action.action,
         channel,
         start_at=action.start_at,
         repeat_every_seconds=action.repeat_every_seconds,
     )
-    return new_task.job
+    return new_job
 
 
 @api_router.post("/channels", status_code=201, tags=["channels"])
