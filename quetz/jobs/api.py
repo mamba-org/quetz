@@ -64,13 +64,13 @@ def get_job_or_fail(
 
     job = dao.get_job(job_id)
 
-    auth.assert_jobs(job.owner_id)
-
     if not job:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Job with id {job_id} not found",
         )
+
+    auth.assert_jobs(job.owner_id)
 
     return job
 
