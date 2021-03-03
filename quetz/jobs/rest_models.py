@@ -1,9 +1,9 @@
 import logging
-import pickle
 import uuid
 from datetime import datetime
 from typing import Optional
 
+import pkg_resources
 from pydantic import BaseModel, Field, validator
 
 from .models import JobStatus, TaskStatus
@@ -28,6 +28,40 @@ class JobBase(BaseModel):
         ),
     )
 
+    @validator("manifest", pre=True)
+    def validate_job_name(cls, function_name):
+
+        if isinstance(function_name, bytes):
+            return function_name.decode("ascii")
+
+        paths = function_name.split(":")
+
+        if len(paths) == 2:
+            plugin_name, job_name = paths
+            entry_points = list(
+                pkg_resources.iter_entry_points('quetz.jobs', plugin_name)
+            )
+            if not entry_points:
+                raise ValueError(
+                    f"invalid function {function_name}: "
+                    f"plugin {plugin_name} not installed"
+                )
+            job_module = entry_points[0].load()
+            try:
+                getattr(job_module, job_name)
+            except AttributeError:
+                raise ValueError(
+                    f"invalid function '{job_name}' name in plugin '{plugin_name}'"
+                )
+        elif len(paths) == 1:
+            raise ValueError(
+                f"invalid function {function_name}: no such built-in function,"
+                " please provide plugin name"
+            )
+        else:
+            raise ValueError(f"invalid function {function_name} - could not parse")
+        return function_name.encode('ascii')
+
 
 class JobUpdateModel(BaseModel):
     """Modify job spec items (status and items_spec)"""
@@ -46,18 +80,6 @@ class Job(JobBase):
     status: JobStatus = Field(None, title='Status of the job (running, paused, ...)')
 
     items_spec: str = Field(None, title='Item selector spec')
-
-    @validator("manifest", pre=True)
-    def convert_name(cls, v):
-        try:
-            try:
-                func = pickle.loads(v)
-                return f"{func.__module__}:{func.__name__}"
-            except pickle.UnpicklingError:
-                return v.decode('ascii')
-        except ModuleNotFoundError as e:
-            logger.error(f"job function not found: could not import module {e.name}")
-            return e.name + ":undefined"
 
     class Config:
         orm_mode = True

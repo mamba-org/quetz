@@ -624,7 +624,7 @@ def test_post_new_job_manifest_validation(
         "/api/jobs", json={"items_spec": "*", "manifest": manifest}
     )
     assert response.status_code == 422
-    msg = response.json()['detail']
+    msg = response.json()['detail'][0]['msg']
     assert "invalid function" in msg
     for name in manifest.split(":"):
         assert name in msg
@@ -656,7 +656,7 @@ def test_post_new_job_from_plugin(auth_client, user, db, manifest, dummy_plugin)
     assert response.status_code == 201
     job_id = response.json()['id']
     job = db.query(Job).get(job_id)
-    assert pickle.loads(job.manifest).__name__ == manifest.split(":")[1]
+    assert job.manifest.decode('ascii') == manifest
 
 
 @pytest.mark.parametrize("user_role", ["owner"])
@@ -674,7 +674,7 @@ def test_filter_jobs_by_status(auth_client, db, user, status, job_ids):
     job0 = Job(
         id=0,
         items_spec="*",
-        manifest=pickle.dumps(dummy_func),
+        manifest=b"dummy_func",
         status=JobStatus.running,
         owner=user,
     )
@@ -682,7 +682,7 @@ def test_filter_jobs_by_status(auth_client, db, user, status, job_ids):
     job1 = Job(
         id=1,
         items_spec="*",
-        manifest=pickle.dumps(dummy_func),
+        manifest=b"dummy_func",
         status=JobStatus.pending,
         owner=user,
     )
@@ -730,7 +730,7 @@ def many_jobs(db, user):
         job = Job(
             id=i,
             items_spec="*",
-            manifest=pickle.dumps(dummy_func),
+            manifest=b"dummy_func",
             status=JobStatus.running,
             owner=user,
         )
@@ -811,10 +811,10 @@ def other_user(db):
 
 @pytest.mark.parametrize("user_role", ["member"])
 def test_get_user_jobs(auth_client, db, user, package_version, other_user):
-    job = Job(items_spec="*", owner=user, manifest=pickle.dumps(dummy_func))
+    job = Job(items_spec="*", owner=user, manifest=b"dummy_func")
     db.add(job)
 
-    other_job = Job(items_spec="*", owner=other_user, manifest=pickle.dumps(dummy_func))
+    other_job = Job(items_spec="*", owner=other_user, manifest=b"dummy_func")
     db.add(other_job)
 
     db.commit()
