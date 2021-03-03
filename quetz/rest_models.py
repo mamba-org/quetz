@@ -291,3 +291,5 @@ class PackageVersion(BaseModel):
 
 class ChannelAction(BaseModel):
     action: ChannelActionEnum
+    start_at: Optional[datetime]
+    repeat_every_seconds: Optional[int]

@@ -2,6 +2,7 @@ import logging
 import pickle
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, Field, validator
 
@@ -13,8 +14,19 @@ logger = logging.getLogger("quetz")
 class JobBase(BaseModel):
     """New job spec"""
 
-    items_spec: str = Field(None, title='Item selector spec')
+    items_spec: str = Field(..., title='Item selector spec')
     manifest: str = Field(None, title='Name of the function')
+
+    start_at: Optional[datetime] = Field(
+        None, title="date and time the job should start, if None it starts immediately"
+    )
+    repeat_every_seconds: Optional[int] = Field(
+        None,
+        title=(
+            "interval in seconds at which the job should be repeated, "
+            "if None it is a one-off job"
+        ),
+    )
 
 
 class JobUpdateModel(BaseModel):
@@ -32,6 +44,8 @@ class Job(JobBase):
     created: datetime = Field(None, title='Created at')
 
     status: JobStatus = Field(None, title='Status of the job (running, paused, ...)')
+
+    items_spec: str = Field(None, title='Item selector spec')
 
     @validator("manifest", pre=True)
     def convert_name(cls, v):

@@ -10,7 +10,7 @@ from quetz.authorization import (
     SERVER_USER,
 )
 from quetz.db_models import PackageVersion
-from quetz.jobs.models import Job, Task, TaskStatus
+from quetz.jobs.models import Job, JobStatus, Task, TaskStatus
 
 
 @pytest.mark.asyncio
@@ -70,7 +70,6 @@ async def test_transmutation_endpoint(
         ("my-package==0.2", 0),
         ("my-package==0.1,my-package==0.2", 1),
         ("", 0),
-        (None, 0),
         ("*", 1),
     ],
 )
@@ -84,14 +83,26 @@ def test_package_specs(
     )
 
     assert response.status_code == 201
+
+    job_id = response.json()['id']
+
+    job = db.query(Job).filter(Job.id == job_id).one()
+
+    assert job.status == JobStatus.pending
+
     supervisor.run_jobs()
+
+    if n_tasks:
+        assert job.status == JobStatus.running
+    else:
+        assert job.status == JobStatus.success
+
+    n_created_task = db.query(Task).count()
+    assert n_created_task == n_tasks
+
     supervisor.run_tasks()
 
     supervisor.check_status()
-
-    n_created_task = db.query(Task).count()
-
-    assert n_created_task == n_tasks
 
     # cleanup
     try:

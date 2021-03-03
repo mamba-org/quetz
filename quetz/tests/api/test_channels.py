@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import ANY
 
@@ -15,6 +16,9 @@ from quetz.authorization import (
 )
 from quetz.condainfo import CondaInfo
 from quetz.config import Config
+from quetz.jobs.models import Job
+from quetz.jobs.runner import Supervisor
+from quetz.testing.mockups import TestWorker
 
 
 @pytest.fixture
@@ -128,6 +132,14 @@ def test_permissions_channel_endpoints(
     assert response.status_code == expected_status
 
 
+@pytest.fixture
+def sync_supervisor(db, dao, config):
+    "supervisor with synchronous test worker"
+    manager = TestWorker(config, db, dao)
+    supervisor = Supervisor(db, manager)
+    return supervisor
+
+
 @pytest.mark.parametrize(
     "action", ['reindex', 'generate_indexes', 'synchronize_metrics']
 )
@@ -136,7 +148,13 @@ def test_permissions_channel_endpoints(
     [("owner", 200), ("maintainer", 200), ("member", 403), (None, 403)],
 )
 def test_channel_action_reindex(
-    auth_client, public_channel, expected_code, action, user
+    auth_client,
+    public_channel,
+    expected_code,
+    action,
+    user,
+    remove_jobs,
+    sync_supervisor,
 ):
 
     response = auth_client.put(
@@ -145,18 +163,20 @@ def test_channel_action_reindex(
 
     assert response.status_code == expected_code
     if expected_code == 200:
-        task = response.json()
-        assert task == {
-            "job_id": ANY,
-            'created': ANY,
-            'id': ANY,
-            'package_version': {},
-            'status': 'created',
+        job_data = response.json()
+        assert job_data == {
+            "created": ANY,
+            "id": ANY,
+            "items_spec": None,
+            "manifest": action,
+            "owner_id": str(uuid.UUID(bytes=user.id)),
+            "status": "pending",
+            "repeat_every_seconds": None,
+            "start_at": None,
         }
+        job_id = job_data['id']
     else:
         return
-
-    job_id = task['job_id']
 
     response = auth_client.get(f"/api/jobs/{job_id}")
     assert response.status_code == 200
@@ -168,7 +188,11 @@ def test_channel_action_reindex(
         "manifest": action,
         "owner_id": str(uuid.UUID(bytes=user.id)),
         "status": "pending",
+        "repeat_every_seconds": None,
+        "start_at": None,
     }
+
+    sync_supervisor.run_jobs()
 
     response = auth_client.get(
         f"/api/jobs/{job_id}/tasks?"
@@ -181,12 +205,55 @@ def test_channel_action_reindex(
     assert all_tasks == [
         {
             "job_id": job_id,
-            'created': task['created'],
-            'id': task['id'],
+            'created': ANY,
+            'id': ANY,
             'package_version': {},
-            'status': ANY,
+            'status': 'created',
         }
     ]
+
+
+@pytest.mark.parametrize("wait_seconds", [None, -5, 5, 0])
+def test_create_delayed_action(
+    auth_client,
+    public_channel,
+    user,
+    remove_jobs,
+    wait_seconds,
+    sync_supervisor,
+):
+
+    action = "reindex"
+    now = datetime.utcnow()
+    if wait_seconds is None:
+        start_at = None
+    else:
+        delta = timedelta(seconds=wait_seconds)
+        start_at = (now + delta).isoformat()
+
+    response = auth_client.put(
+        f"/api/channels/{public_channel.name}/actions",
+        json={"action": action, "start_at": start_at},
+    )
+
+    assert response.status_code == 200
+    job_data = response.json()
+    job_id = job_data['id']
+
+    sync_supervisor.run_once()
+
+    response = auth_client.get(
+        f"/api/jobs/{job_id}/tasks?"
+        "status=created&status=running&status=pending&status=success"
+    )
+
+    assert response.status_code == 200
+    all_tasks = response.json()['result']
+
+    if wait_seconds is not None and wait_seconds > 0:
+        assert not all_tasks
+    else:
+        assert len(all_tasks) == 1
 
 
 @pytest.mark.parametrize(
@@ -204,6 +271,12 @@ def test_get_channel_members(auth_client, public_channel, expected_code):
 def remove_package_versions(db):
     yield
     db.query(db_models.PackageVersion).delete()
+
+
+@pytest.fixture
+def remove_jobs(db):
+    yield
+    db.query(Job).delete()
 
 
 def test_channel_names_are_case_insensitive(

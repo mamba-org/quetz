@@ -4,16 +4,50 @@
 import logging
 import re
 import time
+from datetime import datetime, timedelta
 from typing import Dict, List
 
 import sqlalchemy as sa
+from sqlalchemy import Boolean
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql import func
+from sqlalchemy.sql.expression import FunctionElement
 
 from quetz.db_models import PackageVersion
 from quetz.jobs.models import ItemsSelection, Job, JobStatus, Task, TaskStatus
 from quetz.tasks.common import ACTION_HANDLERS
 
 logger = logging.getLogger('quetz.tasks')
-# manager = RQManager("127.0.0.1", 6379, 0, "", {}, config)
+
+
+class any_true(FunctionElement):
+    name = "anytrue"
+    type = Boolean()
+
+
+@compiles(any_true, 'sqlite')
+def sqlite_any(element, compiler, **kw):
+    return 'max(%s)' % compiler.process(element.clauses, **kw)
+
+
+@compiles(any_true, 'postgresql')
+def pg_any(element, compiler, **kw):
+    return 'bool_or(%s)' % compiler.process(element.clauses, **kw)
+
+
+class all_true(FunctionElement):
+    name = "alltrue"
+    type = Boolean()
+
+
+@compiles(all_true, 'sqlite')
+def sqlite_all(element, compiler, **kw):
+    return 'min(%s)' % compiler.process(element.clauses, **kw)
+
+
+@compiles(all_true, 'postgresql')
+def pg_all(element, compiler, **kw):
+    return 'bool_and(%s)' % compiler.process(element.clauses, **kw)
 
 
 def build_queue(job):
@@ -21,7 +55,8 @@ def build_queue(job):
 
 
 def parse_conda_spec(conda_spec: str):
-    pattern = r'(\w[^ =<>!~]+)([><!=~,\.0-9]+[0-9])?'
+
+    pattern = r'([a-zA-Z\*][^ =<>!~]*)([><!=~,\.0-9]+[0-9])?'
     exprs_list = re.findall(pattern, conda_spec)
 
     package_specs = []
@@ -85,6 +120,9 @@ def mk_sql_expr(dict_spec: List[Dict]):
         else:
             raise NotImplementedError(f"operator '{op}' not known")
 
+    if not dict_spec:
+        return False
+
     or_elements = []
     for el in dict_spec:
         and_elements = []
@@ -111,62 +149,88 @@ class Supervisor:
         self.db = db
         self.manager = manager
         self._process_cache = {}
+        self._reset_tasks_after_restart()
         pass
 
+    def _select_package_versions(self, job, force=False):
+        db = self.db
+
+        if job.items == ItemsSelection.all:
+            if force:
+                q = db.query(PackageVersion)
+            else:
+                existing_task = (
+                    db.query(Task.package_version_id, Task.id.label("task_id"))
+                    .filter(Task.job_id == job.id)
+                    .filter(Task.status != TaskStatus.skipped)
+                    .subquery()
+                )
+                q = (
+                    db.query(PackageVersion)
+                    .outerjoin(
+                        existing_task,
+                        PackageVersion.id == existing_task.c.package_version_id,
+                    )
+                    .filter(existing_task.c.task_id.is_(None))
+                )
+        else:
+            raise NotImplementedError(f"selection {job.items} is not implemented")
+
+        filter_expr = build_sql_from_package_spec(job.items_spec)
+        q = q.filter(filter_expr)
+
+        return q
+
     def run_jobs(self, job_id=None, force=False):
+        now = datetime.utcnow()
         db = self.db
         jobs = db.query(Job).filter(Job.status == JobStatus.pending)
         if job_id:
             jobs = jobs.filter(Job.id == job_id)
         for job in jobs:
-            if job.items == ItemsSelection.all:
-                if force:
-                    q = db.query(PackageVersion)
-                else:
-                    existing_task = (
-                        db.query(Task.package_version_id, Task.id.label("task_id"))
-                        .filter(Task.job_id == job.id)
-                        .filter(Task.status != TaskStatus.skipped)
-                        .subquery()
-                    )
-                    q = (
-                        db.query(PackageVersion)
-                        .outerjoin(
-                            existing_task,
-                            PackageVersion.id == existing_task.c.package_version_id,
-                        )
-                        .filter(existing_task.c.task_id.is_(None))
-                    )
-            else:
-                raise NotImplementedError(f"selection {job.items} is not implemented")
-
-            if job.items_spec:
-                try:
-                    filter_expr = build_sql_from_package_spec(job.items_spec)
-                except Exception as e:
-                    logger.error(f"got error when parsing package spec: {e}")
-                    job.status = JobStatus.failed
-                    continue
-                q = q.filter(filter_expr)
-            else:
-                # it might be also job created in actions
-                # so skipping here
+            if job.start_at and job.start_at > now:
                 continue
 
-            job.status = JobStatus.running
+            should_repeat = (
+                job.repeat_every_seconds
+                and (job.updated + timedelta(seconds=job.repeat_every_seconds)) < now
+            )
 
-            task = None
-            for version in q:
-                task = Task(job=job, package_version=version)
-                db.add(task)
-            if not task:
-                logger.warning(
-                    f"no versions matching the package spec {job.items_spec}. skipping."
-                )
-                if job.items_spec:
-                    # actions have no related package versions
+            if job.items_spec is not None:
+                # it's a "package-version job"
+
+                try:
+                    force = force or should_repeat
+                    q = self._select_package_versions(job, force=force)
+                except Exception as e:
+                    job.status = JobStatus.failed
+                    logger.error(f"got error when parsing package spec: {e}")
+                    continue
+
+                task = None
+                for version in q:
+                    task = Task(job=job, package_version=version)
+                    db.add(task)
+
+                if not task and not job.repeat_every_seconds:
+                    logger.info(
+                        f"No new versions matching the package spec {job.items_spec}. "
+                        f"Skipping job {job.id}."
+                    )
                     job.status = JobStatus.success
-        db.commit()
+                else:
+                    job.status = JobStatus.running
+                    job.updated = now
+
+            else:
+                # it's a "channel action job"
+                if not job.tasks or should_repeat:
+                    task = Task(job=job)
+                    db.add(task)
+                    job.updated = now
+                    job.status = JobStatus.running
+
+            db.commit()
 
     def add_task_to_queue(self, db, task, *args, func=None, **kwargs):
         """add task to the queue"""
@@ -224,18 +288,56 @@ class Supervisor:
         db.commit()
         return jobs
 
-    def check_status(self):
+    def _reset_tasks_after_restart(self):
 
-        tasks = (
+        # tasks lost after restart
+        n_updated = (
             self.db.query(Task)
             .filter(Task.status.in_([TaskStatus.running, TaskStatus.pending]))
             .filter(Task.package_version_id.isnot(None))
+            .update({Task.status: TaskStatus.created}, synchronize_session=False)
         )
-        for task in tasks:
-            if task.id not in self._process_cache:
-                logger.warning(f"running process for task {task} is lost, restarting")
-                task.status = TaskStatus.created
         self.db.commit()
+
+        if n_updated > 0:
+            logger.warning(
+                f"restarting {n_updated} tasks lost due to supervisor restart"
+            )
+
+    def _update_running_jobs(self):
+        """Update status of running/pending jobs."""
+
+        task_done = Task.status.in_([TaskStatus.failed, TaskStatus.success])
+        running_job = Job.status.in_([JobStatus.running, JobStatus.pending])
+        # we are using func.min/max to implement all/any aggregate functions
+        results = (
+            self.db.query(
+                Task.job_id,
+                func.min(Job.repeat_every_seconds),
+                # flag if any task failed
+                any_true(Task.status == TaskStatus.failed).label("failed"),
+            )
+            .outerjoin(Job)
+            .filter(running_job)
+            .group_by(Task.job_id)
+            # select jobs where all tasks are finsihed
+            .having(all_true(task_done))
+            .all()
+        )
+        for job_id, repeat, failed in results:
+            if repeat:
+                # job with repeat non-null repeat column should be
+                # kept runing until cancelled
+                status = JobStatus.pending
+            elif failed:
+                status = JobStatus.failed
+            else:
+                status = JobStatus.success
+            self.db.query(Job).filter(Job.id == job_id).update({Job.status: status})
+        self.db.commit()
+
+    def check_status(self):
+        self._update_running_jobs()
 
     def run_once(self):
         self.run_jobs()

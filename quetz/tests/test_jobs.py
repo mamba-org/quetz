@@ -2,6 +2,7 @@ import os
 import pickle
 import time
 import uuid
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest import mock
 
@@ -318,9 +319,9 @@ async def test_restart_worker_process(db, user, package_version, supervisor, cap
     db.refresh(task)
     assert task.status == TaskStatus.running
 
-    supervisor._process_cache.clear()
+    # simulate restart
+    supervisor = Supervisor(db, supervisor.manager)
 
-    supervisor.check_status()
     assert task.status == TaskStatus.created
     assert "lost" in caplog.text
 
@@ -362,7 +363,7 @@ async def test_failed_task(db, user, package_version, supervisor):
     assert job.status == JobStatus.failed
 
 
-@pytest.mark.parametrize("items_spec", ["", None])
+@pytest.mark.parametrize("items_spec", [""])
 def test_empty_package_spec(db, user, package_version, caplog, items_spec, supervisor):
 
     func_serialized = pickle.dumps(func)
@@ -373,7 +374,7 @@ def test_empty_package_spec(db, user, package_version, caplog, items_spec, super
     db.refresh(job)
     task = db.query(Task).one_or_none()
 
-    assert job.status == JobStatus.pending
+    assert job.status == JobStatus.success
     assert task is None
 
 
@@ -443,8 +444,15 @@ def test_mk_query():
 
     assert sql_expr == ("lower(package_versions.package_name) LIKE lower('my-%')")
 
+    spec = [{"package_name": ("like", "*")}]
+    sql_expr = compile(spec)
+
+    assert sql_expr == ("lower(package_versions.package_name) LIKE lower('%')")
+
 
 def test_parse_conda_spec():
+    dict_spec = parse_conda_spec("*")
+    assert dict_spec == [{"package_name": ("like", "*")}]
 
     dict_spec = parse_conda_spec("my-package==0.1.1")
     assert dict_spec == [
@@ -620,6 +628,19 @@ def test_post_new_job_manifest_validation(
     assert "invalid function" in msg
     for name in manifest.split(":"):
         assert name in msg
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+def test_post_new_job_invalid_items_spec(auth_client, user, db, dummy_plugin):
+    # items_spec=None is not allowed for jobs
+    # (but it works with actions)
+    manifest = "quetz-dummyplugin:dummy_func"
+    response = auth_client.post(
+        "/api/jobs", json={"items_spec": None, "manifest": manifest}
+    )
+    assert response.status_code == 422
+    msg = response.json()['detail']
+    assert "not an allowed value" in msg[0]['msg']
 
 
 @pytest.mark.parametrize("user_role", ["owner"])
@@ -805,13 +826,24 @@ def test_get_user_jobs(auth_client, db, user, package_version, other_user):
 
 
 @pytest.fixture
-def action_task(db, user):
+def action_job(db, user):
     job_dao = JobsDao(db)
-    task = job_dao.create_task(b"test_action", user.id, extra_args={"my_arg": 1})
-    yield task
-    job = task.job
+    job = job_dao.create_job(b"test_action", user.id, extra_args={"my_arg": 1})
 
-    db.delete(task)
+    yield job
+
+    db.delete(job)
+    db.commit()
+
+
+@pytest.fixture
+def package_version_job(db, user, package_version):
+    func_serialized = pickle.dumps(dummy_func)
+    job = Job(owner=user, manifest=func_serialized, items_spec="*")
+    db.add(job)
+    db.commit()
+    yield job
+
     db.delete(job)
     db.commit()
 
@@ -824,9 +856,164 @@ def sync_supervisor(db, dao, config):
     return supervisor
 
 
-def test_run_action_handler(sync_supervisor, db, action_task, caplog, mocker):
+@pytest.fixture
+def mock_action(mocker):
     func = mocker.Mock()
     mocker.patch("quetz.jobs.runner.ACTION_HANDLERS", {"test_action": func})
+    return func
+
+
+def test_update_job_status(sync_supervisor, db, action_job):
+    running_task = Task(status=TaskStatus.running)
+    finished_task = Task(status=TaskStatus.success)
+    action_job.tasks.append(running_task)
+    action_job.tasks.append(finished_task)
+    action_job.status = JobStatus.running
+
+    db.commit()
+
+    sync_supervisor.run_once()
+
+    db.refresh(action_job)
+    db.refresh(running_task)
+    db.refresh(finished_task)
+
+    assert finished_task.status == TaskStatus.success
+    assert running_task.status == TaskStatus.running
+    assert action_job.status == JobStatus.running
+
+
+def test_run_action_handler(sync_supervisor, db, caplog, action_job, mock_action):
     sync_supervisor.run_once()
     assert "ERROR" not in caplog.text
-    func.assert_called_with(my_arg=1)
+    mock_action.assert_called_with(my_arg=1)
+    db.refresh(action_job)
+    assert action_job.tasks[0].status == TaskStatus.success
+    assert action_job.status == JobStatus.success
+
+
+def test_update_periodic_action(sync_supervisor, db, action_job, mock_action):
+    job = action_job
+    job.repeat_every_seconds = 10
+    db.commit()
+
+    sync_supervisor.run_once()
+    db.refresh(action_job)
+    assert job.tasks[0].status == TaskStatus.success
+    assert job.status == JobStatus.pending
+
+
+@pytest.mark.parametrize("start_date", [datetime(1960, 1, 1, 10, 0, 0), None])
+def test_run_action_once(sync_supervisor, db, action_job, mock_action, start_date):
+
+    # job should start immediatedly
+    action_job.start_at = start_date
+    db.commit()
+
+    assert action_job.status == JobStatus.pending
+
+    sync_supervisor.run_once()
+
+    db.refresh(action_job)
+
+    assert len(action_job.tasks) == 1
+    assert action_job.status == JobStatus.success
+
+    sync_supervisor.run_once()
+
+    db.refresh(action_job)
+    assert len(action_job.tasks) == 1
+    assert action_job.status == JobStatus.success
+
+
+def test_run_action_after_delay(sync_supervisor, db, action_job, mock_action, mocker):
+
+    action_job.start_at = datetime(3020, 1, 1, 10, 0)
+    db.commit()
+
+    assert action_job.status == JobStatus.pending
+
+    sync_supervisor.run_once()
+
+    db.refresh(action_job)
+
+    assert len(action_job.tasks) == 0
+    assert action_job.status == JobStatus.pending
+
+    sync_supervisor.run_once()
+
+    mock_datetime = mocker.patch("quetz.jobs.runner.datetime")
+    mock_datetime.utcnow.return_value = datetime(3020, 1, 1, 10, 1)
+
+    sync_supervisor.run_once()
+    assert len(action_job.tasks) == 1
+    assert action_job.status == JobStatus.success
+
+
+@pytest.mark.parametrize("start_date", [datetime(1960, 1, 1, 10, 0, 0), None])
+def test_run_periodic_action(
+    sync_supervisor, db, action_job, mock_action, mocker, start_date
+):
+
+    action_job.repeat_every_seconds = 10
+    action_job.start_date = start_date
+    now = datetime.utcnow()
+    delta = timedelta(seconds=11)
+
+    db.commit()
+
+    sync_supervisor.run_once()
+
+    assert len(action_job.tasks) == 1
+    assert action_job.status == JobStatus.pending
+
+    sync_supervisor.run_once()
+
+    assert len(action_job.tasks) == 1
+    assert action_job.status == JobStatus.pending
+
+    mock_datetime = mocker.patch("quetz.jobs.runner.datetime")
+    mock_datetime.utcnow.return_value = now + delta
+
+    sync_supervisor.run_once()
+    assert len(action_job.tasks) == 2
+    assert action_job.status == JobStatus.pending
+
+    sync_supervisor.run_once()
+    assert len(action_job.tasks) == 2
+    assert action_job.status == JobStatus.pending
+
+
+@pytest.mark.parametrize("start_date", [datetime(1960, 1, 1, 10, 0, 0), None])
+def test_run_periodic_package_version_job(
+    sync_supervisor, db, package_version_job, mocker, start_date
+):
+    package_version_job.repeat_every_seconds = 10
+    package_version_job.start_date = start_date
+
+    now = datetime.utcnow()
+    delta = timedelta(seconds=11)
+
+    db.commit()
+
+    sync_supervisor.run_once()
+
+    assert len(package_version_job.tasks) == 1
+    assert package_version_job.tasks[0].status == TaskStatus.success
+    assert package_version_job.status == JobStatus.pending
+
+    sync_supervisor.run_once()
+    assert len(package_version_job.tasks) == 1
+    assert package_version_job.tasks[0].status == TaskStatus.success
+    assert package_version_job.status == JobStatus.pending
+
+    mock_datetime = mocker.patch("quetz.jobs.runner.datetime")
+    mock_datetime.utcnow.return_value = now + delta
+
+    sync_supervisor.run_once()
+    assert len(package_version_job.tasks) == 2
+    assert package_version_job.status == JobStatus.pending
+
+    sync_supervisor.run_once()
+    assert len(package_version_job.tasks) == 2
+    assert package_version_job.status == JobStatus.pending

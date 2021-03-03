@@ -64,6 +64,9 @@ class Job(Base):
 
     extra_args = sa.Column(sa.String(), nullable=True)
 
+    start_at = sa.Column(sa.DateTime, nullable=True)
+    repeat_every_seconds = sa.Column(sa.Integer, nullable=True)
+
 
 class Task(Base):
     __tablename__ = "tasks"
