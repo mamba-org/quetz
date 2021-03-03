@@ -1,11 +1,10 @@
-import pickle
 from typing import Callable, Optional, Union
 
 import requests
 
 from quetz.config import Config
 from quetz.dao import Dao
-from quetz.tasks.workers import job_wrapper, prepare_arguments
+from quetz.tasks.workers import job_wrapper
 
 
 class TestWorker:
@@ -34,11 +33,5 @@ class TestWorker:
         if self.session:
             resources['session'] = self.session
 
-        if isinstance(func, bytes):
-            callable_func = pickle.loads(func)
-        else:
-            callable_func = func
-
-        extra_kwargs = prepare_arguments(callable_func, **resources)
-        kwargs.update(extra_kwargs)
+        kwargs.update(resources)
         job_wrapper(func, self.config, *args, **kwargs)

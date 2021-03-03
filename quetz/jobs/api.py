@@ -52,7 +52,7 @@ def create_job(
     user = auth.assert_user()
     # only admins can create jobs through /jobs API
     auth.assert_jobs(None)
-    new_job = dao.create_job(user, job.manifest, job.items_spec)
+    new_job = dao.create_job(user, job)
     return new_job
 
 
@@ -64,13 +64,13 @@ def get_job_or_fail(
 
     job = dao.get_job(job_id)
 
-    auth.assert_jobs(job.owner_id)
-
     if not job:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Job with id {job_id} not found",
         )
+
+    auth.assert_jobs(job.owner_id)
 
     return job
 

@@ -4,7 +4,6 @@ import time
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
-from unittest import mock
 
 import pkg_resources
 import pytest
@@ -615,6 +614,7 @@ def dummy_plugin(test_data_dir):
         "quetz.dummy_func",
         "quetz-plugin:dummy_func",
         "quetz-dummyplugin:missing_job",
+        "quetz-dummyplugin:dummy_job:error",
     ],
 )
 def test_post_new_job_manifest_validation(
@@ -624,7 +624,7 @@ def test_post_new_job_manifest_validation(
         "/api/jobs", json={"items_spec": "*", "manifest": manifest}
     )
     assert response.status_code == 422
-    msg = response.json()['detail']
+    msg = response.json()['detail'][0]['msg']
     assert "invalid function" in msg
     for name in manifest.split(":"):
         assert name in msg
@@ -647,16 +647,58 @@ def test_post_new_job_invalid_items_spec(auth_client, user, db, dummy_plugin):
 @pytest.mark.parametrize(
     "manifest", ["quetz-dummyplugin:dummy_func", "quetz-dummyplugin:dummy_job"]
 )
-def test_post_new_job_from_plugin(auth_client, user, db, manifest, dummy_plugin):
+def test_post_new_job_from_plugin(
+    auth_client,
+    user,
+    db,
+    manifest,
+    dummy_plugin,
+    sync_supervisor,
+    package_version,
+    mocker,
+):
 
-    with mock.patch("quetz_dummyplugin.jobs.dummy_func", dummy_func, create=True):
-        response = auth_client.post(
-            "/api/jobs", json={"items_spec": "*", "manifest": manifest}
-        )
+    dummy_func = mocker.Mock()
+    mocker.patch("quetz_dummyplugin.jobs.dummy_func", dummy_func, create=True)
+    response = auth_client.post(
+        "/api/jobs", json={"items_spec": "*", "manifest": manifest}
+    )
     assert response.status_code == 201
     job_id = response.json()['id']
     job = db.query(Job).get(job_id)
-    assert pickle.loads(job.manifest).__name__ == manifest.split(":")[1]
+    assert job.manifest.decode('ascii') == manifest
+
+    sync_supervisor.run_once()
+
+    assert job.status == JobStatus.success
+    assert job.tasks
+
+    if manifest.endswith("dummy_func"):
+        dummy_func.assert_called_once()
+    else:
+        dummy_func.assert_not_called()
+
+
+@pytest.mark.parametrize("user_role", ["owner"])
+def test_post_new_job_with_handler(
+    auth_client, user, db, mock_action, sync_supervisor, package_version
+):
+
+    response = auth_client.post(
+        "/api/jobs", json={"items_spec": "*", "manifest": "test_action"}
+    )
+    assert response.status_code == 201
+    job_id = response.json()['id']
+    job = db.query(Job).get(job_id)
+    assert job.status == JobStatus.pending
+    assert job.manifest.decode('ascii') == "test_action"
+
+    sync_supervisor.run_once()
+
+    assert job.status == JobStatus.success
+    assert job.tasks
+
+    mock_action.assert_called_once()
 
 
 @pytest.mark.parametrize("user_role", ["owner"])
@@ -674,7 +716,7 @@ def test_filter_jobs_by_status(auth_client, db, user, status, job_ids):
     job0 = Job(
         id=0,
         items_spec="*",
-        manifest=pickle.dumps(dummy_func),
+        manifest=b"dummy_func",
         status=JobStatus.running,
         owner=user,
     )
@@ -682,7 +724,7 @@ def test_filter_jobs_by_status(auth_client, db, user, status, job_ids):
     job1 = Job(
         id=1,
         items_spec="*",
-        manifest=pickle.dumps(dummy_func),
+        manifest=b"dummy_func",
         status=JobStatus.pending,
         owner=user,
     )
@@ -730,7 +772,7 @@ def many_jobs(db, user):
         job = Job(
             id=i,
             items_spec="*",
-            manifest=pickle.dumps(dummy_func),
+            manifest=b"dummy_func",
             status=JobStatus.running,
             owner=user,
         )
@@ -811,10 +853,10 @@ def other_user(db):
 
 @pytest.mark.parametrize("user_role", ["member"])
 def test_get_user_jobs(auth_client, db, user, package_version, other_user):
-    job = Job(items_spec="*", owner=user, manifest=pickle.dumps(dummy_func))
+    job = Job(items_spec="*", owner=user, manifest=b"dummy_func")
     db.add(job)
 
-    other_job = Job(items_spec="*", owner=other_user, manifest=pickle.dumps(dummy_func))
+    other_job = Job(items_spec="*", owner=other_user, manifest=b"dummy_func")
     db.add(other_job)
 
     db.commit()
@@ -859,7 +901,7 @@ def sync_supervisor(db, dao, config):
 @pytest.fixture
 def mock_action(mocker):
     func = mocker.Mock()
-    mocker.patch("quetz.jobs.runner.ACTION_HANDLERS", {"test_action": func})
+    mocker.patch("quetz.jobs.handlers.JOB_HANDLERS", {"test_action": func})
     return func
 
 

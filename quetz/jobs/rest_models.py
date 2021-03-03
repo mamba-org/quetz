@@ -4,11 +4,79 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
+import pkg_resources
 from pydantic import BaseModel, Field, validator
 
+from . import handlers
 from .models import JobStatus, TaskStatus
 
 logger = logging.getLogger("quetz")
+
+
+def parse_job_manifest(function_name):
+    """validate and parse job function name from a string
+
+    Examples:
+
+    parse_job_manifest("some_function")
+
+       returns one of the built-in functions registered in quetz.jobs.handlers modules
+
+    parse_job_manifest("plugin:function_name")
+
+       returns a function from a moduled registered with plugin's quetz.jobs entrypoint
+
+    parse_job_manifest("non_existent_function")
+
+       raises ValueError for unknown functions
+
+    """
+    paths = function_name.split(":")
+
+    if len(paths) == 2:
+        plugin_name, job_name = paths
+        entry_points = list(pkg_resources.iter_entry_points('quetz.jobs', plugin_name))
+        if not entry_points:
+            raise ValueError(
+                f"invalid function {function_name}: "
+                f"plugin {plugin_name} not installed"
+            )
+        job_module = entry_points[0].load()
+        try:
+            return getattr(job_module, job_name)
+        except AttributeError:
+            raise ValueError(
+                f"invalid function '{job_name}' name in plugin '{plugin_name}'"
+            )
+    elif len(paths) == 1:
+        try:
+            return handlers.JOB_HANDLERS[function_name]
+        except KeyError:
+            raise ValueError(
+                f"invalid function {function_name}: no such built-in function,"
+                " please provide plugin name"
+            )
+    else:
+        raise ValueError(f"invalid function {function_name} - could not parse")
+
+
+def parse_job_name(v):
+
+    try:
+        return v.decode("ascii")
+    except UnicodeDecodeError:
+        pass
+
+    # try unpickling
+
+    try:
+        func = pickle.loads(v)
+        return f"{func.__module__}:{func.__name__}"
+    except pickle.UnpicklingError:
+        raise ValueError("could not parse manifest")
+    except ModuleNotFoundError as e:
+        logger.error(f"job function not found: could not import module {e.name}")
+        return f"{e.name}:undefined"
 
 
 class JobBase(BaseModel):
@@ -28,6 +96,16 @@ class JobBase(BaseModel):
         ),
     )
 
+    @validator("manifest", pre=True)
+    def validate_job_name(cls, function_name):
+
+        if isinstance(function_name, bytes):
+            return parse_job_name(function_name)
+
+        parse_job_manifest(function_name)
+
+        return function_name.encode('ascii')
+
 
 class JobUpdateModel(BaseModel):
     """Modify job spec items (status and items_spec)"""
@@ -46,18 +124,6 @@ class Job(JobBase):
     status: JobStatus = Field(None, title='Status of the job (running, paused, ...)')
 
     items_spec: str = Field(None, title='Item selector spec')
-
-    @validator("manifest", pre=True)
-    def convert_name(cls, v):
-        try:
-            try:
-                func = pickle.loads(v)
-                return f"{func.__module__}:{func.__name__}"
-            except pickle.UnpicklingError:
-                return v.decode('ascii')
-        except ModuleNotFoundError as e:
-            logger.error(f"job function not found: could not import module {e.name}")
-            return e.name + ":undefined"
 
     class Config:
         orm_mode = True
