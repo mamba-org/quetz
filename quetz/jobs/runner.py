@@ -308,15 +308,12 @@ class Supervisor:
         n_updated = (
             self.db.query(Task)
             .filter(Task.status.in_([TaskStatus.running, TaskStatus.pending]))
-            .filter(Task.package_version_id.isnot(None))
-            .update({Task.status: TaskStatus.created}, synchronize_session=False)
+            .update({Task.status: TaskStatus.failed}, synchronize_session=False)
         )
         self.db.commit()
 
         if n_updated > 0:
-            logger.warning(
-                f"restarting {n_updated} tasks lost due to supervisor restart"
-            )
+            logger.warning(f"{n_updated} tasks set to failed due to supervisor restart")
 
     def _update_running_jobs(self):
         """Update status of running/pending jobs."""
