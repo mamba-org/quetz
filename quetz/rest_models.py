@@ -122,6 +122,8 @@ class ChannelActionEnum(str, Enum):
     cleanup = 'cleanup'
     cleanup_dry_run = 'cleanup_dry_run'
 
+    # handlers for new actions should be registered in quetz.job.handlers
+
 
 class ChannelMetadata(BaseModel):
 

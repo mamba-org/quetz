@@ -52,7 +52,7 @@ def create_job(
     user = auth.assert_user()
     # only admins can create jobs through /jobs API
     auth.assert_jobs(None)
-    new_job = dao.create_job(user, job.manifest, job.items_spec)
+    new_job = dao.create_job(user, job)
     return new_job
 
 

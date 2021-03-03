@@ -6,25 +6,11 @@ from fastapi import HTTPException, status
 
 from quetz import authorization, dao, db_models
 from quetz.jobs.dao import JobsDao
-from quetz.metrics import tasks as metrics_tasks
 from quetz.rest_models import ChannelActionEnum
 
-from . import assertions, cleanup, indexing, mirror, reindexing
+from . import assertions
 
 logger = logging.getLogger("quetz")
-
-ACTION_HANDLERS = {
-    "synchronize": mirror.synchronize_packages,
-    "synchronize_repodata": mirror.synchronize_packages,
-    "validate_packages": indexing.validate_packages,
-    "generate_indexes": indexing.update_indexes,
-    "reindex": reindexing.reindex_packages_from_store,
-    "synchronize_metrics": metrics_tasks.synchronize_metrics_from_mirrors,
-    "pkgstore_cleanup": cleanup.cleanup_channel_db,
-    "db_cleanup": cleanup.cleanup_temp_files,
-    "pkgstore_cleanup_dry_run": cleanup.cleanup_channel_db,
-    "db_cleanup_dry_run": cleanup.cleanup_temp_files,
-}
 
 
 def assert_channel_action(action, channel):

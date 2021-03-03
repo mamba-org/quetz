@@ -6,9 +6,57 @@ from typing import Optional
 import pkg_resources
 from pydantic import BaseModel, Field, validator
 
+from . import handlers
 from .models import JobStatus, TaskStatus
 
 logger = logging.getLogger("quetz")
+
+
+def parse_job_manifest(function_name):
+    """validate and parse job function name from a string
+
+    Examples:
+
+    parse_job_manifest("some_function")
+
+       returns one of the built-in functions registered in quetz.jobs.handlers modules
+
+    parse_job_manifest("plugin:function_name")
+
+       returns a function from a moduled registered with plugin's quetz.jobs entrypoint
+
+    parse_job_manifest("non_existent_function")
+
+       raises ValueError for unknown functions
+
+    """
+    paths = function_name.split(":")
+
+    if len(paths) == 2:
+        plugin_name, job_name = paths
+        entry_points = list(pkg_resources.iter_entry_points('quetz.jobs', plugin_name))
+        if not entry_points:
+            raise ValueError(
+                f"invalid function {function_name}: "
+                f"plugin {plugin_name} not installed"
+            )
+        job_module = entry_points[0].load()
+        try:
+            return getattr(job_module, job_name)
+        except AttributeError:
+            raise ValueError(
+                f"invalid function '{job_name}' name in plugin '{plugin_name}'"
+            )
+    elif len(paths) == 1:
+        try:
+            return handlers.JOB_HANDLERS[function_name]
+        except KeyError:
+            raise ValueError(
+                f"invalid function {function_name}: no such built-in function,"
+                " please provide plugin name"
+            )
+    else:
+        raise ValueError(f"invalid function {function_name} - could not parse")
 
 
 class JobBase(BaseModel):
@@ -34,32 +82,8 @@ class JobBase(BaseModel):
         if isinstance(function_name, bytes):
             return function_name.decode("ascii")
 
-        paths = function_name.split(":")
+        parse_job_manifest(function_name)
 
-        if len(paths) == 2:
-            plugin_name, job_name = paths
-            entry_points = list(
-                pkg_resources.iter_entry_points('quetz.jobs', plugin_name)
-            )
-            if not entry_points:
-                raise ValueError(
-                    f"invalid function {function_name}: "
-                    f"plugin {plugin_name} not installed"
-                )
-            job_module = entry_points[0].load()
-            try:
-                getattr(job_module, job_name)
-            except AttributeError:
-                raise ValueError(
-                    f"invalid function '{job_name}' name in plugin '{plugin_name}'"
-                )
-        elif len(paths) == 1:
-            raise ValueError(
-                f"invalid function {function_name}: no such built-in function,"
-                " please provide plugin name"
-            )
-        else:
-            raise ValueError(f"invalid function {function_name} - could not parse")
         return function_name.encode('ascii')
 
 

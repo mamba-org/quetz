@@ -2,6 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import logging
+import pickle
 import re
 import time
 from datetime import datetime, timedelta
@@ -15,7 +16,7 @@ from sqlalchemy.sql.expression import FunctionElement
 
 from quetz.db_models import PackageVersion
 from quetz.jobs.models import ItemsSelection, Job, JobStatus, Task, TaskStatus
-from quetz.tasks.common import ACTION_HANDLERS
+from quetz.jobs.rest_models import parse_job_manifest
 
 logger = logging.getLogger('quetz.tasks')
 
@@ -185,6 +186,7 @@ class Supervisor:
         now = datetime.utcnow()
         db = self.db
         jobs = db.query(Job).filter(Job.status == JobStatus.pending)
+        logger.info(f"Got pending jobs: {jobs.count()}")
         if job_id:
             jobs = jobs.filter(Job.id == job_id)
         for job in jobs:
@@ -232,20 +234,33 @@ class Supervisor:
 
             db.commit()
 
-    def add_task_to_queue(self, db, task, *args, func=None, **kwargs):
+    def add_task_to_queue(self, db, task, *args, **kwargs):
         """add task to the queue"""
 
         db = self.db
         manager = self.manager
         _process_cache = self._process_cache
 
-        if func is None:
-            func = task.job.manifest
+        try:
+            action_name = task.job.manifest.decode('ascii')
+            action_func = parse_job_manifest(action_name)
+        except UnicodeDecodeError:
+            try:
+                action_func = pickle.loads(task.job.manifest)
+            except pickle.UnpicklingError:
+                logger.error(
+                    f"job {task.job_id} manifest contains non-ascii characters"
+                )
+                raise
+        except ValueError:
+            logger.error(f"job action {action_name} not known")
+            raise
+
         task.status = TaskStatus.pending
         task.job.status = JobStatus.running
         db.add(task)
         db.commit()
-        job = manager.execute(func, *args, task_id=task.id, **kwargs)
+        job = manager.execute(action_func, *args, task_id=task.id, **kwargs)
         _process_cache[task.id] = job
         return job
 
@@ -260,13 +275,7 @@ class Supervisor:
         jobs = []
         for task in tasks:
             if not task.package_version:
-                action_name = task.job.manifest.decode('ascii')
-                try:
-                    action_func = ACTION_HANDLERS[action_name]
-                except KeyError:
-                    logger.error(f"action {action_name} not known")
-                    continue
-                kwargs = {"func": action_func}
+                kwargs = {}
             else:
                 kwargs = {
                     'package_version': {
@@ -283,8 +292,13 @@ class Supervisor:
                         "uploader_id": task.package_version.uploader_id,
                     }
                 }
-            job = self.add_task_to_queue(db, task, **kwargs)
-            jobs.append(job)
+            try:
+                job = self.add_task_to_queue(db, task, **kwargs)
+                jobs.append(job)
+            except Exception:
+                logger.exception(f"task {task.id} failed due to error")
+                task.status = TaskStatus.failed
+
         db.commit()
         return jobs
 

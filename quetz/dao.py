@@ -1084,13 +1084,15 @@ class Dao:
 
         return get_paginated_result(tasks, skip, limit)
 
-    def create_job(self, user_id, function_name, items_spec):
+    def create_job(self, user_id, job_model):
 
-        serialized = function_name.encode('ascii')
+        serialized = job_model.manifest.encode('ascii')
         job = Job(
             owner_id=user_id,
             manifest=serialized,
-            items_spec=items_spec,
+            items_spec=job_model.items_spec,
+            start_at=job_model.start_at,
+            repeat_every_seconds=job_model.repeat_every_seconds,
         )
         self.db.add(job)
         self.db.commit()
