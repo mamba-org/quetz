@@ -1,4 +1,5 @@
 import logging
+import pickle
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -59,6 +60,25 @@ def parse_job_manifest(function_name):
         raise ValueError(f"invalid function {function_name} - could not parse")
 
 
+def parse_job_name(v):
+
+    try:
+        return v.decode("ascii")
+    except UnicodeDecodeError:
+        pass
+
+    # try unpickling
+
+    try:
+        func = pickle.loads(v)
+        return f"{func.__module__}:{func.__name__}"
+    except pickle.UnpicklingError:
+        raise ValueError("could not parse manifest")
+    except ModuleNotFoundError as e:
+        logger.error(f"job function not found: could not import module {e.name}")
+        return f"{e.name}:undefined"
+
+
 class JobBase(BaseModel):
     """New job spec"""
 
@@ -80,7 +100,7 @@ class JobBase(BaseModel):
     def validate_job_name(cls, function_name):
 
         if isinstance(function_name, bytes):
-            return function_name.decode("ascii")
+            return parse_job_name(function_name)
 
         parse_job_manifest(function_name)
 
