@@ -290,8 +290,11 @@ async def test_running_task(db, user, package_version, supervisor):
     assert task.status == TaskStatus.success
 
 
+@pytest.mark.parametrize("items_spec", [None, "*"])
 @pytest.mark.asyncio
-async def test_restart_worker_process(db, user, package_version, supervisor, caplog):
+async def test_restart_worker_process(
+    db, user, package_version, supervisor, caplog, items_spec
+):
     # test if we can resume jobs if a worker was killed/restarted
     func_serialized = pickle.dumps(long_running)
 
@@ -321,23 +324,16 @@ async def test_restart_worker_process(db, user, package_version, supervisor, cap
     # simulate restart
     supervisor = Supervisor(db, supervisor.manager)
 
-    assert task.status == TaskStatus.created
-    assert "lost" in caplog.text
+    db.refresh(job)
+    assert job.status == JobStatus.running
+    assert task.status == TaskStatus.failed
+    assert "failed" in caplog.text
 
-    new_processes = supervisor.run_tasks()
-    db.refresh(task)
+    supervisor.run_once()
 
-    assert len(new_processes) == 1
-    assert task.status == TaskStatus.pending
+    db.refresh(job)
 
-    more_processes = supervisor.run_tasks()
-    await new_processes[0].wait()
-    even_more_processes = supervisor.run_tasks()
-    supervisor.check_status()
-    db.refresh(task)
-    assert not more_processes
-    assert not even_more_processes
-    assert task.status == TaskStatus.success
+    assert job.status == JobStatus.failed
 
 
 @pytest.mark.asyncio
