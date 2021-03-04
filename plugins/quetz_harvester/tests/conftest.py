@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -6,10 +7,10 @@ import pytest
 from quetz.authorization import SERVER_OWNER
 from quetz.config import Config
 from quetz.dao import Dao
-from quetz.db_models import Profile, User
+from quetz.db_models import ApiKey, Profile, User
 from quetz.jobs.runner import Supervisor
 from quetz.rest_models import Channel, Package
-from quetz.tasks.workers import SubprocessWorker
+from quetz.testing.mockups import TestWorker
 
 pytest_plugins = "quetz.testing.fixtures"
 
@@ -49,8 +50,8 @@ def auth_client(client, user):
 
 
 @pytest.fixture
-def supervisor(config, db):
-    manager = SubprocessWorker(config)
+def supervisor(config, db, dao):
+    manager = TestWorker(config, db, dao)
     supervisor = Supervisor(db, manager)
     return supervisor
 
@@ -156,3 +157,18 @@ def auto_rollback():
 def sqlite_in_memory():
     # use sqlite on disk so that we can modify it in a different process
     return False
+
+
+@pytest.fixture
+def api_key(db, user):
+
+    key = ApiKey(
+        key="apikey",
+        time_created=date.today(),
+        expire_at=date(2030, 1, 1),
+        user_id=user.id,
+        owner_id=user.id,
+    )
+    db.add(key)
+    db.commit()
+    return key

@@ -1,26 +1,19 @@
 import json
-import pickle
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends
-from libcflib.harvester import harvest
+from libcflib.harvester import harvest as libc_harvest
 from pydantic import BaseModel, Field
 
-from quetz import authorization
 from quetz.dao import Dao
-from quetz.deps import get_db, get_rules
-from quetz.jobs.models import Job
 from quetz.pkgstores import PackageStore
-
-router = APIRouter()
 
 
 class PackageSpec(BaseModel):
     package_spec: Optional[str] = Field(None, title="package version specification")
 
 
-def quetz_harvest(package_version: dict, config, pkgstore: PackageStore, dao: Dao):
+def harvest(package_version: dict, config, pkgstore: PackageStore, dao: Dao):
     filename: str = package_version["filename"]
     channel: str = package_version["channel_name"]
     platform = package_version["platform"]
@@ -34,7 +27,7 @@ def quetz_harvest(package_version: dict, config, pkgstore: PackageStore, dao: Da
 
     print("Harvesting ... ")
     try:
-        result = harvest(fh)
+        result = libc_harvest(fh)
     except Exception as e:
         print(f"Exception caught in harvesting: {str(e)}")
         return
@@ -46,22 +39,3 @@ def quetz_harvest(package_version: dict, config, pkgstore: PackageStore, dao: Da
         channel,
         Path("metadata") / platform / filename.replace('.tar.bz2', '.json'),
     )
-
-
-harvest_serialized = pickle.dumps(quetz_harvest)
-
-
-@router.put("/api/harvester", tags=["plugins"])
-def put_harvest(
-    package_spec: PackageSpec,
-    db=Depends(get_db),
-    auth: authorization.Rules = Depends(get_rules),
-):
-    user = auth.get_user()
-    job = Job(
-        owner_id=user,
-        manifest=harvest_serialized,
-        items_spec=package_spec.package_spec,
-    )
-    db.add(job)
-    db.commit()

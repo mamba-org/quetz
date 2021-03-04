@@ -5,6 +5,8 @@ setup(
     # you should install libcflib using
     # $ pip install git+https://git@github.com/regro/libcflib@master --no-deps
     install_requires=["quetz", "libcflib"],
-    entry_points={"quetz": ["quetz-harvester = quetz_harvester.main"]},
+    entry_points={
+        "quetz.jobs": ["quetz-harvester=quetz_harvester.jobs"],
+    },
     packages=["quetz_harvester"],
 )
