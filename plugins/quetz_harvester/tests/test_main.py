@@ -1,24 +1,20 @@
 from pathlib import Path
 
-import pytest
-from httpx import AsyncClient
-
 from quetz.db_models import PackageVersion
 from quetz.jobs.models import Job, Task, TaskStatus
 
 
-@pytest.mark.asyncio
-async def test_harvest_endpoint_and_job(
-    auth_client, db, config, supervisor, package_version, app, channel_name
+def test_harvest_endpoint_and_job(
+    api_key, auth_client, db, config, supervisor, package_version, app, channel_name
 ):
 
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        response = await ac.put("/api/harvester", json={"package_spec": "*"})
+    response = auth_client.post(
+        "/api/jobs", json={"items_spec": "*", "manifest": "quetz-harvester:harvest"}
+    )
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     supervisor.run_jobs()
-    new_jobs = supervisor.run_tasks()
-    await new_jobs[0].wait()
+    supervisor.run_tasks()
 
     supervisor.check_status()
 

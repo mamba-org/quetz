@@ -41,7 +41,7 @@ def parse_job_manifest(function_name):
                 f"invalid function {function_name}: "
                 f"plugin {plugin_name} not installed"
             )
-        job_module = entry_points[0].load()
+        job_module = entry_points[0].load(require=False)
         try:
             return getattr(job_module, job_name)
         except AttributeError:

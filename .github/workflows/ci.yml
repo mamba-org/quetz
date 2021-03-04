@@ -82,7 +82,7 @@ jobs:
           for f in ./plugins/quetz_*
           do
             echo "Testing plugin" $f
-            pip install $f
+            quetz plugin install $f
             pytest -v $f
           done
       - uses: codecov/codecov-action@v1
