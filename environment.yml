@@ -9,7 +9,7 @@ dependencies:
   - authlib
   - psycopg2
   - httpx=0.16.0
-  - sqlalchemy
+  - sqlalchemy<1.4.0
   - sqlalchemy-utils
   - sqlite
   - python-multipart
