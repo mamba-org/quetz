@@ -10,7 +10,6 @@ import os.path as path
 import shutil
 import tempfile
 from contextlib import contextmanager
-from datetime import datetime, timedelta
 from os import PathLike
 from typing import IO, BinaryIO, List, NoReturn, Tuple, Union
 
@@ -23,13 +22,6 @@ try:
     has_xattr = True
 except ImportError:
     has_xattr = False
-
-try:
-    import azure.storage.blob as azure
-
-    azure_available = True
-except ImportError:
-    azure_available = False
 
 from quetz.errors import ConfigError
 
@@ -336,17 +328,15 @@ class AzureBlobStore(PackageStore):
             import adlfs
         except ModuleNotFoundError:
             raise ModuleNotFoundError("Azure Blob package store requires adlfs module")
-        if not azure_available:
-            raise ModuleNotFoundError(
-                "Azure Blob package store requires azure-storage-blob module"
-            )
 
         self.storage_account_name = config.get('account_name')
         self.access_key = config.get("account_access_key")
         self.conn_string = config.get("conn_str")
 
         self.fs = adlfs.AzureBlobFileSystem(
-            account_name=self.storage_account_name, connection_string=self.conn_string
+            account_name=self.storage_account_name,
+            connection_string=self.conn_string,
+            account_key=self.access_key,
         )
 
         self.container_prefix = config['container_prefix']
@@ -435,31 +425,19 @@ class AzureBlobStore(PackageStore):
 
     def url(self, channel: str, src: str, expires=3600):
         # expires is in seconds, so the default is 60 minutes!
-        channel_container = self._container_map(channel)
-        sas_token = azure.generate_blob_sas(
-            account_name=self.storage_account_name,
-            container_name=channel_container,
-            blob_name=src,
-            account_key=self.access_key,
-            permission=azure.BlobSasPermissions(read=True),
-            expiry=datetime.utcnow() + timedelta(seconds=expires),
-        )
-
-        bsc = azure.BlobServiceClient.from_connection_string(self.conn_string)
-        blob = bsc.get_blob_client(channel_container, src)
-        return azure.BlobClient.from_blob_url(blob.url, credential=sas_token).url
+        with self._get_fs() as fs:
+            return fs.url(path.join(self._container_map(channel), src), expires)
 
     def get_filemetadata(self, channel: str, src: str):
-        channel_container = self._container_map(channel)
-        bsc = azure.BlobServiceClient.from_connection_string(self.conn_string)
-        blob = bsc.get_blob_client(channel_container, src)
-        infodata = blob.get_blob_properties()
+        with self._get_fs() as fs:
+            filepath = path.join(self._container_map(channel), src)
+            infodata = fs.info(filepath)
 
-        mtime = infodata['last_modified'].timestamp()
-        msize = infodata['size']
-        etag = infodata['etag']
+            mtime = infodata['last_modified'].timestamp()
+            msize = infodata['size']
+            etag = infodata['etag']
 
-        return (msize, mtime, etag)
+            return (msize, mtime, etag)
 
     def cleanup_temp_files(self, channel: str, dry_run: bool = False):
         with self._get_fs() as fs:
