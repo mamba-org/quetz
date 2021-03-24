@@ -21,15 +21,16 @@ config = Config()
 
 logger = logging.getLogger('quetz')
 
-plugin_js = []
+federated_extensions = []
 for js in pm.hook.js_plugin_paths():
-    plugin_js.append(js)
+    federated_extensions.append(js)
 
 mock_router = APIRouter()
 catchall_router = APIRouter()
 
 mock_settings_dict = None
 frontend_dir = ""
+extensions_dir = "/share/quetz/extensions/"
 index_template = None
 config_data: dict
 
@@ -94,8 +95,21 @@ def render_index(config):
         with open(static_dir / "settings.json", "w") as fo:
             fo.write(json.dumps(settings_template))
 
+@mock_router.get('/extensions/{resource:path}', include_in_schema=False)
+def extensions(
+    resource: str,
+    session: dict = Depends(get_session),
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    user_id = auth.get_user()
 
-@catchall_router.get('/{resource:path}', include_in_schema=False)
+    logger.info(f"Extension request: {resource}")
+    logger.info(f"Extensions dir: {extensions_dir}")
+    logger.info(f"Extension path: {os.path.join(extensions_dir, resource)}")
+    return FileResponse(path=os.path.join(extensions_dir, resource))
+
+@mock_router.get('/static/{resource:path}', include_in_schema=False)
 def static(
     resource: str,
     session: dict = Depends(get_session),
@@ -134,6 +148,7 @@ def register(app):
     # This is to help the jupyterlab-based frontend to not
     # have any 404 requests.
     global frontend_dir
+    global extensions_dir
     global config_data
 
     auth_registry = AuthenticatorRegistry()
@@ -144,17 +159,25 @@ def register(app):
     config_data = {
         "appName": "Quetz – the fast conda package server!",
         "baseUrl": "/jlabmock/",
+        "fullStaticUrl": os.path.join('/jlabmock/', 'static'),
+        "fullLabextensionsUrl": os.path.join('/jlabmock/', 'extensions'),
+        "federated_extensions": [],
         "github_login_available": github_login_available,
         "gitlab_login_available": gitlab_login_available,
         "google_login_available": google_login_available,
     }
 
 
-    if plugin_js:
-        logger.info(f"Found frontend plugin paths: {plugin_js}")
-        config_data["pluginJs"] = plugin_js
+    if federated_extensions:
+        logger.info(f"Found frontend plugin paths: {federated_extensions}")
+        config_data["federated_extensions"] = federated_extensions
 
     logger.info(f"Frontend config: {config_data}")
+
+    if hasattr(config, 'general_extensions_dir') and config.general_extensions_dir:
+        extensions_dir = config.general_extensions_dir
+    
+    logger.info(f"Configured extensions directory: {extensions_dir}")
 
     app.include_router(mock_router, prefix="/jlabmock")
 

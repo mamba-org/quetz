@@ -73,6 +73,7 @@ class Config:
             [
                 ConfigEntry("package_unpack_threads", int, 1),
                 ConfigEntry("frontend_dir", str, default=""),
+                ConfigEntry("extensions_dir", str, default="/share/quetz/extensions/")
             ],
         ),
         ConfigSection(
