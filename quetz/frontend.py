@@ -73,23 +73,24 @@ def render_index(config):
     static_dir = config.general_frontend_dir
 
     logger.info("Rendering index.html!")
+    logger.info("config_data: ", config_data)
     static_dir = Path(static_dir)
-    if (static_dir / ".." / "templates").exists():
+    if (static_dir).exists():
         with open(static_dir / "index.html") as fi:
             index_template = jinja2.Template(fi.read())
 
-        with open(static_dir / ".." / "templates" / "settings.json") as fi:
+        with open(static_dir / ".." / "app" / "templates" / "settings.json") as fi:
             settings_template = json.load(fi)
 
-        with open(static_dir / ".." / "templates" / "default_settings.json") as fi:
+        with open(static_dir / ".." / "app" / "templates" / "default_settings.json") as fi:
             default_settings = fi.read()
 
         for setting in settings_template["settings"]:
             if setting["id"] == '@jupyterlab/apputils-extension:themes':
                 setting["raw"] = default_settings
 
-        with open(os.path.join(static_dir, "index.html"), "w") as fo:
-            fo.write(index_template.render(page_config=config_data))
+        #with open(os.path.join(static_dir, "index.html"), "w") as fo:
+        #    fo.write(index_template.render(page_config=config_data))
 
         mock_settings_dict = settings_template
         with open(static_dir / "settings.json", "w") as fo:
@@ -107,6 +108,7 @@ def extensions(
     logger.info(f"Extension request: {resource}")
     logger.info(f"Extensions dir: {extensions_dir}")
     logger.info(f"Extension path: {os.path.join(extensions_dir, resource)}")
+    #"federated_extensions": [{"extension": "./extension", "load": "static/remoteEntry.a1fe33117f8149d71c15.js", "name": "@mamba-org/gator-lab", "style": "./style"}]
     return FileResponse(path=os.path.join(extensions_dir, resource))
 
 @mock_router.get('/static/{resource:path}', include_in_schema=False)
@@ -117,6 +119,8 @@ def static(
     auth: authorization.Rules = Depends(get_rules),
 ):
     user_id = auth.get_user()
+    logger.info(f"STATIC: {resource}, {session}, {user_id}")
+    return FileResponse(path=os.path.join(frontend_dir, resource))
 
     if "." not in resource:
         if index_template is None or user_id is None:
@@ -132,14 +136,36 @@ def static(
                 return FileResponse(path=os.path.join(frontend_dir, "index.html"))
     elif ".." in resource:  # Don't serve relative paths
         return FileResponse(path=os.path.join(frontend_dir, "index.html"))
+        
+@catchall_router.get('/{resource:path}', include_in_schema=False)
+def index(
+    resource: str,
+    session: dict = Depends(get_session),
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    user_id = auth.get_user()
+    logger.info(f"STATIC: {resource}, {session}, {user_id}")
+
+    profile = dao.get_profile(user_id)
+    if profile is not None:
+        logger.info(f"STATIC index: {profile}, {index_template}")
+        index_rendered = get_rendered_index(config_data, profile, index_template)
+        return HTMLResponse(content=index_rendered, status_code=200)
     else:
-        return FileResponse(path=os.path.join(frontend_dir, resource))
+        static_dir = Path(config.general_frontend_dir)
+        with open(static_dir / "index.html") as fi:
+            template = jinja2.Template(fi.read())
+        index_rendered = template.render(page_config=config_data)
+        return HTMLResponse(content=index_rendered, status_code=200)
 
 
 def get_rendered_index(config_data, profile, index_template):
     config_data["logged_in_user_profile"] = rest_models.Profile.from_orm(profile).json()
-    logger.info(f"Page config: {config_data}")
-    index_rendered = index_template.render(page_config=config_data)
+    static_dir = Path(config.general_frontend_dir)
+    with open(static_dir / "index.html") as fi:
+        template = jinja2.Template(fi.read())
+    index_rendered = template.render(page_config=config_data)
     return index_rendered
 
 
@@ -158,15 +184,51 @@ def register(app):
 
     config_data = {
         "appName": "Quetz – the fast conda package server!",
-        "baseUrl": "/jlabmock/",
+        "github_login_available": github_login_available,
+        "google_login_available": google_login_available,
+        
+        "baseUrl": "/",
+        "wsUrl": ""
+        "appUrl": "/jlabmock",
+        "listingsUrl": os.path.join('/jlabmock/', 'api', 'listings'),
+        "labextensionsUrl": os.path.join('/jlabmock/', 'extensions'),
+        "themesUrl": os.path.join('/jlabmock/', 'api', 'themes'),
+        "settingsUrl": os.path.join('/jlabmock/', 'api', 'settings'),
+
+        "fullAppUrl": "/lab",
         "fullStaticUrl": os.path.join('/jlabmock/', 'static'),
         "fullLabextensionsUrl": os.path.join('/jlabmock/', 'extensions'),
+        "fullListingsUrl": os.path.join('/jlabmock/', 'api', 'listings'),
+        "fullThemesUrl": os.path.join('/jlabmock/', 'api', 'themes')
+        "fullSettingsUrl": os.path.join('/jlabmock/', 'api', 'settings'),
+        
         "federated_extensions": [],
+<<<<<<< HEAD
         "github_login_available": github_login_available,
         "gitlab_login_available": gitlab_login_available,
         "google_login_available": google_login_available,
+=======
+        "cacheFiles": false,
+        "devMode": false,
+        "mode": "multiple-document",
+        "exposeAppInBrowser": false,
+>>>>>>> bc0b06a (page config object)
     }
 
+    #"serverRoot": "~/Documents/mamba/quetz",
+    #"staticDir": "/home/carlos/miniconda3/envs/quetz/share/jupyter/lab/static",
+    #"templatesDir": "/home/carlos/miniconda3/envs/quetz/share/jupyter/lab/static",
+    #"schemasDir": "/home/carlos/miniconda3/envs/quetz/share/jupyter/lab/schemas",
+    #"themesDir": "/home/carlos/miniconda3/envs/quetz/share/jupyter/lab/themes",
+    #"appSettingsDir": "/home/carlos/miniconda3/envs/quetz/share/jupyter/lab/settings",
+    #"userSettingsDir": "/home/carlos/miniconda3/envs/quetz/etc/jupyter/lab/user-settings",
+    #"labextensionsPath": [
+    #    "/home/carlos/miniconda3/envs/quetz/share/jupyter/labextensions",
+    #    "/home/carlos/.local/share/jupyter/labextensions",
+    #    "/usr/local/share/jupyter/labextensions",
+    #    "/usr/share/jupyter/labextensions"
+    #],
+    #"extraLabextensionsPath": [],
 
     if federated_extensions:
         logger.info(f"Found frontend plugin paths: {federated_extensions}")
