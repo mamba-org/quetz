@@ -1,5 +1,12 @@
 def test_mamba_solve_endpoint(client):
-    response = client.get("/api/mamba/solve/conda-forge/osx-64/xtensor>=0.21.0")
+    response = client.post(
+        "/api/mamba/solve",
+        json={
+            "channels": ["conda-forge"],
+            "subdir": "osx-64",
+            "spec": ["xtensor>=0.21.0"],
+        },
+    )
     assert response.status_code == 200
     assert (
         response.content
