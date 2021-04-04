@@ -19,6 +19,11 @@
             Sign In Via Github
           </cv-button>
         </template>
+        <template v-if="gitlab_login">
+          <cv-button v-on:click="signinGitlab">
+            Sign In Via Gitlab
+          </cv-button>
+        </template>
         <template v-if="google_login">
           <cv-button v-on:click="signinGoogle">
             Sign In Via Google
@@ -64,12 +69,14 @@
         name: '',
         avatar_url: undefined,
         github_login: false,
+        gitlab_login: false,
         google_login: false,
       };
     },
     created() {
       this.me();
       this.check_github_login();
+      this.check_gitlab_login();
       this.check_google_login();
     //  TODO: get enabled login routes
     },
@@ -77,6 +84,10 @@
       signinGithub() {
         window.location.href = "/auth/github/login";
         console.log("Signing in via github");
+      },
+      signinGitlab() {
+        window.location.href = "/auth/gitlab/login";
+        console.log("Signing in via gitlab");
       },
       signinGoogle() {
         window.location.href = "/auth/google/login";
@@ -105,6 +116,14 @@
         }).catch((err) => {
           console.log(err);
           this.github_login = false;
+        })
+      },
+      check_gitlab_login() {
+        fetch("/auth/gitlab/enabled").then((msg) => {
+          this.gitlab_login = msg.status === 200;
+        }).catch((err) => {
+          console.log(err);
+          this.gitlab_login = false;
         })
       },
       check_google_login() {

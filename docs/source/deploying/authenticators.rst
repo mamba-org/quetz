@@ -24,6 +24,12 @@ Github
 
 .. autoclass:: quetz.authentication.github.GithubAuthenticator
 
+Gitlab
+^^^^^^
+
+.. autoclass:: quetz.authentication.gitlab.GitlabAuthenticator
+
+
 Google
 ^^^^^^
 

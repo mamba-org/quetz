@@ -94,6 +94,15 @@ class Config:
             required=False,
         ),
         ConfigSection(
+            "gitlab",
+            [
+                ConfigEntry("url", str, default="https://gitlab.com"),
+                ConfigEntry("client_id", str),
+                ConfigEntry("client_secret", str),
+            ],
+            required=False,
+        ),
+        ConfigSection(
             "sqlalchemy",
             [
                 ConfigEntry("database_url", str),
