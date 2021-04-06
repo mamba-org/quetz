@@ -55,9 +55,9 @@ def mock_settings():
     return mock_settings_dict
 
 
-@mock_router.get('/quetz-themes/{resource:path}', include_in_schema=False)
+@catchall_router.get('/quetz-themes/{resource:path}', include_in_schema=False)
 def get_theme(resource: str):
-    final_path = os.path.join(frontend_dir, resource)
+    final_path = os.path.join(frontend_dir, 'themes', resource)
     logger.info(f"Getting file from {frontend_dir}")
     logger.info(final_path)
     if os.path.exists(final_path):
@@ -75,14 +75,14 @@ def render_index(config):
     logger.info("Rendering index.html!")
     logger.info("config_data: ", config_data)
     static_dir = Path(static_dir)
-    if (static_dir).exists():
+    if (static_dir / "index.html").exists():
         with open(static_dir / "index.html") as fi:
             index_template = jinja2.Template(fi.read())
 
-        with open(static_dir / ".." / "app" / "templates" / "settings.json") as fi:
+        with open(static_dir / ".." / "templates" / "settings.json") as fi:
             settings_template = json.load(fi)
 
-        with open(static_dir / ".." / "app" / "templates" / "default_settings.json") as fi:
+        with open(static_dir / ".." / "templates" / "default_settings.json") as fi:
             default_settings = fi.read()
 
         for setting in settings_template["settings"]:
@@ -148,6 +148,15 @@ def index(
     logger.info(f"STATIC: {resource}, {session}, {user_id}")
 
     profile = dao.get_profile(user_id)
+    if '.' in resource: 
+        return FileResponse(path=os.path.join(frontend_dir, resource))
+    else:
+        static_dir = Path(config.general_frontend_dir)
+        with open(static_dir / "index.html") as fi:
+            template = jinja2.Template(fi.read())
+        index_rendered = template.render(page_config=config_data)
+        return HTMLResponse(content=index_rendered, status_code=200)
+    
     if profile is not None:
         logger.info(f"STATIC index: {profile}, {index_template}")
         index_rendered = get_rendered_index(config_data, profile, index_template)
@@ -188,7 +197,7 @@ def register(app):
         "google_login_available": google_login_available,
         
         "baseUrl": "/",
-        "wsUrl": ""
+        "wsUrl": "",
         "appUrl": "/jlabmock",
         "listingsUrl": os.path.join('/jlabmock/', 'api', 'listings'),
         "labextensionsUrl": os.path.join('/jlabmock/', 'extensions'),
@@ -199,20 +208,22 @@ def register(app):
         "fullStaticUrl": os.path.join('/jlabmock/', 'static'),
         "fullLabextensionsUrl": os.path.join('/jlabmock/', 'extensions'),
         "fullListingsUrl": os.path.join('/jlabmock/', 'api', 'listings'),
-        "fullThemesUrl": os.path.join('/jlabmock/', 'api', 'themes')
+        "fullThemesUrl": os.path.join('/jlabmock/', 'api', 'themes'),
         "fullSettingsUrl": os.path.join('/jlabmock/', 'api', 'settings'),
         
         "federated_extensions": [],
-<<<<<<< HEAD
         "github_login_available": github_login_available,
         "gitlab_login_available": gitlab_login_available,
         "google_login_available": google_login_available,
-=======
+
         "cacheFiles": false,
         "devMode": false,
         "mode": "multiple-document",
         "exposeAppInBrowser": false,
->>>>>>> bc0b06a (page config object)
+        "cacheFiles": False,
+        "devMode": False,
+        "mode": "multiple-document",
+        "exposeAppInBrowser": False
     }
 
     #"serverRoot": "~/Documents/mamba/quetz",
