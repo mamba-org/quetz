@@ -136,7 +136,7 @@ class LocalStore(PackageStore):
         )
 
     def serve_path(self, channel, src):
-        return self.fs.open(path.join(self.channels_dir, channel, src)).f
+        return self.fs.open(path.join(self.channels_dir, channel, src))
 
     def list_files(self, channel: str):
         channel_dir = os.path.join(self.channels_dir, channel)
