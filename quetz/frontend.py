@@ -131,11 +131,13 @@ def register(app):
     auth_registry = AuthenticatorRegistry()
     google_login_available = auth_registry.is_registered("google")
     github_login_available = auth_registry.is_registered("github")
+    gitlab_login_available = auth_registry.is_registered("gitlab")
 
     config_data = {
         "appName": "Quetz – the fast conda package server!",
         "baseUrl": "/jlabmock/",
         "github_login_available": github_login_available,
+        "gitlab_login_available": gitlab_login_available,
         "google_login_available": google_login_available,
     }
 
