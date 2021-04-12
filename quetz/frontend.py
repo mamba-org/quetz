@@ -110,6 +110,8 @@ def static(
                 return HTMLResponse(content=index_rendered, status_code=200)
             else:
                 return FileResponse(path=os.path.join(frontend_dir, "index.html"))
+    elif ".." in resource:# Don't serve relative paths
+        return FileResponse(path=os.path.join(frontend_dir, "index.html"))
     else:
         return FileResponse(path=os.path.join(frontend_dir, resource))
 
