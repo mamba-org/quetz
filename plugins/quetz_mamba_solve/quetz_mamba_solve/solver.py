@@ -4,6 +4,7 @@ import tempfile
 from conda.base.context import context
 from conda.common.serialize import json_dump
 from conda.core.index import _supplement_index_with_system
+from conda.core.package_cache_data import PackageCacheData
 from conda_build.conda_interface import pkgs_dirs
 from mamba import mamba_api
 from mamba.utils import get_index, load_channels
@@ -79,7 +80,7 @@ class MambaSolver:
             self.local_repos[str(channel)].set_priority(start_prio, 0)
             start_prio -= 1
 
-    def solve(self, specs, pkg_cache_path=pkgs_dirs):
+    def solve(self, specs, pkg_cache_path=None):
         """Solve given a set of specs.
         Parameters
         ----------
@@ -112,6 +113,13 @@ class MambaSolver:
             print(error_string)
             exit(1)
 
+        if pkg_cache_path is None:
+            # use values from conda
+            pkg_cache_path = pkgs_dirs
+            writeable_dir = PackageCacheData.first_writable().pkgs_dir
+        else:
+            writeable_dir = pkg_cache_path[0]
+
         package_cache = mamba_api.MultiPackageCache(pkg_cache_path)
-        t = mamba_api.Transaction(api_solver, package_cache)
+        t = mamba_api.Transaction(api_solver, package_cache, writeable_dir)
         return t

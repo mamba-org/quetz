@@ -89,12 +89,13 @@ def render_index(config):
             if setting["id"] == '@jupyterlab/apputils-extension:themes':
                 setting["raw"] = default_settings
 
-        #with open(os.path.join(static_dir, "index.html"), "w") as fo:
+        # with open(os.path.join(static_dir, "index.html"), "w") as fo:
         #    fo.write(index_template.render(page_config=config_data))
 
         mock_settings_dict = settings_template
         with open(static_dir / "settings.json", "w") as fo:
             fo.write(json.dumps(settings_template))
+
 
 @mock_router.get('/extensions/{resource:path}', include_in_schema=False)
 def extensions(
@@ -103,13 +104,19 @@ def extensions(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
-    user_id = auth.get_user()
+    # user_id = auth.get_user()
 
     logger.info(f"Extension request: {resource}")
     logger.info(f"Extensions dir: {extensions_dir}")
     logger.info(f"Extension path: {os.path.join(extensions_dir, resource)}")
-    #"federated_extensions": [{"extension": "./extension", "load": "static/remoteEntry.a1fe33117f8149d71c15.js", "name": "@mamba-org/gator-lab", "style": "./style"}]
+    # "federated_extensions": [{
+    #   "extension": "./extension",
+    #   "load": "static/remoteEntry.a1fe33117f8149d71c15.js",
+    #   "name": "@mamba-org/gator-lab",
+    #   "style": "./style"
+    # }]
     return FileResponse(path=os.path.join(extensions_dir, resource))
+
 
 @mock_router.get('/static/{resource:path}', include_in_schema=False)
 def static(
@@ -119,7 +126,7 @@ def static(
     auth: authorization.Rules = Depends(get_rules),
 ):
     user_id = auth.get_user()
-    logger.info(f"STATIC: {resource}, {session}, {user_id}")
+    logger.info("STATIC: {!r}, {!r}, {!r}".format(resource, session, user_id))
     return FileResponse(path=os.path.join(frontend_dir, resource))
 
     if "." not in resource:
@@ -136,7 +143,8 @@ def static(
                 return FileResponse(path=os.path.join(frontend_dir, "index.html"))
     elif ".." in resource:  # Don't serve relative paths
         return FileResponse(path=os.path.join(frontend_dir, "index.html"))
-        
+
+
 @catchall_router.get('/{resource:path}', include_in_schema=False)
 def index(
     resource: str,
@@ -145,7 +153,7 @@ def index(
     auth: authorization.Rules = Depends(get_rules),
 ):
     user_id = auth.get_user()
-    logger.info(f"CATCHALL: {resource}, {session}, {user_id}")
+    logger.info("CATCHALL: {!r}, {!r}, {!r}".format(resource, session, user_id))
 
     profile = dao.get_profile(user_id)
 
@@ -158,7 +166,7 @@ def index(
             template = jinja2.Template(fi.read())
         index_rendered = template.render(page_config=config_data)
         return HTMLResponse(content=index_rendered, status_code=200)
-    
+
     if profile is not None:
         logger.info(f"STATIC index: {profile}, {index_template}")
         index_rendered = get_rendered_index(config_data, profile, index_template)
@@ -197,7 +205,6 @@ def register(app):
         "appName": "Quetz – the fast conda package server!",
         "github_login_available": github_login_available,
         "google_login_available": google_login_available,
-        
         "baseUrl": "/",
         "wsUrl": "",
         "appUrl": "/jlabmock",
@@ -205,19 +212,16 @@ def register(app):
         "themesUrl": os.path.join('/jlabmock/', 'themes'),
         "settingsUrl": os.path.join('/jlabmock/', 'api', 'settings'),
         "listingsUrl": os.path.join('/jlabmock/', 'api', 'listings'),
-
         "fullAppUrl": "/jlabmock",
         "fullStaticUrl": os.path.join('/jlabmock/', 'static'),
         "fullLabextensionsUrl": os.path.join('/jlabmock/', 'extensions'),
         "fullThemesUrl": os.path.join('/jlabmock/', 'themes'),
         "fullSettingsUrl": os.path.join('/jlabmock/', 'api', 'settings'),
         "fullListingsUrl": os.path.join('/jlabmock/', 'api', 'listings'),
-        
         "federated_extensions": [],
         "github_login_available": github_login_available,
         "gitlab_login_available": gitlab_login_available,
         "google_login_available": google_login_available,
-
         "cacheFiles": False,
         "devMode": False,
         "mode": "multiple-document",
@@ -225,23 +229,8 @@ def register(app):
         "cacheFiles": False,
         "devMode": False,
         "mode": "multiple-document",
-        "exposeAppInBrowser": False
+        "exposeAppInBrowser": False,
     }
-
-    #"serverRoot": "~/Documents/mamba/quetz",
-    #"staticDir": "/home/carlos/miniconda3/envs/quetz/share/jupyter/lab/static",
-    #"templatesDir": "/home/carlos/miniconda3/envs/quetz/share/jupyter/lab/static",
-    #"schemasDir": "/home/carlos/miniconda3/envs/quetz/share/jupyter/lab/schemas",
-    #"themesDir": "/home/carlos/miniconda3/envs/quetz/share/jupyter/lab/themes",
-    #"appSettingsDir": "/home/carlos/miniconda3/envs/quetz/share/jupyter/lab/settings",
-    #"userSettingsDir": "/home/carlos/miniconda3/envs/quetz/etc/jupyter/lab/user-settings",
-    #"labextensionsPath": [
-    #    "/home/carlos/miniconda3/envs/quetz/share/jupyter/labextensions",
-    #    "/home/carlos/.local/share/jupyter/labextensions",
-    #    "/usr/local/share/jupyter/labextensions",
-    #    "/usr/share/jupyter/labextensions"
-    #],
-    #"extraLabextensionsPath": [],
 
     if federated_extensions:
         logger.info(f"Found frontend plugin paths: {federated_extensions}")
@@ -251,7 +240,7 @@ def register(app):
 
     if hasattr(config, 'general_extensions_dir') and config.general_extensions_dir:
         extensions_dir = config.general_extensions_dir
-    
+
     logger.info(f"Configured extensions directory: {extensions_dir}")
 
     app.include_router(mock_router, prefix="/jlabmock")
