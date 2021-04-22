@@ -90,6 +90,7 @@ def validate_new_package(
        uploaded
     """
 
+
 @hookspec
 def js_plugin_paths() -> List[str]:
     """
