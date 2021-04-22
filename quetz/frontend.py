@@ -55,7 +55,7 @@ def mock_settings():
     return mock_settings_dict
 
 
-@catchall_router.get('/quetz-themes/{resource:path}', include_in_schema=False)
+@mock_router.get('/themes/{resource:path}', include_in_schema=False)
 def get_theme(resource: str):
     final_path = os.path.join(frontend_dir, 'themes', resource)
     logger.info(f"Getting file from {frontend_dir}")
@@ -145,11 +145,13 @@ def index(
     auth: authorization.Rules = Depends(get_rules),
 ):
     user_id = auth.get_user()
-    logger.info(f"STATIC: {resource}, {session}, {user_id}")
+    logger.info(f"CATCHALL: {resource}, {session}, {user_id}")
 
     profile = dao.get_profile(user_id)
-    if '.' in resource: 
-        return FileResponse(path=os.path.join(frontend_dir, resource))
+
+    if '.' in resource:
+        file_name = resource if 'icons' in resource else resource.split('/')[-1]
+        return FileResponse(path=os.path.join(frontend_dir, file_name))
     else:
         static_dir = Path(config.general_frontend_dir)
         with open(static_dir / "index.html") as fi:
@@ -199,27 +201,27 @@ def register(app):
         "baseUrl": "/",
         "wsUrl": "",
         "appUrl": "/jlabmock",
-        "listingsUrl": os.path.join('/jlabmock/', 'api', 'listings'),
         "labextensionsUrl": os.path.join('/jlabmock/', 'extensions'),
-        "themesUrl": os.path.join('/jlabmock/', 'api', 'themes'),
+        "themesUrl": os.path.join('/jlabmock/', 'themes'),
         "settingsUrl": os.path.join('/jlabmock/', 'api', 'settings'),
+        "listingsUrl": os.path.join('/jlabmock/', 'api', 'listings'),
 
-        "fullAppUrl": "/lab",
+        "fullAppUrl": "/jlabmock",
         "fullStaticUrl": os.path.join('/jlabmock/', 'static'),
         "fullLabextensionsUrl": os.path.join('/jlabmock/', 'extensions'),
-        "fullListingsUrl": os.path.join('/jlabmock/', 'api', 'listings'),
-        "fullThemesUrl": os.path.join('/jlabmock/', 'api', 'themes'),
+        "fullThemesUrl": os.path.join('/jlabmock/', 'themes'),
         "fullSettingsUrl": os.path.join('/jlabmock/', 'api', 'settings'),
+        "fullListingsUrl": os.path.join('/jlabmock/', 'api', 'listings'),
         
         "federated_extensions": [],
         "github_login_available": github_login_available,
         "gitlab_login_available": gitlab_login_available,
         "google_login_available": google_login_available,
 
-        "cacheFiles": false,
-        "devMode": false,
+        "cacheFiles": False,
+        "devMode": False,
         "mode": "multiple-document",
-        "exposeAppInBrowser": false,
+        "exposeAppInBrowser": False,
         "cacheFiles": False,
         "devMode": False,
         "mode": "multiple-document",
