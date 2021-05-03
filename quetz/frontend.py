@@ -94,7 +94,7 @@ def _under_frontend_dir(path):
     Check that path is under frontend_dir
 
     NOTE: os.path.abspath may seem unnecessary, but os.path.commonpath does not
-    appear to handle relative paths you would expect:
+    appear to handle relative paths as you would expect:
 
     >>> os.path.commonpath([os.path.abspath('../quetz/quetz'), os.path.abspath('quetz')])
     '/home/username/quetz/quetz'
