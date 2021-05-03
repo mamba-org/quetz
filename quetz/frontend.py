@@ -96,9 +96,9 @@ def _under_frontend_dir(path):
     NOTE: os.path.abspath may seem unnecessary, but os.path.commonpath does not
     appear to handle relative paths as you would expect:
 
-    >>> os.path.commonpath([os.path.abspath('../quetz/quetz'), os.path.abspath('quetz')])
+    >>> commonpath([abspath('../quetz/quetz'), abspath('quetz')])
     '/home/username/quetz/quetz'
-    >>> os.path.commonpath(['../quetz/quetz', 'quetz'])
+    >>> commonpath(['../quetz/quetz', 'quetz'])
     ''
     """
     path = os.path.abspath(path)
