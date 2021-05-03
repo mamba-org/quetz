@@ -89,6 +89,24 @@ def render_index(config):
             fo.write(json.dumps(settings_template))
 
 
+def _under_frontend_dir(path):
+    """
+    Check that path is under frontend_dir
+
+    NOTE: os.path.abspath may seem unnecessary, but os.path.commonpath does not
+    appear to handle relative paths you would expect:
+
+    >>> os.path.commonpath([os.path.abspath('../quetz/quetz'), os.path.abspath('quetz')])
+    '/home/username/quetz/quetz'
+    >>> os.path.commonpath(['../quetz/quetz', 'quetz'])
+    ''
+    """
+    path = os.path.abspath(path)
+    fdir = os.path.abspath(frontend_dir)
+
+    return os.path.commonpath([path, fdir]) == fdir
+
+
 @catchall_router.get('/{resource:path}', include_in_schema=False)
 def static(
     resource: str,
@@ -110,7 +128,7 @@ def static(
                 return HTMLResponse(content=index_rendered, status_code=200)
             else:
                 return FileResponse(path=os.path.join(frontend_dir, "index.html"))
-    elif ".." in resource:  # Don't serve relative paths
+    elif not _under_frontend_dir(resource):  # Don't serve relative paths
         return FileResponse(path=os.path.join(frontend_dir, "index.html"))
     else:
         return FileResponse(path=os.path.join(frontend_dir, resource))
