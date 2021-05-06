@@ -113,5 +113,5 @@ class MambaSolver:
             exit(1)
 
         package_cache = mamba_api.MultiPackageCache(pkg_cache_path)
-        t = mamba_api.Transaction(api_solver, package_cache)
+        t = mamba_api.Transaction(api_solver, package_cache, pkg_cache_path[-1])
         return t
