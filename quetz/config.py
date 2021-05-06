@@ -166,6 +166,7 @@ class Config:
                 ConfigEntry("maintainers", list, default=list),
                 ConfigEntry("members", list, default=list),
                 ConfigEntry("default_role", str, required=False),
+                ConfigEntry("collect_emails", bool, default=False, required=False),
                 ConfigEntry(
                     "create_default_channel", bool, default=False, required=False
                 ),

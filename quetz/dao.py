@@ -7,7 +7,7 @@ import uuid
 from collections import defaultdict
 from datetime import date, datetime
 from itertools import groupby
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from sqlalchemy import and_, func, insert, or_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -32,6 +32,7 @@ from .db_models import (
     PackageVersion,
     Profile,
     User,
+    UserEmail,
 )
 from .jobs.models import Job, JobStatus, Task, TaskStatus
 from .metrics.db_models import (
@@ -40,6 +41,9 @@ from .metrics.db_models import (
     next_timestamp,
     round_timestamp,
 )
+
+if TYPE_CHECKING:
+    from quetz.authentication import base as auth_base
 
 logger = logging.getLogger("quetz")
 
@@ -1019,6 +1023,7 @@ class Dao:
         avatar_url: str,
         role: Optional[str],
         exist_ok: bool = False,
+        emails: Optional[List['auth_base.UserEmail']] = None,
     ):
         """create a user with profile and role
 
@@ -1026,10 +1031,28 @@ class Dao:
           or raise an error
         """
 
+        # TODO: check that username comes from the right id provider
         user = self.db.query(User).filter(User.username == username).one_or_none()
 
-        if user and not exist_ok:
-            raise IntegrityError(f"User {username} exists", "", "")
+        if not exist_ok:
+            if user:
+                raise IntegrityError(f"User {username} exists", "", "")
+
+            # check if any email already registered
+            if emails:
+                for e in emails:
+                    user_email = (
+                        self.db.query(UserEmail)
+                        .filter(UserEmail.email == e["email"])
+                        .one_or_none()
+                    )
+                    if user_email:
+                        raise IntegrityError(
+                            f"User {username} already registered "
+                            "with email {user_email.email}",
+                            "",
+                            "",
+                        )
 
         if not user:
             user = User(id=uuid.uuid4().bytes, username=username, role=role)
@@ -1043,6 +1066,24 @@ class Dao:
         profile = Profile(name=name, avatar_url=avatar_url)
 
         user.identities.append(identity)
+
+        if emails:
+            user_emails = []
+            for email in emails:
+                # we only store verified emails
+                if not email["verified"]:
+                    continue
+                user_email = UserEmail(
+                    provider=provider,
+                    identity_id=identity_id,
+                    email=email["email"],
+                    verified=email["verified"],
+                    primary=email["primary"],
+                )
+                user_emails.append(user_email)
+
+            user.emails.extend(user_emails)
+
         user.profile = profile
         self.db.add(user)
         self.db.commit()

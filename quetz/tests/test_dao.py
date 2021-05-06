@@ -398,6 +398,7 @@ def test_create_user_with_profile(dao: Dao, user_without_profile):
         identity_id="1",
         name="new user",
         avatar_url="http://avatar",
+        emails=None,
         role=None,
         exist_ok=True,
     )

@@ -41,12 +41,39 @@ class GitlabAuthenticator(OAuthAuthenticator):
     async def userinfo(self, request, token):
         resp = await self.client.get('/oauth/userinfo', token=token)
         profile = resp.json()
+
         gitlab_profile = {
             "id": profile["sub"],
             "name": profile["name"],
-            "avatar_url": profile['picture'],
+            "avatar_url": profile["picture"],
             "login": profile["nickname"],
+            # https://docs.gitlab.com/ee/integration/openid_connect_provider.html#shared-information
+            # note we're not checking if the email has been verified here...
+            # which we could do by looking at `profile["email_verified"]`.
+            "email": profile["email"],
         }
+
+        if self.collect_emails:
+            emails = await self.client.get('/user/emails', token=token)
+            emails_res = []
+
+            emails_res.append(
+                {
+                    "email": profile["email"],
+                    "primary": True,
+                    "verified": profile["email_verified"],
+                }
+            )
+
+            for e in emails.json():
+                x = {
+                    "email": e["email"],
+                    "primary": False,
+                    "verified": e["confirmed_at"] is not None,
+                }
+                emails_res.append(x)
+
+            gitlab_profile["emails"] = emails_res
         return gitlab_profile
 
     def configure(self, config):
@@ -58,6 +85,10 @@ class GitlabAuthenticator(OAuthAuthenticator):
             self.client_id = config.gitlab_client_id
             self.client_secret = config.gitlab_client_secret
             self.is_enabled = True
+            if config.configured_section("users"):
+                self.collect_emails = config.users_collect_emails
+            else:
+                self.collect_emails = False
         else:
             self.is_enabled = False
 

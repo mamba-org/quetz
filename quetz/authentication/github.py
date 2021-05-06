@@ -33,6 +33,10 @@ class GithubAuthenticator(OAuthAuthenticator):
         resp = await self.client.get('user', token=token)
         profile = resp.json()
 
+        if self.collect_emails:
+            emails = await self.client.get('user/emails', token=token)
+            profile["emails"] = emails.json()
+
         return profile
 
     def configure(self, config):
@@ -40,6 +44,11 @@ class GithubAuthenticator(OAuthAuthenticator):
             self.client_id = config.github_client_id
             self.client_secret = config.github_client_secret
             self.is_enabled = True
+            if config.configured_section("users"):
+                self.collect_emails = config.users_collect_emails
+            else:
+                self.collect_emails = False
+
         else:
             self.is_enabled = False
 

@@ -37,8 +37,19 @@ class GoogleAuthenticator(OAuthAuthenticator):
             "id": profile["sub"],
             "name": profile["name"],
             "avatar_url": profile['picture'],
+            "email": profile["email"],
             "login": profile["email"],
         }
+
+        if self.collect_emails:
+            github_profile["emails"] = [
+                {
+                    "email": profile["email"],
+                    "primary": True,
+                    "verified": profile["email_verified"],
+                }
+            ]
+        print(github_profile)
         return github_profile
 
     def configure(self, config: Config):
@@ -46,6 +57,11 @@ class GoogleAuthenticator(OAuthAuthenticator):
             self.client_id = config.google_client_id
             self.client_secret = config.google_client_secret
             self.is_enabled = True
+            if config.configured_section("users"):
+                self.collect_emails = config.users_collect_emails
+            else:
+                self.collect_emails = False
+
         else:
             self.is_enabled = False
 
