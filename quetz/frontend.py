@@ -158,8 +158,12 @@ def index(
     profile = dao.get_profile(user_id)
 
     if '.' in resource:
-        file_name = resource if 'icons' in resource else resource.split('/')[-1]
-        return FileResponse(path=os.path.join(frontend_dir, file_name))
+        file_name = resource if ('icons' in resource or 'logos' in resource or 'page-data' in resource) else resource.split('/')[-1]
+        path = os.path.join(frontend_dir, file_name)
+        if os.path.exists(path):
+            return FileResponse(path=path)
+        else:
+            return HTTPException()
     else:
         static_dir = Path(config.general_frontend_dir)
         with open(static_dir / "index.html") as fi:
@@ -177,7 +181,6 @@ def index(
             template = jinja2.Template(fi.read())
         index_rendered = template.render(page_config=config_data)
         return HTMLResponse(content=index_rendered, status_code=200)
-
 
 def get_rendered_index(config_data, profile, index_template):
     config_data["logged_in_user_profile"] = rest_models.Profile.from_orm(profile).json()
