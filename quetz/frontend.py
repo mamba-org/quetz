@@ -2,6 +2,9 @@ import json
 import logging
 import os
 import sys
+from glob import iglob
+from itertools import chain
+from os.path import join as pjoin
 from pathlib import Path
 
 import jinja2
@@ -21,16 +24,13 @@ config = Config()
 
 logger = logging.getLogger('quetz')
 
-federated_extensions = []
-for js in pm.hook.js_plugin_paths():
-    federated_extensions.append(js)
-
 mock_router = APIRouter()
 catchall_router = APIRouter()
 
 mock_settings_dict = None
 frontend_dir = ""
 extensions_dir = "/share/quetz/extensions/"
+federated_extensions = []
 index_template = None
 config_data: dict
 
@@ -158,7 +158,11 @@ def index(
     profile = dao.get_profile(user_id)
 
     if '.' in resource:
-        file_name = resource if ('icons' in resource or 'logos' in resource or 'page-data' in resource) else resource.split('/')[-1]
+        file_name = (
+            resource
+            if ('icons' in resource or 'logos' in resource or 'page-data' in resource)
+            else resource.split('/')[-1]
+        )
         path = os.path.join(frontend_dir, file_name)
         if os.path.exists(path):
             return FileResponse(path=path)
@@ -182,6 +186,7 @@ def index(
         index_rendered = template.render(page_config=config_data)
         return HTMLResponse(content=index_rendered, status_code=200)
 
+
 def get_rendered_index(config_data, profile, index_template):
     config_data["logged_in_user_profile"] = rest_models.Profile.from_orm(profile).json()
     static_dir = Path(config.general_frontend_dir)
@@ -191,6 +196,51 @@ def get_rendered_index(config_data, profile, index_template):
     return index_rendered
 
 
+def load_federated_extensions(federated_extensions):
+    extensions = []
+    for name, data in federated_extensions.items():
+        build_info = data['jupyterlab']['_build']
+        build_info['name'] = name
+        extensions.append(build_info)
+
+    return extensions
+
+
+def get_federated_extensions(labextensions_path):
+    """Get the metadata about federated extensions"""
+
+    federated_extensions = dict()
+    for ext_dir in labextensions_path:
+        # extensions are either top-level directories, or two-deep in @org directories
+        dirs = chain(
+            iglob(pjoin(ext_dir, '[!@]*', 'package.json')),
+            iglob(pjoin(ext_dir, '@*', '*', 'package.json')),
+        )
+
+        for ext_path in dirs:
+            with open(ext_path, encoding='utf-8') as fid:
+                pkgdata = json.load(fid)
+
+            if pkgdata['name'] not in federated_extensions:
+                data = dict(
+                    name=pkgdata['name'],
+                    version=pkgdata['version'],
+                    description=pkgdata.get('description', ''),
+                    # url=get_package_url(pkgdata),
+                    ext_dir=ext_dir,
+                    ext_path=os.path.dirname(ext_path),
+                    is_local=False,
+                    dependencies=pkgdata.get('dependencies', dict()),
+                    jupyterlab=pkgdata.get('jupyterlab', dict()),
+                )
+                install_path = pjoin(os.path.dirname(ext_path), 'install.json')
+                if os.path.exists(install_path):
+                    with open(install_path, encoding='utf-8') as fid:
+                        data['install'] = json.load(fid)
+                federated_extensions[data['name']] = data
+    return federated_extensions
+
+
 def register(app):
     # TODO fix, don't put under /api/
     # This is to help the jupyterlab-based frontend to not
@@ -198,6 +248,13 @@ def register(app):
     global frontend_dir
     global extensions_dir
     global config_data
+
+    if hasattr(config, 'general_extensions_dir') and config.general_extensions_dir:
+        extensions_dir = config.general_extensions_dir
+
+    logger.info(f"Configured extensions directory: {extensions_dir}")
+    extensions = get_federated_extensions([extensions_dir])
+    federated_extensions = load_federated_extensions(extensions)
 
     auth_registry = AuthenticatorRegistry()
     google_login_available = auth_registry.is_registered("google")
@@ -211,17 +268,17 @@ def register(app):
         "baseUrl": "/",
         "wsUrl": "",
         "appUrl": "/jlabmock",
-        "labextensionsUrl": os.path.join('/jlabmock/', 'extensions'),
-        "themesUrl": os.path.join('/jlabmock/', 'themes'),
-        "settingsUrl": os.path.join('/jlabmock/', 'api', 'settings'),
-        "listingsUrl": os.path.join('/jlabmock/', 'api', 'listings'),
+        "labextensionsUrl": pjoin('/jlabmock/', 'extensions'),
+        "themesUrl": pjoin('/jlabmock/', 'themes'),
+        "settingsUrl": pjoin('/jlabmock/', 'api', 'settings'),
+        "listingsUrl": pjoin('/jlabmock/', 'api', 'listings'),
         "fullAppUrl": "/jlabmock",
-        "fullStaticUrl": os.path.join('/jlabmock/', 'static'),
-        "fullLabextensionsUrl": os.path.join('/jlabmock/', 'extensions'),
-        "fullThemesUrl": os.path.join('/jlabmock/', 'themes'),
-        "fullSettingsUrl": os.path.join('/jlabmock/', 'api', 'settings'),
-        "fullListingsUrl": os.path.join('/jlabmock/', 'api', 'listings'),
-        "federated_extensions": [],
+        "fullStaticUrl": pjoin('/jlabmock/', 'static'),
+        "fullLabextensionsUrl": pjoin('/jlabmock/', 'extensions'),
+        "fullThemesUrl": pjoin('/jlabmock/', 'themes'),
+        "fullSettingsUrl": pjoin('/jlabmock/', 'api', 'settings'),
+        "fullListingsUrl": pjoin('/jlabmock/', 'api', 'listings'),
+        "federated_extensions": federated_extensions,
         "github_login_available": github_login_available,
         "gitlab_login_available": gitlab_login_available,
         "google_login_available": google_login_available,
@@ -235,16 +292,7 @@ def register(app):
         "exposeAppInBrowser": False,
     }
 
-    if federated_extensions:
-        logger.info(f"Found frontend plugin paths: {federated_extensions}")
-        config_data["federated_extensions"] = federated_extensions
-
     logger.info(f"Frontend config: {config_data}")
-
-    if hasattr(config, 'general_extensions_dir') and config.general_extensions_dir:
-        extensions_dir = config.general_extensions_dir
-
-    logger.info(f"Configured extensions directory: {extensions_dir}")
 
     app.include_router(mock_router, prefix="/jlabmock")
 
