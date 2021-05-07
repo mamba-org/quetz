@@ -4,7 +4,6 @@
 import logging
 import logging.config
 import os
-from base64 import b64encode
 from distutils.util import strtobool
 from secrets import token_bytes
 from typing import (
@@ -396,7 +395,7 @@ def create_config(
     client_id: str = "",
     client_secret: str = "",
     database_url: str = "sqlite:///./quetz.sqlite",
-    secret: str = b64encode(token_bytes(32)).decode(),
+    secret: str = token_bytes(32).hex(),
     https: str = 'true',
 ) -> str:
     """Create a configuration file from a template.

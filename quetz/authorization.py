@@ -77,6 +77,8 @@ class Rules:
         if not (requested_user_id == user_id):
             self.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
+        return user_id
+
     def assert_delete_user(self, requested_user_id: bytes):
 
         user_id = self.assert_user()
@@ -84,12 +86,14 @@ class Rules:
         if not (requested_user_id == user_id):
             self.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
+        return user_id
+
     def assert_assign_user_role(self, role: str):
 
         if role == SERVER_MAINTAINER or role == SERVER_OWNER:
-            self.assert_server_roles([SERVER_OWNER])
+            return self.assert_server_roles([SERVER_OWNER])
         if role == SERVER_MEMBER:
-            self.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
+            return self.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
     def assert_server_roles(self, roles: list, msg: Optional[str] = None):
         user_id = self.assert_user()
@@ -99,6 +103,8 @@ class Rules:
             detail = (msg or "this operation requires" + " or ".join(roles) + " roles",)
 
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
+
+        return user_id
 
     def has_server_roles(self, user_id, roles: list):
 
