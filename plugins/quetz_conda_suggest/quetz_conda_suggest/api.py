@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.orm.session import Session
@@ -18,7 +20,7 @@ def get_conda_suggest(channel_name, subdir, db: Session = Depends(get_db)):
     try:
         if map_filepath.startswith("http"):
             return RedirectResponse(map_filepath)
-        else:
+        elif os.path.isfile(map_filepath):
             return FileResponse(
                 map_filepath,
                 media_type="application/octet-stream",
