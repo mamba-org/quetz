@@ -1,38 +1,33 @@
 import os
-import glob
 import shutil
 from pathlib import Path
-import rich.console
-
-console = rich.console.Console()
 
 import conda_content_trust.authentication as cct_authentication
 import conda_content_trust.common as cct_common
 import conda_content_trust.metadata_construction as cct_metadata_construction
 import conda_content_trust.root_signing as cct_root_signing
 import conda_content_trust.signing as cct_signing
+import rich.console
 
-from quetz.config import Config
+console = rich.console.Console()
 
-config = Config()
-pkgstore = config.get_package_store()
 
 class RepoSigner:
     keys = {
         "root": [
             '1aed4d30459fa8bd8609ad4e0d182827ed6d3904',
-            'c3b532977ffadc4095c676bea9a2880061e3662c'
+            'c3b532977ffadc4095c676bea9a2880061e3662c',
         ],
         "key_mgr": [
             {
-                "private": "c9c2060d7e0d93616c2654840b4983d00221d8b6b69c850107da74b42168f937",
-                "public": "013ddd714962866d12ba5bae273f14d48c89cf0773dee2dbf6d4561e521c83f7",
+                "private": "c9c2060d7e0d93616c2654840b4983d00221d8b6b69c850107da74b42168f937",  # noqa: E501
+                "public": "013ddd714962866d12ba5bae273f14d48c89cf0773dee2dbf6d4561e521c83f7",  # noqa: E501
             },
         ],
         "pkg_mgr": [
             {
-                "private": "f3cdab14740066fb277651ec4f96b9f6c3e3eb3f812269797b9656074cd52133",
-                "public": "f46b5a7caa43640744186564c098955147daa8bac4443887bc64d8bfee3d3569",
+                "private": "f3cdab14740066fb277651ec4f96b9f6c3e3eb3f812269797b9656074cd52133",  # noqa: E501
+                "public": "f46b5a7caa43640744186564c098955147daa8bac4443887bc64d8bfee3d3569",  # noqa: E501
             }
         ],
     }
@@ -159,9 +154,6 @@ class RepoSigner:
     def __init__(self, in_folder):
         self.in_folder = Path(in_folder).resolve()
         self.folder = self.in_folder.parent
-
-        if not self.folder.exists():
-            os.mkdir(self.folder)
 
         self.keys = self.normalize_keys(self.keys)
         console.print("Using keys:", self.keys)
