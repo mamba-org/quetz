@@ -274,6 +274,12 @@ def package_version(user, mirror_channel, db, dao):
         role="owner",
     )
 
+    dao.update_package_channeldata(
+        mirror_channel.name,
+        new_package_data.name,
+        {'name': new_package_data.name, 'subdirs': ["noarch"]},
+    )
+
     version = dao.create_version(
         mirror_channel.name,
         "test-package",

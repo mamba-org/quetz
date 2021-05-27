@@ -595,7 +595,7 @@ def test_refresh_job(auth_client, user, db, package_version, supervisor):
 
 @pytest.fixture(scope="session")
 def dummy_plugin(test_data_dir):
-    plugin_dir = Path(test_data_dir) / "dummy-plugin"
+    plugin_dir = str(Path(test_data_dir) / "dummy-plugin")
     dist = list(pkg_resources.find_distributions(plugin_dir))[0]
     pkg_resources.working_set.add(dist)
 
