@@ -160,8 +160,8 @@ class RepoSigner:
 
         console.print("Using folder:", self.folder)
 
-        self.create_root(self.keys)
-        self.create_key_mgr(self.keys)
+        # self.create_root(self.keys)
+        # self.create_key_mgr(self.keys)
         f = os.path.join(self.in_folder, "repodata.json")
         if os.path.isfile(f):
             self.sign_repodata(Path(f), self.keys)
