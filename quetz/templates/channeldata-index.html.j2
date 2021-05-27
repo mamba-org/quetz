@@ -89,7 +89,7 @@
       <td>{% if record.dev_url %}<a href="{{ record.dev_url }}">dev</a>{% endif %}</td>
       <td class="tight">{% if record.license %}{{ record.license.split(' ')[0] | truncate(15, True, '')  }}{% endif %}</td>
 {% for subdir in subdirs %}
-      <td>{% if subdir in record.subdirs %}X{% endif %}</td>
+      <td>{% if 'subdirs' in record and subdir in record.subdirs %}X{% endif %}</td>
 {%- endfor %}
       <td class="summary">{{ record.summary | escape | truncate(75) }}</td>
     </tr>

@@ -53,11 +53,12 @@ def private_package_version(dao, private_channel, private_package, other_user, c
     with open(filename, "rb") as fid:
         pkgstore.add_file(fid.read(), channel_name, "linux-64" / filename)
 
+    platform = "linux-64"
     version = dao.create_version(
         private_channel.name,
         private_package.name,
         package_format,
-        "linux-64",
+        platform,
         "0.1",
         "0",
         "",
@@ -65,6 +66,12 @@ def private_package_version(dao, private_channel, private_package, other_user, c
         package_info,
         other_user.id,
         size=0,
+    )
+
+    dao.update_package_channeldata(
+        private_channel.name,
+        private_package.name,
+        {'name': package_name, 'subdirs': [platform]},
     )
 
     return version
@@ -104,6 +111,12 @@ def make_package_version(
             package_info,
             user.id,
             size=11,
+        )
+
+        dao.update_package_channeldata(
+            channel_name,
+            package_name,
+            {'name': package_name, 'subdirs': [platform]},
         )
 
         dao.update_channel_size(channel_name)
