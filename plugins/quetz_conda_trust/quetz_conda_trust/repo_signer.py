@@ -3,9 +3,6 @@ import shutil
 from pathlib import Path
 
 import conda_content_trust.signing as cct_signing
-import rich.console
-
-console = rich.console.Console()
 
 
 class RepoSigner:
@@ -15,7 +12,7 @@ class RepoSigner:
         shutil.copyfile(repodata_fn, final_fn)
 
         cct_signing.sign_all_in_repodata(str(final_fn), pkg_mgr_key)
-        console.print(f"[green]Signed [bold]{final_fn}[/bold]")
+        print(f"Signed {final_fn}")
 
     def __init__(self, in_folder, pkg_mgr_key):
         self.in_folder = Path(in_folder).resolve()
