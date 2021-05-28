@@ -4,9 +4,7 @@ import tempfile
 from pathlib import Path
 
 
-def test_post_index_signed_repodata(
-    client, config, channel, reposigning_private_key
-):
+def test_post_index_signed_repodata(client, config, channel, reposigning_private_key):
     response = client.get("/api/dummylogin/madhurt")
     assert response.status_code == 200
 

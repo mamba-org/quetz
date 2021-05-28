@@ -18,6 +18,8 @@ def register_router():
 @quetz.hookimpl
 def post_package_indexing(tempdir: Path, channel_name, subdirs, files, packages):
     with get_db_manager() as db:
+        # the most recent created key is fetched since we
+        # cannot get `user_id` outside a request / API call.
         query = (
             db.query(db_models.RepodataSigningKey)
             .filter(
