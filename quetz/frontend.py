@@ -71,7 +71,7 @@ def register(app):
 
     if len(frontend_plugins) > 1:
         logger.warning(
-            f"Multiple frontend plugins found! {', '.join(frontend_plugins)}\n"
+            f"Multiple frontend plugins found! {', '.join([str(fp) for fp in frontend_plugins])}\n"
             "Using last found."
         )
 
