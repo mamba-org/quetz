@@ -10,27 +10,31 @@ services:
       dockerfile: ./docker/Dockerfile
     environment:
       - HTTPX_LOG_LEVEL=TRACE
-    command:  ["./docker/wait-for-postgres.sh",  "database", "quetz",  "start" , "/quetz-deployment", "--host", "0.0.0.0", "--port",  "8000",  "--reload"]
+    command:  ["sh", "-c", "./docker/wait-for-postgres.sh database && quetz start /quetz-deployment --host 0.0.0.0 --port 8000 --reload"]
     depends_on: 
       - database
       - init-db
     volumes:
       - .:/code
       - quetz_deployment:/quetz-deployment
-      - ./docker/docker_config.toml:/quetz-deployment/config.toml
+    env_file:
+        - docker/postgres.env
   init-db:
     image: quetz_dev_image
-    command: ["sh", "-c", "./docker/wait-for-postgres.sh database quetz create /quetz-deployment --copy-conf /code/docker_config.toml --exists-ok & quetz init-db /quetz-deployment"]
+    command: ["sh", "-c", "./docker/wait-for-postgres.sh database && quetz create /quetz-deployment --copy-conf /code/docker/docker_config.toml --exists-ok && quetz init-db /quetz-deployment"]
     depends_on: 
       - database
     volumes:
       - .:/code
       - quetz_deployment:/quetz-deployment
-      - ./docker/docker_config.toml:/quetz-deployment/config.toml
+    env_file:
+        - docker/postgres.env
   database:
     image: postgres
     volumes:
       - ./docker/postgres.conf:/etc/postgresql/postgresql.conf
+    env_file:
+        - docker/postgres.env
   prometheus:
     image: prom/prometheus
     volumes:
@@ -41,6 +45,8 @@ services:
       - 3000:3000
     volumes:
       - ./docker/graphana_datasources.yml:/etc/grafana/provisioning/datasources/datasource.yaml
+    env_file:
+      - docker/grafana.env
   jupyterhub:
     build:
       context: docker

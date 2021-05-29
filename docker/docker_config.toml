@@ -1,5 +1,5 @@
 [sqlalchemy]
-database_url = "postgresql://postgres@database:5432/postgres"
+database_url = ""
 
 [session]
 # openssl rand -hex 32
