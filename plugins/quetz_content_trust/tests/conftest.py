@@ -1,7 +1,7 @@
 import uuid
 
 from pytest import fixture
-from quetz_conda_trust import db_models
+from quetz_content_trust import db_models
 
 from quetz import rest_models
 from quetz.dao import Dao

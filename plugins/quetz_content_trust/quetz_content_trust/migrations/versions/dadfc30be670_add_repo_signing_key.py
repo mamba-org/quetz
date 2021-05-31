@@ -11,7 +11,7 @@ from alembic import op
 # revision identifiers, used by Alembic.
 revision = 'dadfc30be670'
 down_revision = None
-branch_labels = ('quetz-conda_trust',)
+branch_labels = ('quetz-content_trust',)
 depends_on = 'quetz'
 
 

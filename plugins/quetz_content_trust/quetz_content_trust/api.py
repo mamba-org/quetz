@@ -44,7 +44,7 @@ def post_file(file):
     pkgstore.add_file(file.file.read(), "", file.filename)
 
 
-@router.post("/api/conda-trust/private-key")
+@router.post("/api/content-trust/private-key")
 def post_pkg_mgr_private_key(
     repodata_signing_key: SigningKey,
     auth: authorization.Rules = Depends(get_rules),
@@ -61,7 +61,7 @@ def post_pkg_mgr_private_key(
         db.commit()
 
 
-@router.post("/api/conda-trust/upload-root", status_code=201, tags=["files"])
+@router.post("/api/content-trust/upload-root", status_code=201, tags=["files"])
 def post_root_json_to_channel(
     root_json_file: UploadFile = File(...),
     auth: authorization.Rules = Depends(get_rules),
@@ -70,7 +70,7 @@ def post_root_json_to_channel(
     post_file(root_json_file)
 
 
-@router.post("/api/conda-trust/upload-key-mgr", status_code=201, tags=["files"])
+@router.post("/api/content-trust/upload-key-mgr", status_code=201, tags=["files"])
 def post_key_mgr_to_channel(
     key_mgr_file: UploadFile = File(...),
     auth: authorization.Rules = Depends(get_rules),

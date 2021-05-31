@@ -16,7 +16,7 @@ def test_post_index_signed_repodata(client, config, channel, reposigning_private
     response = client.post(url, files=files_to_upload)
     assert response.status_code == 201
 
-    from quetz_conda_trust import main
+    from quetz_content_trust import main
 
     with tempfile.TemporaryDirectory() as tempdir:
         tempdir_path = Path(tempdir)
@@ -39,11 +39,9 @@ def test_post_index_signed_repodata(client, config, channel, reposigning_private
     f = pkgstore.serve_path(channel.name, "linux-64/repodata_signed.json")
     signed_repodata = json.load(f)
 
-    signature_key = "f46b5a7caa43640744186564c098955147daa8bac4443887bc64d8bfee3d3569"
+    public_key = "f46b5a7caa43640744186564c098955147daa8bac4443887bc64d8bfee3d3569"
     assert "signatures" in signed_repodata
     assert filename in signed_repodata["signatures"]
-    assert signature_key in signed_repodata["signatures"][filename]
-    assert "signature" in signed_repodata["signatures"][filename][signature_key]
-    assert (
-        len(signed_repodata["signatures"][filename][signature_key]["signature"]) == 128
-    )
+    assert public_key in signed_repodata["signatures"][filename]
+    assert "signature" in signed_repodata["signatures"][filename][public_key]
+    assert len(signed_repodata["signatures"][filename][public_key]["signature"]) == 128
