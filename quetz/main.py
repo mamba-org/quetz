@@ -153,7 +153,9 @@ class CondaTokenMiddleware(BaseHTTPMiddleware):
 app.add_middleware(CondaTokenMiddleware)
 
 pkgstore = config.get_package_store()
-pkgstore_support_url = hasattr(pkgstore, 'url')
+pkgstore_support_url = (
+    hasattr(pkgstore, 'url') and not type(pkgstore).__name__ == 'LocalStore'
+)
 
 # authenticators
 

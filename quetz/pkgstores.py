@@ -142,6 +142,10 @@ class LocalStore(PackageStore):
         channel_dir = os.path.join(self.channels_dir, channel)
         return [os.path.relpath(f, channel_dir) for f in self.fs.find(channel_dir)]
 
+    def url(self, channel: str, src: str, expires=None):
+        filepath = path.abspath(path.join(self.channels_dir, channel, src))
+        return filepath
+
     def get_filemetadata(self, channel: str, src: str):
         filepath = path.abspath(path.join(self.channels_dir, channel, src))
         if not path.exists(filepath):
