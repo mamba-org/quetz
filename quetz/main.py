@@ -1552,7 +1552,7 @@ async def stop_sync_donwload_counts():
 
 
 @app.get("/get/{channel_name}/{path:path}")
-async def serve_path(
+def serve_path(
     path,
     channel: db_models.Channel = Depends(get_channel_allow_proxy),
     accept_encoding: Optional[str] = Header(None),
@@ -1650,13 +1650,13 @@ async def serve_path(
 
 
 @app.get("/get/{channel_name}")
-async def serve_channel_index(
+def serve_channel_index(
     channel: db_models.Channel = Depends(get_channel_allow_proxy),
     accept_encoding: Optional[str] = Header(None),
     session=Depends(get_remote_session),
     dao: Dao = Depends(get_dao),
 ):
-    return await serve_path("index.html", channel, accept_encoding, session, dao)
+    return serve_path("index.html", channel, accept_encoding, session, dao)
 
 
 frontend.register(app)
