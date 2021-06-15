@@ -193,6 +193,13 @@ class Config:
             ],
             required=False,
         ),
+        ConfigSection(
+            "download",
+            [
+                ConfigEntry("redirect_static_files", bool, default=False),
+                ConfigEntry("redirect_endpoint", str, default="/files"),
+            ],
+        ),
     ]
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]
@@ -367,7 +374,12 @@ class Config:
                 }
             )
         else:
-            return pkgstores.LocalStore({'channels_dir': 'channels'})
+            return pkgstores.LocalStore(
+                {
+                    'channels_dir': 'channels',
+                    'redirect_endpoint': self.download_redirect_endpoint,
+                }
+            )
 
     def configured_section(self, section: str) -> bool:
         """Return if a given section has been configured.

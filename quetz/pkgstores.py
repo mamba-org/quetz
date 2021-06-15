@@ -85,6 +85,7 @@ class LocalStore(PackageStore):
     def __init__(self, config):
         self.fs: fsspec.AbstractFileSystem = fsspec.filesystem("file")
         self.channels_dir = config['channels_dir']
+        self.redirect_endpoint = config['redirect_endpoint']
 
     @contextmanager
     def _atomic_open(self, channel: str, destination: StrPath, mode="wb") -> IO:
@@ -145,6 +146,9 @@ class LocalStore(PackageStore):
     def url(self, channel: str, src: str, expires=None):
         filepath = path.abspath(path.join(self.channels_dir, channel, src))
         return filepath
+
+    def redirect_url(self, channel: str, src: str):
+        return path.join(self.redirect_endpoint, self.channels_dir, channel, src)
 
     def get_filemetadata(self, channel: str, src: str):
         filepath = path.abspath(path.join(self.channels_dir, channel, src))

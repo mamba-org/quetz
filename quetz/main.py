@@ -32,13 +32,12 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import RedirectResponse
 from tenacity import (
     after_log,
     retry,
@@ -1566,7 +1565,7 @@ async def serve_path(
 
     if channel.mirror_channel_url and channel.mirror_mode == "proxy":
         repository = RemoteRepository(channel.mirror_channel_url, session)
-        return get_from_cache_or_download(repository, cache, path)
+        return get_from_cache_or_download(repository, cache, path, config)
 
     chunk_size = 10_000
 
@@ -1609,6 +1608,10 @@ async def serve_path(
     if path == "" or path.endswith("/"):
         path += "index.html"
     package_content_iter = None
+
+    if config.download_redirect_static_files and hasattr(pkgstore, "redirect_url"):
+        url = pkgstore.redirect_url(channel.name, path)  # type: ignore
+        return RedirectResponse(url=url)
 
     headers = {}
     if accept_encoding and 'gzip' in accept_encoding and path.endswith('.json'):

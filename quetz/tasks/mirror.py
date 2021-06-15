@@ -10,7 +10,7 @@ from typing import List
 
 import requests
 from fastapi import HTTPException, status
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from tenacity import TryAgain, after_log, retry, stop_after_attempt, wait_exponential
 
 from quetz import authorization, rest_models
@@ -45,38 +45,6 @@ KNOWN_SUBDIRS = (
 
 
 logger = logging.getLogger("quetz")
-
-
-def get_from_cache_or_download(
-    repository, cache, target, exclude=["repodata.json", "current_repodata.json"]
-):
-    """Serve from cache or download if missing."""
-
-    _, filename = os.path.split(target)
-    skip_cache = filename in exclude
-
-    chunksize = 10000
-
-    def data_iter(f):
-        chunk = f.read(chunksize)
-        while chunk:
-            yield chunk
-            # Do stuff with byte.
-            chunk = f.read(chunksize)
-
-    if skip_cache:
-        remote_file = repository.open(target)
-        data_stream = remote_file.file
-
-        return StreamingResponse(data_iter(data_stream))
-
-    if target not in cache:
-        # copy from repository to cache
-        remote_file = repository.open(target)
-        data_stream = remote_file.file
-        cache.dump(target, data_stream)
-
-    return FileResponse(cache[target])
 
 
 class RemoteRepository:
@@ -166,6 +134,46 @@ class LocalCache:
             raise KeyError
 
         return cache_path
+
+
+def get_from_cache_or_download(
+    repository: RemoteRepository,
+    cache: LocalCache,
+    target: str,
+    config: Config,
+    exclude=["repodata.json", "current_repodata.json"],
+):
+    """Serve from cache or download if missing."""
+
+    _, filename = os.path.split(target)
+    skip_cache = filename in exclude
+
+    chunksize = 10000
+
+    def data_iter(f):
+        chunk = f.read(chunksize)
+        while chunk:
+            yield chunk
+            # Do stuff with byte.
+            chunk = f.read(chunksize)
+
+    if skip_cache:
+        remote_file = repository.open(target)
+        data_stream = remote_file.file
+
+        return StreamingResponse(data_iter(data_stream))
+
+    if target not in cache:
+        # copy from repository to cache
+        remote_file = repository.open(target)
+        data_stream = remote_file.file
+        cache.dump(target, data_stream)
+
+    if config.download_redirect_static_files:
+        return RedirectResponse(
+            url=os.path.join(config.download_redirect_endpoint, cache[target])
+        )
+    return FileResponse(cache[target])
 
 
 @contextlib.contextmanager
