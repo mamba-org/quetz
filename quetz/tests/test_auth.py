@@ -406,7 +406,7 @@ def test_private_channels_create_package(data, client):
     # channel member can not create packages in public channel
     response = client.post(
         f'/api/channels/{data.channel1.name}/packages',
-        '{"name": "newpackage2"}',
+        json={"name": "newpackage2"},
         headers={"X-Api-Key": data.keyb},
     )
     assert response.status_code == 403
@@ -414,7 +414,7 @@ def test_private_channels_create_package(data, client):
     # user with credentials to private channel
     response = client.post(
         f'/api/channels/{data.channel2.name}/packages',
-        '{"name": "newpackage2"}',
+        json={"name": "newpackage2"},
         headers={"X-Api-Key": data.keyb},
     )
     assert response.status_code == 403
@@ -422,7 +422,7 @@ def test_private_channels_create_package(data, client):
     # member credential access to private channel
     response = client.post(
         f'/api/channels/{data.channel2.name}/packages',
-        '{"name": "newpackage2"}',
+        json={"name": "newpackage2"},
         headers={"X-Api-Key": data.keya},
     )
     assert response.status_code == 201
