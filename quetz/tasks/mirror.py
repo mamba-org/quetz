@@ -48,7 +48,7 @@ logger = logging.getLogger("quetz")
 
 
 def get_from_cache_or_download(
-    repository, cache, target, exclude=["repodata.json", "current_respodata.json"]
+    repository, cache, target, exclude=["repodata.json", "current_repodata.json"]
 ):
     """Serve from cache or download if missing."""
 
