@@ -11,3 +11,21 @@ repos:
     rev: 3.8.4
     hooks:
       - id: flake8
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v0.902
+    hooks:
+      - id: mypy
+        files: ^quetz/
+        additional_dependencies:
+          - sqlalchemy-stubs
+          - types-click
+          - types-Jinja2
+          - types-mock
+          - types-orjson
+          - types-pkg-resources
+          - types-redis
+          - types-requests
+          - types-six
+          - types-toml
+          - types-ujson
+        args: [--show-error-codes]
