@@ -23,7 +23,7 @@ async def test_transmutation_endpoint(
         response = await ac.post(
             "/api/jobs",
             json={"items_spec": "*", "manifest": "quetz-transmutation:transmutation"},
-            headers={"x-api-key": api_key.key},
+            headers={"x-api-key": api_key.key, "content-type": "application/json"},
         )
 
     assert response.status_code == 201
