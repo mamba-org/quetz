@@ -241,14 +241,21 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
     after_upload_move = []
     for path in tempdir_path.rglob('*.*'):
         rel_path = path.relative_to(tempdir_path)
-        if len(rel_path.parts) != 3:
-            raise NotImplementedError("We can only handle channel_name/subdir/file.xyz")
-
-        channel_name, sdir, filename = rel_path.parts
-        with open(path, 'rb') as to_upload:
+        to_upload = open(path, 'rb')
+        if len(rel_path.parts) == 2:
+            channel_name, filename = rel_path.parts
+            dest = f"{filename}{tmp_suffix}"
+        elif len(rel_path.parts) == 3:
+            channel_name, sdir, filename = rel_path.parts
             dest = f"{sdir}/{filename}{tmp_suffix}"
-            pkgstore.add_file(to_upload.read(), channel_name, dest)
-            after_upload_move.append(dest)
+        else:
+            raise NotImplementedError(
+                "We can only handle channel_name/subdir/file.xyz OR"
+                "channel_name/file.xyz"
+            )
+
+        pkgstore.add_file(to_upload.read(), channel_name, dest)
+        after_upload_move.append(dest)
 
     for f_to_move in after_upload_move:
         logger.info(
