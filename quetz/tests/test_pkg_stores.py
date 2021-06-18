@@ -28,12 +28,19 @@ azure_config = {
 test_dir = os.path.dirname(__file__)
 
 
-def test_local_store():
+@pytest.mark.parametrize("redirect_enabled", [False, True])
+def test_local_store(redirect_enabled):
 
     temp_dir = os.path.join(test_dir, "test_pkg_store_" + str(int(time.time())))
     os.makedirs(temp_dir, exist_ok=False)
 
-    pkg_store = LocalStore({"channels_dir": temp_dir, "redirect_endpoint": "/files"})
+    pkg_store = LocalStore(
+        {
+            "channels_dir": temp_dir,
+            "redirect_enabled": redirect_enabled,
+            "redirect_endpoint": "/files",
+        }
+    )
 
     pkg_store.add_file("content", "my-channel", "test.txt")
     pkg_store.add_file("content".encode('ascii'), "my-channel", "test_2.txt")
@@ -74,7 +81,13 @@ def local_store():
     temp_dir = os.path.join(test_dir, "test_pkg_store_" + str(int(time.time())))
     os.makedirs(temp_dir, exist_ok=False)
 
-    pkg_store = LocalStore({"channels_dir": temp_dir, "redirect_endpoint": "/files"})
+    pkg_store = LocalStore(
+        {
+            "channels_dir": temp_dir,
+            "redirect_enabled": False,
+            "redirect_endpoint": "/files",
+        }
+    )
 
     yield pkg_store
 
@@ -193,10 +206,18 @@ def test_move_file(any_store, channel, channel_name):
     assert_files(['test_2.txt'])
 
 
+@pytest.mark.parametrize("redirect_enabled", [False, True])
 @pytest.mark.parametrize("redirect_endpoint", ["/files", "/static"])
-def test_local_store_redirect_url(redirect_endpoint):
+def test_local_store_url(redirect_enabled, redirect_endpoint):
     local_store = LocalStore(
-        {"channels_dir": "channels", "redirect_endpoint": redirect_endpoint}
+        {
+            "channels_dir": "channels",
+            "redirect_enabled": redirect_enabled,
+            "redirect_endpoint": redirect_endpoint,
+        }
     )
-    url = local_store.redirect_url("mychannel", "linux-64/foo.tar.bz2")
-    assert url == f"{redirect_endpoint}/channels/mychannel/linux-64/foo.tar.bz2"
+    url = local_store.url("mychannel", "linux-64/foo.tar.bz2")
+    if redirect_enabled:
+        assert url == f"{redirect_endpoint}/channels/mychannel/linux-64/foo.tar.bz2"
+    else:
+        assert url == os.path.abspath("channels/mychannel/linux-64/foo.tar.bz2")

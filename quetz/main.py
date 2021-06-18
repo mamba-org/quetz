@@ -152,9 +152,6 @@ class CondaTokenMiddleware(BaseHTTPMiddleware):
 app.add_middleware(CondaTokenMiddleware)
 
 pkgstore = config.get_package_store()
-pkgstore_support_url = (
-    hasattr(pkgstore, 'url') and not type(pkgstore).__name__ == 'LocalStore'
-)
 
 # authenticators
 
@@ -1594,9 +1591,8 @@ async def serve_path(
         if channel_proxylist and package_name and package_name in channel_proxylist:
             return RedirectResponse(f"{channel.mirror_channel_url}/{path}")
 
-    if is_package_request and pkgstore_support_url:
-        # we have to ignore type checking here right now, sorry
-        return RedirectResponse(pkgstore.url(channel.name, path))  # type: ignore
+    if is_package_request and pkgstore.support_redirect:
+        return RedirectResponse(pkgstore.url(channel.name, path))
 
     def iter_chunks(fid):
         while True:
@@ -1608,10 +1604,6 @@ async def serve_path(
     if path == "" or path.endswith("/"):
         path += "index.html"
     package_content_iter = None
-
-    if config.local_store_redirect_static_files and hasattr(pkgstore, "redirect_url"):
-        url = pkgstore.redirect_url(channel.name, path)  # type: ignore
-        return RedirectResponse(url=url)
 
     headers = {}
     if accept_encoding and 'gzip' in accept_encoding and path.endswith('.json'):

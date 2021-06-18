@@ -37,6 +37,11 @@ class PackageStore(abc.ABC):
     def __init__(self):
         pass
 
+    @property
+    @abc.abstractmethod
+    def support_redirect(self) -> bool:
+        pass
+
     @abc.abstractmethod
     def create_channel(self, name):
         pass
@@ -48,6 +53,10 @@ class PackageStore(abc.ABC):
 
     @abc.abstractmethod
     def list_files(self, channel: str) -> List[str]:
+        pass
+
+    @abc.abstractmethod
+    def url(self, channel: str, src: str, expires: int = 0) -> str:
         pass
 
     @abc.abstractmethod
@@ -85,7 +94,12 @@ class LocalStore(PackageStore):
     def __init__(self, config):
         self.fs: fsspec.AbstractFileSystem = fsspec.filesystem("file")
         self.channels_dir = config['channels_dir']
+        self.redirect_enabled = config['redirect_enabled']
         self.redirect_endpoint = config['redirect_endpoint']
+
+    @property
+    def support_redirect(self):
+        return self.redirect_enabled
 
     @contextmanager
     def _atomic_open(self, channel: str, destination: StrPath, mode="wb") -> IO:
@@ -143,12 +157,11 @@ class LocalStore(PackageStore):
         channel_dir = os.path.join(self.channels_dir, channel)
         return [os.path.relpath(f, channel_dir) for f in self.fs.find(channel_dir)]
 
-    def url(self, channel: str, src: str, expires=None):
-        filepath = path.abspath(path.join(self.channels_dir, channel, src))
-        return filepath
-
-    def redirect_url(self, channel: str, src: str):
-        return path.join(self.redirect_endpoint, self.channels_dir, channel, src)
+    def url(self, channel: str, src: str, expires=0):
+        if self.redirect_enabled:
+            return path.join(self.redirect_endpoint, self.channels_dir, channel, src)
+        else:
+            return path.abspath(path.join(self.channels_dir, channel, src))
 
     def get_filemetadata(self, channel: str, src: str):
         filepath = path.abspath(path.join(self.channels_dir, channel, src))
@@ -219,6 +232,10 @@ class S3Store(PackageStore):
 
         self.bucket_prefix = config['bucket_prefix']
         self.bucket_suffix = config['bucket_suffix']
+
+    @property
+    def support_redirect(self):
+        return True
 
     @contextlib.contextmanager
     def _get_fs(self):
@@ -349,6 +366,10 @@ class AzureBlobStore(PackageStore):
 
         self.container_prefix = config['container_prefix']
         self.container_suffix = config['container_suffix']
+
+    @property
+    def support_redirect(self):
+        return True
 
     @contextlib.contextmanager
     def _get_fs(self):

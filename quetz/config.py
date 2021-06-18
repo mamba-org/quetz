@@ -116,7 +116,7 @@ class Config:
         ConfigSection(
             "local_store",
             [
-                ConfigEntry("redirect_static_files", bool, default=False),
+                ConfigEntry("redirect_enabled", bool, default=False),
                 ConfigEntry("redirect_endpoint", str, default="/files"),
             ],
         ),
@@ -377,6 +377,7 @@ class Config:
             return pkgstores.LocalStore(
                 {
                     'channels_dir': 'channels',
+                    'redirect_enabled': self.local_store_redirect_enabled,
                     'redirect_endpoint': self.local_store_redirect_endpoint,
                 }
             )
