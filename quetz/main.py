@@ -1609,7 +1609,7 @@ async def serve_path(
         path += "index.html"
     package_content_iter = None
 
-    if config.download_redirect_static_files and hasattr(pkgstore, "redirect_url"):
+    if config.local_store_redirect_static_files and hasattr(pkgstore, "redirect_url"):
         url = pkgstore.redirect_url(channel.name, path)  # type: ignore
         return RedirectResponse(url=url)
 

@@ -114,6 +114,13 @@ class Config:
             [ConfigEntry("secret", str), ConfigEntry("https_only", bool, default=True)],
         ),
         ConfigSection(
+            "local_store",
+            [
+                ConfigEntry("redirect_static_files", bool, default=False),
+                ConfigEntry("redirect_endpoint", str, default="/files"),
+            ],
+        ),
+        ConfigSection(
             "s3",
             [
                 ConfigEntry("access_key", str, default=""),
@@ -192,13 +199,6 @@ class Config:
                 ConfigEntry("channel_quota", int, required=False),
             ],
             required=False,
-        ),
-        ConfigSection(
-            "download",
-            [
-                ConfigEntry("redirect_static_files", bool, default=False),
-                ConfigEntry("redirect_endpoint", str, default="/files"),
-            ],
         ),
     ]
     _config_dirs = [_site_dir, _user_dir]
@@ -377,7 +377,7 @@ class Config:
             return pkgstores.LocalStore(
                 {
                     'channels_dir': 'channels',
-                    'redirect_endpoint': self.download_redirect_endpoint,
+                    'redirect_endpoint': self.local_store_redirect_endpoint,
                 }
             )
 

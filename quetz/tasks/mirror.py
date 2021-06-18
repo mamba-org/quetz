@@ -169,9 +169,9 @@ def get_from_cache_or_download(
         data_stream = remote_file.file
         cache.dump(target, data_stream)
 
-    if config.download_redirect_static_files:
+    if config.local_store_redirect_static_files:
         return RedirectResponse(
-            url=os.path.join(config.download_redirect_endpoint, cache[target])
+            url=os.path.join(config.local_store_redirect_endpoint, cache[target])
         )
     return FileResponse(cache[target])
 
