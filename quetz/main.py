@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+import time
 import uuid
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
@@ -83,7 +84,7 @@ from quetz.metrics.middleware import DOWNLOAD_COUNT, UPLOAD_COUNT
 from quetz.rest_models import ChannelActionEnum, CPRole
 from quetz.tasks import indexing
 from quetz.tasks.common import Task
-from quetz.tasks.mirror import LocalCache, RemoteRepository, get_from_cache_or_download
+from quetz.tasks.mirror import RemoteRepository, download_remote_file
 from quetz.utils import TicToc, generate_random_key, parse_query
 
 from .condainfo import CondaInfo
@@ -1555,14 +1556,20 @@ async def serve_path(
     path,
     channel: db_models.Channel = Depends(get_channel_allow_proxy),
     accept_encoding: Optional[str] = Header(None),
-    cache: LocalCache = Depends(LocalCache),
     session=Depends(get_remote_session),
     dao: Dao = Depends(get_dao),
 ):
 
     if channel.mirror_channel_url and channel.mirror_mode == "proxy":
         repository = RemoteRepository(channel.mirror_channel_url, session)
-        return get_from_cache_or_download(repository, cache, path, config)
+        if not pkgstore.file_exists(channel.name, path):
+            download_remote_file(repository, pkgstore, channel.name, path)
+        elif path.endswith(".json"):
+            # repodata.json and current_repodata.json are cached locally
+            # for channel.ttl seconds
+            _, fmtime, _ = pkgstore.get_filemetadata(channel.name, path)
+            if time.time() - fmtime >= channel.ttl:
+                download_remote_file(repository, pkgstore, channel.name, path)
 
     chunk_size = 10_000
 
@@ -1646,11 +1653,10 @@ async def serve_path(
 async def serve_channel_index(
     channel: db_models.Channel = Depends(get_channel_allow_proxy),
     accept_encoding: Optional[str] = Header(None),
-    cache: LocalCache = Depends(LocalCache),
     session=Depends(get_remote_session),
     dao: Dao = Depends(get_dao),
 ):
-    return await serve_path("index.html", channel, accept_encoding, cache, session, dao)
+    return await serve_path("index.html", channel, accept_encoding, session, dao)
 
 
 frontend.register(app)

@@ -82,6 +82,10 @@ class PackageStore(abc.ABC):
         """move file from source to destination in package store"""
 
     @abc.abstractmethod
+    def file_exists(self, channel: str, destination: str):
+        """Return True if the file exists"""
+
+    @abc.abstractmethod
     def get_filemetadata(self, channel: str, src: str) -> Tuple[int, int, str]:
         """get file metadata: returns (file size, last modified time, etag)"""
 
@@ -149,6 +153,9 @@ class LocalStore(PackageStore):
             path.join(self.channels_dir, channel, source),
             path.join(self.channels_dir, channel, destination),
         )
+
+    def file_exists(self, channel: str, destination: str):
+        return self.fs.exists(path.join(self.channels_dir, channel, destination))
 
     def serve_path(self, channel, src):
         return self.fs.open(path.join(self.channels_dir, channel, src))
@@ -306,6 +313,11 @@ class S3Store(PackageStore):
                 path.join(channel_bucket, destination),
             )
 
+    def file_exists(self, channel: str, destination: str):
+        channel_bucket = self._bucket_map(channel)
+        with self._get_fs() as fs:
+            return fs.exists(path.join(channel_bucket, destination))
+
     def list_files(self, channel: str):
         def remove_prefix(text, prefix):
             if text.startswith(prefix):
@@ -438,6 +450,11 @@ class AzureBlobStore(PackageStore):
                 path.join(channel_container, source),
                 path.join(channel_container, destination),
             )
+
+    def file_exists(self, channel: str, destination: str):
+        channel_container = self._container_map(channel)
+        with self._get_fs() as fs:
+            return fs.exists(path.join(channel_container, destination))
 
     def list_files(self, channel: str):
         def remove_prefix(text, prefix):
