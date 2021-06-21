@@ -72,6 +72,7 @@ class ChannelBase(BaseModel):
     )
     private: bool = Field(True, title="channel should be private")
     size_limit: Optional[int] = Field(None, title="size limit of the channel")
+    ttl: int = Field(36000, title="ttl of the channel")
     mirror_channel_url: Optional[str] = Field(None, regex="^(http|https)://.+")
     mirror_mode: Optional[MirrorMode] = None
 
