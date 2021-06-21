@@ -758,7 +758,7 @@ def patch_channel(
     if "size_limit" in user_attrs:
         auth.assert_set_channel_size_limit()
 
-    changeable_attrs = ["private", "size_limit", "metadata"]
+    changeable_attrs = ["private", "size_limit", "metadata", "ttl"]
 
     for attr_ in user_attrs.keys():
         if attr_ not in changeable_attrs:

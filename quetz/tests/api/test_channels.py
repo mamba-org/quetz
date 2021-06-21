@@ -534,6 +534,46 @@ def test_set_channel_size_limit(auth_client, db, public_channel):
     assert public_channel.size_limit == 101
 
 
+@pytest.mark.parametrize("ttl", [None, 1200, 36000])
+@pytest.mark.parametrize("user_role", [SERVER_OWNER])
+def test_create_channel_ttl(auth_client, db, user_role, ttl):
+    name = "test-create-channel-ttl"
+    payload = {"name": name, "private": False}
+    if ttl is not None:
+        payload["ttl"] = ttl
+    response = auth_client.post("/api/channels", json=payload)
+    channel = (
+        db.query(db_models.Channel).filter(db_models.Channel.name == name).one_or_none()
+    )
+    assert response.status_code == 201
+    if ttl is None:
+        expected_ttl = 36000
+    else:
+        expected_ttl = ttl
+    assert channel.ttl == expected_ttl
+
+
+@pytest.mark.parametrize("user_role", [SERVER_OWNER])
+def test_update_channel_ttl(auth_client, db, public_channel):
+
+    assert public_channel.ttl == 36000
+
+    response = auth_client.patch(
+        f"/api/channels/{public_channel.name}",
+        json={"ttl": 1200},
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["name"] == public_channel.name
+    assert data["ttl"] == 1200
+
+    db.refresh(public_channel)
+
+    assert public_channel.ttl == 1200
+
+
 @pytest.mark.parametrize("user_role", [SERVER_OWNER])
 @pytest.mark.parametrize(
     "attr_dict",

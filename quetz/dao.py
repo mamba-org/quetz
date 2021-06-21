@@ -313,6 +313,7 @@ class Dao:
             mirror_channel_url=data.mirror_channel_url,
             mirror_mode=data.mirror_mode,
             private=data.private,
+            ttl=data.ttl,
             channel_metadata=json.dumps(data.metadata.__dict__),
             size_limit=size_limit,
         )
