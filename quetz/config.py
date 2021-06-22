@@ -114,6 +114,13 @@ class Config:
             [ConfigEntry("secret", str), ConfigEntry("https_only", bool, default=True)],
         ),
         ConfigSection(
+            "local_store",
+            [
+                ConfigEntry("redirect_enabled", bool, default=False),
+                ConfigEntry("redirect_endpoint", str, default="/files"),
+            ],
+        ),
+        ConfigSection(
             "s3",
             [
                 ConfigEntry("access_key", str, default=""),
@@ -367,7 +374,13 @@ class Config:
                 }
             )
         else:
-            return pkgstores.LocalStore({'channels_dir': 'channels'})
+            return pkgstores.LocalStore(
+                {
+                    'channels_dir': 'channels',
+                    'redirect_enabled': self.local_store_redirect_enabled,
+                    'redirect_endpoint': self.local_store_redirect_endpoint,
+                }
+            )
 
     def configured_section(self, section: str) -> bool:
         """Return if a given section has been configured.

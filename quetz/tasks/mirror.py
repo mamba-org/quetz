@@ -10,7 +10,6 @@ from typing import List
 
 import requests
 from fastapi import HTTPException, status
-from fastapi.responses import FileResponse, StreamingResponse
 from tenacity import TryAgain, after_log, retry, stop_after_attempt, wait_exponential
 
 from quetz import authorization, rest_models
@@ -45,38 +44,6 @@ KNOWN_SUBDIRS = (
 
 
 logger = logging.getLogger("quetz")
-
-
-def get_from_cache_or_download(
-    repository, cache, target, exclude=["repodata.json", "current_repodata.json"]
-):
-    """Serve from cache or download if missing."""
-
-    _, filename = os.path.split(target)
-    skip_cache = filename in exclude
-
-    chunksize = 10000
-
-    def data_iter(f):
-        chunk = f.read(chunksize)
-        while chunk:
-            yield chunk
-            # Do stuff with byte.
-            chunk = f.read(chunksize)
-
-    if skip_cache:
-        remote_file = repository.open(target)
-        data_stream = remote_file.file
-
-        return StreamingResponse(data_iter(data_stream))
-
-    if target not in cache:
-        # copy from repository to cache
-        remote_file = repository.open(target)
-        data_stream = remote_file.file
-        cache.dump(target, data_stream)
-
-    return FileResponse(cache[target])
 
 
 class RemoteRepository:
@@ -136,36 +103,14 @@ class RemoteFile:
         return json.load(self.file)
 
 
-class LocalCache:
-    """Local storage for downloaded files."""
-
-    def __init__(self, channel_name: str):
-        self.cache_dir = "cache"
-        self.channel = channel_name
-
-    def dump(self, path, stream):
-        cache_path = self._make_path(path)
-        package_dir, _ = os.path.split(cache_path)
-        os.makedirs(package_dir, exist_ok=True)
-        with open(cache_path, "wb") as fid:
-            shutil.copyfileobj(stream, fid)
-
-    def __contains__(self, path):
-        cache_path = self._make_path(path)
-        return os.path.isfile(cache_path)
-
-    def _make_path(self, path):
-        cache_path = os.path.join(self.cache_dir, self.channel, path)
-        return cache_path
-
-    def __getitem__(self, path):
-
-        cache_path = os.path.join(self.cache_dir, self.channel, path)
-
-        if not os.path.isfile(cache_path):
-            raise KeyError
-
-        return cache_path
+def download_remote_file(
+    repository: RemoteRepository, pkgstore: PackageStore, channel: str, path: str
+):
+    """Download a file from a remote repository to a package store"""
+    logger.debug(f"Downloading {path} from {channel} to pkgstore")
+    remote_file = repository.open(path)
+    data_stream = remote_file.file
+    pkgstore.add_package(data_stream, channel, path)
 
 
 @contextlib.contextmanager

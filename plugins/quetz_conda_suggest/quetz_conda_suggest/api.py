@@ -18,7 +18,7 @@ def get_conda_suggest(channel_name, subdir, db: Session = Depends(get_db)):
     map_filename = "{0}.{1}.map".format(channel_name, subdir)
     map_filepath = pkgstore.url(channel_name, f"{subdir}/{map_filename}")
     try:
-        if map_filepath.startswith("http"):
+        if pkgstore.support_redirect:
             return RedirectResponse(map_filepath)
         elif os.path.isfile(map_filepath):
             return FileResponse(

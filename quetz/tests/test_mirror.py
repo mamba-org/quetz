@@ -604,7 +604,7 @@ def test_download_remote_file(client, owner, dummy_repo):
     assert dummy_repo == [("http://host/test_file_2.txt")]
 
 
-def test_always_download_repodata(client, owner, dummy_repo):
+def test_proxy_repodata_cached(client, owner, dummy_repo):
     """Test downloading from cache."""
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -628,8 +628,9 @@ def test_always_download_repodata(client, owner, dummy_repo):
     assert response.status_code == 200
     assert response.content == b"Hello world!"
 
+    # repodata.json was cached locally and downloaded from the
+    # the remote only once
     assert dummy_repo == [
-        ("http://host/repodata.json"),
         ("http://host/repodata.json"),
     ]
 

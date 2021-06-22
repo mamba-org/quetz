@@ -37,6 +37,11 @@ class PackageStore(abc.ABC):
     def __init__(self):
         pass
 
+    @property
+    @abc.abstractmethod
+    def support_redirect(self) -> bool:
+        pass
+
     @abc.abstractmethod
     def create_channel(self, name):
         pass
@@ -48,6 +53,10 @@ class PackageStore(abc.ABC):
 
     @abc.abstractmethod
     def list_files(self, channel: str) -> List[str]:
+        pass
+
+    @abc.abstractmethod
+    def url(self, channel: str, src: str, expires: int = 0) -> str:
         pass
 
     @abc.abstractmethod
@@ -73,6 +82,10 @@ class PackageStore(abc.ABC):
         """move file from source to destination in package store"""
 
     @abc.abstractmethod
+    def file_exists(self, channel: str, destination: str):
+        """Return True if the file exists"""
+
+    @abc.abstractmethod
     def get_filemetadata(self, channel: str, src: str) -> Tuple[int, int, str]:
         """get file metadata: returns (file size, last modified time, etag)"""
 
@@ -85,6 +98,12 @@ class LocalStore(PackageStore):
     def __init__(self, config):
         self.fs: fsspec.AbstractFileSystem = fsspec.filesystem("file")
         self.channels_dir = config['channels_dir']
+        self.redirect_enabled = config['redirect_enabled']
+        self.redirect_endpoint = config['redirect_endpoint']
+
+    @property
+    def support_redirect(self):
+        return self.redirect_enabled
 
     @contextmanager
     def _atomic_open(self, channel: str, destination: StrPath, mode="wb") -> IO:
@@ -135,6 +154,9 @@ class LocalStore(PackageStore):
             path.join(self.channels_dir, channel, destination),
         )
 
+    def file_exists(self, channel: str, destination: str):
+        return self.fs.exists(path.join(self.channels_dir, channel, destination))
+
     def serve_path(self, channel, src):
         return self.fs.open(path.join(self.channels_dir, channel, src))
 
@@ -142,9 +164,11 @@ class LocalStore(PackageStore):
         channel_dir = os.path.join(self.channels_dir, channel)
         return [os.path.relpath(f, channel_dir) for f in self.fs.find(channel_dir)]
 
-    def url(self, channel: str, src: str, expires=None):
-        filepath = path.abspath(path.join(self.channels_dir, channel, src))
-        return filepath
+    def url(self, channel: str, src: str, expires=0):
+        if self.redirect_enabled:
+            return path.join(self.redirect_endpoint, self.channels_dir, channel, src)
+        else:
+            return path.abspath(path.join(self.channels_dir, channel, src))
 
     def get_filemetadata(self, channel: str, src: str):
         filepath = path.abspath(path.join(self.channels_dir, channel, src))
@@ -216,6 +240,10 @@ class S3Store(PackageStore):
         self.bucket_prefix = config['bucket_prefix']
         self.bucket_suffix = config['bucket_suffix']
 
+    @property
+    def support_redirect(self):
+        return True
+
     @contextlib.contextmanager
     def _get_fs(self):
         try:
@@ -285,6 +313,11 @@ class S3Store(PackageStore):
                 path.join(channel_bucket, destination),
             )
 
+    def file_exists(self, channel: str, destination: str):
+        channel_bucket = self._bucket_map(channel)
+        with self._get_fs() as fs:
+            return fs.exists(path.join(channel_bucket, destination))
+
     def list_files(self, channel: str):
         def remove_prefix(text, prefix):
             if text.startswith(prefix):
@@ -345,6 +378,10 @@ class AzureBlobStore(PackageStore):
 
         self.container_prefix = config['container_prefix']
         self.container_suffix = config['container_suffix']
+
+    @property
+    def support_redirect(self):
+        return True
 
     @contextlib.contextmanager
     def _get_fs(self):
@@ -413,6 +450,11 @@ class AzureBlobStore(PackageStore):
                 path.join(channel_container, source),
                 path.join(channel_container, destination),
             )
+
+    def file_exists(self, channel: str, destination: str):
+        channel_container = self._container_map(channel)
+        with self._get_fs() as fs:
+            return fs.exists(path.join(channel_container, destination))
 
     def list_files(self, channel: str):
         def remove_prefix(text, prefix):
