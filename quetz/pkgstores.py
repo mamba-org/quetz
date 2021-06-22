@@ -9,6 +9,7 @@ import os
 import os.path as path
 import shutil
 import tempfile
+from threading import Lock
 from contextlib import contextmanager
 from os import PathLike
 from typing import IO, BinaryIO, List, NoReturn, Tuple, Union
@@ -33,9 +34,19 @@ logger = logging.getLogger("quetz")
 
 
 class PackageStore(abc.ABC):
-    @abc.abstractmethod
+
     def __init__(self):
-        pass
+        self._download_locks = {}
+
+    def get_download_lock(self, channel: str, destination: str):
+        return self._download_locks.get((channel, destination))
+
+    def create_download_lock(self, channel: str, destination: str):
+        lock = self._download_locks[(channel, destination)] = Lock()
+        return lock
+
+    def delete_download_lock(self, channel: str, destination: str):
+        del self._download_locks[(channel, destination)]
 
     @property
     def kind(self):
@@ -99,11 +110,13 @@ class PackageStore(abc.ABC):
 
 
 class LocalStore(PackageStore):
+
     def __init__(self, config):
         self.fs: fsspec.AbstractFileSystem = fsspec.filesystem("file")
         self.channels_dir = config['channels_dir']
         self.redirect_enabled = config['redirect_enabled']
         self.redirect_endpoint = config['redirect_endpoint']
+        super().__init__()
 
     @property
     def support_redirect(self):
@@ -243,6 +256,7 @@ class S3Store(PackageStore):
 
         self.bucket_prefix = config['bucket_prefix']
         self.bucket_suffix = config['bucket_suffix']
+        super().__init__()
 
     @property
     def support_redirect(self):
@@ -382,6 +396,7 @@ class AzureBlobStore(PackageStore):
 
         self.container_prefix = config['container_prefix']
         self.container_suffix = config['container_suffix']
+        super().__init__()
 
     @property
     def support_redirect(self):
