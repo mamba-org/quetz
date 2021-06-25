@@ -14,4 +14,4 @@ infrastructure.
    migrations
    frontend
    workers
-
+   nginx
