@@ -1598,7 +1598,9 @@ def serve_path(
         if channel_proxylist and package_name and package_name in channel_proxylist:
             return RedirectResponse(f"{channel.mirror_channel_url}/{path}")
 
-    if is_package_request and pkgstore.support_redirect:
+    if (
+        is_package_request or pkgstore.kind == "LocalStore"
+    ) and pkgstore.support_redirect:
         return RedirectResponse(pkgstore.url(channel.name, path))
 
     def iter_chunks(fid):
