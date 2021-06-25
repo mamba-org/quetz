@@ -3,6 +3,7 @@ version: '3'
 services:
   web:
     image: quetz_dev_image
+    container_name: quetz-web
     ports:
       - "8000:8000"
     build: 
@@ -54,6 +55,17 @@ services:
     command: jupyterhub --debug
     ports:
       - 8001:8000
+  nginx:
+    image: nginx:stable
+    container_name: quetz-nginx
+    entrypoint: ["nginx", "-g", "daemon off;"]
+    ports:
+      - "8080:8080"
+    depends_on:
+      - web
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf
+      - quetz_deployment:/quetz-deployment
 
 volumes:
   quetz_deployment:
