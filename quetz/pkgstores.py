@@ -9,9 +9,9 @@ import os
 import os.path as path
 import shutil
 import tempfile
-from threading import Lock
 from contextlib import contextmanager
 from os import PathLike
+from threading import Lock
 from typing import IO, BinaryIO, List, NoReturn, Tuple, Union
 
 import fsspec
@@ -34,7 +34,6 @@ logger = logging.getLogger("quetz")
 
 
 class PackageStore(abc.ABC):
-
     def __init__(self):
         self._download_locks = {}
 
@@ -110,7 +109,6 @@ class PackageStore(abc.ABC):
 
 
 class LocalStore(PackageStore):
-
     def __init__(self, config):
         self.fs: fsspec.AbstractFileSystem = fsspec.filesystem("file")
         self.channels_dir = config['channels_dir']
