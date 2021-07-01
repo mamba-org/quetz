@@ -127,6 +127,25 @@ Quetz can store package in object cloud storage compatible with S3 interface. To
 :bucket_prefix:
 :bucket_suffix: channel directories on S3 are created with the following semantics: ``{bucket_prefix}{channel_name}{bucket_suffix}``
 
+``local_store`` section
+^^^^^^^^^^^^^^^^^^^^^^^
+
+By default, Quetz stores packages on the local filesystem and all files
+are streamed by the application. To improve performances, it is recommended to deploy
+Nginx in front of Quetz to serve those files.
+
+This can be achieved by setting ``redirect_enabled`` to ``true``.
+Requests for conda packages and json files will be redirected to a specific endpoint (``redirect_endpoint``)
+which shall be configured in Nginx. See :ref:`nginx_config` for more information.
+
+
+.. code::
+
+    [local_store]
+    redirect_enabled = true
+    redirect_endpoint = "/files"
+
+
 .. _worker_config:
 
 ``worker`` section

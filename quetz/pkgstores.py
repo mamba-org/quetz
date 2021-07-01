@@ -38,6 +38,10 @@ class PackageStore(abc.ABC):
         pass
 
     @property
+    def kind(self):
+        return type(self).__name__
+
+    @property
     @abc.abstractmethod
     def support_redirect(self) -> bool:
         pass
