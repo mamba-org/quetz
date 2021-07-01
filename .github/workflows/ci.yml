@@ -78,6 +78,10 @@ jobs:
 
           echo "install and test plugins"
 
+          # add micromamba to path
+          export PATH=$(dirname $MAMBA_EXE):$PATH
+          echo "adding micromamba to path: $MAMBA_EXE"
+
           pip install --no-deps git+https://git@github.com/regro/libcflib@master
           for f in ./plugins/quetz_*
           do
