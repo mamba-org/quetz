@@ -1560,17 +1560,6 @@ def serve_path(
     dao: Dao = Depends(get_dao),
 ):
 
-    if channel.mirror_channel_url and channel.mirror_mode == "proxy":
-        repository = RemoteRepository(channel.mirror_channel_url, session)
-        if not pkgstore.file_exists(channel.name, path):
-            download_remote_file(repository, pkgstore, channel.name, path)
-        elif path.endswith(".json"):
-            # repodata.json and current_repodata.json are cached locally
-            # for channel.ttl seconds
-            _, fmtime, _ = pkgstore.get_filemetadata(channel.name, path)
-            if time.time() - fmtime >= channel.ttl:
-                download_remote_file(repository, pkgstore, channel.name, path)
-
     chunk_size = 10_000
 
     is_package_request = path.endswith((".tar.bz2", ".conda"))
@@ -1597,6 +1586,17 @@ def serve_path(
         channel_proxylist = json.loads(channel.channel_metadata).get('proxylist', [])
         if channel_proxylist and package_name and package_name in channel_proxylist:
             return RedirectResponse(f"{channel.mirror_channel_url}/{path}")
+
+    if channel.mirror_channel_url and channel.mirror_mode == "proxy":
+        repository = RemoteRepository(channel.mirror_channel_url, session)
+        if not pkgstore.file_exists(channel.name, path):
+            download_remote_file(repository, pkgstore, channel.name, path)
+        elif path.endswith(".json"):
+            # repodata.json and current_repodata.json are cached locally
+            # for channel.ttl seconds
+            _, fmtime, _ = pkgstore.get_filemetadata(channel.name, path)
+            if time.time() - fmtime >= channel.ttl:
+                download_remote_file(repository, pkgstore, channel.name, path)
 
     if (
         is_package_request or pkgstore.kind == "LocalStore"
