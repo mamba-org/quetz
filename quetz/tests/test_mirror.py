@@ -1029,6 +1029,34 @@ def test_includelist_and_excludelist_mirror_channel(owner, client):
     assert response.status_code == 422
 
 
+@pytest.mark.parametrize("mirror_mode", ["proxy", "mirror"])
+def test_proxylist_mirror_channel(owner, client, mirror_mode):
+    response = client.get("/api/dummylogin/bartosz")
+    assert response.status_code == 200
+
+    response = client.post(
+        "/api/channels",
+        json={
+            "name": "mirror-channel-btel",
+            "private": False,
+            "mirror_channel_url": "https://conda.anaconda.org/btel",
+            "mirror_mode": mirror_mode,
+            "metadata": {"proxylist": ["nrnpython"]},
+        },
+    )
+    assert response.status_code == 201
+
+    response = client.get(
+        "/get/mirror-channel-btel/linux-64/nrnpython-0.1-0.tar.bz2",
+        allow_redirects=False,
+    )
+    assert response.status_code == 307
+    assert (
+        response.headers.get("location")
+        == "https://conda.anaconda.org/btel/linux-64/nrnpython-0.1-0.tar.bz2"
+    )
+
+
 def test_sync_local_channel(local_channel, user, client, dummy_repo):
     response = client.put(
         f"/api/channels/{local_channel.name}/actions", json={"action": "synchronize"}
