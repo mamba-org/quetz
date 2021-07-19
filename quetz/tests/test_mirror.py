@@ -1,3 +1,4 @@
+import concurrent.futures
 import json
 import os
 import uuid
@@ -602,6 +603,37 @@ def test_download_remote_file(client, owner, dummy_repo):
     assert response.status_code == 200
     assert response.content == b"Hello world!"
     assert dummy_repo == [("http://host/test_file_2.txt")]
+
+
+def test_download_remote_file_in_parallel(client, owner, dummy_repo):
+    """Test downloading in parallel."""
+    response = client.get("/api/dummylogin/bartosz")
+    assert response.status_code == 200
+
+    response = client.post(
+        "/api/channels",
+        json={
+            "name": "proxy-channel",
+            "private": False,
+            "mirror_channel_url": "http://host",
+            "mirror_mode": "proxy",
+        },
+    )
+    assert response.status_code == 201
+
+    def get_remote_file(filename):
+        return client.get(f"/get/proxy-channel/{filename}")
+
+    # download the same file from the remote server in parallel (3 threads)
+    test_file = "test_file3.txt"
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        downloads = [executor.submit(get_remote_file, test_file) for index in range(3)]
+        for future in concurrent.futures.as_completed(downloads):
+            response = future.result()
+            assert response.status_code == 200
+            assert response.content == b"Hello world!"
+    # the file was only downloaded once and served from cache for other requests
+    assert dummy_repo == [(f"http://host/{test_file}")]
 
 
 def test_proxy_repodata_cached(client, owner, dummy_repo):
