@@ -18,74 +18,93 @@ Here is an example configuration to use Nginx in front of Quetz:
 
 .. code::
 
-	worker_processes  1;
-	pid        /tmp/nginx.pid;
+   worker_processes  1;
+   pid        /tmp/nginx.pid;
 
-	events {
-	    worker_connections  1024;
-	}
+   events {
+      worker_connections  1024;
+   }
 
-	http {
-	    map $cache $control {
-		1       "max-age=1200";
-	    }
-	    map $uri $cache {
-		~*\.(json)$    1;
-	    }
-	    proxy_temp_path /tmp/proxy_temp;
-	    client_body_temp_path /tmp/client_temp;
-	    fastcgi_temp_path /tmp/fastcgi_temp;
-	    uwsgi_temp_path /tmp/uwsgi_temp;
-	    scgi_temp_path /tmp/scgi_temp;
+   http {
 
-	    include       mime.types;
-	    default_type  application/octet-stream;
+      map $cache $control {
+         1       "max-age=1200";
+      }
+      map $uri $cache {
+         ~*\.(json)$    1;
+      }
 
-	    sendfile        on;
-	    tcp_nopush      on;
-	    tcp_nodelay     on;
+      proxy_temp_path /tmp/proxy_temp;
+      client_body_temp_path /tmp/client_temp;
+      fastcgi_temp_path /tmp/fastcgi_temp;
+      uwsgi_temp_path /tmp/uwsgi_temp;
+      scgi_temp_path /tmp/scgi_temp;
 
-	    keepalive_timeout  65;
+      include       mime.types;
+      default_type  application/octet-stream;
 
-	    gzip  on;
-	    gzip_types  application/json;
+      sendfile        on;
+      tcp_nopush      on;
+      tcp_nodelay     on;
 
-	    client_max_body_size 100m;
+      keepalive_timeout  65;
 
-	    upstream quetz {
-	      server 127.0.0.1:8000;
-	    }
+      gzip  on;
+      gzip_types  application/json;
 
-	    server {
-		listen      8080;
-		add_header  Cache-Control $control;
+      client_max_body_size 100m;
 
-		server_name  localhost;
+      upstream quetz {
+         server 127.0.0.1:8000;
+      }
 
-		location / {
-		  proxy_set_header Host $http_host;
-		  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-		  proxy_set_header X-Forwarded-Proto $scheme;
-		  proxy_set_header Upgrade $http_upgrade;
-		  proxy_set_header Connection $connection_upgrade;
-		  proxy_redirect off;
-		  proxy_buffering off;
-		  proxy_pass http://quetz;
-		}
+      server {
+         listen      8080;
+         add_header  Cache-Control $control;
 
-		location /files/channels/ {
-		  # path for channels
-		  alias /quetz-deployment/channels/;
-		}
-	    }
+         server_name  localhost;
 
-	    map $http_upgrade $connection_upgrade {
-	      default upgrade;
-	      '' close;
-	    }
-	}
+         location / {
+           proxy_set_header Host $http_host;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+           proxy_set_header Upgrade $http_upgrade;
+           proxy_set_header Connection $connection_upgrade;
+           proxy_redirect off;
+           proxy_buffering off;
+           proxy_pass http://quetz;
+         }
 
-Requests for files under ``/files/channels/`` will be served by Nginx.
+         location /files/channels/ {
+           # path for channels
+           alias /quetz-deployment/channels/;
+
+           secure_link $arg_md5,$arg_expires;
+           secure_link_md5 "$secure_link_expires$file_name mysecrettoken";
+
+           if ($secure_link = "") { return 403; }
+           if ($secure_link = "0") { return 410; }
+         }
+      }
+
+      map $http_upgrade $connection_upgrade {
+         default upgrade;
+         '' close;
+      }
+   }
+
+Requests for files under ``/files/channels/`` will be served by Nginx. Note the
+optional secure_link and secure_link_md5 configuration. This enables expiring,
+authenticated links. To use these links (important with private channels) you
+will need to set the same secret in the quetz config
+
+.. code::
+
+   [local_store]
+   redirect_enabled = true
+   redirect_endpoint = "/files"
+   redirect_secret = "mysecrettoken"  # this has to correspond with nginx config!
+
 All other requests are passed to the Quetz application, which is running locally on port 8000
 in this example.
 
