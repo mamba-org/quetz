@@ -107,10 +107,22 @@ def download_remote_file(
     repository: RemoteRepository, pkgstore: PackageStore, channel: str, path: str
 ):
     """Download a file from a remote repository to a package store"""
-    logger.debug(f"Downloading {path} from {channel} to pkgstore")
-    remote_file = repository.open(path)
-    data_stream = remote_file.file
-    pkgstore.add_package(data_stream, channel, path)
+
+    # Check if a download is already underway for this file
+    lock = pkgstore.get_download_lock(channel, path)
+    if lock:
+        # Wait for the download to complete
+        lock.acquire()
+        # Release the lock so that any other clients can also finish
+        lock.release()
+        return
+    # Acquire a lock to prevent multiple concurrent downloads of the same file
+    with pkgstore.create_download_lock(channel, path):
+        logger.debug(f"Downloading {path} from {channel} to pkgstore")
+        remote_file = repository.open(path)
+        data_stream = remote_file.file
+        pkgstore.add_package(data_stream, channel, path)
+    pkgstore.delete_download_lock(channel, path)
 
 
 @contextlib.contextmanager
