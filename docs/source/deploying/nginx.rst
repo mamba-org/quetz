@@ -104,6 +104,7 @@ will need to set the same secret in the quetz config
    redirect_enabled = true
    redirect_endpoint = "/files"
    redirect_secret = "mysecrettoken"  # this has to correspond with nginx config!
+   redirect_expiration = 3600  # expire link after 3600 seconds (1 hour)
 
 All other requests are passed to the Quetz application, which is running locally on port 8000
 in this example.

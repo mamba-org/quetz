@@ -131,8 +131,8 @@ class LocalStore(PackageStore):
         self.channels_dir = config['channels_dir']
         self.redirect_enabled = config['redirect_enabled']
         self.redirect_endpoint = config['redirect_endpoint']
-        self.redirect_secret = config['redirect_secret']
-        self.redirect_expiration = config['redirect_expiration']
+        self.redirect_secret = config.get('redirect_secret')
+        self.redirect_expiration = config.get('redirect_expiration')
 
         super().__init__()
 
