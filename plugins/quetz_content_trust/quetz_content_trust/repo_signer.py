@@ -7,9 +7,7 @@ import conda_content_trust.signing as cct_signing
 
 class RepoSigner:
     def sign_repodata(self, repodata_fn, pkg_mgr_key):
-        final_fn = self.in_folder / "repodata_signed.json"
-        print("copy", repodata_fn, final_fn)
-        shutil.copyfile(repodata_fn, final_fn)
+        final_fn = self.in_folder / "repodata.json"
 
         cct_signing.sign_all_in_repodata(str(final_fn), pkg_mgr_key)
         print(f"Signed {final_fn}")

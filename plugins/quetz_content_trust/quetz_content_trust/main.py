@@ -18,33 +18,31 @@ def register_router():
 @quetz.hookimpl
 def post_package_indexing(tempdir: Path, channel_name, subdirs, files, packages):
     with get_db_manager() as db:
-        # the most recent created key is fetched since we
-        # cannot get `user_id` outside a request / API call.
         query = (
             db.query(db_models.RepodataSigningKey)
             .filter(
                 db_models.RepodataSigningKey.channel_name == channel_name,
             )
-            .order_by(desc('time_created'))
-            .first()
+            .all()
         )
 
         if query:
-            for subdir in subdirs:
-                repodata_folderpath = tempdir / channel_name / subdir
+            for each_key in query:
+                for subdir in subdirs:
+                    repodata_folderpath = tempdir / channel_name / subdir
 
-                RepoSigner(repodata_folderpath, query.private_key)
+                    RepoSigner(repodata_folderpath, each_key.private_key)
 
-                with open(
-                    tempdir / channel_name / subdir / "repodata_signed.json"
-                ) as f:
-                    repodata_signed = f.read()
+                    with open(
+                        tempdir / channel_name / subdir / "repodata.json"
+                    ) as f:
+                        repodata_signed = f.read()
 
-                add_temp_static_file(
-                    repodata_signed,
-                    channel_name,
-                    subdir,
-                    "repodata_signed.json",
-                    tempdir,
-                    files,
-                )
+                    add_temp_static_file(
+                        repodata_signed,
+                        channel_name,
+                        subdir,
+                        "repodata.json",
+                        tempdir,
+                        files,
+                    )

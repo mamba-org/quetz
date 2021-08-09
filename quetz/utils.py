@@ -96,16 +96,29 @@ def add_entry_for_index(files, subdir, fname, data_bytes):
     md5.update(data_bytes)
     sha.update(data_bytes)
 
+    existing_index = -1
     if subdir:
-        files[subdir].append(
-            {
+        for i, each_f in enumerate(files[subdir]):
+            if each_f['name'] == fname:
+                existing_index = i
+        if existing_index != -1:
+            files[subdir][existing_index] = {
                 "name": fname,
                 "size": len(data_bytes),
                 "timestamp": datetime.now(timezone.utc),
                 "md5": md5.hexdigest(),
                 "sha256": sha.hexdigest(),
             }
-        )
+        else:
+            files[subdir].append(
+                {
+                    "name": fname,
+                    "size": len(data_bytes),
+                    "timestamp": datetime.now(timezone.utc),
+                    "md5": md5.hexdigest(),
+                    "sha256": sha.hexdigest(),
+                }
+            )
 
 
 def parse_query(search_type, query):
