@@ -1,7 +1,5 @@
 from pathlib import Path
 
-from sqlalchemy import desc
-
 import quetz
 from quetz.utils import add_temp_static_file
 
@@ -33,9 +31,7 @@ def post_package_indexing(tempdir: Path, channel_name, subdirs, files, packages)
 
                     RepoSigner(repodata_folderpath, each_key.private_key)
 
-                    with open(
-                        tempdir / channel_name / subdir / "repodata.json"
-                    ) as f:
+                    with open(tempdir / channel_name / subdir / "repodata.json") as f:
                         repodata_signed = f.read()
 
                     add_temp_static_file(

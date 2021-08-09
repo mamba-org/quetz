@@ -1,5 +1,4 @@
 import os
-import shutil
 from pathlib import Path
 
 import conda_content_trust.signing as cct_signing
