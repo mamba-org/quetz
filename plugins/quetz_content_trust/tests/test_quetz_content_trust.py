@@ -33,10 +33,10 @@ def test_post_index_signed_repodata(client, config, channel, reposigning_private
             tempdir_path, channel.name, ['linux-64'], {'linux-64': []}, {'linux-64': []}
         )
 
-        with open(stubdir / "repodata_signed.json", "rb") as fo:
-            pkgstore.add_file(fo.read(), channel.name, "linux-64/repodata_signed.json")
+        with open(stubdir / "repodata.json", "rb") as fo:
+            pkgstore.add_file(fo.read(), channel.name, "linux-64/repodata.json")
 
-    f = pkgstore.serve_path(channel.name, "linux-64/repodata_signed.json")
+    f = pkgstore.serve_path(channel.name, "linux-64/repodata.json")
     signed_repodata = json.load(f)
 
     public_key = "f46b5a7caa43640744186564c098955147daa8bac4443887bc64d8bfee3d3569"
