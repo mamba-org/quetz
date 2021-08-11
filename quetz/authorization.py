@@ -62,7 +62,7 @@ class Rules:
     def assert_user(self) -> bytes:
         user_id = self.get_user()
 
-        if not user_id:
+        if not user_id or not self.db.query(User).filter(User.id == user_id).count():
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Not logged in",
