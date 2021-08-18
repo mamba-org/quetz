@@ -2,7 +2,10 @@
 # Distributed under the terms of the Modified BSD License.
 
 import abc
+import base64
+import calendar
 import contextlib
+import datetime
 import hashlib
 import logging
 import os
@@ -108,12 +111,29 @@ class PackageStore(abc.ABC):
         """clean up temporary `*.json{HASH}.[bz2|gz]` files from pkgstore"""
 
 
+# generate a secret token for use with nginx secure link
+# similar to https://stackoverflow.com/a/52764346 (thanks @flix on stackoverflow)
+def nginx_secure_link(url: str, secret: str, expires=3600):
+    future = datetime.datetime.utcnow() + datetime.timedelta(seconds=expires)
+    expire_ts = calendar.timegm(future.timetuple())
+
+    hash_string = f"{expire_ts}{url} {secret}".encode('utf-8')
+    m = hashlib.md5(hash_string).digest()
+
+    base64_hash = base64.urlsafe_b64encode(m)
+    base64_s = base64_hash.decode('utf-8').rstrip('=')
+    return base64_s, expire_ts
+
+
 class LocalStore(PackageStore):
     def __init__(self, config):
         self.fs: fsspec.AbstractFileSystem = fsspec.filesystem("file")
         self.channels_dir = config['channels_dir']
         self.redirect_enabled = config['redirect_enabled']
         self.redirect_endpoint = config['redirect_endpoint']
+        self.redirect_secret = config.get('redirect_secret')
+        self.redirect_expiration = config.get('redirect_expiration')
+
         super().__init__()
 
     @property
@@ -181,6 +201,17 @@ class LocalStore(PackageStore):
 
     def url(self, channel: str, src: str, expires=0):
         if self.redirect_enabled:
+            # generate url + secret if necessary
+            if self.redirect_secret:
+                url = path.join(self.channels_dir, channel, src)
+                md5hash, expires_by = nginx_secure_link(
+                    url, self.redirect_secret, self.redirect_expiration
+                )
+                return (
+                    path.join(self.redirect_endpoint, url)
+                    + f"?md5={md5hash}&expires={expires_by}"
+                )
+
             return path.join(self.redirect_endpoint, self.channels_dir, channel, src)
         else:
             return path.abspath(path.join(self.channels_dir, channel, src))

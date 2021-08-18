@@ -118,6 +118,8 @@ class Config:
             [
                 ConfigEntry("redirect_enabled", bool, default=False),
                 ConfigEntry("redirect_endpoint", str, default="/files"),
+                ConfigEntry("redirect_secret", str, default=""),
+                ConfigEntry("redirect_expiration", int, default="3600"),
             ],
         ),
         ConfigSection(
@@ -379,6 +381,8 @@ class Config:
                     'channels_dir': 'channels',
                     'redirect_enabled': self.local_store_redirect_enabled,
                     'redirect_endpoint': self.local_store_redirect_endpoint,
+                    'redirect_secret': self.local_store_redirect_secret,
+                    'redirect_expiration': int(self.local_store_redirect_expiration),
                 }
             )
 
