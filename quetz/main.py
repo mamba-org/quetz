@@ -61,6 +61,7 @@ from quetz.authentication import AuthenticatorRegistry, BaseAuthenticator
 from quetz.authentication import github as auth_github
 from quetz.authentication import gitlab as auth_gitlab
 from quetz.authentication import google as auth_google
+from quetz.authentication.azuread import AzureADAuthenticator
 from quetz.authentication.jupyterhub import JupyterhubAuthenticator
 from quetz.authentication.pam import PAMAuthenticator
 from quetz.config import PAGINATION_LIMIT, Config, configure_logger, get_plugin_manager
@@ -168,6 +169,7 @@ builtin_authenticators: List[Type[BaseAuthenticator]] = [
     auth_google.GoogleAuthenticator,
     JupyterhubAuthenticator,
     PAMAuthenticator,
+    AzureADAuthenticator,
 ]
 
 plugin_authenticators: List[Type[BaseAuthenticator]] = [

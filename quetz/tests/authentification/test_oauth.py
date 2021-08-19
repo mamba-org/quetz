@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from quetz.authentication import github as auth_github
 from quetz.authentication import google as auth_google
+from quetz.authentication.azuread import AzureADAuthenticator
 from quetz.authentication.jupyterhub import JupyterhubAuthenticator
 from quetz.authorization import SERVER_OWNER
 from quetz.dao import Dao
@@ -213,6 +214,11 @@ client_secret = "test_secret"
 access_token_url = "http://jupyterhub/hub/api/oauth2/token"
 authorize_url = "http://jupyterhub/hub/api/oauth2/authorize"
 api_base_url = "http://jupyterhub/hub/api/"
+
+[azuread]
+client_id = "aaa"
+client_secret = "bbb"
+tenant_id = "common"
 """
 
 
@@ -221,6 +227,7 @@ api_base_url = "http://jupyterhub/hub/api/"
         "github_response",
         "google_response",
         "jupyter_response",
+        "azuread_response",
     ]
 )
 def provider_spec(request):
@@ -243,6 +250,8 @@ def oauth_server(request, config, app, provider_spec):
         auth_module = auth_google.GoogleAuthenticator
     elif provider == 'test_jupyter':
         auth_module = JupyterhubAuthenticator
+    elif provider == 'test_azuread':
+        auth_module = AzureADAuthenticator
     else:
         raise Exception(f"not recognised provider {provider}")
 
