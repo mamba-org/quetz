@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import uuid
 
 from sqlalchemy.exc import IntegrityError
 
@@ -19,10 +20,11 @@ def handle_file(
     filename,
     file_buffer,
     dao,
-    user_id,
+    user_id:str,
 ):
 
     logger.debug(f"adding file '{filename}' to channel '{channel_name}'")
+    user_id=uuid.UUID(user_id).bytes
     condainfo = CondaInfo(file_buffer, filename)
 
     package_name = condainfo.info["name"]
@@ -72,11 +74,12 @@ def reindex_packages_from_store(
     dao: Dao,
     config: Config,
     channel_name: str,
-    user_id: bytes,
+    user_id: str,
 ):
     """Reindex packages from files in the package store"""
 
     db = dao.db
+    user_id=uuid.UUID(user_id).bytes
 
     pkgstore = config.get_package_store()
 
