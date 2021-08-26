@@ -158,7 +158,7 @@ def job_wrapper(
             job_extra_args = json.loads(task.job.extra_args)
             kwargs.update(job_extra_args)
         if task.job.owner_id:
-            user_id = str(uuid.UUID(bytes=task.job.owner_id))
+            user_id = task.job.owner_id
         else:
             user_id = None
     else:

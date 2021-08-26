@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import uuid
 
 from sqlalchemy.exc import IntegrityError
 
@@ -16,13 +15,12 @@ logger = logging.getLogger("quetz.tasks")
 
 
 def handle_file(
-    channel_name,
-    filename,
+    channel_name: str,
+    filename: str,
     file_buffer,
-    dao,
-    user_id,
+    dao: Dao,
+    user_id: bytes,
 ):
-    user_id=uuid.UUID(user_id).bytes
     logger.debug(f"adding file '{filename}' to channel '{channel_name}'")
     condainfo = CondaInfo(file_buffer, filename)
     package_name = condainfo.info["name"]
@@ -32,7 +30,10 @@ def handle_file(
     package = dao.get_package(channel_name, package_name)
 
     if not package:
-        logger.debug(f"creating new package {channel_name}/{package_name} with user {user_id} and role {authorization.OWNER}")
+        logger.debug(
+            f"creating new package %s/%s with user %s and role %s"%
+            (channel_name,package_name,user_id,authorization.OWNER)        
+        )
 
         dao.create_package(
             channel_name,
