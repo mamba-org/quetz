@@ -14,21 +14,17 @@ from .indexing import update_indexes
 
 logger = logging.getLogger("quetz.tasks")
 
+
 def uuid_to_bytes(id):
     if isinstance(id, str):
-        id=uuid.UUID(id).bytes
+        id = uuid.UUID(id).bytes
     return id
 
-def handle_file(
-    channel_name,
-    filename,
-    file_buffer,
-    dao,
-    user_id,
-):
+
+def handle_file(channel_name, filename, file_buffer, dao, user_id):
 
     logger.debug(f"adding file '{filename}' to channel '{channel_name}'")
-    user_id=uuid_to_bytes(user_id)
+    user_id = uuid_to_bytes(user_id)
     condainfo = CondaInfo(file_buffer, filename)
 
     package_name = condainfo.info["name"]
@@ -74,16 +70,11 @@ def handle_file(
     return version
 
 
-def reindex_packages_from_store(
-    dao: Dao,
-    config: Config,
-    channel_name: str,
-    user_id,
-):
+def reindex_packages_from_store(dao: Dao, config: Config, channel_name: str, user_id):
     """Reindex packages from files in the package store"""
 
     db = dao.db
-    user_id=uuid_to_bytes(user_id)
+    user_id = uuid_to_bytes(user_id)
 
     pkgstore = config.get_package_store()
 
