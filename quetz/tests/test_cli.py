@@ -1,11 +1,11 @@
 import os
 import shutil
+import sys
 import tempfile
 from pathlib import Path
 from unittest import mock
 from unittest.mock import MagicMock
 
-import pkg_resources
 import pytest
 import sqlalchemy as sa
 from alembic.script import ScriptDirectory
@@ -177,30 +177,37 @@ def test_make_migrations_quetz(mocker, config, config_dir):
 
 
 @pytest.fixture(scope="module")
-def entry_points() -> Path:
+def dummy_migration_plugin() -> Path:
 
-    path = Path(tempfile.mkdtemp())
+    path = Path(tempfile.mkdtemp(prefix="quetz"))
+    plugin_dir = str(path)
+    pkg_path = path / "dummy"
+
+    os.makedirs(pkg_path / "versions")
+    with open(pkg_path / "dummy_module.py", 'w') as fid:
+        fid.write("class DummyPlugin: pass")
+    with open(pkg_path / "__init__.py", 'w') as fid:
+        fid.write("")
 
     # add entry points
-    dist = pkg_resources.Distribution(str(path))
-    ep = pkg_resources.EntryPoint.parse("quetz-plugin = dummy_module", dist=dist)
+    os.makedirs(path / "dummy-0.0.0.dist-info")
+    with open(path / "dummy-0.0.0.dist-info" / "entry_points.txt", 'w') as fid:
+        fid.writelines(
+            [
+                "[quetz.models]\nquetz-plugin = dummy.dummy_module\n",
+                "[quetz.migrations]\nquetz-plugin = dummy",
+            ]
+        )
 
-    with open(path / "dummy_module.py", 'w') as fid:
-        fid.write("class DummyPlugin: pass")
-    os.makedirs(path / "versions")
-    dist._ep_map = {  # type: ignore
-        "quetz.models": {"quetz-plugin": ep},
-        "quetz.migrations": {"quetz-plugin": ep},
-    }
+    sys.path.insert(0, plugin_dir)
 
-    pkg_resources.working_set.add(dist, "dummy")
-
-    yield path
+    yield pkg_path
 
     shutil.rmtree(path, ignore_errors=True)
+    sys.path.remove(plugin_dir)
 
 
-def test_make_migrations_plugin(mocker, config, config_dir, entry_points):
+def test_make_migrations_plugin(mocker, config, config_dir, dummy_migration_plugin):
 
     revision = mocker.patch("alembic.command.revision")
 
@@ -209,7 +216,7 @@ def test_make_migrations_plugin(mocker, config, config_dir, entry_points):
         config_dir, message="test revision", plugin="quetz-plugin", initialize=True
     )
 
-    version_path = os.path.join(entry_points, "versions")
+    version_path = os.path.join(dummy_migration_plugin, "versions")
     revision.assert_called_with(
         mock.ANY,
         message="test revision",
@@ -235,7 +242,7 @@ def test_make_migrations_plugin(mocker, config, config_dir, entry_points):
 
 
 def test_make_migrations_plugin_with_alembic(
-    config, config_dir, entry_points: Path, alembic_config, engine
+    config, config_dir, dummy_migration_plugin: Path, alembic_config, engine
 ):
 
     # make sure db is up-to-date
@@ -243,7 +250,7 @@ def test_make_migrations_plugin_with_alembic(
 
     alembic_config.set_main_option(
         "version_locations",
-        os.path.join(entry_points, "versions") + " quetz:migrations/versions",
+        os.path.join(dummy_migration_plugin, "versions") + " quetz:migrations/versions",
     )
 
     # initialize a plugin
@@ -255,7 +262,9 @@ def test_make_migrations_plugin_with_alembic(
         alembic_config=alembic_config,
     )
 
-    migration_scripts = list((entry_points / "versions").glob("*_test_revision.py"))
+    migration_scripts = list(
+        (dummy_migration_plugin / "versions").glob("*_test_revision.py")
+    )
     assert migration_scripts
 
     # apply migrations
@@ -274,7 +283,9 @@ def test_make_migrations_plugin_with_alembic(
         alembic_config=alembic_config,
     )
 
-    migration_scripts = list((entry_points / "versions").glob("*_new_revision.py"))
+    migration_scripts = list(
+        (dummy_migration_plugin / "versions").glob("*_new_revision.py")
+    )
     assert migration_scripts
 
     with open(migration_scripts[0]) as fid:
@@ -284,7 +295,7 @@ def test_make_migrations_plugin_with_alembic(
 
     # clean up
 
-    for p in (entry_points / "versions").glob("*.py"):
+    for p in (dummy_migration_plugin / "versions").glob("*.py"):
         os.remove(p)
 
     Base.metadata.drop_all(engine)
@@ -334,7 +345,7 @@ def downgrade(): pass
 
 
 def test_multi_head(
-    config, config_dir, entry_points: Path, alembic_config, engine, refresh_db
+    config, config_dir, dummy_migration_plugin: Path, alembic_config, engine, refresh_db
 ):
 
     quetz_migrations_path = Path(config_dir) / "migrations"
@@ -344,7 +355,7 @@ def test_multi_head(
 
     os.makedirs(quetz_versions_path)
 
-    plugin_versions_path = Path(entry_points) / "versions"
+    plugin_versions_path = Path(dummy_migration_plugin) / "versions"
 
     with open(quetz_migrations_path / "env.py", "w") as fid:
         fid.write(alembic_env)

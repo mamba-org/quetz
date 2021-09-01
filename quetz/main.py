@@ -15,7 +15,6 @@ from email.utils import formatdate
 from tempfile import SpooledTemporaryFile
 from typing import List, Optional, Tuple, Type
 
-import pkg_resources
 import pydantic
 import requests
 from fastapi import (
@@ -34,6 +33,7 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, StreamingResponse
+from importlib_metadata import entry_points
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
@@ -166,7 +166,7 @@ builtin_authenticators: List[Type[BaseAuthenticator]] = [
 ]
 
 plugin_authenticators: List[Type[BaseAuthenticator]] = [
-    ep.load() for ep in pkg_resources.iter_entry_points('quetz.authenticator')
+    ep.load() for ep in entry_points().select(group='quetz.authenticator')
 ]
 
 

@@ -1,11 +1,11 @@
 import os
 import pickle
+import sys
 import time
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import pkg_resources
 import pytest
 
 from quetz.config import Config
@@ -594,10 +594,13 @@ def test_refresh_job(auth_client, user, db, package_version, supervisor):
 
 
 @pytest.fixture(scope="session")
-def dummy_plugin(test_data_dir):
+def dummy_job_plugin(test_data_dir):
     plugin_dir = str(Path(test_data_dir) / "dummy-plugin")
-    dist = list(pkg_resources.find_distributions(plugin_dir))[0]
-    pkg_resources.working_set.add(dist)
+    sys.path.insert(0, plugin_dir)
+
+    yield
+
+    sys.path.remove(plugin_dir)
 
 
 @pytest.mark.parametrize("user_role", ["owner"])
@@ -614,7 +617,7 @@ def dummy_plugin(test_data_dir):
     ],
 )
 def test_post_new_job_manifest_validation(
-    auth_client, user, db, manifest, dummy_plugin
+    auth_client, user, db, manifest, dummy_job_plugin
 ):
     response = auth_client.post(
         "/api/jobs", json={"items_spec": "*", "manifest": manifest}
@@ -627,7 +630,7 @@ def test_post_new_job_manifest_validation(
 
 
 @pytest.mark.parametrize("user_role", ["owner"])
-def test_post_new_job_invalid_items_spec(auth_client, user, db, dummy_plugin):
+def test_post_new_job_invalid_items_spec(auth_client, user, db, dummy_job_plugin):
     # items_spec=None is not allowed for jobs
     # (but it works with actions)
     manifest = "quetz-dummyplugin:dummy_func"
@@ -648,12 +651,11 @@ def test_post_new_job_from_plugin(
     user,
     db,
     manifest,
-    dummy_plugin,
+    dummy_job_plugin,
     sync_supervisor,
     package_version,
     mocker,
 ):
-
     dummy_func = mocker.Mock()
     mocker.patch("quetz_dummyplugin.jobs.dummy_func", dummy_func, create=True)
     response = auth_client.post(
