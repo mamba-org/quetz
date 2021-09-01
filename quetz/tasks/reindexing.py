@@ -18,6 +18,7 @@ from .indexing import update_indexes
 
 logger = logging.getLogger("quetz.tasks")
 
+
 def uuid_to_bytes(id):
 
     if isinstance(id, str):
@@ -54,7 +55,6 @@ def handle_file(channel_name, condainfo, dao, user_id):
     size = condainfo.info["size"]
     info = json.dumps(condainfo.info)
 
-
     package = dao.get_package(channel_name, package_name)
 
     if not package:
@@ -77,7 +77,8 @@ def handle_file(channel_name, condainfo, dao, user_id):
 
     try:
         logger.debug(
-            f"Adding package {channel_name}/{platform}/{package_name}-{version}-{build_string}"
+            f"Adding package {channel_name}/{platform}/{package_name}"
+            + f"-{version}-{build_string}"
         )
         dao.create_version(
             channel_name=channel_name,
@@ -97,7 +98,8 @@ def handle_file(channel_name, condainfo, dao, user_id):
     except IntegrityError:
         dao.rollback()
         logger.error(
-            f"Duplicate package {channel_name}/{package_name}-{condainfo.info['version']}"
+            f"Duplicate package {channel_name}/{package_name}"
+            + "-{condainfo.info['version']}"
         )
     dao.db.commit()
 
@@ -158,22 +160,20 @@ def reindex_packages_from_store(
         tic = time.perf_counter()
         with ThreadPoolExecutor(max_workers=nthreads) as executor:
             results = []
-            try:
-                for fname in pkg_group:
-                    results.append(
-                        executor.submit(handle_condainfo, pkgstore, channel_name, fname)
-                    )
-                for future in as_completed(results):
-                    condainfo = future.result()
-                    if condainfo:
-                        handle_file(channel_name, condainfo, dao, user_id)
-            except:
-                logger.exception(f"handle_file {channel_name}/{fname}")
+            for fname in pkg_group:
+                results.append(
+                    executor.submit(handle_condainfo, pkgstore, channel_name, fname)
+                )
+            for future in as_completed(results):
+                condainfo = future.result()
+                if condainfo:
+                    handle_file(channel_name, condainfo, dao, user_id)
+
         toc = time.perf_counter()
         logger.debug(
-            f"Imported files {pkg_group[0]} to {pkg_group[-1]}"
-            + "for channel {channel_name} in {toc - tic:0.4f} seconds"
-            + "using {nthreads} threads"
+            f"Imported files {pkg_group[0]} to {pkg_group[-1]} "
+            + f"for channel {channel_name} in {toc - tic:0.4f} seconds "
+            + f"using {nthreads} threads"
         )
 
         try:
@@ -181,6 +181,6 @@ def reindex_packages_from_store(
             dao.db.commit()
         except IntegrityError:
             dao.rollback()
-            logger.exception(f"Update index {channel_name} FAILED")
+            logger.error(f"Update index {channel_name} failed")
     dao.cleanup_channel_db(channel_name)
     dao.db.commit()
