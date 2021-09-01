@@ -13,11 +13,11 @@ from multiprocessing import get_context
 from pathlib import Path
 from typing import NoReturn, Optional, Union
 
-import pkg_resources
 import typer
 import uvicorn
 from alembic import command
 from alembic.config import Config as AlembicConfig
+from importlib_metadata import entry_points
 from sqlalchemy.orm.session import Session
 from sqlalchemy_utils.functions import database_exists
 
@@ -70,8 +70,8 @@ def _alembic_config(db_url: str) -> AlembicConfig:
     script_location = "quetz:migrations"
 
     migration_modules = [
-        f"{entry_point.module_name}:versions"
-        for entry_point in pkg_resources.iter_entry_points('quetz.migrations')
+        f"{ep.module}:versions"
+        for ep in entry_points().select(group='quetz.migrations')
     ]
     migration_modules.append("quetz:migrations/versions")
 
@@ -113,7 +113,7 @@ def _make_migrations(
     from quetz.jobs.models import Job, Task  # noqa
     from quetz.metrics.db_models import PackageVersionMetric  # noqa
 
-    for entry_point in pkg_resources.iter_entry_points('quetz.models'):
+    for entry_point in entry_points().select(group='quetz.models'):
         logger.debug("loading plugin %r", entry_point.name)
         entry_point.load()
         if entry_point.name == plugin_name:
@@ -132,13 +132,13 @@ def _make_migrations(
     if plugin_name == "quetz":
         version_path = None  # Path(quetz.__file__).parent / 'migrations' / 'versions'
     else:
-        entry_point = next(
-            pkg_resources.iter_entry_points('quetz.migrations', plugin_name)
-        )
+        entry_point = tuple(
+            entry_points().select(group='quetz.migrations', name=plugin_name)
+        )[0]
         module = entry_point.load()
         version_path = str(Path(module.__file__).parent / "versions")
-    if initialize:
 
+    if initialize:
         command.revision(
             alembic_config,
             head="base",
