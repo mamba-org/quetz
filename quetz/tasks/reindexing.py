@@ -6,19 +6,20 @@ import time
 
 from sqlalchemy.exc import IntegrityError
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from tarfile import ReadError
 
 from quetz import authorization, rest_models
 from quetz.condainfo import CondaInfo
 from quetz.config import Config
 from quetz.dao import Dao
+from quetz.exceptions import PackageError
 
 from .indexing import update_indexes
 
+
 logger = logging.getLogger("quetz.tasks")
 
-
 def uuid_to_bytes(id):
+
     if isinstance(id, str):
         id = uuid.UUID(id).bytes
     return id
@@ -32,8 +33,8 @@ def handle_condainfo(pkgstore, channel_name, fname):
 
     try:
         condainfo = CondaInfo(fid, fname, lazy=False)
-    except ReadError:
-        logger.exception(f"CondaInfo for {fname}")
+    except PackageError:
+        logger.error(f"{fname} is not a tar.bzip2 file")
         condainfo = None
 
     return condainfo
@@ -53,36 +54,25 @@ def handle_file(channel_name, condainfo, dao, user_id):
     size = condainfo.info["size"]
     info = json.dumps(condainfo.info)
 
-    try:
-        package = dao.get_package(channel_name, package_name)
 
-        if not package:
-            logger.debug(f"Creating package {package_name}")
+    package = dao.get_package(channel_name, package_name)
 
-            dao.create_package(
-                channel_name,
-                rest_models.Package(
-                    name=package_name,
-                    summary=condainfo.about.get("summary", "n/a"),
-                    description=condainfo.about.get("description", "n/a"),
-                ),
-                user_id,
-                authorization.OWNER,
-            )
-            dao.db.commit()
-    except IntegrityError:
-        dao.rollback()
-        logger.exception(f"dao.create_package {package_name}")
+    if not package:
+        logger.debug(f"Creating package {package_name}")
 
-    try:
+        dao.create_package(
+            channel_name,
+            rest_models.Package(
+                name=package_name,
+                summary=condainfo.about.get("summary", "n/a"),
+                description=condainfo.about.get("description", "n/a"),
+            ),
+            user_id,
+            authorization.OWNER,
+        )
+
         dao.update_package_channeldata(
             channel_name, package_name, condainfo.channeldata
-        )
-        dao.db.commit()
-    except IntegrityError:
-        dao.rollback()
-        logger.exception(
-            f"dao.update_package_channeldata {channel_name}/{package_name}"
         )
 
     try:
@@ -177,8 +167,8 @@ def reindex_packages_from_store(
                     condainfo = future.result()
                     if condainfo:
                         handle_file(channel_name, condainfo, dao, user_id)
-            except ReadError:
-                logger.exception(f"handle_file {channel_name}/{condainfo._filename}")
+            except:
+                logger.exception(f"handle_file {channel_name}/{fname}")
         toc = time.perf_counter()
         logger.debug(
             f"Imported files {pkg_group[0]} to {pkg_group[-1]}"
