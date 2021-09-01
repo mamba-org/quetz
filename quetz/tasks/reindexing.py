@@ -119,6 +119,7 @@ def chunks(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
 
+
 def reindex_packages_from_store(
     dao: Dao, config: Config, channel_name: str, user_id, sync: bool = True
 ):
@@ -159,7 +160,8 @@ def reindex_packages_from_store(
 
     pkg_files = list(set(pkg_files) - set(pkg_db))
     logger.debug(
-        f"Importing {len(pkg_files)} packages for channel {channel_name} from pkgstore"
+        f"Importing {len(pkg_files)} packages for channel {channel_name}"
+        + " from pkgstore"
     )
 
     for pkg_group in chunks(pkg_files, nthreads * 8):
@@ -179,7 +181,9 @@ def reindex_packages_from_store(
                 logger.exception(f"handle_file {channel_name}/{condainfo._filename}")
         toc = time.perf_counter()
         logger.debug(
-            f"Imported files {pkg_group[0]} to {pkg_group[-1]} for channel {channel_name} in {toc - tic:0.4f} seconds using {nthreads} threads"
+            f"Imported files {pkg_group[0]} to {pkg_group[-1]}"
+            + "for channel {channel_name} in {toc - tic:0.4f} seconds"
+            + "using {nthreads} threads"
         )
 
         try:

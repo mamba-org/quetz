@@ -71,8 +71,14 @@ def test_reindex_package_files(
     assert channel.packages
     assert channel.packages[0].name == "test-package"
     assert channel.packages[0].members[0].user.username == user.username
-    assert channel.packages[0].package_versions[0].version == '0.1' or channel.packages[0].package_versions[0].version == '0.2'
-    assert channel.packages[0].package_versions[1].version == '0.1' or channel.packages[0].package_versions[1].version == '0.2'
+    assert (
+        channel.packages[0].package_versions[0].version == '0.1'
+        or channel.packages[0].package_versions[0].version == '0.2'
+    )
+    assert (
+        channel.packages[0].package_versions[1].version == '0.1'
+        or channel.packages[0].package_versions[1].version == '0.2'
+    )
 
     repodata = pkgstore.serve_path(channel.name, "linux-64/repodata.json")
     repodata = json.load(repodata)
@@ -99,8 +105,14 @@ def test_validate_packages(
     assert channel.packages
     assert channel.packages[0].name == "test-package"
     assert channel.packages[0].members[0].user.username == user.username
-    assert channel.packages[0].package_versions[0].version == '0.1' or channel.packages[0].package_versions[0].version == '0.2'
-    assert channel.packages[0].package_versions[1].version == '0.1' or channel.packages[0].package_versions[1].version == '0.2'
+    assert (
+        channel.packages[0].package_versions[0].version == '0.1'
+        or channel.packages[0].package_versions[0].version == '0.2'
+    )
+    assert (
+        channel.packages[0].package_versions[1].version == '0.1'
+        or channel.packages[0].package_versions[1].version == '0.2'
+    )
 
     repodata = pkgstore.serve_path(channel.name, "linux-64/repodata.json")
     repodata = json.load(repodata)
