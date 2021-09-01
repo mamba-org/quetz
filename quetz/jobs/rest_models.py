@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-import pkg_resources
+from importlib_metadata import entry_points as get_entry_points
 from pydantic import BaseModel, Field, validator
 
 from . import handlers
@@ -35,13 +35,15 @@ def parse_job_manifest(function_name):
 
     if len(paths) == 2:
         plugin_name, job_name = paths
-        entry_points = list(pkg_resources.iter_entry_points('quetz.jobs', plugin_name))
+        entry_points = tuple(
+            get_entry_points().select(group='quetz.jobs', name=plugin_name)
+        )
         if not entry_points:
             raise ValueError(
                 f"invalid function {function_name}: "
                 f"plugin {plugin_name} not installed"
             )
-        job_module = entry_points[0].load(require=False)
+        job_module = entry_points[0].load()
         try:
             return getattr(job_module, job_name)
         except AttributeError:

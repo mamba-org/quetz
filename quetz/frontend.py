@@ -2,9 +2,9 @@ import logging
 import os
 import sys
 
-import pkg_resources
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
+from importlib_metadata import entry_points
 
 from quetz import authorization
 from quetz.config import Config
@@ -66,7 +66,7 @@ def static(
 
 def register(app):
     frontend_plugins = []
-    for entry_point in pkg_resources.iter_entry_points('quetz.frontend'):
+    for entry_point in entry_points().select(group='quetz.frontend'):
         frontend_plugins.append(entry_point)
 
     if len(frontend_plugins) > 1:
