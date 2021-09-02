@@ -35,7 +35,7 @@ def handle_condainfo(pkgstore, channel_name, fname):
     try:
         condainfo = CondaInfo(fid, fname, lazy=False)
     except PackageError:
-        logger.error(f"{fname} is not a tar.bzip2 file")
+        logger.error(f"Package {fname} is not a tar.bzip2 file")
         condainfo = None
 
     return condainfo
