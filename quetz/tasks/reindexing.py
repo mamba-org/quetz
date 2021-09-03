@@ -75,10 +75,6 @@ def handle_file(channel_name, condainfo, dao, user_id):
         )
 
     try:
-        logger.debug(
-            f"Adding package {channel_name}/{platform}/{package_name}"
-            + f"-{version}-{build_string}"
-        )
         dao.create_version(
             channel_name=channel_name,
             package_name=package_name,
@@ -133,7 +129,7 @@ def reindex_packages_from_store(
             dao.db.commit()
     else:
         data = rest_models.Channel(
-            name=channel_name, description="re-indexed from store", private=True
+            name=channel_name, description="Re-indexed from store", private=True
         )
         channel = dao.create_channel(data, user_id, authorization.OWNER)
 
@@ -142,7 +138,6 @@ def reindex_packages_from_store(
     pkgstore = config.get_package_store()
     all_files = pkgstore.list_files(channel_name)
     pkg_files = [f for f in all_files if f.endswith(".tar.bz2")]
-    nthreads = config.general_package_unpack_threads
 
     logger.debug(f"Found {len(pkg_db)} packages for channel {channel_name} in database")
     logger.debug(
@@ -150,12 +145,19 @@ def reindex_packages_from_store(
     )
 
     pkg_files = list(set(pkg_files) - set(pkg_db))
+
+    if pkg_files:
+        pkg_files.sort(key=lambda x: x.split("/")[1])
+
     logger.debug(
         f"Importing {len(pkg_files)} packages for channel {channel_name}"
         + " from pkgstore"
     )
 
-    for pkg_group in chunks(pkg_files, nthreads * 8):
+    nthreads = config.general_package_unpack_threads
+    qsize = config.general_package_queue_size
+
+    for pkg_group in chunks(pkg_files, qsize):
         tic = time.perf_counter()
         with ThreadPoolExecutor(max_workers=nthreads) as executor:
             results = []
@@ -170,7 +172,7 @@ def reindex_packages_from_store(
 
         toc = time.perf_counter()
         logger.debug(
-            f"Imported files {pkg_group[0]} to {pkg_group[-1]} "
+            f"Imported {len(pkg_group)} files {pkg_group[0]} to {pkg_group[-1]} "
             + f"for channel {channel_name} in {toc - tic:0.4f} seconds "
             + f"using {nthreads} threads"
         )

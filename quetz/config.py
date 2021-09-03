@@ -71,6 +71,7 @@ class Config:
             "general",
             [
                 ConfigEntry("package_unpack_threads", int, 1),
+                ConfigEntry("package_queue_size", int, 1),
                 ConfigEntry("frontend_dir", str, default=""),
             ],
         ),
