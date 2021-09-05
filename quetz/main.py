@@ -38,6 +38,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from tenacity import (
     after_log,
@@ -102,6 +103,10 @@ app.add_middleware(
     secret_key=config.session_secret,
     https_only=config.session_https_only,
 )
+
+if config.general_redirect_http_to_https:
+    logger.info("Configuring http to https redirect ")
+    app.add_middleware(HTTPSRedirectMiddleware)
 
 metrics.init(app)
 
