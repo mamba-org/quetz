@@ -28,6 +28,7 @@ dependencies:
   - alembic
   - zchunk
   - s3fs
+  - gcsfs
   - sphinx
   - sphinx-book-theme
   - tenacity

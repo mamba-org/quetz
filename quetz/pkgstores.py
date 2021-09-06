@@ -545,3 +545,158 @@ class AzureBlobStore(PackageStore):
                 logger.info(f"removing {each_temp_file} from pkgstore")
                 if not dry_run:
                     fs.delete(each_temp_file)
+
+
+class GoogleCloudStorageStore(PackageStore):
+    def __init__(self, config):
+        try:
+            import gcsfs
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError(
+                "Google Cloud Storage package store requires gcsfs module"
+            )
+
+        self.project = config.get("project")
+        self.token = config.get("token")
+
+        self.fs = gcsfs.GCSFileSystem(
+            project=self.project,
+            token=self.token if self.token else None,
+        )
+
+        self.bucket_prefix = config['bucket_prefix']
+        self.bucket_suffix = config['bucket_suffix']
+        super().__init__()
+
+    @property
+    def support_redirect(self):
+        # `gcsfs` currently doesnt support signing yet. Once this is implemented we
+        # can enable this again.
+        return False
+
+    @contextlib.contextmanager
+    def _get_fs(self):
+        try:
+            yield self.fs
+        except PermissionError as e:
+            raise ConfigError(
+                f"{e} - check configured Google Cloud Storage credentials"
+            )
+
+    def _bucket_map(self, name):
+        return f"{self.bucket_prefix}{name}{self.bucket_suffix}"
+
+    def create_channel(self, name):
+        """Create the container if one doesn't already exist
+
+        Parameters
+        ----------
+        name : str
+            The name of the container to create on azure blob
+        """
+        with self._get_fs() as fs:
+            try:
+                fs.mkdir(self._bucket_map(name))
+            except FileExistsError:
+                pass
+
+    def remove_channel(self, name):
+        channel_path = self._bucket_map(name)
+        with self._get_fs() as fs:
+            fs.rm(channel_path, recursive=True)
+
+    def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
+        with self._get_fs() as fs:
+            container = self._bucket_map(channel)
+            with fs.open(path.join(container, destination), "wb") as pkg:
+                # use a chunk size of 10 Megabytes
+                shutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
+
+    def add_file(
+        self, data: Union[str, bytes], channel: str, destination: StrPath
+    ) -> NoReturn:
+        if type(data) is str:
+            mode = "w"
+        else:
+            mode = "wb"
+
+        with self._get_fs() as fs:
+            container = self._bucket_map(channel)
+            with fs.open(path.join(container, destination), mode) as f:
+                f.write(data)
+
+    def serve_path(self, channel, src):
+        with self._get_fs() as fs:
+            file = fs.open(path.join(self._bucket_map(channel), src))
+            info = file.info()
+            if info["type"] != "file":
+                raise FileNotFoundError()
+            return file
+
+    def delete_file(self, channel: str, destination: str):
+        channel_container = self._bucket_map(channel)
+
+        with self._get_fs() as fs:
+            fs.delete(path.join(channel_container, destination))
+
+    def move_file(self, channel: str, source: str, destination: str):
+        channel_container = self._bucket_map(channel)
+
+        with self._get_fs() as fs:
+            fs.move(
+                path.join(channel_container, source),
+                path.join(channel_container, destination),
+            )
+
+    def file_exists(self, channel: str, destination: str):
+        channel_container = self._bucket_map(channel)
+        with self._get_fs() as fs:
+            return fs.exists(path.join(channel_container, destination))
+
+    def list_files(self, channel: str):
+        def remove_prefix(text, prefix):
+            if text.startswith(prefix):
+                return text[len(prefix) :].lstrip("/")  # noqa: E203
+            return text
+
+        channel_container = self._bucket_map(channel)
+
+        with self._get_fs() as fs:
+            return [
+                remove_prefix(f, channel_container) for f in fs.find(channel_container)
+            ]
+
+    def url(self, channel: str, src: str, expires=3600):
+        raise NotImplementedError("gcsfs doesnt support signing yet.")
+        # # expires is in seconds, so the default is 60 minutes!
+        # with self._get_fs() as fs:
+        #     return fs.sign(path.join(self._bucket_map(channel), src), expires)
+
+    def get_filemetadata(self, channel: str, src: str):
+        with self._get_fs() as fs:
+            filepath = path.join(self._bucket_map(channel), src)
+            infodata = fs.info(filepath)
+
+            if infodata['type'] != 'file':
+                raise FileNotFoundError()
+
+            mtime = datetime.datetime.fromisoformat(
+                infodata['updated'].replace('Z', '+00:00')
+            ).timestamp()
+            msize = infodata['size']
+            etag = infodata['etag']
+
+            return (msize, mtime, etag)
+
+    def cleanup_temp_files(self, channel: str, dry_run: bool = False):
+        with self._get_fs() as fs:
+            temp_files = []
+            for each_end in [".bz2", ".gz"]:
+                temp_files.extend(
+                    fs.glob(f"{self._bucket_map(channel)}/**/*.json?*{each_end}")
+                )
+
+            for each_temp_file in temp_files:
+                logger.info(f"removing {each_temp_file} from pkgstore")
+                if not dry_run:
+                    fs.delete(each_temp_file)

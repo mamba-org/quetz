@@ -131,6 +131,30 @@ Quetz can store package in object cloud storage compatible with S3 interface. To
 :bucket_prefix:
 :bucket_suffix: channel directories on S3 are created with the following semantics: ``{bucket_prefix}{channel_name}{bucket_suffix}``
 
+``gcs`` section
+^^^^^^^^^^^^^^^
+
+Quetz can store packages in Google Cloud Storage. To configure, use the following values:
+
+.. note::
+
+    To use the GCS backend you need to install the ``gcsfs`` library::
+
+        mamba install -c conda-forge gcsfs
+
+.. code::
+
+    [gcs]
+    project = ".."
+    token = ".."
+    bucket_prefix="..."
+    bucket_suffix="..."
+
+:project: The Google Cloud Project ID to work under
+:token: A token to pass the `gcsfs`. See the `gcsfs documention <https://gcsfs.readthedocs.io/en/latest/index.html#credentials>`_ for valid values.
+:bucket_prefix:
+:bucket_suffix: channel buckets on GCS are created with the following semantics: ``{bucket_prefix}{channel_name}{bucket_suffix}``
+
 ``local_store`` section
 ^^^^^^^^^^^^^^^^^^^^^^^
 

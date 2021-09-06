@@ -147,6 +147,16 @@ class Config:
             required=False,
         ),
         ConfigSection(
+            "gcs",
+            [
+                ConfigEntry("project", str, default=""),
+                ConfigEntry("token", str, default=""),
+                ConfigEntry("bucket_prefix", str, default=""),
+                ConfigEntry("bucket_suffix", str, default=""),
+            ],
+            required=False,
+        ),
+        ConfigSection(
             "google",
             [ConfigEntry("client_id", str), ConfigEntry("client_secret", str)],
             required=False,
@@ -374,6 +384,15 @@ class Config:
                     'conn_str': self.azure_blob_conn_str,
                     'container_prefix': self.azure_blob_container_prefix,
                     'container_suffix': self.azure_blob_container_suffix,
+                }
+            )
+        elif self.config.get('gcs'):
+            return pkgstores.GoogleCloudStorageStore(
+                {
+                    'project': self.gcs_project,
+                    'token': self.gcs_token,
+                    'bucket_prefix': self.gcs_bucket_prefix,
+                    'bucket_suffix': self.gcs_bucket_suffix,
                 }
             )
         else:

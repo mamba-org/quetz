@@ -6,7 +6,13 @@ import uuid
 
 import pytest
 
-from quetz.pkgstores import AzureBlobStore, LocalStore, S3Store, has_xattr
+from quetz.pkgstores import (
+    AzureBlobStore,
+    GoogleCloudStorageStore,
+    LocalStore,
+    S3Store,
+    has_xattr,
+)
 
 s3_config = {
     'key': os.environ.get("S3_ACCESS_KEY"),
@@ -23,6 +29,13 @@ azure_config = {
     'conn_str': os.environ.get("AZURE_CONN_STRING"),
     'container_prefix': "test",
     'container_suffix': "",
+}
+
+gcs_config = {
+    'project': os.environ.get("GCS_PROJECT"),
+    'token': os.environ.get("GCS_TOKEN"),
+    'bucket_prefix': "test",
+    'bucket_suffix': "",
 }
 
 test_dir = os.path.dirname(__file__)
@@ -110,6 +123,13 @@ def local_store():
                 reason="requires azure credentials",
             ),
         ),
+        pytest.param(
+            "gcs_store",
+            marks=pytest.mark.skipif(
+                not gcs_config['project'],
+                reason="requires google cloud storage credentials",
+            ),
+        ),
     ]
 )
 def any_store(request):
@@ -140,6 +160,13 @@ def s3_store():
 @pytest.fixture
 def azure_store():
     pkg_store = AzureBlobStore(azure_config)
+
+    yield pkg_store
+
+
+@pytest.fixture
+def gcs_store():
+    pkg_store = GoogleCloudStorageStore(gcs_config)
 
     yield pkg_store
 
