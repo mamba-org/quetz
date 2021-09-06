@@ -76,6 +76,10 @@ Quetz can also create a channel for a newly connected user:
 
    Users with role ``None`` will not be able to create channels. However, they will be able to see all public channels and can be given permissions to private channels/packages by their owners/maintainers. You can also set ``create_default_channel`` option to automatically create a channel for the user, where they will have owner permissions.
 
+``general`` section
+^^^^^^^^^^^^^^^^^^^
+
+:redirect_http_to_https: Enforces that all incoming requests must be `https`. Any incoming requests to `http` will be redirected to the secure scheme instead. Defaults to `false`.
 
 ``session`` section
 ^^^^^^^^^^^^^^^^^^^
