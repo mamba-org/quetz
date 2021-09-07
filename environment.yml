@@ -39,3 +39,4 @@ dependencies:
   - pamela
   - typing_extensions
   - adlfs
+  - importlib_metadata
