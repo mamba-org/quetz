@@ -27,8 +27,9 @@ class GitlabAuthenticator(OAuthAuthenticator):
     `<https://gitlab.com/-/profile/applications>`_ or
     `<https://gitlab.mydomain.org/admin/applications>`_
     if using a self-hosted GitLab instance.
-    Select ``openid`` as scope. If you want to collect email addresses, 
-    make sure to also select ``email`` as scope in the Gitlab interface.
+    Select ``openid`` as scope. If you want to collect email addresses,
+    make sure to also select ``email``, ``profile`` and ``read_user`` as scope
+    in the Gitlab interface.
     """
 
     provider = "gitlab"
@@ -88,7 +89,7 @@ class GitlabAuthenticator(OAuthAuthenticator):
             self.is_enabled = True
             if config.configured_section("users"):
                 self.collect_emails = config.users_collect_emails
-                self.scope = 'openid email read_user'                
+                self.scope = 'openid email read_user'
 
         else:
             self.is_enabled = False

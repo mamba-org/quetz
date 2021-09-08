@@ -51,7 +51,7 @@ class GoogleAuthenticator(OAuthAuthenticator):
                     "verified": profile["email_verified"],
                 }
             ]
-        print(github_profile)
+
         return github_profile
 
     def configure(self, config: Config):
