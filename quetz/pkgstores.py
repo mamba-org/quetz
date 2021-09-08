@@ -595,10 +595,10 @@ class GoogleCloudStorageStore(PackageStore):
             The name of the container to create on azure blob
         """
         with self._get_fs() as fs:
-            try:
-                fs.mkdir(self._bucket_map(name))
-            except FileExistsError:
-                pass
+            bucket_name = self._bucket_map(name)
+            if f"{bucket_name}/" not in fs.buckets:
+                fs.mkdir(bucket_name)
+                fs.invalidate_cache()
 
     def remove_channel(self, name):
         channel_path = self._bucket_map(name)
