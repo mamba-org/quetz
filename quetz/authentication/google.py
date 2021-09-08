@@ -30,6 +30,8 @@ class GoogleAuthenticator(OAuthAuthenticator):
     revoke_url = 'https://myaccount.google.com/permissions'
     validate_token_url = 'https://openidconnect.googleapis.com/v1/userinfo'
 
+    collect_emails = False
+
     async def userinfo(self, request, token):
         profile = await self.client.parse_id_token(request, token)
 
@@ -59,8 +61,6 @@ class GoogleAuthenticator(OAuthAuthenticator):
             self.is_enabled = True
             if config.configured_section("users"):
                 self.collect_emails = config.users_collect_emails
-            else:
-                self.collect_emails = False
 
         else:
             self.is_enabled = False

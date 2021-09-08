@@ -18,6 +18,7 @@ class GithubAuthenticator(OAuthAuthenticator):
     """
 
     provider = "github"
+    collect_emails = False
 
     # oauth client params
     access_token_url = 'https://github.com/login/oauth/access_token'
@@ -46,8 +47,6 @@ class GithubAuthenticator(OAuthAuthenticator):
             self.is_enabled = True
             if config.configured_section("users"):
                 self.collect_emails = config.users_collect_emails
-            else:
-                self.collect_emails = False
 
         else:
             self.is_enabled = False

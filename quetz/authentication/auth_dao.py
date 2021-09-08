@@ -67,7 +67,7 @@ def user_profile_changed(user, identity, profile: 'base.UserProfile'):
         or user.profile.name != profile['name']
         or user.profile.avatar_url != profile['avatar_url']
         or set((e.verified, e.primary, e.email) for e in user.emails)
-        != set((e['verified'], e['primary'], e['email']) for e in profile['emails'])
+        != set((e['verified'], e['primary'], e['email']) for e in profile.get('emails', []))
     ):
         return True
 

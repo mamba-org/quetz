@@ -27,10 +27,13 @@ class GitlabAuthenticator(OAuthAuthenticator):
     `<https://gitlab.com/-/profile/applications>`_ or
     `<https://gitlab.mydomain.org/admin/applications>`_
     if using a self-hosted GitLab instance.
-    Select ``openid`` as scope.
+    Select ``openid`` as scope. If you want to collect email addresses, 
+    make sure to also select ``email`` as scope in the Gitlab interface.
     """
 
     provider = "gitlab"
+
+    collect_emails = False
 
     # oauth client params
     scope = 'openid'
@@ -41,22 +44,19 @@ class GitlabAuthenticator(OAuthAuthenticator):
     async def userinfo(self, request, token):
         resp = await self.client.get('/oauth/userinfo', token=token)
         profile = resp.json()
-
         gitlab_profile = {
             "id": profile["sub"],
             "name": profile["name"],
             "avatar_url": profile["picture"],
             "login": profile["nickname"],
-            # https://docs.gitlab.com/ee/integration/openid_connect_provider.html#shared-information
-            # note we're not checking if the email has been verified here...
-            # which we could do by looking at `profile["email_verified"]`.
-            "email": profile["email"],
         }
 
+        # https://docs.gitlab.com/ee/integration/openid_connect_provider.html#shared-information
+        # note we're not checking if the email has been verified here...
+        # which we could do by looking at `profile["email_verified"]`.
         if self.collect_emails:
-            emails = await self.client.get('/user/emails', token=token)
+            emails = await self.client.get('/api/v4/user/emails', token=token)
             emails_res = []
-
             emails_res.append(
                 {
                     "email": profile["email"],
@@ -74,6 +74,7 @@ class GitlabAuthenticator(OAuthAuthenticator):
                 emails_res.append(x)
 
             gitlab_profile["emails"] = emails_res
+
         return gitlab_profile
 
     def configure(self, config):
@@ -87,8 +88,8 @@ class GitlabAuthenticator(OAuthAuthenticator):
             self.is_enabled = True
             if config.configured_section("users"):
                 self.collect_emails = config.users_collect_emails
-            else:
-                self.collect_emails = False
+                self.scope = 'openid email read_user'                
+
         else:
             self.is_enabled = False
 
