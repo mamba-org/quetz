@@ -27,6 +27,8 @@ class AzureADAuthenticator(OAuthAuthenticator):
     """
 
     provider = "azuread"
+    collect_emails = False
+
     scope = "openid profile email"
 
     async def userinfo(self, request, token):
@@ -43,7 +45,10 @@ class AzureADAuthenticator(OAuthAuthenticator):
             # "avatar_url": profile["picture"],
             "avatar_url": "",
             "login": profile["email"],
-            "emails": [
+        }
+
+        if self.collect_emails:
+            azuread_profile["emails"] = [
                 {
                     "email": profile["email"],
                     "primary": True,
@@ -51,12 +56,11 @@ class AzureADAuthenticator(OAuthAuthenticator):
                     # https://stackoverflow.com/questions/40618210/is-an-email-verified-in-azuread
                     "verified": True,
                 }
-            ],
-        }
+            ]
 
         return azuread_profile
 
-    async def authenticate(self, request, data, dao, config):
+    async def authenticate(self, request, data=None, dao=None, config=None):
         token = await self.client.authorize_access_token(request)
         profile = await self.userinfo(request, token)
 
@@ -94,6 +98,9 @@ class AzureADAuthenticator(OAuthAuthenticator):
                 f'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/logout'
             )
             self.validate_token_url = 'https://graph.microsoft.com/oidc/userinfo'
+
+            if config.configured_section("users"):
+                self.collect_emails = config.users_collect_emails
 
             self.is_enabled = True
         else:
