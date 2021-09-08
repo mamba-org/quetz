@@ -248,3 +248,8 @@ def test_local_store_url(redirect_enabled, redirect_endpoint):
         assert url == f"{redirect_endpoint}/channels/mychannel/linux-64/foo.tar.bz2"
     else:
         assert url == os.path.abspath("channels/mychannel/linux-64/foo.tar.bz2")
+
+
+def test_create_channel_multiple_times(any_store, channel_name):
+    any_store.create_channel(channel_name)
+    any_store.create_channel(channel_name)
