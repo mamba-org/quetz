@@ -40,6 +40,9 @@ class User(Base):
     username = Column(String, unique=True, index=True)
 
     identities = relationship('Identity', back_populates='user', uselist=True)
+    emails = relationship(
+        'Email', back_populates='user', uselist=True, cascade="all,delete-orphan"
+    )
     profile = relationship(
         'Profile', uselist=False, back_populates='user', cascade="all,delete-orphan"
     )
@@ -54,6 +57,40 @@ class User(Base):
         return db.query(cls).filter(cls.username == name).first()
 
 
+class Email(Base):
+    __tablename__ = "emails"
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ['provider', 'identity_id'],
+            ['identities.provider', 'identities.identity_id'],
+        ),
+    )
+
+    provider = Column(String, primary_key=True)
+    identity_id = Column(String, primary_key=True)
+    email = Column(String, primary_key=True, unique=True)
+
+    user_id = Column(UUID, ForeignKey('users.id'))
+
+    verified = Column(Boolean)
+    primary = Column(Boolean)
+
+    user = relationship('User', back_populates='emails')
+    identity = relationship(
+        'Identity', foreign_keys=[provider, identity_id], back_populates='emails'
+    )
+
+
+Index(
+    'email_index',
+    Email.provider,
+    Email.identity_id,
+    Email.email,
+    unique=True,
+)
+
+
 class Identity(Base):
     __tablename__ = 'identities'
 
@@ -63,6 +100,7 @@ class Identity(Base):
     user_id = Column(UUID, ForeignKey('users.id'))
 
     user = relationship('User', back_populates='identities')
+    emails = relationship('Email', back_populates='identity')
 
 
 Index('identity_index', Identity.provider, Identity.identity_id, unique=True)

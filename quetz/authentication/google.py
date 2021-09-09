@@ -30,6 +30,8 @@ class GoogleAuthenticator(OAuthAuthenticator):
     revoke_url = 'https://myaccount.google.com/permissions'
     validate_token_url = 'https://openidconnect.googleapis.com/v1/userinfo'
 
+    collect_emails = False
+
     async def userinfo(self, request, token):
         profile = await self.client.parse_id_token(request, token)
 
@@ -37,8 +39,19 @@ class GoogleAuthenticator(OAuthAuthenticator):
             "id": profile["sub"],
             "name": profile["name"],
             "avatar_url": profile['picture'],
+            "email": profile["email"],
             "login": profile["email"],
         }
+
+        if self.collect_emails:
+            github_profile["emails"] = [
+                {
+                    "email": profile["email"],
+                    "primary": True,
+                    "verified": profile["email_verified"],
+                }
+            ]
+
         return github_profile
 
     def configure(self, config: Config):
@@ -46,6 +59,9 @@ class GoogleAuthenticator(OAuthAuthenticator):
             self.client_id = config.google_client_id
             self.client_secret = config.google_client_secret
             self.is_enabled = True
+            if config.configured_section("users"):
+                self.collect_emails = config.users_collect_emails
+
         else:
             self.is_enabled = False
 

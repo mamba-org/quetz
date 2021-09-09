@@ -1,5 +1,6 @@
 [github]
 # Register the app here: https://github.com/settings/applications/new
+# Use a callback URL like `http://localhost:8000/auth/github/authorize`
 client_id = "37cdbb80c7733e2a1831"
 client_secret = "75e648e981545902ab7802de94e2f2707c8e0ff8"
 

@@ -3,6 +3,7 @@ import uuid
 from typing import Dict, List, Optional, Type, Union
 
 from fastapi import APIRouter, Depends, Request, Response
+from sqlalchemy.sql.sqltypes import Boolean
 from starlette.responses import RedirectResponse
 
 from quetz.authorization import ServerRole
@@ -18,12 +19,20 @@ else:
 from . import auth_dao
 
 
+class Email(TypedDict):
+
+    email: str
+    verified: Boolean
+    primary: Boolean
+
+
 class UserProfile(TypedDict):
 
     id: str
     name: str
     avatar_url: str
     login: str
+    emails: List[Email]
 
 
 class UserName(TypedDict):
@@ -113,6 +122,7 @@ class BaseAuthenticationHandlers:
             "id": user_data["username"],
             "name": user_data["username"],
             "avatar_url": "",
+            "emails": [],
         }
 
         profile: UserProfile = user_data.get("profile", default_profile)

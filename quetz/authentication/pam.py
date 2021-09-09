@@ -7,14 +7,14 @@ from typing import List, Optional
 import pamela
 from fastapi import Request
 
-from quetz.authentication.base import SimpleAuthenticator, UserProfile
+from quetz.authentication.base import BaseAuthenticator, FormHandlers, UserProfile
 from quetz.authorization import ServerRole
 from quetz.config import Config, ConfigEntry, ConfigSection
 
 logger = logging.getLogger("quetz")
 
 
-class PAMAuthenticator(SimpleAuthenticator):
+class PAMAuthenticator(BaseAuthenticator):
     """Use PAM to authenticate with local system users.
 
     To enable add the following to your configuration file:
@@ -44,6 +44,7 @@ class PAMAuthenticator(SimpleAuthenticator):
     """
 
     provider: str = 'pam'
+    handler_cls = FormHandlers
 
     service: str = "login"
     encoding: str = 'utf8'

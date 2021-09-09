@@ -54,6 +54,8 @@ Configure default user permissions, creating default channel and super-admin per
    default_role = "member"
    # create a default channel for new users named {username}
    create_default_channel = false
+   # wether to collect email addresses when users register
+   collect_emails = false
 
 You can use one of the following options to configure privileged users:
 
