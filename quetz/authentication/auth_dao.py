@@ -84,7 +84,6 @@ def update_user_from_profile(
     user.profile.name = profile['name']
     user.profile.avatar_url = profile['avatar_url']
 
-    # TODO modify emails here
     # check if any email already registered
     emails = []
     for e in profile.get('emails', []):
