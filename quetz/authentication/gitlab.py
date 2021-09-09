@@ -53,8 +53,6 @@ class GitlabAuthenticator(OAuthAuthenticator):
         }
 
         # https://docs.gitlab.com/ee/integration/openid_connect_provider.html#shared-information
-        # note we're not checking if the email has been verified here...
-        # which we could do by looking at `profile["email_verified"]`.
         if self.collect_emails:
             emails = await self.client.get('/api/v4/user/emails', token=token)
             emails_res = []
@@ -67,6 +65,10 @@ class GitlabAuthenticator(OAuthAuthenticator):
             )
 
             for e in emails.json():
+                # there is a bug in gitlab so this should never be true (currently)
+                if e["email"] == profile["email"]:
+                    continue
+
                 x = {
                     "email": e["email"],
                     "primary": False,
