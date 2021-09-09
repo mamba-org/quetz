@@ -26,13 +26,13 @@ from .db_models import (
     Channel,
     ChannelMember,
     ChannelMirror,
+    Email,
     Identity,
     Package,
     PackageMember,
     PackageVersion,
     Profile,
     User,
-    Email,
 )
 from .jobs.models import Job, JobStatus, Task, TaskStatus
 from .metrics.db_models import (

@@ -10,7 +10,7 @@ from quetz import rest_models
 from quetz.authorization import OWNER
 from quetz.config import Config
 from quetz.dao import Dao
-from quetz.db_models import Channel, Identity, User, Email
+from quetz.db_models import Channel, Email, Identity, User
 from quetz.errors import ValidationError
 
 from . import base
@@ -90,9 +90,7 @@ def update_user_from_profile(
         if not e["verified"]:
             continue
 
-        user_email = (
-            db.query(Email).filter(Email.email == e["email"]).one_or_none()
-        )
+        user_email = db.query(Email).filter(Email.email == e["email"]).one_or_none()
         if user_email and user_email.user_id != user.id:
             raise IntegrityError(
                 f"User {user.profile.name} already registered"
