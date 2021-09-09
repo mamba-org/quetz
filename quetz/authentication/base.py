@@ -19,7 +19,7 @@ else:
 from . import auth_dao
 
 
-class UserEmail(TypedDict):
+class Email(TypedDict):
 
     email: str
     verified: Boolean
@@ -32,7 +32,7 @@ class UserProfile(TypedDict):
     name: str
     avatar_url: str
     login: str
-    emails: List[UserEmail]
+    emails: List[Email]
 
 
 class UserName(TypedDict):

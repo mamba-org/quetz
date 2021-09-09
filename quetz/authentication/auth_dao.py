@@ -10,7 +10,7 @@ from quetz import rest_models
 from quetz.authorization import OWNER
 from quetz.config import Config
 from quetz.dao import Dao
-from quetz.db_models import Channel, Identity, User, UserEmail
+from quetz.db_models import Channel, Identity, User, Email
 from quetz.errors import ValidationError
 
 from . import base
@@ -91,7 +91,7 @@ def update_user_from_profile(
             continue
 
         user_email = (
-            db.query(UserEmail).filter(UserEmail.email == e["email"]).one_or_none()
+            db.query(Email).filter(Email.email == e["email"]).one_or_none()
         )
         if user_email and user_email.user_id != user.id:
             raise IntegrityError(
@@ -106,7 +106,7 @@ def update_user_from_profile(
             user_email.primary = True if e["primary"] else False
         else:
             emails.append(
-                UserEmail(
+                Email(
                     email=e["email"],
                     verified=e["verified"],
                     primary=e["primary"],

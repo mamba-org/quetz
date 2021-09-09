@@ -41,7 +41,7 @@ class User(Base):
 
     identities = relationship('Identity', back_populates='user', uselist=True)
     emails = relationship(
-        'UserEmail', back_populates='user', uselist=True, cascade="all,delete-orphan"
+        'Email', back_populates='user', uselist=True, cascade="all,delete-orphan"
     )
     profile = relationship(
         'Profile', uselist=False, back_populates='user', cascade="all,delete-orphan"
@@ -57,8 +57,8 @@ class User(Base):
         return db.query(cls).filter(cls.username == name).first()
 
 
-class UserEmail(Base):
-    __tablename__ = "user_emails"
+class Email(Base):
+    __tablename__ = "emails"
 
     __table_args__ = (
         ForeignKeyConstraint(
@@ -84,9 +84,9 @@ class UserEmail(Base):
 
 Index(
     'email_index',
-    UserEmail.provider,
-    UserEmail.identity_id,
-    UserEmail.email,
+    Email.provider,
+    Email.identity_id,
+    Email.email,
     unique=True,
 )
 
@@ -100,7 +100,7 @@ class Identity(Base):
     user_id = Column(UUID, ForeignKey('users.id'))
 
     user = relationship('User', back_populates='identities')
-    emails = relationship('UserEmail', back_populates='identity')
+    emails = relationship('Email', back_populates='identity')
 
 
 Index('identity_index', Identity.provider, Identity.identity_id, unique=True)

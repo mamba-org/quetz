@@ -1,4 +1,4 @@
-"""add UserEmail table for email addresses
+"""add Email table for email addresses
 
 Revision ID: d212023a8e0b
 Revises: cddba8e6e639
@@ -17,7 +17,7 @@ depends_on = None
 
 def upgrade():
     op.create_table(
-        'user_emails',
+        'emails',
         sa.Column('provider', sa.String(), nullable=False),
         sa.Column('identity_id', sa.String(), nullable=False),
         sa.Column('email', sa.String(), nullable=False),
@@ -35,14 +35,14 @@ def upgrade():
         sa.PrimaryKeyConstraint('provider', 'identity_id', 'email'),
         sa.UniqueConstraint('email'),
     )
-    with op.batch_alter_table('user_emails', schema=None) as batch_op:
+    with op.batch_alter_table('emails', schema=None) as batch_op:
         batch_op.create_index(
             'email_index', ['provider', 'identity_id', 'email'], unique=True
         )
 
 
 def downgrade():
-    with op.batch_alter_table('user_emails', schema=None) as batch_op:
+    with op.batch_alter_table('emails', schema=None) as batch_op:
         batch_op.drop_index('email_index')
 
-    op.drop_table('user_emails')
+    op.drop_table('emails')

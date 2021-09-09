@@ -32,7 +32,7 @@ from .db_models import (
     PackageVersion,
     Profile,
     User,
-    UserEmail,
+    Email,
 )
 from .jobs.models import Job, JobStatus, Task, TaskStatus
 from .metrics.db_models import (
@@ -1023,7 +1023,7 @@ class Dao:
         avatar_url: str,
         role: Optional[str],
         exist_ok: bool = False,
-        emails: Optional[List['auth_base.UserEmail']] = None,
+        emails: Optional[List['auth_base.Email']] = None,
     ):
         """create a user with profile and role
 
@@ -1042,8 +1042,8 @@ class Dao:
             if emails:
                 for e in emails:
                     user_email = (
-                        self.db.query(UserEmail)
-                        .filter(UserEmail.email == e["email"])
+                        self.db.query(Email)
+                        .filter(Email.email == e["email"])
                         .one_or_none()
                     )
                     if user_email:
@@ -1073,7 +1073,7 @@ class Dao:
                 # we only store verified emails
                 if not email["verified"]:
                     continue
-                user_email = UserEmail(
+                user_email = Email(
                     provider=provider,
                     identity_id=identity_id,
                     email=email["email"],
