@@ -38,5 +38,11 @@ class AuthenticatorRegistry:
             f"of class {auth.__class__.__name__} registered"
         )
 
+        if len(self.enabled_authenticators) > 1:
+            logger.warn(
+                "You have registered multiple authentication providers."
+                "Please note that this is currently discouraged in production setups!"
+            )
+
     def is_registered(self, provider_name: str):
         return provider_name in self.enabled_authenticators

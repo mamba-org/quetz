@@ -1,6 +1,7 @@
 import pytest
 
 from quetz.authentication import auth_dao
+from quetz.db_models import UserEmail
 from quetz.errors import ValidationError
 
 
@@ -96,6 +97,14 @@ def test_add_user_with_emails(dao, config):
 
     with pytest.raises(KeyError):
         e = find_email(user.emails, "w.vollprecht@abcdef.com")
+
+    # Make sure that the email is properly deleted
+    assert (
+        dao.db.query(UserEmail)
+        .filter(UserEmail.email == "w.vollprecht@abcdef.com")
+        .one_or_none()
+        is None
+    )
 
 
 def test_add_user_with_same_email(dao, config):

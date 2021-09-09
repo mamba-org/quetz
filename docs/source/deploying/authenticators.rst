@@ -7,6 +7,13 @@ by services such as Github and Google. This means that you can configure Quetz t
 users log in with their Github accounts. Quetz also supports the PAM-based authentication which
 uses local Unix users for authentication.
 
+.. warning::
+    While it is possible to register and use multiple authenticators at once, it is heavily discouraged
+    and a warning will be printed. Currently quetz does not automatically merge accounts based on email
+    addresses and usernames from different auth providers can overlap.
+
+    A warning will be printed when running quetz with multiple activated auth providers.
+
 Built-in authenticators
 -----------------------
 
