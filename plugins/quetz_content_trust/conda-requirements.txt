@@ -1,1 +1,2 @@
 conda_content_trust
+libmambapy

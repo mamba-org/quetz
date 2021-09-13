@@ -1562,6 +1562,7 @@ async def stop_sync_donwload_counts():
         pass
 
 
+@app.head("/get/{channel_name}/{path:path}")
 @app.get("/get/{channel_name}/{path:path}")
 def serve_path(
     path,

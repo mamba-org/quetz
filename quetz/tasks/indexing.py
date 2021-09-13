@@ -204,19 +204,26 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
     tempdir = tempfile.TemporaryDirectory()
     tempdir_path = Path(tempdir.name)
 
+    pm = quetz.config.get_plugin_manager()
+
     for sdir in subdirs:
         logger.debug(f"creating indexes for subdir {sdir} of channel {channel_name}")
         raw_repodata = repo_data.export(dao, channel_name, sdir)
+
+        pm.hook.post_index_creation(
+            raw_repodata=raw_repodata,
+            channel_name=channel_name,
+            subdir=sdir,
+        )
 
         files[sdir] = []
         packages[sdir] = raw_repodata["packages"]
 
         repodata = json.dumps(raw_repodata, indent=2, sort_keys=False)
+
         add_temp_static_file(
             repodata, channel_name, sdir, "repodata.json", tempdir_path, files
         )
-
-    pm = quetz.config.get_plugin_manager()
 
     pm.hook.post_package_indexing(
         tempdir=tempdir_path,

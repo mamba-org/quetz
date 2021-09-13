@@ -31,6 +31,7 @@ def post_add_package_version(
         metadata extracted from the archive
 
     """
+    pass
 
 
 @hookspec
@@ -59,6 +60,26 @@ def post_package_indexing(
     :param dict packages:
         a dict that contains list of packages for each subdir
         - used in updating the index
+    """
+    pass
+
+
+@hookspec
+def post_index_creation(
+    raw_repodata: dict,
+    channel_name: str,
+    subdir: str,
+) -> None:
+    """hook for post-processsing after creating package index.
+
+    :param dict raw_repodata:
+        the package index
+
+    :param str channel_name:
+        the channel name
+
+    :param str subdir:
+        the subdirectory to which belongs the package index
     """
     pass
 
