@@ -118,7 +118,7 @@ def upload_packages(args):
         files.append(('force', (None, 'true')))
 
     api_key = get_installed_api_key(channel_url)
-    url = f'{channel_url}/files/'
+    url = f'{channel_url}/files'
     if args.dry_run:
         package_lines = "\n  ".join(package_file_names)
         print(
