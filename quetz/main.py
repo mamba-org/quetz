@@ -1056,7 +1056,7 @@ def delete_package_version(
 
 
 @api_router.get(
-    "/packages/search/", response_model=List[rest_models.PackageSearch], tags=["search"]
+    "/packages/search", response_model=List[rest_models.PackageSearch], tags=["search"]
 )
 def search(
     q: str,
@@ -1069,7 +1069,7 @@ def search(
 
 
 @api_router.get(
-    "/channels/search/", response_model=List[rest_models.ChannelSearch], tags=["search"]
+    "/channels/search", response_model=List[rest_models.ChannelSearch], tags=["search"]
 )
 def channel_search(
     q: str,
@@ -1221,7 +1221,7 @@ def delete_api_keys(
 
 
 @api_router.post(
-    "/channels/{channel_name}/packages/{package_name}/files/",
+    "/channels/{channel_name}/packages/{package_name}/files",
     status_code=201,
     tags=["files"],
 )
@@ -1240,7 +1240,7 @@ def post_file_to_package(
     dao.update_channel_size(package.channel_name)
 
 
-@api_router.post("/channels/{channel_name}/files/", status_code=201, tags=["files"])
+@api_router.post("/channels/{channel_name}/files", status_code=201, tags=["files"])
 def post_file_to_channel(
     background_tasks: BackgroundTasks,
     files: List[UploadFile] = File(...),
