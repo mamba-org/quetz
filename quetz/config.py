@@ -103,6 +103,15 @@ class Config:
             required=False,
         ),
         ConfigSection(
+            "azuread",
+            [
+                ConfigEntry("client_id", str),
+                ConfigEntry("client_secret", str),
+                ConfigEntry("tenant_id", str),
+            ],
+            required=False,
+        ),
+        ConfigSection(
             "sqlalchemy",
             [
                 ConfigEntry("database_url", str),

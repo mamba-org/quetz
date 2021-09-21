@@ -14,3 +14,7 @@ test_quetz
 
 # Logs
 *.log
+
+# IDE
+.idea/
+.vscode/

@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from quetz.authentication import github as auth_github
 from quetz.authentication import google as auth_google
+from quetz.authentication.azuread import AzureADAuthenticator
 from quetz.authentication.jupyterhub import JupyterhubAuthenticator
 from quetz.authorization import SERVER_OWNER
 from quetz.dao import Dao
@@ -68,6 +69,90 @@ def github_response(login):
     }
 
     return "test_github", response
+
+
+@pytest.fixture
+def azuread_response(login):
+    response = {
+        '/3cd6563a-bbcf-4e30-bbc6-ea3445c75c79/oauth2/v2.0/token': {
+            'body': {'access_token': 'b'}
+        },
+        '/oidc/userinfo': {
+            "body": {
+                'sub': login + '_id',
+                'name': 'monalisa',
+                'family_name': 'Lisa',
+                'given_name': 'Mona',
+                'picture': 'https://graph.microsoft.com/v1.0/me/photo/$value',
+                'email': login,
+            }
+        },
+        '/3cd6563a-bbcf-4e30-bbc6-ea3445c75c79/v2.0/.well-known/openid-configuration': {
+            "body": {
+                "token_endpoint": "https://login.microsoftonline.com/"
+                "3cd6563a-bbcf-4e30-bbc6-ea3445c75c79/oauth2/v2.0/token",
+                "token_endpoint_auth_methods_supported": [
+                    "client_secret_post",
+                    "private_key_jwt",
+                    "client_secret_basic",
+                ],
+                "jwks_uri": "https://login.microsoftonline.com/"
+                "3cd6563a-bbcf-4e30-bbc6-ea3445c75c79/discovery/v2.0/keys",
+                "response_modes_supported": ["query", "fragment", "form_post"],
+                "subject_types_supported": ["pairwise"],
+                "id_token_signing_alg_values_supported": ["RS256"],
+                "response_types_supported": [
+                    "code",
+                    "id_token",
+                    "code id_token",
+                    "id_token token",
+                ],
+                "scopes_supported": ["openid", "profile", "email", "offline_access"],
+                "issuer": "https://login.microsoftonline.com/"
+                "3cd6563a-bbcf-4e30-bbc6-ea3445c75c79/v2.0",
+                "request_uri_parameter_supported": False,
+                "userinfo_endpoint": "https://graph.microsoft.com/oidc/userinfo",
+                "authorization_endpoint": "https://login.microsoftonline.com/"
+                "3cd6563a-bbcf-4e30-bbc6-ea3445c75c79/oauth2/v2.0/authorize",
+                "device_authorization_endpoint": "https://login.microsoftonline.com/"
+                "3cd6563a-bbcf-4e30-bbc6-ea3445c75c79/oauth2/v2.0/devicecode",
+                "http_logout_supported": True,
+                "frontchannel_logout_supported": True,
+                "end_session_endpoint": "https://login.microsoftonline.com/"
+                "3cd6563a-bbcf-4e30-bbc6-ea3445c75c79/oauth2/v2.0/logout",
+                "claims_supported": [
+                    "sub",
+                    "iss",
+                    "cloud_instance_name",
+                    "cloud_instance_host_name",
+                    "cloud_graph_host_name",
+                    "msgraph_host",
+                    "aud",
+                    "exp",
+                    "iat",
+                    "auth_time",
+                    "acr",
+                    "nonce",
+                    "preferred_username",
+                    "name",
+                    "tid",
+                    "ver",
+                    "at_hash",
+                    "c_hash",
+                    "email",
+                ],
+                "kerberos_endpoint": "https://login.microsoftonline.com/"
+                "3cd6563a-bbcf-4e30-bbc6-ea3445c75c79/kerberos",
+                "tenant_region_scope": "EU",
+                "cloud_instance_name": "microsoftonline.com",
+                "cloud_graph_host_name": "graph.windows.net",
+                "msgraph_host": "graph.microsoft.com",
+                "rbac_url": "https://pas.windows.net",
+            }
+        },
+    }
+
+    return "test_azuread", response
 
 
 @pytest.fixture
@@ -213,6 +298,11 @@ client_secret = "test_secret"
 access_token_url = "http://jupyterhub/hub/api/oauth2/token"
 authorize_url = "http://jupyterhub/hub/api/oauth2/authorize"
 api_base_url = "http://jupyterhub/hub/api/"
+
+[azuread]
+client_id = "aaa"
+client_secret = "bbb"
+tenant_id = "3cd6563a-bbcf-4e30-bbc6-ea3445c75c79"
 """
 
 
@@ -221,6 +311,7 @@ api_base_url = "http://jupyterhub/hub/api/"
         "github_response",
         "google_response",
         "jupyter_response",
+        "azuread_response",
     ]
 )
 def provider_spec(request):
@@ -243,6 +334,8 @@ def oauth_server(request, config, app, provider_spec):
         auth_module = auth_google.GoogleAuthenticator
     elif provider == 'test_jupyter':
         auth_module = JupyterhubAuthenticator
+    elif provider == 'test_azuread':
+        auth_module = AzureADAuthenticator
     else:
         raise Exception(f"not recognised provider {provider}")
 
