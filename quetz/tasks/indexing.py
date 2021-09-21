@@ -254,7 +254,14 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
                 "channel_name/file.xyz"
             )
 
-        pkgstore.add_file(to_upload.read(), channel_name, dest)
+        logger.debug(f"Uploading {path} -> {channel_name} {dest}")
+        if type(pkgstore).__name__ == "S3Store":
+            with pkgstore._get_fs() as fs:
+                bucket = pkgstore._bucket_map(channel_name)
+                fs.put_file(path, f"{bucket}/{dest}")
+        else:
+            pkgstore.add_file(to_upload.read(), channel_name, dest)
+
         after_upload_move.append(dest)
 
     for f_to_move in after_upload_move:
