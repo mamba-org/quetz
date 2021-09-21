@@ -82,6 +82,7 @@ Quetz can also create a channel for a newly connected user:
 ^^^^^^^^^^^^^^^^^^^
 
 :redirect_http_to_https: Enforces that all incoming requests must be `https`. Any incoming requests to `http` will be redirected to the secure scheme instead. Defaults to `false`.
+:package_unpack_threads: Number of parallel threads used for unpacking. Defaults to `1`.
 
 ``session`` section
 ^^^^^^^^^^^^^^^^^^^
@@ -89,6 +90,16 @@ Quetz can also create a channel for a newly connected user:
 Details about the session cookies that will be created in the browser.
 
 :secret: you can create a valid secret key using the command ``openssl rand -hex 32``
+
+``mirroring`` section
+^^^^^^^^^^^^^^^^^^^^^^
+
+You can fine tune the mirroring speed and requests made to the upstream server under ``[mirroring]``:
+
+:batch_length: Number of packages downloaded in one batch. Defaults to `10`.
+:batch_size: Maximum size to be downloaded in a batch. Defaults to `100000000` bytes.
+:num_parallel_downloads: Number of parallel downloads. Defaults to `10`.
+
 
 ``logging`` section
 ^^^^^^^^^^^^^^^^^^^

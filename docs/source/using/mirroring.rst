@@ -25,11 +25,13 @@ You may copy the data directly to the Swagger web interface under the heading PO
 
 .. code:: bash
 
+   export QUETZ_HOST=http://localhost:8000
    export QUETZ_API_KEY=...
-   curl -X POST "http://localhost:8000/api/channels" \
+
+   curl -X POST "${QUETZ_HOST}/api/channels" \
+       -H  "X-API-Key: ${QUETZ_API_KEY}" \
        -H  "accept: application/json" \
        -H  "Content-Type: application/json" \
-       -H  "X-API-Key: ${QUETZ_API_KEY}" \
        -d '{"name":"proxy-channel",
             "private":false,
             "mirror_channel_url":"https://conda.anaconda.org/btel",
@@ -41,7 +43,7 @@ Then you can install packages from the channel the standard way using ``conda`` 
 
 .. code:: bash
 
-   mamba install --strict-channel-priority -c http://localhost:8000/channels/proxy-channel nrnpython
+   mamba install --strict-channel-priority -c ${QUETZ_HOST}/channels/proxy-channel nrnpython
 
 Mirror channels
 ^^^^^^^^^^^^^^^
@@ -63,11 +65,10 @@ Creating a mirror channel is similar to creating proxy channels except that you 
 
 .. code:: bash
 
-   export QUETZ_API_KEY=...
-   curl -X POST "http://localhost:8000/api/channels" \
+   curl -X POST "${QUETZ_HOST}/api/channels" \
+       -H  "X-API-Key: ${QUETZ_API_KEY}" \
        -H  "accept: application/json" \
        -H  "Content-Type: application/json" \
-       -H  "X-API-Key: ${QUETZ_API_KEY}" \
        -d '{"name":"mirror-channel",
             "private":false,
             "mirror_channel_url":"https://conda.anaconda.org/btel",
@@ -77,16 +78,16 @@ Mirror channels are read only (you can not add or change packages in these chann
 
 .. code:: bash
 
-   curl http://localhost:8000/api/channels/mirror-channel/packages
+   curl ${QUETZ_HOST}/api/channels/mirror-channel/packages
 
 You can also postpone the synchronising the channel by adding ``{"actions": []}`` to the request:
 
 .. code:: bash
 
-   curl -X POST "http://localhost:8000/api/channels" \
+   curl -X POST "${QUETZ_HOST}/api/channels" \
+       -H  "X-API-Key: ${QUETZ_API_KEY}" \
        -H  "accept: application/json" \
        -H  "Content-Type: application/json" \
-       -H  "X-API-Key: ${QUETZ_API_KEY}" \
        -d '{"name":"mirror-channel",
             "private":false,
             "mirror_channel_url":"https://conda.anaconda.org/btel",
@@ -102,11 +103,46 @@ If packages are added or modified on the primary server from which they were pul
 
 .. code:: bash
 
-   curl -X PUT localhost:8000/api/channels/mirror-channel/actions \ 
+   curl -X PUT ${QUETZ_HOST}/api/channels/mirror-channel/actions \ 
        -H "X-API-Key: ${QUETZ_API_KEY}" \
        -d '{"action": "synchronize_repodata"}'
 
 Only channel owners or maintainers are allowed to trigger synchronisation, therefore you have to provide a valid API key of a privileged user.
+
+Partial synchronisation and package proxing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you don't want to mirror all packages for a channel or can't mirror packages for legal reasons it's possible to limit the list of downloaded packages by setting the following metadata options for a channel:
+
+:includelist: Only download packages in list.
+:excludelist: Don't download packages in list.
+:proxylist: Parse package metadata, but redirect downloads to upstream server for packages in list.
+
+
+It's possible to change metadata after creating a channel using the PATCH ``/api​/channels​/{channel_name}`` endpoint:
+
+.. code:: json
+
+   {
+      "metadata": {
+         "excludelist":[],
+         "includelist":[],
+         "proxylist":["cudatoolkit","cudnn","cutensor","cusparselt","msmpi","msms","nvcc"]}
+   }
+
+
+.. code:: bash
+
+   curl -X PATCH "${QUETZ_HOST}/api/channels/conda-forge" \
+   -H 'accept: application/json' \
+   -H 'Content-Type: application/json' \
+   -H  "X-API-Key: ${QUETZ_API_KEY}" \
+   -d '{
+   "metadata":  {
+      "excludelist":[],
+      "includelist":[], 
+      "proxylist":["cudatoolkit","cudnn","cutensor","cusparselt","msmpi","msms","nvcc"]}
+   }'
 
 
 Re-indexing existing package files
@@ -128,7 +164,7 @@ For example, to re-index the ``mirror-channel`` from previous example, you would
 
 .. code:: bash
 
-   curl -X POST "http://localhost:8000/api/channels" \
+   curl -X POST "${QUETZ_HOST}/api/channels" \
        -H  "accept: application/json" \
        -H  "Content-Type: application/json" \
        -H  "X-API-Key: ${QUETZ_API_KEY}" \
@@ -149,11 +185,11 @@ To register and list mirrors, you can use the `/api/channels/{channel_name}/mirr
 
 .. code:: bash
 
-   curl -X POST "http://localhost:8000/api/channels/my-channel/mirrors" \
+   curl -X POST "${QUETZ_HOST}/api/channels/my-channel/mirrors" \
        -H "X-API-Key: ${QUETZ_API_KEY}" \
-       -d '{"url": "http://localhost:8000/get/mirror-channel",
-            "api_endpoint": "http://localhost:8000/api/channels/mirror-channel",
-            "metrics_endpoint": "http://localhost:8000/metrics/channels/mirror-channel"}'
+       -d '{"url": "${QUETZ_HOST}/get/mirror-channel",
+            "api_endpoint": "${QUETZ_HOST}/api/channels/mirror-channel",
+            "metrics_endpoint": "${QUETZ_HOST}/metrics/channels/mirror-channel"}'
 
 You can also create a mirror and register it at the same time by passing the `register_mirror` query param with your "create channels" request. Note that you will also need to provide a valid API key for the primary server (`mirror_api_key`) with the permissions to register a channel:
 
@@ -162,7 +198,7 @@ You can also create a mirror and register it at the same time by passing the `re
    curl -X POST "localhost:8000/api/channels?register_mirror=true&mirror_api_key=${QUETZ_API_KEY}"  \
        -d '{"name": "my-mirror-channel",
             "private": false,
-            "mirror_channel_url": "http://localhost:8000/get/my-channel",
+            "mirror_channel_url": "${QUETZ_HOST}/get/my-channel",
             "mirror_mode": "mirror"}' \
        -H "x-api-key: ${QUETZ_API_KEY}"
 
@@ -171,13 +207,13 @@ Then you can list the mirros using:
 
 .. code:: bash
 
-   curl "http://localhost:8000/api/channels/my-channel/mirrors"
+   curl "${QUETZ_HOST}/api/channels/my-channel/mirrors"
 
 
 To synchronize the metrics with the mirror server, use the `synchronize_metrics` action on the primary channel:
 
 .. code:: bash
 
-   curl -X PUT http://localhost:8000/api/channels/my-channel/actions \
+   curl -X PUT ${QUETZ_HOST}/api/channels/my-channel/actions \
        -H "x-api-key:${QUETZ_API_KEY}" \
        -d '{"action": "synchronize_metrics"}'
