@@ -56,7 +56,7 @@ def sign_current_tos(
     if current_tos:
         signature = db.query(TermsOfServiceSignatures).filter(TermsOfServiceSignatures.user_id == user_id).filter(TermsOfServiceSignatures.tos_id == current_tos.id).one_or_none()
         if signature:
-            return f"TOS already signed for {user_id} at {signature.time_created}."
+            return f"TOS already signed for {user.profile.name} at {signature.time_created}."
         else:
             signature = TermsOfServiceSignatures(user_id=user_id, tos_id=current_tos.id)
             db.add(signature)
