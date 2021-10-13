@@ -1,7 +1,7 @@
 """add tables for terms of service and signatures
 
 Revision ID: 44ec522465e5
-Revises: 
+Revises:
 Create Date: 2021-10-07 15:12:14.309053
 
 """

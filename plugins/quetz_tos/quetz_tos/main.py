@@ -29,6 +29,7 @@ def check_for_signed_tos(user_id):
             else:
                 return False
         else:
-            # what if there doesn't exist a terms of service but the plugin is installed?
+            # what if there doesn't exist a terms of service
+            # but the plugin is installed?
             # treating it as if the plugin is not installed
             return True

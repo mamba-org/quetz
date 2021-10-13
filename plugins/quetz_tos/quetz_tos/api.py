@@ -64,7 +64,7 @@ def get_current_tos(db: Session = Depends(get_db)):
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"terms of service file not found",
+            detail="terms of service file not found",
         )
 
 
@@ -81,7 +81,7 @@ def sign_current_tos(
     if tos_id:
         try:
             tos_id_bytes = uuid.UUID(tos_id).bytes
-        except Exception as e:
+        except Exception:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"{tos_id} is not a valid hexadecimal string",
@@ -111,7 +111,10 @@ def sign_current_tos(
             .one_or_none()
         )
         if signature:
-            return f"TOS already signed for {user.profile.name} at {signature.time_created}."
+            return (
+                f"TOS already signed for {user.profile.name}"
+                f" at {signature.time_created}."
+            )
         else:
             signature = TermsOfServiceSignatures(
                 user_id=user_id, tos_id=selected_tos.id
@@ -122,7 +125,7 @@ def sign_current_tos(
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"terms of service file not found",
+            detail="terms of service file not found",
         )
 
 
