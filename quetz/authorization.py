@@ -10,9 +10,9 @@ from fastapi import HTTPException, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from .db_models import ApiKey, ChannelMember, PackageMember, User
-
 import quetz.config
+
+from .db_models import ApiKey, ChannelMember, PackageMember, User
 
 OWNER = "owner"
 MAINTAINER = "maintainer"
@@ -102,7 +102,9 @@ class Rules:
 
         if not self.has_server_roles(user_id, roles):
 
-            detail = (msg or "this operation requires " + " or ".join(roles) + " roles",)
+            detail = (
+                msg or "this operation requires " + " or ".join(roles) + " roles",
+            )
 
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
 

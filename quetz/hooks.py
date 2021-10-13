@@ -90,6 +90,7 @@ def validate_new_package(
        uploaded
     """
 
+
 @hookspec
 def check_for_signed_tos(user_id) -> bool:
     """

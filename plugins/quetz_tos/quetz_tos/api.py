@@ -1,15 +1,15 @@
-import os, uuid
+import os
+import uuid
 from contextlib import contextmanager
 from tempfile import SpooledTemporaryFile
 
-from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm.session import Session
 
-from quetz import dao
-from quetz import authorization
+from quetz import authorization, dao
 from quetz.config import Config
 from quetz.database import get_session
-from quetz.deps import get_rules, get_db, get_dao
+from quetz.deps import get_dao, get_db, get_rules
 
 from .db_models import TermsOfService, TermsOfServiceSignatures
 
@@ -17,6 +17,7 @@ router = APIRouter()
 config = Config()
 
 pkgstore = config.get_package_store()
+
 
 @contextmanager
 def get_db_manager():
@@ -44,9 +45,12 @@ def post_file(file):
     pkgstore.add_file(file.file.read(), "root", file.filename)
     return file.filename
 
+
 @router.get("/api/tos", tags=['Terms of Service'])
 def get_current_tos(db: Session = Depends(get_db)):
-    current_tos = db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).first()
+    current_tos = (
+        db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).first()
+    )
     if current_tos:
         f = pkgstore.serve_path("root", current_tos.filename)
         data_bytes = f.read()
@@ -55,13 +59,14 @@ def get_current_tos(db: Session = Depends(get_db)):
             "content": data_bytes.decode('utf-8'),
             "uploader_id": str(uuid.UUID(bytes=current_tos.uploader_id)),
             "filename": current_tos.filename,
-            "time_created": current_tos.time_created
+            "time_created": current_tos.time_created,
         }
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"terms of service file not found",
         )
+
 
 @router.post("/api/tos/sign", status_code=201, tags=['Terms of Service'])
 def sign_current_tos(
@@ -81,21 +86,36 @@ def sign_current_tos(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"{tos_id} is not a valid hexadecimal string",
             )
-        selected_tos = db.query(TermsOfService).filter(TermsOfService.id == tos_id_bytes).one_or_none()
+        selected_tos = (
+            db.query(TermsOfService)
+            .filter(TermsOfService.id == tos_id_bytes)
+            .one_or_none()
+        )
         if not selected_tos:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"terms of service with id {tos_id} not found",
             )
     else:
-        selected_tos = db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).first()
+        selected_tos = (
+            db.query(TermsOfService)
+            .order_by(TermsOfService.time_created.desc())
+            .first()
+        )
 
     if selected_tos:
-        signature = db.query(TermsOfServiceSignatures).filter(TermsOfServiceSignatures.user_id == user_id).filter(TermsOfServiceSignatures.tos_id == selected_tos.id).one_or_none()
+        signature = (
+            db.query(TermsOfServiceSignatures)
+            .filter(TermsOfServiceSignatures.user_id == user_id)
+            .filter(TermsOfServiceSignatures.tos_id == selected_tos.id)
+            .one_or_none()
+        )
         if signature:
             return f"TOS already signed for {user.profile.name} at {signature.time_created}."
         else:
-            signature = TermsOfServiceSignatures(user_id=user_id, tos_id=selected_tos.id)
+            signature = TermsOfServiceSignatures(
+                user_id=user_id, tos_id=selected_tos.id
+            )
             db.add(signature)
             db.commit()
             return f"TOS signed for {user.profile.name}"
@@ -105,13 +125,16 @@ def sign_current_tos(
             detail=f"terms of service file not found",
         )
 
+
 @router.post("/api/tos/upload", status_code=201, tags=['Terms of Service'])
 def upload_tos(
     db: Session = Depends(get_db),
     auth: authorization.Rules = Depends(get_rules),
     tos_file: UploadFile = File(...),
 ):
-    user_id = auth.assert_server_roles(["owner"], "To upload new Terms of Services you need to be a server owner.")
+    user_id = auth.assert_server_roles(
+        ["owner"], "To upload new Terms of Services you need to be a server owner."
+    )
     filename = post_file(tos_file)
     tos = TermsOfService(uploader_id=user_id, filename=filename)
     db.add(tos)
