@@ -1,12 +1,15 @@
 import os
 import tempfile
 
+import mamba
 from conda.base.context import context
 from conda.common.serialize import json_dump
 from conda.core.index import _supplement_index_with_system
 from conda_build.conda_interface import pkgs_dirs
 from mamba import mamba_api
 from mamba.utils import get_index, load_channels
+
+MAMBA_17_UP = mamba.version_info >= (0, 17, 0)
 
 
 def get_virtual_packages():
@@ -113,5 +116,10 @@ class MambaSolver:
             exit(1)
 
         package_cache = mamba_api.MultiPackageCache(pkg_cache_path)
-        t = mamba_api.Transaction(api_solver, package_cache, pkg_cache_path[-1])
+
+        if MAMBA_17_UP:
+            t = mamba_api.Transaction(api_solver, package_cache)
+        else:
+            t = mamba_api.Transaction(api_solver, package_cache, pkg_cache_path[-1])
+
         return t
