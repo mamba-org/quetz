@@ -1,4 +1,4 @@
-import os
+import os, uuid
 from tempfile import SpooledTemporaryFile
 
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, status
@@ -37,7 +37,13 @@ def get_current_tos(db: Session = Depends(get_db)):
     if current_tos:
         f = pkgstore.serve_path("root", current_tos.filename)
         data_bytes = f.read()
-        return data_bytes
+        return {
+            "id": str(uuid.UUID(bytes=current_tos.id)),
+            "content": data_bytes.decode('utf-8'),
+            "uploader_id": str(uuid.UUID(bytes=current_tos.uploader_id)),
+            "filename": current_tos.filename,
+            "time_created": current_tos.time_created
+        }
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -46,19 +52,37 @@ def get_current_tos(db: Session = Depends(get_db)):
 
 @router.post("/api/tos/sign", status_code=201, tags=['Terms of Service'])
 def sign_current_tos(
+    tos_id: str = "",
     db: Session = Depends(get_db),
     dao: dao.Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
     user_id = auth.assert_user()
     user = dao.get_user(user_id)
-    current_tos = db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).first()
-    if current_tos:
-        signature = db.query(TermsOfServiceSignatures).filter(TermsOfServiceSignatures.user_id == user_id).filter(TermsOfServiceSignatures.tos_id == current_tos.id).one_or_none()
+
+    if tos_id:
+        try:
+            tos_id_bytes = uuid.UUID(tos_id).bytes
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"{tos_id} is not a valid hexadecimal string",
+            )
+        selected_tos = db.query(TermsOfService).filter(TermsOfService.id == tos_id_bytes).one_or_none()
+        if not selected_tos:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"terms of service with id {tos_id} not found",
+            )
+    else:
+        selected_tos = db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).first()
+
+    if selected_tos:
+        signature = db.query(TermsOfServiceSignatures).filter(TermsOfServiceSignatures.user_id == user_id).filter(TermsOfServiceSignatures.tos_id == selected_tos.id).one_or_none()
         if signature:
             return f"TOS already signed for {user.profile.name} at {signature.time_created}."
         else:
-            signature = TermsOfServiceSignatures(user_id=user_id, tos_id=current_tos.id)
+            signature = TermsOfServiceSignatures(user_id=user_id, tos_id=selected_tos.id)
             db.add(signature)
             db.commit()
             return f"TOS signed for {user.profile.name}"
