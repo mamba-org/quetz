@@ -89,3 +89,13 @@ def validate_new_package(
        CondaInfo instance with package metadata, it can be None if file was not
        uploaded
     """
+
+@hookspec
+def check_for_signed_tos(user_id) -> bool:
+    """
+    Check if the user has signed Terms of Service (TOS)
+
+    :param str user_id:
+        id of the user
+    """
+    return True

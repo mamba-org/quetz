@@ -1,4 +1,5 @@
 import os, uuid
+from contextlib import contextmanager
 from tempfile import SpooledTemporaryFile
 
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, status
@@ -7,6 +8,7 @@ from sqlalchemy.orm.session import Session
 from quetz import dao
 from quetz import authorization
 from quetz.config import Config
+from quetz.database import get_session
 from quetz.deps import get_rules, get_db, get_dao
 
 from .db_models import TermsOfService, TermsOfServiceSignatures
@@ -15,6 +17,17 @@ router = APIRouter()
 config = Config()
 
 pkgstore = config.get_package_store()
+
+@contextmanager
+def get_db_manager():
+
+    db = get_session(config.sqlalchemy_database_url)
+
+    try:
+        yield db
+    finally:
+        db.close()
+
 
 def post_file(file):
     if type(file.file) is SpooledTemporaryFile and not hasattr(file, "seekable"):

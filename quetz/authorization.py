@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 
 from .db_models import ApiKey, ChannelMember, PackageMember, User
 
+import quetz.config
+
 OWNER = "owner"
 MAINTAINER = "maintainer"
 MEMBER = "member"
@@ -100,20 +102,26 @@ class Rules:
 
         if not self.has_server_roles(user_id, roles):
 
-            detail = (msg or "this operation requires" + " or ".join(roles) + " roles",)
+            detail = (msg or "this operation requires " + " or ".join(roles) + " roles",)
 
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
 
         return user_id
 
     def has_server_roles(self, user_id, roles: list):
-
-        return (
+        pm = quetz.config.get_plugin_manager()
+        res = (
             self.db.query(User)
             .filter(User.id == user_id)
             .filter(User.role.in_(roles))
             .one_or_none()
         )
+
+        tos_signed = pm.hook.check_for_signed_tos(user_id=user_id)[0]
+        if tos_signed:
+            return res
+        else:
+            return None
 
     def has_channel_role(self, user_id: bytes, channel_name: str, roles: list):
         return (
