@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 
 import quetz
-from quetz import dao
+from quetz.dao import Dao
 from quetz.authorization import OWNER
 
 from .api import get_db_manager, router
@@ -14,11 +14,12 @@ def register_router():
 
 
 def check_for_signed_tos(user_id, user_role):
-    user = dao.get_user(user_id)
-    if user_role == OWNER:
-        return True
-    else:
-        with get_db_manager() as db:
+    with get_db_manager() as db:
+        dao = Dao(db)
+        user = dao.get_user(user_id)
+        if user_role == OWNER:
+            return True
+        else:
             selected_tos = (
                 db.query(TermsOfService)
                 .order_by(TermsOfService.time_created.desc())
