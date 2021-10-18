@@ -1,8 +1,8 @@
 from fastapi import HTTPException, status
 
 import quetz
-from quetz.dao import Dao
 from quetz.authorization import OWNER
+from quetz.dao import Dao
 
 from .api import get_db_manager, router
 from .db_models import TermsOfService, TermsOfServiceSignatures
