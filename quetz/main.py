@@ -47,6 +47,7 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential,
 )
+from fps.hooks import register_router
 
 from quetz import (
     authorization,
@@ -88,10 +89,9 @@ from quetz.tasks import indexing
 from quetz.tasks.common import Task
 from quetz.tasks.mirror import RemoteRepository, download_remote_file
 from quetz.utils import TicToc, generate_random_key, parse_query
+from fps.main import app
 
 from .condainfo import CondaInfo
-
-app = FastAPI()
 
 config = Config()
 
@@ -189,12 +189,6 @@ for auth_cls in builtin_authenticators + plugin_authenticators:
 
 pm = get_plugin_manager()
 api_router = APIRouter()
-plugin_routers = pm.hook.register_router()
-
-for router in plugin_routers:
-    app.include_router(router)
-app.include_router(jobs_api.get_router())
-app.include_router(metrics_api.get_router())
 
 
 # helper functions
@@ -1489,11 +1483,6 @@ def handle_package_files(
         pm.hook.post_add_package_version(version=version, condainfo=condainfo)
 
 
-app.include_router(
-    api_router,
-    prefix="/api",
-)
-
 
 @app.get("/api/.*", status_code=404, include_in_schema=False)
 def invalid_api():
@@ -1669,3 +1658,7 @@ def serve_channel_index(
 
 
 frontend.register(app)
+
+r_jobs_api = register_router(jobs_api.get_router())
+r_metrics_api = register_router(metrics_api.get_router())
+r_main_api = register_router(api_router, prefix="/api")
