@@ -531,7 +531,7 @@ def start(
 
         quetz_src = os.path.dirname(quetz.__file__)
         uvicorn.run(
-            "quetz.main:app",
+            "fps.main:app",
             reload=reload,
             reload_dirs=(quetz_src,),
             port=port,

@@ -89,7 +89,6 @@ from quetz.tasks import indexing
 from quetz.tasks.common import Task
 from quetz.tasks.mirror import RemoteRepository, download_remote_file
 from quetz.utils import TicToc, generate_random_key, parse_query
-from fps.main import app
 
 from .condainfo import CondaInfo
 
@@ -99,17 +98,20 @@ configure_logger(config)
 
 logger = logging.getLogger("quetz")
 
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=config.session_secret,
-    https_only=config.session_https_only,
-)
 
-if config.general_redirect_http_to_https:
-    logger.info("Configuring http to https redirect ")
-    app.add_middleware(HTTPSRedirectMiddleware)
+#api_jobs = APIRouter()
 
-metrics.init(app)
+#api_jobs.add_middleware(
+#    SessionMiddleware,
+#    secret_key=config.session_secret,
+#    https_only=config.session_https_only,
+#)
+
+#if config.general_redirect_http_to_https:
+#    logger.info("Configuring http to https redirect ")
+#    api_jobs.add_middleware(HTTPSRedirectMiddleware)
+
+#metrics.init(api_jobs)
 
 if config.configured_section("cors"):
     logger.info("Configuring CORS with ")
@@ -117,13 +119,13 @@ if config.configured_section("cors"):
     logger.info(f"allow_credentials = {config.cors_allow_credentials}")
     logger.info(f"allow_methods     = {config.cors_allow_methods}")
     logger.info(f"allow_headers     = {config.cors_allow_headers}")
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=config.cors_allow_origins,
-        allow_credentials=config.cors_allow_credentials,
-        allow_methods=config.cors_allow_methods,
-        allow_headers=config.cors_allow_headers,
-    )
+#    api_jobs.add_middleware(
+#        CORSMiddleware,
+#        allow_origins=config.cors_allow_origins,
+#        allow_credentials=config.cors_allow_credentials,
+#        allow_methods=config.cors_allow_methods,
+#        allow_headers=config.cors_allow_headers,
+#    )
 
 # global variables for batching download counts
 
@@ -156,12 +158,9 @@ class CondaTokenMiddleware(BaseHTTPMiddleware):
         return response
 
 
-app.add_middleware(CondaTokenMiddleware)
+# app.add_middleware(CondaTokenMiddleware)
 
 pkgstore = config.get_package_store()
-
-# authenticators
-
 
 builtin_authenticators: List[Type[BaseAuthenticator]] = [
     auth_github.GithubAuthenticator,
@@ -177,18 +176,17 @@ plugin_authenticators: List[Type[BaseAuthenticator]] = [
 ]
 
 
+pm = get_plugin_manager()
+api_router = APIRouter()
+
+
 auth_registry = AuthenticatorRegistry()
-auth_registry.set_router(app)
+auth_registry.set_router(api_router)
 
 for auth_cls in builtin_authenticators + plugin_authenticators:
     auth_obj = auth_cls(config)
     if auth_obj.is_enabled:
         auth_registry.register(auth_obj)
-
-# other routers
-
-pm = get_plugin_manager()
-api_router = APIRouter()
 
 
 # helper functions
@@ -216,15 +214,15 @@ def logout(session):
 
 
 # custom exception handlers
-@app.exception_handler(errors.ValidationError)
-async def unicorn_exception_handler(request: Request, exc: errors.ValidationError):
-    return responses.JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content={"detail": str(exc)}
-    )
+#@app.exception_handler(errors.ValidationError)
+#async def unicorn_exception_handler(request: Request, exc: errors.ValidationError):
+#    return responses.JSONResponse(
+#        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content={"detail": str(exc)}
+#    )
 
 
 # endpoints
-@app.route("/auth/logout")
+@api_router.route("/auth/logout")
 async def route_logout(request):
     logout(request.session)
     return RedirectResponse("/")
@@ -1484,12 +1482,12 @@ def handle_package_files(
 
 
 
-@app.get("/api/.*", status_code=404, include_in_schema=False)
+@api_router.get("/api/.*", status_code=404, include_in_schema=False)
 def invalid_api():
     return None
 
 
-@app.on_event("startup")
+@api_router.on_event("startup")
 def start_sync_download_counts():
 
     global download_counts
@@ -1535,19 +1533,19 @@ def start_sync_download_counts():
             download_counts.clear()
             raise
 
-    app.sync_download_task = asyncio.create_task(task())
+    api_router.sync_download_task = asyncio.create_task(task())
 
 
-@app.on_event("shutdown")
+@api_router.on_event("shutdown")
 async def stop_sync_donwload_counts():
-    app.sync_download_task.cancel()
+    api_router.sync_download_task.cancel()
     try:
-        await app.sync_download_task
+        await api_router.sync_download_task
     except asyncio.CancelledError:
         pass
 
 
-@app.get("/get/{channel_name}/{path:path}")
+@api_router.get("/get/{channel_name}/{path:path}")
 def serve_path(
     path,
     channel: db_models.Channel = Depends(get_channel_allow_proxy),
@@ -1647,7 +1645,7 @@ def serve_path(
     return StreamingResponse(package_content_iter, headers=headers)
 
 
-@app.get("/get/{channel_name}")
+@api_router.get("/get/{channel_name}")
 def serve_channel_index(
     channel: db_models.Channel = Depends(get_channel_allow_proxy),
     accept_encoding: Optional[str] = Header(None),
@@ -1657,7 +1655,7 @@ def serve_channel_index(
     return serve_path("index.html", channel, accept_encoding, session, dao)
 
 
-frontend.register(app)
+#frontend.register(app)
 
 r_jobs_api = register_router(jobs_api.get_router())
 r_metrics_api = register_router(metrics_api.get_router())
