@@ -1,7 +1,7 @@
 import uuid
 
 from sqlalchemy import Column, DateTime, ForeignKey, String, UniqueConstraint, func
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import backref, relationship
 
 from quetz.db_models import UUID, Base
 
@@ -13,11 +13,6 @@ class TermsOfService(Base):
     uploader_id = Column(UUID)
     filename = Column(String)
     time_created = Column(DateTime, nullable=False, server_default=func.now())
-    signatures = relationship(
-        "TermsOfServiceSignatures",
-        back_populates="quetz_tos",
-        cascade="all, delete, delete-orphan",
-    )
 
 
 class TermsOfServiceSignatures(Base):
@@ -27,3 +22,11 @@ class TermsOfServiceSignatures(Base):
     tos_id = Column(UUID, ForeignKey('quetz_tos.id'), primary_key=True)
     user_id = Column(UUID, ForeignKey('users.id'), primary_key=True)
     time_created = Column(DateTime, nullable=False, server_default=func.now())
+    tos = relationship(
+        "TermsOfService",
+        backref=backref(
+            "tos",
+            uselist=False,
+            cascade="delete,all",
+        ),
+    )
