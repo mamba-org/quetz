@@ -112,16 +112,23 @@ class Rules:
 
     def has_server_roles(self, user_id, roles: list):
         pm = quetz.config.get_plugin_manager()
-        res = (
-            self.db.query(User)
-            .filter(User.id == user_id)
-            .filter(User.role.in_(roles))
-            .one_or_none()
-        )
+        res = self.db.query(User).filter(User.id == user_id).one_or_none()
 
-        tos_signed = pm.hook.check_for_signed_tos(user_id=user_id)[0]
-        if tos_signed:
-            return res
+        if res:
+            user_role = res.role
+            if user_role in roles:
+                permissions_check = pm.hook.check_additional_permissions(
+                    user_id=user_id, user_role=user_role
+                )
+                if len(permissions_check):
+                    if all(permissions_check):
+                        return res
+                    else:
+                        return None
+                else:
+                    return res
+            else:
+                return None
         else:
             return None
 

@@ -83,7 +83,7 @@ def sign_current_tos(
             tos_id_bytes = uuid.UUID(tos_id).bytes
         except Exception:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"{tos_id} is not a valid hexadecimal string",
             )
         selected_tos = (

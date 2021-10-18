@@ -92,9 +92,9 @@ def validate_new_package(
 
 
 @hookspec
-def check_for_signed_tos(user_id) -> bool:
+def check_additional_permissions(user_id, user_role) -> bool:
     """
-    Check if the user has signed Terms of Service (TOS)
+    Check if the user has appropriate permissions
 
     :param str user_id:
         id of the user
