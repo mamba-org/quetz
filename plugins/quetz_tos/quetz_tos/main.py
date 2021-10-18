@@ -44,4 +44,4 @@ def check_for_signed_tos(user_id, user_role):
 
 @quetz.hookimpl
 def check_additional_permissions(user_id, user_role):
-    check_for_signed_tos(user_id, user_role)
+    return check_for_signed_tos(user_id, user_role)
