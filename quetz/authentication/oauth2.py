@@ -6,6 +6,7 @@ from typing import Optional
 
 from authlib.integrations.starlette_client import OAuth
 from fastapi import Request
+from authlib.integrations.base_client.errors import InvalidTokenError
 from starlette.responses import RedirectResponse
 
 from quetz.config import Config
@@ -123,5 +124,8 @@ class OAuthAuthenticator(BaseAuthenticator):
         )
 
     async def validate_token(self, token):
-        resp = await self.client.get(self.validate_token_url, token=json.loads(token))
-        return resp.status_code != 401
+        try:
+            resp = await self.client.get(self.validate_token_url, token=json.loads(token))
+            return resp.status_code != 401
+        except InvalidTokenError:
+            return False
