@@ -1,6 +1,7 @@
 import io
 
 import pytest
+from fastapi import HTTPException
 
 
 @pytest.fixture
@@ -55,9 +56,53 @@ def test_tos_sign(client, member_profile, tos_file, tos):
 
 
 def test_tos_already_signed(client, tos_sign):
-    response = client.get("/api/dummylogin/madhurt")
+    response = client.get("/api/dummylogin/alice")
     assert response.status_code == 200
 
     response = client.post('/api/tos/sign')
     assert response.status_code == 201
-    assert b"TOS already signed for madhur" in response.content
+    assert b"TOS already signed for alice" in response.content
+
+
+def test_check_additional_permissions_hook_with_owner(
+    client, owner_profile, tos, tos_file
+):
+    response = client.get("/api/dummylogin/madhurt")
+    assert response.status_code == 200
+
+    from quetz_tos import main
+
+    owner_tos_check = main.check_additional_permissions(
+        owner_profile.user.id, owner_profile.user.role
+    )
+    assert owner_tos_check is True
+
+
+def test_check_additional_permissions_hook_with_member(
+    client, member_profile, tos, tos_file
+):
+    response = client.get("/api/dummylogin/alice")
+    assert response.status_code == 200
+
+    from quetz_tos import main
+
+    with pytest.raises(HTTPException) as e:
+        main.check_additional_permissions(
+            member_profile.user.id, member_profile.user.role
+        )
+    assert "status_code=403" in str(e)
+    assert "detail='terms of service is not signed for alice'" in str(e)
+
+
+def test_check_additional_permissions_hook_with_member_signed(
+    client, member_profile, tos, tos_file, tos_sign
+):
+    response = client.get("/api/dummylogin/alice")
+    assert response.status_code == 200
+
+    from quetz_tos import main
+
+    member_tos_check = main.check_additional_permissions(
+        member_profile.user.id, member_profile.user.role
+    )
+    assert member_tos_check is True

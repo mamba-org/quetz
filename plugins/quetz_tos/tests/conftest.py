@@ -64,9 +64,6 @@ def tos(db, owner_user):
 
     yield tos
 
-    db.delete(tos)
-    db.commit()
-
 
 @fixture
 def tos_file(config):
@@ -75,16 +72,13 @@ def tos_file(config):
 
 
 @fixture
-def tos_sign(db, tos, owner_user, owner_profile):
+def tos_sign(db, tos, member_user, member_profile):
     tos_sign = db_models.TermsOfServiceSignatures(
         tos_id=tos.id,
-        user_id=owner_user.id,
+        user_id=member_user.id,
     )
 
     db.add(tos_sign)
     db.commit()
 
     yield tos_sign
-
-    db.delete(tos_sign)
-    db.commit()
