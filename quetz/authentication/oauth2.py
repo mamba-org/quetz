@@ -128,5 +128,5 @@ class OAuthAuthenticator(BaseAuthenticator):
                 self.validate_token_url, token=json.loads(token)
             )
             return resp.status_code != 401
-        except:
+        except Exception:
             return False
