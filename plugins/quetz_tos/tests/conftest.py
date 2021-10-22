@@ -16,9 +16,6 @@ def owner_user(db):
 
     yield user
 
-    db.delete(user)
-    db.commit()
-
 
 @fixture
 def member_user(db):
@@ -27,9 +24,6 @@ def member_user(db):
     db.commit()
 
     yield user
-
-    db.delete(user)
-    db.commit()
 
 
 @fixture
@@ -43,9 +37,6 @@ def tos(db, owner_user):
     db.commit()
 
     yield tos
-
-    db.delete(tos)
-    db.commit()
 
 
 @fixture
@@ -65,6 +56,3 @@ def tos_sign(db, tos, member_user):
     db.commit()
 
     yield tos_sign
-
-    db.delete(tos_sign)
-    db.commit()
