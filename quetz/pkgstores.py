@@ -572,7 +572,7 @@ class GoogleCloudStorageStore(PackageStore):
     def support_redirect(self):
         # `gcsfs` currently doesnt support signing yet. Once this is implemented we
         # can enable this again.
-        return False
+        return True
 
     @contextlib.contextmanager
     def _get_fs(self):
@@ -667,10 +667,16 @@ class GoogleCloudStorageStore(PackageStore):
             ]
 
     def url(self, channel: str, src: str, expires=3600):
-        raise NotImplementedError("gcsfs doesnt support signing yet.")
-        # # expires is in seconds, so the default is 60 minutes!
-        # with self._get_fs() as fs:
-        #     return fs.sign(path.join(self._bucket_map(channel), src), expires)
+        # expires is in seconds, so the default is 60 minutes!
+        with self._get_fs() as fs:
+            expiration_timestamp = (
+                int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp())
+                + expires
+            )
+            redirect_url = fs.sign(
+                path.join(self._bucket_map(channel), src), expiration_timestamp
+            )
+            return redirect_url
 
     def get_filemetadata(self, channel: str, src: str):
         with self._get_fs() as fs:
