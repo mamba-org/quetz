@@ -72,9 +72,7 @@ def test_check_additional_permissions_hook_with_owner(
 
     from quetz_tos import main
 
-    owner_tos_check = main.check_additional_permissions(
-        owner_user.id, owner_user.role
-    )
+    owner_tos_check = main.check_additional_permissions(owner_user.id, owner_user.role)
     assert owner_tos_check is True
 
 
@@ -87,9 +85,7 @@ def test_check_additional_permissions_hook_with_member(
     from quetz_tos import main
 
     with pytest.raises(HTTPException) as e:
-        main.check_additional_permissions(
-            member_user.id, member_user.role
-        )
+        main.check_additional_permissions(member_user.id, member_user.role)
     assert "status_code=403" in str(e)
     assert "detail='terms of service is not signed for alice'" in str(e)
 

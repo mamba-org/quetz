@@ -3,7 +3,7 @@ import uuid
 from pytest import fixture
 from quetz_tos import db_models
 
-from quetz.db_models import Profile, User
+from quetz.db_models import User
 
 pytest_plugins = "quetz.testing.fixtures"
 
