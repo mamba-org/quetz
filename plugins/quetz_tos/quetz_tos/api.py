@@ -112,7 +112,7 @@ def sign_current_tos(
         )
         if signature:
             return (
-                f"TOS already signed for {user.profile.name}"
+                f"TOS already signed for {user.username}"
                 f" at {signature.time_created}."
             )
         else:
@@ -121,7 +121,7 @@ def sign_current_tos(
             )
             db.add(signature)
             db.commit()
-            return f"TOS signed for {user.profile.name}"
+            return f"TOS signed for {user.username}"
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

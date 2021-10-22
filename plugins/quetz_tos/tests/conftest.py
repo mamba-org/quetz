@@ -16,6 +16,9 @@ def owner_user(db):
 
     yield user
 
+    db.delete(user)
+    db.commit()
+
 
 @fixture
 def member_user(db):
@@ -25,31 +28,8 @@ def member_user(db):
 
     yield user
 
-
-@fixture
-def owner_profile(db, owner_user):
-    user_profile = Profile(
-        name="madhur",
-        avatar_url="madhur-tandon",
-        user_id=owner_user.id,
-        user=owner_user,
-    )
-    db.add(user_profile)
+    db.delete(user)
     db.commit()
-    yield user_profile
-
-
-@fixture
-def member_profile(db, member_user):
-    user_profile = Profile(
-        name="alice",
-        avatar_url="alice-furnier",
-        user_id=member_user.id,
-        user=member_user,
-    )
-    db.add(user_profile)
-    db.commit()
-    yield user_profile
 
 
 @fixture
@@ -64,6 +44,9 @@ def tos(db, owner_user):
 
     yield tos
 
+    db.delete(tos)
+    db.commit()
+
 
 @fixture
 def tos_file(config):
@@ -72,7 +55,7 @@ def tos_file(config):
 
 
 @fixture
-def tos_sign(db, tos, member_user, member_profile):
+def tos_sign(db, tos, member_user):
     tos_sign = db_models.TermsOfServiceSignatures(
         tos_id=tos.id,
         user_id=member_user.id,
@@ -82,3 +65,6 @@ def tos_sign(db, tos, member_user, member_profile):
     db.commit()
 
     yield tos_sign
+
+    db.delete(tos_sign)
+    db.commit()

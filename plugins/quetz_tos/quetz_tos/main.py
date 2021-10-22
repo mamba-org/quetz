@@ -35,7 +35,7 @@ def check_for_signed_tos(user_id, user_role):
                 if signature:
                     return True
                 else:
-                    detail = f"terms of service is not signed for {user.profile.name}"
+                    detail = f"terms of service is not signed for {user.username}"
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN, detail=detail
                     )
