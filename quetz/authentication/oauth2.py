@@ -123,5 +123,10 @@ class OAuthAuthenticator(BaseAuthenticator):
         )
 
     async def validate_token(self, token):
-        resp = await self.client.get(self.validate_token_url, token=json.loads(token))
-        return resp.status_code != 401
+        try:
+            resp = await self.client.get(
+                self.validate_token_url, token=json.loads(token)
+            )
+            return resp.status_code != 401
+        except Exception:
+            return False
