@@ -65,19 +65,21 @@ def test_tos_already_signed(client, tos_sign):
 
 
 def test_check_additional_permissions_hook_with_owner(
-    client, owner_user, tos, tos_file
+    db, client, owner_user, tos, tos_file
 ):
     response = client.get("/api/dummylogin/madhurt")
     assert response.status_code == 200
 
     from quetz_tos import main
 
-    owner_tos_check = main.check_additional_permissions(owner_user.id, owner_user.role)
+    owner_tos_check = main.check_additional_permissions(
+        db, owner_user.id, owner_user.role
+    )
     assert owner_tos_check is True
 
 
 def test_check_additional_permissions_hook_with_member(
-    client, member_user, tos, tos_file
+    db, client, member_user, tos, tos_file
 ):
     response = client.get("/api/dummylogin/alice")
     assert response.status_code == 200
@@ -85,13 +87,13 @@ def test_check_additional_permissions_hook_with_member(
     from quetz_tos import main
 
     with pytest.raises(HTTPException) as e:
-        main.check_additional_permissions(member_user.id, member_user.role)
+        main.check_additional_permissions(db, member_user.id, member_user.role)
     assert "status_code=403" in str(e)
     assert "detail='terms of service is not signed for alice'" in str(e)
 
 
 def test_check_additional_permissions_hook_with_member_signed(
-    client, member_user, tos, tos_file, tos_sign
+    db, client, member_user, tos, tos_file, tos_sign
 ):
     response = client.get("/api/dummylogin/alice")
     assert response.status_code == 200
@@ -99,6 +101,6 @@ def test_check_additional_permissions_hook_with_member_signed(
     from quetz_tos import main
 
     member_tos_check = main.check_additional_permissions(
-        member_user.id, member_user.role
+        db, member_user.id, member_user.role
     )
     assert member_tos_check is True

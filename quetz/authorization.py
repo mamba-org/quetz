@@ -118,7 +118,7 @@ class Rules:
             user_role = res.role
             if user_role in roles:
                 permissions_check = pm.hook.check_additional_permissions(
-                    user_id=user_id, user_role=user_role
+                    db=self.db, user_id=user_id, user_role=user_role
                 )
                 if len(permissions_check):
                     if all(permissions_check):

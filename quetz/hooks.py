@@ -92,7 +92,7 @@ def validate_new_package(
 
 
 @hookspec
-def check_additional_permissions(user_id, user_role) -> bool:
+def check_additional_permissions(db, user_id, user_role) -> bool:
     """
     Check if the user has appropriate permissions
 
