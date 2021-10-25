@@ -1,12 +1,11 @@
 import os
-from contextlib import contextmanager
 from tempfile import SpooledTemporaryFile
 
 from fastapi import APIRouter, Depends, File, UploadFile
 
 from quetz import authorization
 from quetz.config import Config
-from quetz.database import get_session
+from quetz.database import get_db_manager
 from quetz.deps import get_rules
 
 from . import db_models
@@ -16,17 +15,6 @@ router = APIRouter()
 config = Config()
 
 pkgstore = config.get_package_store()
-
-
-@contextmanager
-def get_db_manager():
-
-    db = get_session(config.sqlalchemy_database_url)
-
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 def post_file(file):

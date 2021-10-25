@@ -1,24 +1,10 @@
 import json
-from contextlib import contextmanager
 
 import quetz
-from quetz.config import Config
-from quetz.database import get_session
+from quetz.database import get_db_manager
 
 from . import db_models
 from .api import router
-
-
-@contextmanager
-def get_db_manager():
-    config = Config()
-
-    db = get_session(config.sqlalchemy_database_url)
-
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @quetz.hookimpl

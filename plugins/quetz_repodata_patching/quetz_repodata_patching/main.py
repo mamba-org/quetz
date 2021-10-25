@@ -9,7 +9,7 @@ import zstandard
 
 import quetz
 from quetz.config import Config
-from quetz.database import get_session
+from quetz.database import get_db_manager
 from quetz.db_models import PackageFormatEnum, PackageVersion
 from quetz.utils import add_temp_static_file
 
@@ -103,17 +103,6 @@ def _load_instructions(tar, path):
     except KeyError:
         return {}
     return patch_instructions
-
-
-@contextmanager
-def get_db_manager():
-
-    db = get_session(config.sqlalchemy_database_url)
-
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @quetz.hookimpl(tryfirst=True)

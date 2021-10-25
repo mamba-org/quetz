@@ -1,11 +1,10 @@
 import json
-from contextlib import contextmanager
 
 from sqlalchemy import and_, func
 
 import quetz
 from quetz.config import Config
-from quetz.database import get_session
+from quetz.database import get_db_manager
 from quetz.db_models import PackageVersion
 from quetz.utils import add_entry_for_index
 
@@ -14,17 +13,6 @@ from .api import router
 
 config = Config()
 pkgstore = config.get_package_store()
-
-
-@contextmanager
-def get_db_manager():
-
-    db = get_session(config.sqlalchemy_database_url)
-
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @quetz.hookimpl

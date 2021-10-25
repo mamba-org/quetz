@@ -40,8 +40,14 @@ def database_url(sqlite_url):
 
 
 @fixture
-def engine(database_url):
-    sql_echo = bool(os.environ.get("QUETZ_TEST_ECHO_SQL", False))
+def sql_echo():
+    """whether to activate SQL echo during the tests or not."""
+    return False
+
+
+@fixture
+def engine(database_url, sql_echo):
+    sql_echo = bool(os.environ.get("QUETZ_TEST_ECHO_SQL", sql_echo))
     engine = get_engine(database_url, echo=sql_echo, reuse_engine=False)
     yield engine
     engine.dispose()
@@ -64,7 +70,6 @@ def use_migrations() -> bool:
 
 @fixture
 def sql_connection(engine):
-
     connection = engine.connect()
     yield connection
     connection.close()
@@ -125,11 +130,8 @@ def session_maker(sql_connection, create_tables, auto_rollback):
 
 @fixture
 def db(session_maker):
-
     session = session_maker()
-
     yield session
-
     session.close()
 
 
@@ -228,7 +230,10 @@ def app(config, db, mocker):
 
     # mocking is required for some functions that do not use fastapi
     # dependency injection (mainly non-request functions)
-    mocker.patch("quetz.database.get_session", lambda _: db)
+    def get_session_mock(*args, **kwargs):
+        return db
+
+    mocker.patch("quetz.database.get_session", get_session_mock)
 
     # overiding dependency works with all requests handlers that
     # depend on quetz.deps.get_db

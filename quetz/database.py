@@ -1,6 +1,7 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 import logging
+from contextlib import contextmanager
 from typing import Callable
 
 from sqlalchemy import create_engine, event
@@ -9,6 +10,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
 from sqlalchemy.pool import StaticPool
 
+from quetz.config import Config
 from quetz.metrics.middleware import DATABASE_CONNECTIONS_USED, DATABASE_POOL_SIZE
 
 engine = None
@@ -63,5 +65,22 @@ def get_session_maker(engine) -> Callable[[], Session]:
     return sessionmaker(autocommit=False, autoflush=True, bind=engine)
 
 
-def get_session(db_url, echo: bool = False, **kwargs) -> Session:
+def get_session(db_url: str, echo: bool = False, **kwargs) -> Session:
+    """Get a database session.
+
+    Important note: this function is mocked during tests!
+
+    """
     return get_session_maker(get_engine(db_url, echo, **kwargs))()
+
+
+@contextmanager
+def get_db_manager():
+    config = Config()
+    database_url = config.sqlalchemy_database_url
+    db = get_session(database_url, echo=config.sqlalchemy_echo_sql)
+
+    try:
+        yield db
+    finally:
+        db.close()
