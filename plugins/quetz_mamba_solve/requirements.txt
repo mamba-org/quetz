@@ -1,2 +1,1 @@
-mamba
 conda-build >=3.20
