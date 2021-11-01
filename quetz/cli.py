@@ -656,7 +656,9 @@ def plugin(
             # Try to install pip if it's missing
             if conda_exe_path is not None:
                 print("pip is missing, installing...")
-                subprocess.call([conda_exe_path, 'install', 'pip'])
+                subprocess.call(
+                    [conda_exe_path, 'install', '--channel', 'conda-forge', 'pip']
+                )
                 pip_exe_path = find_executable('pip')
 
         if pip_exe_path is None:
