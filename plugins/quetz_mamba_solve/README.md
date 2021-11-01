@@ -8,6 +8,6 @@ It takes `a list of channels`, a `subdir` and a `spec` as input and generates a 
 
 To install use:
 
-```
-pip install .
+```bash
+quetz plugin install plugins/quetz_mamba_solve
 ```

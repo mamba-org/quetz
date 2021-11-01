@@ -10,8 +10,8 @@ See `usage` section below for more details.
 
 To install use:
 
-```
-pip install .
+```bash
+quetz plugin install plugins/quetz_content_trust
 ```
 
 ## Usage

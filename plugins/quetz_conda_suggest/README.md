@@ -8,8 +8,8 @@ It generates `.map` files specific to a particular channel (such as `conda-forge
 
 To install use:
 
-```
-pip install .
+```bash
+quetz plugin install plugins/quetz_conda_suggest
 ```
 
 ## Usage
