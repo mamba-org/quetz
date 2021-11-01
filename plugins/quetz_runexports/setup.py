@@ -4,7 +4,7 @@ plugin_name = "quetz-runexports"
 
 setup(
     name=plugin_name,
-    install_requires="quetz",
+    install_requires=[],
     entry_points={
         "quetz": [f"{plugin_name} = quetz_runexports.main"],
         "quetz.migrations": [f"{plugin_name} = quetz_runexports.migrations"],

@@ -2,24 +2,21 @@
 
 This is a plugin to use with the [quetz](https://github.com/mamba-org/quetz) package server that allows to extract additional metadata from the packages, using the [libcflib](https://github.com/regro/libcflib) harvester.
 
-
 ## Installing
 
 To install use:
 
-```
+```bash
 # no other libcflib deps necessary for the harvester itself
 pip install git+https://git@github.com/regro/libcflib@master --no-deps
-mamba install ruamel.yaml -c conda-forge
-pip install .
+quetz plugin install plugins/quetz_harvester
 ```
-
 
 ## Using
 
 After installing the package run the `harvest` job using the standard /jobs endpoint in quetz:
 
-```
+```bash
 QUETZ_API_KEY=... # setup you api key retrieved through the quetz fronted
 curl -X POST localhost:8000/api/jobs  -d '{"items_spec": "*", "manifest": "quetz-harvester:harvest"}' -H "X-api-key: ${QUETZ_API_KEY}"
 ```

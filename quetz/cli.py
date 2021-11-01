@@ -620,34 +620,51 @@ def plugin(
 
     if cmd == 'install':
         abs_path = Path(path).absolute()
-        assert (abs_path / "setup.py").exists()
+        if not (abs_path / "setup.py").exists():
+            raise ValueError(f"Could not find any setup.py file in {abs_path}/.")
+        requirements = abs_path / "conda-requirements.txt"
 
-        exes = ['micromamba', 'mamba', 'conda', 'pip']
-        if (abs_path / "requirements.txt").exists():
-            exe_path = None
-            for exe in exes:
-                exe_path = find_executable(exe)
-                if exe_path:
+        conda_exes = ['mamba', 'conda', 'micromamba']
+        conda_exe_path = None
+        if requirements.exists():
+            for conda_exe in conda_exes:
+                conda_exe_path = find_executable(conda_exe)
+                if conda_exe_path:
                     break
 
-            if not exe_path:
+            if conda_exe_path is None:
                 print(
-                    f"""Could not find any of {exes}.
-                    Needed to install the plugin requirements."""
+                    f"Could not find any of {', '.join(conda_exes)}. "
+                    f"One is needed to install the plugin requirements."
                 )
                 exit(1)
 
             print(f"Installing requirements.txt for {os.path.split(abs_path)[1]}")
             subprocess.call(
-                [exe_path, 'install', '--file', abs_path / "requirements.txt"]
+                [
+                    conda_exe_path,
+                    'install',
+                    '--channel',
+                    'conda-forge',
+                    '--file',
+                    requirements,
+                ]
             )
 
         pip_exe_path = find_executable('pip')
-        if pip_exe_path:
-            subprocess.call([pip_exe_path, 'install', abs_path])
-        else:
+        if pip_exe_path is None:
+            # Try to install pip if it's missing
+            if conda_exe_path is not None:
+                print("pip is missing, installing...")
+                subprocess.call(
+                    [conda_exe_path, 'install', '--channel', 'conda-forge', 'pip']
+                )
+                pip_exe_path = find_executable('pip')
+
+        if pip_exe_path is None:
             print("Could not find pip to install the plugin.")
             exit(1)
+        subprocess.call([pip_exe_path, 'install', abs_path])
     else:
         print(f"Command '{cmd}' not yet understood.")
 

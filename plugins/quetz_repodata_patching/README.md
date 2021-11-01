@@ -7,8 +7,8 @@ A plugin for [quetz](https://github.com/mamba-org/quetz) package server that imp
 
 To install use:
 
-```
-pip install .
+```bash
+quetz plugin install plugins/quetz_repodata_patching
 ```
 
 ## Using

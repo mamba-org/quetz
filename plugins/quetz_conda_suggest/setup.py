@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="quetz-conda_suggest",
-    install_requires="quetz",
+    install_requires=[],
     entry_points={
         "quetz": ["quetz-conda_suggest = quetz_conda_suggest.main"],
         "quetz.migrations": ["quetz-conda_suggest = quetz_conda_suggest.migrations"],

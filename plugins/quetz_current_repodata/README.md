@@ -8,6 +8,6 @@ It generates `current_repodata.json` file specific to a particular channel (such
 
 To install use:
 
-```
-pip install .
+```bash
+quetz plugin install plugins/quetz_current_repodata
 ```

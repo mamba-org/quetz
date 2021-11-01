@@ -8,15 +8,15 @@ Sample authenticator inspired by an example from [JupyterHub docs.](https://jupy
 
 ### Installation
 
-```
-pip install -e .
+```bash
+quetz plugin install plugins/quetz_dictauthenticator
 ```
 
 ### Configure
 
 add the following section to your `config.toml`:
 
-```
+```ini
 [dictauthenticator]
 users = ["happyuser:happy", "unhappyuser:unhappy"]
 ```
