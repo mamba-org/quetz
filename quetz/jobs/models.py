@@ -41,7 +41,7 @@ class Job(Base):
     id = sa.Column(sa.Integer, primary_key=True)
     created = sa.Column(sa.DateTime, nullable=False, default=datetime.utcnow)
     updated = sa.Column(sa.DateTime, nullable=False, default=datetime.utcnow)
-    manifest = sa.Column(sa.Binary(), nullable=False)
+    manifest = sa.Column(sa.LargeBinary(), nullable=False)
     owner_id = sa.Column(
         UUID, sa.ForeignKey("users.id", ondelete="cascade"), nullable=True
     )
