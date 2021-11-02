@@ -186,7 +186,8 @@ class Supervisor:
         now = datetime.utcnow()
         db = self.db
         jobs = db.query(Job).filter(Job.status == JobStatus.pending)
-        logger.info(f"Got pending jobs: {jobs.count()}")
+        if jobs.count():
+            logger.info(f"Got pending jobs: {jobs.count()}")
         if job_id:
             jobs = jobs.filter(Job.id == job_id)
         for job in jobs:
@@ -271,7 +272,8 @@ class Supervisor:
 
         tasks = db.query(Task).filter(Task.status == TaskStatus.created)
         task: Task
-        logger.info(f"Got pending tasks: {tasks.count()}")
+        if tasks.count():
+            logger.info(f"Got pending tasks: {tasks.count()}")
         jobs = []
         for task in tasks:
             if not task.package_version:
