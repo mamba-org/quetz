@@ -265,7 +265,7 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
         after_upload_move.append(dest)
 
     for f_to_move in after_upload_move:
-        logger.info(
+        logger.debug(
             "Moving to final destination: "
             f"{f_to_move} -> {f_to_move[:-len(tmp_suffix)]}"
         )
