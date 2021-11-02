@@ -106,6 +106,7 @@ class Upsert(Insert):
         self._returning = None
         self.table = table
         self.incr = incr
+        self._inline = False
 
 
 @compiles(Upsert, 'postgresql')

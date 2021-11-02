@@ -22,7 +22,7 @@ def upgrade():
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('created', sa.DateTime(), nullable=False),
         sa.Column('updated', sa.DateTime(), nullable=False),
-        sa.Column('manifest', sa.Binary(), nullable=False),
+        sa.Column('manifest', sa.LargeBinary(), nullable=False),
         sa.Column('owner_id', sa.LargeBinary(length=16), nullable=True),
         sa.Column("items_spec", sa.String(), nullable=True),
         sa.Column(
