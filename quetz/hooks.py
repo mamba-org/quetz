@@ -89,3 +89,14 @@ def validate_new_package(
        CondaInfo instance with package metadata, it can be None if file was not
        uploaded
     """
+
+
+@hookspec
+def check_additional_permissions(db, user_id, user_role) -> bool:
+    """
+    Check if the user has appropriate permissions
+
+    :param str user_id:
+        id of the user
+    """
+    return True

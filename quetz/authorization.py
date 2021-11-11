@@ -10,6 +10,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
+import quetz.config
+
 from .db_models import ApiKey, ChannelMember, PackageMember, User
 
 OWNER = "owner"
@@ -100,20 +102,35 @@ class Rules:
 
         if not self.has_server_roles(user_id, roles):
 
-            detail = (msg or "this operation requires" + " or ".join(roles) + " roles",)
+            detail = (
+                msg or "this operation requires " + " or ".join(roles) + " roles",
+            )
 
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
 
         return user_id
 
     def has_server_roles(self, user_id, roles: list):
+        pm = quetz.config.get_plugin_manager()
+        res = self.db.query(User).filter(User.id == user_id).one_or_none()
 
-        return (
-            self.db.query(User)
-            .filter(User.id == user_id)
-            .filter(User.role.in_(roles))
-            .one_or_none()
-        )
+        if res:
+            user_role = res.role
+            if user_role in roles:
+                permissions_check = pm.hook.check_additional_permissions(
+                    db=self.db, user_id=user_id, user_role=user_role
+                )
+                if len(permissions_check):
+                    if all(permissions_check):
+                        return res
+                    else:
+                        return None
+                else:
+                    return res
+            else:
+                return None
+        else:
+            return None
 
     def has_channel_role(self, user_id: bytes, channel_name: str, roles: list):
         return (
