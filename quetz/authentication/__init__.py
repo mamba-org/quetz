@@ -1,2 +1,2 @@
-from .base import BaseAuthenticationHandlers, BaseAuthenticator  # noqa
+from .base import BaseAuthenticationHandlers, BaseAuthenticator, SimpleAuthenticator  # noqa
 from .registry import AuthenticatorRegistry  # noqa

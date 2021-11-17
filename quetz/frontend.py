@@ -7,11 +7,11 @@ from fastapi.responses import FileResponse
 from importlib_metadata import entry_points
 
 from quetz import authorization
-from quetz.config import Config
+from quetz.config import Config, QuetzModel
 from quetz.dao import Dao
 from quetz.deps import get_dao, get_rules, get_session
 
-config = Config()
+config = Config(QuetzModel)
 
 logger = logging.getLogger('quetz')
 

@@ -1,9 +1,19 @@
 # Copyright 2020 QuantStack, Codethink Ltd
 # Distributed under the terms of the Modified BSD License.
 
-from quetz.config import Config
+from pydantic import SecretStr
+
+from quetz.config import PluginModel
 
 from .oauth2 import OAuthAuthenticator
+
+
+class GoogleAuthModel(PluginModel):
+    client_id: str
+    client_secret: SecretStr
+
+    class Config:
+        min_anystr_length = 1
 
 
 class GoogleAuthenticator(OAuthAuthenticator):
@@ -13,7 +23,7 @@ class GoogleAuthenticator(OAuthAuthenticator):
 
     .. code::
 
-      [google]
+      [google_authenticator]
       client_id = "1111111111-dha39auqzp92110sdf.apps.googleusercontent.com"
       client_secret = "03728444a12abff17e9444fd231b4379d58f0b"
 
@@ -54,16 +64,9 @@ class GoogleAuthenticator(OAuthAuthenticator):
 
         return github_profile
 
-    def configure(self, config: Config):
-        if config.configured_section("google"):
-            self.client_id = config.google_client_id
-            self.client_secret = config.google_client_secret
-            self.is_enabled = True
-            if config.configured_section("users"):
-                self.collect_emails = config.users_collect_emails
+    @staticmethod
+    def _make_config():
+        return (GoogleAuthModel, ...)
 
-        else:
-            self.is_enabled = False
-
-        # call the configure of base class to set default_channel and default role
-        super().configure(config)
+    def configure_plugin(self, config: GoogleAuthModel):
+        self.auto_configure(config)

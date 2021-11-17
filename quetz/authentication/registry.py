@@ -23,7 +23,7 @@ class AuthenticatorRegistry:
 
     def register(self, auth: BaseAuthenticator):
         if auth.provider in self.enabled_authenticators:
-            logger.warning(f"authenticator '{auth.provider}' already registered")
+            logger.warning(f"Authenticator '{auth.provider}' already registered")
             return
 
         if not self._router:
@@ -34,8 +34,8 @@ class AuthenticatorRegistry:
         self._router.include_router(auth.router)
         self.enabled_authenticators[auth.provider] = auth
         logger.info(
-            f"authentication provider '{auth.provider}' "
-            f"of class {auth.__class__.__name__} registered"
+            f"Authentication provider '{auth.provider}' "
+            f"of class '{auth.__class__.__name__}' registered"
         )
 
         if len(self.enabled_authenticators) > 1:

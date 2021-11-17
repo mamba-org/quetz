@@ -1,13 +1,16 @@
+import abc
 import sys
 import uuid
-from typing import Dict, List, Optional, Type, Union
+
+from typing import Dict, List, Optional, Type, Union, Any
 
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.sql.sqltypes import Boolean
+from pydantic import create_model
 from starlette.responses import RedirectResponse
 
 from quetz.authorization import ServerRole
-from quetz.config import Config
+from quetz.config import Config, QuetzModel, PluginModel
 from quetz.dao import Dao
 from quetz.deps import get_config, get_dao
 
@@ -156,7 +159,7 @@ class BaseAuthenticationHandlers:
         return user_dict
 
 
-class BaseAuthenticator:
+class BaseAuthenticator(abc.ABC):
     """Base class for authenticators.
 
     Subclasses MUST implement:
@@ -170,7 +173,8 @@ class BaseAuthenticator:
 
     """
 
-    provider = "base"
+    provider: str = "base"
+    extra_section_name: str
     handler_cls: Type[BaseAuthenticationHandlers] = BaseAuthenticationHandlers
 
     is_enabled = False
@@ -182,33 +186,64 @@ class BaseAuthenticator:
     def router(self):
         return self.handler.router
 
-    def __init__(self, config: Config, provider=None, app=None):
+    def __init__(self, config_file: str, provider=None, app=None):
+        self.extra_section_name = self.provider + "_authenticator"
+        config = Config(QuetzModel)
+
         if provider is not None:
             self.provider = str(provider)
         self.handler = self.handler_cls(self, app)
 
-        self.configure(config)
+        if self.provider in config.auth.authenticators:
+            self.is_enabled = True
+            self.configure(config)
+        else:
+            self.is_enabled = False
 
-    def configure(self, config):
+    @abc.abstractmethod
+    def configure_plugin(self):
+        raise NotImplementedError("subclasses need to implement configure_plugin")
+
+    def configure(self, config: Config):
         """configure authenticator and set is_enabled=True"""
 
-        # use the config to configure default role and
-        # whether to create a default channel
-        if config.configured_section("users"):
-            self.default_role = config.users_default_role
-            self._admins = config.users_admins
-            self._maintainers = config.users_maintainers
-            self._members = config.users_members
-            self.create_default_channel = config.users_create_default_channel
-        else:
-            self.default_role = None
-            self.create_default_channel = False
-            self._admins = []
-            self._maintainers = []
-            self._members = []
+        self._admins = config.users.admins
+        self._maintainers = config.users.maintainers
+        self._members = config.users.members
+        self.default_role = config.users.default_role
+        self.create_default_channel = config.users.create_default_channel
+
+        extra_model = self._make_config()
+        if extra_model:
+            model = create_model(
+                self.__class__.__name__ + "Model",
+                **{self.extra_section_name: extra_model},
+            )
+            plugin_config = Config(model)
+            self.configure_plugin(plugin_config)
+
+    def auto_configure(self, config):
+        """automatically configure the derived authenticator by setting
+        the configuration key/val to the subclass.
+
+        """
+
+        for k, v in getattr(config, self.extra_section_name):
+            setattr(self, k, v)
+
+    def _make_config(cls) -> PluginModel:
+        """Extra configuration required by the authenticator.
+
+        It can be either a tuple of the form (<type>, <default value>)
+        or just a default value.
+
+        """
+
+        return None
 
     async def validate_token(self, token):
         "check token validity"
+
         return True
 
     async def user_role(self, request: Request, profile: UserProfile) -> Optional[str]:
@@ -234,6 +269,7 @@ class BaseAuthenticator:
         else:
             return None
 
+    @abc.abstractmethod
     async def authenticate(
         self, request, data=None, dao=None, config=None, **kwargs
     ) -> AuthReturnType:
@@ -294,13 +330,11 @@ class SimpleAuthenticator(BaseAuthenticator):
     probably want to redirect to your custom login page. Make sure that
     this page submits data to ``/auth/{provider}/authorize`` endpoint."""
 
-    provider = "simple"
-    handler_cls = FormHandlers
+    provider: str = "simple"
+    handler_cls: Type[BaseAuthenticationHandlers] = FormHandlers
 
-    def configure(self, config):
-        self.is_enabled = True
-
-        super().configure(config)
+    def configure_plugin(self, config):
+        pass
 
     async def authenticate(
         self, request: Request, data=None, dao=None, config=None, **kwargs

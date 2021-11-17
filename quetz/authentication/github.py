@@ -1,4 +1,15 @@
-from .oauth2 import OAuthAuthenticator
+from pydantic import SecretStr
+
+from quetz.authentication.oauth2 import OAuthAuthenticator
+from quetz.config import PluginModel
+
+
+class GithubAuthModel(PluginModel):
+    client_id: str
+    client_secret: SecretStr
+
+    class Config:
+        min_anystr_length = 1
 
 
 class GithubAuthenticator(OAuthAuthenticator):
@@ -7,8 +18,10 @@ class GithubAuthenticator(OAuthAuthenticator):
     To enable add the following to the configuration file:
 
     .. code::
+      [auth]
+      authenticators = ['github', ...]
 
-      [github]
+      [github_authenticator]
       client_id = "fde330aef1fbe39991"
       client_secret = "03728444a12abff17e9444fd231b4379d58f0b"
 
@@ -40,16 +53,9 @@ class GithubAuthenticator(OAuthAuthenticator):
 
         return profile
 
-    def configure(self, config):
-        if config.configured_section("github"):
-            self.client_id = config.github_client_id
-            self.client_secret = config.github_client_secret
-            self.is_enabled = True
-            if config.configured_section("users"):
-                self.collect_emails = config.users_collect_emails
+    @staticmethod
+    def _make_config():
+        return (GithubAuthModel, ...)
 
-        else:
-            self.is_enabled = False
-
-        # call the configure of base class to set default_channel and default role
-        super().configure(config)
+    def configure_plugin(self, config: GithubAuthModel):
+        self.auto_configure(config)

@@ -2,62 +2,15 @@
 # Distributed under the terms of the Modified BSD License.
 
 import json
+from os import stat
 from typing import Any, List, overload
 from urllib.parse import quote
 
-from quetz.config import Config, ConfigEntry, ConfigSection
-
 from .oauth2 import OAuthAuthenticator
 
+from pydantic import BaseModel, SecretStr
 
-class JupyterConfigEntry:
-
-    config_section = "jupyterhubauthenticator"
-    registered_entries: List[ConfigEntry] = []
-    config = None
-
-    def __init__(self, dtype, default=None, required=True):
-        self.dtype = dtype
-        self.default = default
-        self.required = required
-
-    # these type annotations dont work yet, but I leave them for now
-    # maybe someone will find a solution later
-    # https://github.com/python/mypy/issues/2566#issuecomment-703998877
-    @overload
-    def __get__(self, instance: None, owner: Any) -> "JupyterConfigEntry":
-        ...
-
-    @overload
-    def __get__(self, instance: object, owner: Any) -> str:
-        ...
-
-    def __get__(self, obj, objtype) -> str:
-        return getattr(self.config, self.config_attr_name)
-
-    def __set_name__(self, owner, name):
-        self.attr_name = name
-        self.config_attr_name = f"{self.config_section}_{name}"
-        entry = ConfigEntry(
-            name, self.dtype, default=self.default, required=self.required
-        )
-        self.registered_entries.append(entry)
-
-    @classmethod
-    def _make_config(cls):
-        section = ConfigSection(
-            cls.config_section,
-            cls.registered_entries,
-            required=False,
-        )
-        return [section]
-
-    @classmethod
-    def register(cls, config: Config):
-        cls.config = config
-        config_options = cls._make_config()
-        config.register(config_options)
-        return config.configured_section(cls.config_section)
+from quetz.config import Config
 
 
 class JupyterhubAuthenticator(OAuthAuthenticator):
@@ -110,17 +63,26 @@ class JupyterhubAuthenticator(OAuthAuthenticator):
     """  # noqa
 
     provider = 'jupyterhub'
+    client_id: str
+    client_secret: str
+    access_token_url: str
+    authorize_url: str
+    api_base_url: str
+
+    class JupyterhubAuthModel(BaseModel):
+        client_id: str
+        client_secret: SecretStr
+        access_token_url: str
+        authorize_url: str
+        api_base_url: str
+
+        class Config:
+            min_anystr_length = 1
 
     # TODO: need to figure out how to use type annotations with descriptors
     # see also: https://github.com/python/mypy/pull/2266
 
-    client_id = JupyterConfigEntry(str, required=True)  # type: ignore
-    client_secret = JupyterConfigEntry(str, required=True)  # type: ignore
-
-    access_token_url = JupyterConfigEntry(str, required=True)  # type: ignore
     validate_token_url = "authorizations/token/{}"
-    authorize_url = JupyterConfigEntry(str, required=True)  # type: ignore
-    api_base_url = JupyterConfigEntry(str, required=True)  # type: ignore
 
     client_kwargs = {
         "token_endpoint_auth_method": "client_secret_post",
@@ -159,8 +121,9 @@ class JupyterhubAuthenticator(OAuthAuthenticator):
         resp = await self._get_user_for_token(token)
         return resp.status_code == 200
 
-    def configure(self, config: Config):
+    @classmethod
+    def _make_config(cls):
+        return (cls.JupyterhubAuthModel, ...)
 
-        self.is_enabled = JupyterConfigEntry.register(config)
-
-        super().configure(config)
+    def configure_plugin(self, config: BaseModel):
+        self.auto_configure(config)

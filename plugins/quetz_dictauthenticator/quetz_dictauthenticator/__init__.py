@@ -1,36 +1,28 @@
-from quetz.authentication.base import SimpleAuthenticator
-from quetz.config import Config, ConfigEntry, ConfigSection
+from typing import Dict, Type, List
 
+from quetz.authentication.base import (BaseAuthenticator, BaseAuthenticationHandlers, FormHandlers, UserProfile)
+from quetz.config import PluginModel
 
-class DictionaryAuthenticator(SimpleAuthenticator):
+class DictionaryAuthenticator(BaseAuthenticator):
 
-    passwords: dict
-    provider = "dict"
+    users: List[str]
+    passwords: Dict[str, str]
+    provider: str = "dict"
+    handler_cls: Type[BaseAuthenticationHandlers] = FormHandlers
 
-    def configure(self, config: Config):
+    class DictAuthConfig(PluginModel):
+        users: List[str] = []
 
-        config.register(
-            [
-                ConfigSection(
-                    "dictauthenticator",
-                    [
-                        ConfigEntry("users", list, default=list),
-                    ],
-                )
-            ]
+    @classmethod
+    def _make_config(cls):
+        return cls.DictAuthConfig()
+
+    def configure_plugin(self, config: DictAuthConfig):
+        self.auto_configure(config)
+
+        self.passwords = dict(
+            user_pass.split(":") for user_pass in self.users
         )
-
-        if config.configured_section("dictauthenticator"):
-            self.passwords = dict(
-                user_pass.split(":") for user_pass in config.dictauthenticator_users
-            )
-            self.is_enabled = True
-        else:
-            self.passwords = {}
-
-        # call the config of base class to configure default roles and
-        # channels
-        super().configure(config)
 
     async def authenticate(self, request, data, **kwargs):
         if self.passwords.get(data['username']) == data['password']:

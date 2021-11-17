@@ -9,7 +9,7 @@ from pytest import fixture
 
 import quetz
 from quetz.cli import _alembic_config
-from quetz.config import Config
+from quetz.config import Config, QuetzModel
 from quetz.dao import Dao
 from quetz.database import get_engine, get_session_maker
 from quetz.db_models import Base
@@ -205,7 +205,8 @@ def config(config_str, config_dir, test_data_dir):
             shutil.copy(full_path, dest)
 
     Config._instances = {}
-    config = Config()
+    Config._obj = None
+    config = Config(QuetzModel)
     yield config
     del os.environ["QUETZ_CONFIG_FILE"]
     Config._instances = {}

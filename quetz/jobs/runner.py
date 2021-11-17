@@ -194,6 +194,7 @@ class Supervisor:
             if job.start_at and job.start_at > now:
                 continue
 
+            logger.info(f"Executing job: {jobs.id}")
             should_repeat = (
                 job.repeat_every_seconds
                 and (job.updated + timedelta(seconds=job.repeat_every_seconds)) < now
@@ -297,6 +298,7 @@ class Supervisor:
             try:
                 job = self.add_task_to_queue(db, task, **kwargs)
                 jobs.append(job)
+                logger.info(f"Adding task {task.id}")
             except Exception:
                 logger.exception(f"task {task.id} failed due to error")
                 task.status = TaskStatus.failed

@@ -47,7 +47,6 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential,
 )
-
 from quetz import (
     authorization,
     db_models,
@@ -57,14 +56,15 @@ from quetz import (
     metrics,
     rest_models,
 )
-from quetz.authentication import AuthenticatorRegistry, BaseAuthenticator
+from quetz.authentication import AuthenticatorRegistry, BaseAuthenticator, SimpleAuthenticator
 from quetz.authentication import github as auth_github
 from quetz.authentication import gitlab as auth_gitlab
 from quetz.authentication import google as auth_google
 from quetz.authentication.azuread import AzureADAuthenticator
 from quetz.authentication.jupyterhub import JupyterhubAuthenticator
 from quetz.authentication.pam import PAMAuthenticator
-from quetz.config import PAGINATION_LIMIT, Config, configure_logger, get_plugin_manager
+from quetz.config import PAGINATION_LIMIT, Config, QuetzModel, get_plugin_manager
+from quetz.logging import configure_logger
 from quetz.dao import Dao
 from quetz.deps import (
     ChannelChecker,
@@ -93,16 +93,15 @@ from .condainfo import CondaInfo
 
 app = FastAPI()
 
-config = Config()
+config = Config(QuetzModel)
 
-configure_logger(config)
-
+configure_logger(config.logging)
 logger = logging.getLogger("quetz")
 
 app.add_middleware(
     SessionMiddleware,
-    secret_key=config.session_secret,
-    https_only=config.session_https_only,
+    secret_key=config.session.secret,
+    https_only=config.session.https_only,
 )
 
 if config.general_redirect_http_to_https:
@@ -111,18 +110,18 @@ if config.general_redirect_http_to_https:
 
 metrics.init(app)
 
-if config.configured_section("cors"):
+if "cors" in config.__fields_set__:
     logger.info("Configuring CORS with ")
-    logger.info(f"allow_origins     = {config.cors_allow_origins}")
-    logger.info(f"allow_credentials = {config.cors_allow_credentials}")
-    logger.info(f"allow_methods     = {config.cors_allow_methods}")
-    logger.info(f"allow_headers     = {config.cors_allow_headers}")
+    logger.info(f"allow_origins     = {config.cors.allow_origins}")
+    logger.info(f"allow_credentials = {config.cors.allow_credentials}")
+    logger.info(f"allow_methods     = {config.cors.allow_methods}")
+    logger.info(f"allow_headers     = {config.cors.allow_headers}")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=config.cors_allow_origins,
-        allow_credentials=config.cors_allow_credentials,
-        allow_methods=config.cors_allow_methods,
-        allow_headers=config.cors_allow_headers,
+        allow_origins=config.cors.allow_origins,
+        allow_credentials=config.cors.allow_credentials,
+        allow_methods=config.cors.allow_methods,
+        allow_headers=config.cors.allow_headers,
     )
 
 # global variables for batching download counts
@@ -134,7 +133,7 @@ DOWNLOAD_INCREMENT_MAX_DOWNLOADS = 50
 
 
 class CondaTokenMiddleware(BaseHTTPMiddleware):
-    """Removes /t/<QUETZ_API_KEY> prefix, adds QUETZ_APY_KEY to the headers and passes
+    """Removes /t/<QUETZ_API_KEY> prefix, adds QUETZ_API_KEY to the headers and passes
     on the rest of the path to be routed."""
 
     def __init__(self, app):
@@ -161,9 +160,8 @@ app.add_middleware(CondaTokenMiddleware)
 pkgstore = config.get_package_store()
 
 # authenticators
-
-
 builtin_authenticators: List[Type[BaseAuthenticator]] = [
+    SimpleAuthenticator,
     auth_github.GithubAuthenticator,
     auth_gitlab.GitlabAuthenticator,
     auth_google.GoogleAuthenticator,
@@ -181,12 +179,11 @@ auth_registry = AuthenticatorRegistry()
 auth_registry.set_router(app)
 
 for auth_cls in builtin_authenticators + plugin_authenticators:
-    auth_obj = auth_cls(config)
+    auth_obj = auth_cls(Config.file)
     if auth_obj.is_enabled:
         auth_registry.register(auth_obj)
 
 # other routers
-
 pm = get_plugin_manager()
 api_router = APIRouter()
 plugin_routers = pm.hook.register_router()
@@ -1512,7 +1509,7 @@ def start_sync_download_counts():
         count: int
         package = Tuple[str, str, str]
 
-        with TicToc("sync download counts"):
+        with TicToc("Sync download counts"):
             with db_manager(config) as db:
                 dao = get_dao(db)
                 for package, count in counts.items():

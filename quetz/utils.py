@@ -5,6 +5,7 @@ import bz2
 import distutils
 import gzip
 import hashlib
+import logging
 import secrets
 import shlex
 import string
@@ -16,6 +17,9 @@ from urllib.parse import unquote
 from sqlalchemy import String, and_, cast, collate, not_, or_
 
 from .db_models import Channel, Package, PackageVersion, User
+
+
+logger = logging.getLogger("quetz")
 
 
 def check_package_membership(package_name, includelist, excludelist):
@@ -216,7 +220,7 @@ class TicToc:
 
     def __exit__(self, ty, val, tb):
         self.stop = time.time()
-        print(f"[TOC] {self.description}: {self.stop - self.start}")
+        logger.debug(f"{self.description}: {self.stop - self.start}")
 
     @property
     def elapsed(self):

@@ -10,7 +10,7 @@ from abc import abstractmethod
 from multiprocessing import get_context
 from typing import Callable, Dict, Optional, Union
 
-from quetz.config import Config
+from quetz.config import Config, QuetzModel
 from quetz.jobs.models import JobStatus, Task, TaskStatus
 
 try:
@@ -37,7 +37,7 @@ def prepare_arguments(func: Callable, **resources):
 
 def get_worker(config, num_procs=None):
     if config.configured_section("worker"):
-        worker = config.worker_type
+        worker = config.worker.type
     else:
         worker = "thread"
     if worker == "thread":
@@ -47,9 +47,9 @@ def get_worker(config, num_procs=None):
     elif worker == "redis":
         if rq_available:
             worker = RQManager(
-                config.worker_redis_ip,
-                config.worker_redis_port,
-                config.worker_redis_db,
+                config.worker.redis_ip,
+                config.worker.redis_port,
+                config.worker.redis_db,
                 config,
             )
         else:
@@ -126,12 +126,12 @@ def job_wrapper(
     import pickle
 
     from quetz.authorization import Rules
-    from quetz.config import configure_logger
+    from quetz.logging import configure_logger
     from quetz.dao import Dao
     from quetz.database import get_session
     from quetz.deps import get_remote_session
 
-    configure_logger(config)
+    configure_logger(config.logging)
 
     logger = logging.getLogger("quetz.worker")
 
@@ -147,7 +147,7 @@ def job_wrapper(
         db = dao.db
         close_session = False
     else:
-        db = get_session(config.sqlalchemy_database_url)
+        db = get_session(config.sqlalchemy.database_url)
         close_session = True
 
     user_id: Optional[str]
@@ -326,7 +326,7 @@ class RQManager(AbstractWorker):
         host,
         port,
         db,
-        config: Config,
+        config: QuetzModel,
         no_testing=True,
     ):
         self.host = host

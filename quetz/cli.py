@@ -23,11 +23,14 @@ from sqlalchemy_utils.functions import database_exists
 
 from quetz.config import (
     Config,
+    PluginModel,
+    QuetzModel,
+    SQLAlchemyModel,
     _env_config_file,
     _env_prefix,
-    configure_logger,
     create_config,
 )
+from quetz.logging import configure_logger, get_logger_config
 from quetz.database import get_session
 from quetz.db_models import (
     ApiKey,
@@ -42,8 +45,7 @@ from quetz.db_models import (
 
 app = typer.Typer()
 
-logger = logging.getLogger("quetz-cli")
-configure_logger(loggers=("quetz-cli", "alembic"))
+logger = logging.getLogger("quetz.cli")
 
 
 class LogLevel(str, Enum):
@@ -53,6 +55,14 @@ class LogLevel(str, Enum):
     info = "info"
     debug = "debug"
     trace = "trace"
+
+
+def set_loggers_config(func):
+    def wrapper(*args, **kwargs):
+        configure_logger(loggers=("quetz.cli", "alembic", "uvicorn"))
+        func(*args, **kwargs)
+
+    return wrapper
 
 
 @contextlib.contextmanager
@@ -159,17 +169,17 @@ def _make_migrations(
         )
 
 
-def _set_user_roles(db: Session, config: Config):
+def _set_user_roles(db: Session, config: QuetzModel):
     """Initialize the database and add users from config."""
     if config.configured_section("users"):
 
         role_map = [
-            (config.users_admins, "owner"),
-            (config.users_maintainers, "maintainer"),
-            (config.users_members, "member"),
+            (config.users.admins, "owner"),
+            (config.users.maintainers, "maintainer"),
+            (config.users.members, "member"),
         ]
 
-        default_role = config.users_default_role
+        default_role = config.users.default_role
 
         for users, role in role_map:
             for username in users:
@@ -182,7 +192,7 @@ def _set_user_roles(db: Session, config: Config):
                         "the format 'PROVIDER:USERNAME' where PROVIDER is one of"
                         "'google', 'github', 'dummy', etc."
                     )
-                logger.info(f"create user {username} with role {role}")
+                logger.info(f"Create user '{username}' with role '{role}'")
                 user = (
                     db.query(User)
                     .join(Identity)
@@ -270,7 +280,9 @@ def _fill_test_database(db: Session) -> NoReturn:
                     key=key, description='test API key', user=test_user, owner=test_user
                 )
                 db.add(api_key)
-                print(f'Test API key created for user "{test_user.username}": {key}')
+                logger.warning(
+                    f"Test API key created for user '{test_user.username}': {key}"
+                )
 
                 key_package_member = PackageMember(
                     user=key_user,
@@ -301,9 +313,9 @@ def _is_deployment(base_dir: Path):
         and config_file.exists()
         and base_dir.joinpath("channels").exists()
     ):
-        config = Config(str(config_file.resolve()))
+        config = Config(SQLAlchemyModel, str(config_file.resolve()))
         with working_directory(base_dir):
-            return database_exists(config.sqlalchemy_database_url)
+            return database_exists(config.database_url)
     return False
 
 
@@ -363,6 +375,7 @@ def make_migrations(
 
 
 @app.command()
+@set_loggers_config
 def create(
     path: str = typer.Argument(
         None,
@@ -396,53 +409,51 @@ def create(
 ):
     """Create a new Quetz deployment."""
 
-    logger.info(f"creating new deployment in path {path}")
     deployment_folder = Path(path).resolve()
     config_file = deployment_folder / "config.toml"
 
     if _is_deployment(deployment_folder):
         if exists_ok:
             logger.info(
-                f'Quetz deployment already exists at {deployment_folder}.\n'
-                f'Skipping creation.'
+                f'Quetz deployment already exists at {deployment_folder}\n'
+                f'Skipping creation'
             )
             return
         if delete and (copy_conf or create_conf):
+            logger.info(f"Deleting previous deployment at '{path}'")
             shutil.rmtree(deployment_folder)
         else:
-            typer.echo(
+            logger.error(
                 'Use the start command to start a deployment '
-                'or specify --delete with --copy-conf or --create-conf.',
-                err=True,
+                'or specify --delete with --copy-conf or --create-conf'
             )
             raise typer.Abort()
 
     deployment_folder.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Creating new deployment in path '{path}'")
 
     # only authorize path with a config file to avoid deletion of unexpected files
     # when deleting Quetz instance
     if any(f != config_file for f in deployment_folder.iterdir()):
-        typer.echo(
-            f'Quetz deployment not allowed at {path}.\n'
-            'The path should not contain more than the configuration file.',
-            err=True,
+        logger.error(
+            f"Quetz deployment not allowed at '{path}'.\n"
+            "The path should not contain more than the configuration file"
         )
         raise typer.Abort()
 
     if not config_file.exists() and not create_conf and not copy_conf:
-        typer.echo(
+        logger.error(
             'No configuration file provided.\n'
-            'Use --create-conf or --copy-conf to produce a config file.',
-            err=True,
+            'Use --create-conf or --copy-conf to produce a config file'
         )
         raise typer.Abort()
 
     if copy_conf:
         if not os.path.exists(copy_conf):
-            typer.echo(f'Config file to copy does not exist {copy_conf}.', err=True)
+            logger.error(f'Config file to copy does not exist {copy_conf}')
             raise typer.Abort()
 
-        typer.echo(f"Copying config file from {copy_conf} to {config_file}")
+        logger.info(f"Copying config file from {copy_conf} to {config_file}")
         shutil.copyfile(copy_conf, config_file)
 
     if not config_file.exists() and create_conf:
@@ -452,31 +463,38 @@ def create(
             f.write(conf)
 
     os.environ[_env_prefix + _env_config_file] = str(config_file.resolve())
-    config = Config(str(config_file))
+    config = Config(QuetzModel, str(config_file))
+
+    # Update loggers config to use the file handler if any specified
+    if config.logging.file:
+        configure_logger(
+            config=config.logging, loggers=("quetz.cli", "alembic", "uvicorn")
+        )
 
     deployment_folder.joinpath('channels').mkdir(exist_ok=True)
     with working_directory(path):
-        db = get_session(config.sqlalchemy_database_url)
-        _run_migrations(config.sqlalchemy_database_url)
+        db = get_session(config.sqlalchemy.database_url)
+        _run_migrations(config.sqlalchemy.database_url)
         if dev:
             _fill_test_database(db)
         _set_user_roles(db, config)
 
 
-def _get_config(path: Union[Path, str]) -> Config:
+def _get_config(plugin_model: PluginModel, path: Union[Path, str]) -> Config:
     """get config path"""
     config_file = Path(path) / 'config.toml'
     if not config_file.exists():
-        typer.echo(f'Could not find config at {config_file}')
+        logger.error(f'Could not find config at {config_file}')
         raise typer.Abort()
 
-    config = Config(str(config_file.resolve()))
+    config = Config(plugin_model, str(config_file.resolve()))
     if not os.environ.get(_env_prefix + _env_config_file):
         os.environ[_env_prefix + _env_config_file] = str(config_file.resolve())
 
     return config
 
 
+@set_loggers_config
 @app.command()
 def start(
     path: str = typer.Argument(None, help="The path of the deployment"),
@@ -504,30 +522,38 @@ def start(
     At this time, only Uvicorn is supported as manager.
     """
 
-    logger.info(f"deploying quetz from directory {path}")
+    logger.info(f"Deploying quetz from directory {path}")
 
     deployment_folder = Path(path)
-    _get_config(deployment_folder)
+    config = _get_config(QuetzModel, deployment_folder)
 
     if not _is_deployment(deployment_folder):
-        typer.echo(
-            'The specified directory is not a deployment.\n'
-            'Use the create or run command to create a deployment.',
-            err=True,
+        logger.error(
+            'The specified directory is not a deployment\n'
+            'Use the create or run command to create a deployment',
         )
         raise typer.Abort()
 
     if supervisor:
-        logger.info("starting supervisor")
+        logger.info("Starting jobs supervisor")
         ctx = get_context("spawn")
         supervisor_process = ctx.Process(
             target=start_supervisor_daemon,
             args=(deployment_folder,),
         )
         supervisor_process.start()
+        logger.debug(f"Started supervisor process [{supervisor_process.pid}]")
 
     with working_directory(path):
         import quetz
+
+        from uvicorn.config import LOGGING_CONFIG
+
+        logging_config = get_logger_config(loggers=("uvicorn", "uvicorn.access"))
+        logging_config["loggers"]["uvicorn.error"] = LOGGING_CONFIG["loggers"][
+            "uvicorn.error"
+        ]
+        logging_config["loggers"]["uvicorn.access"]["propagate"] = False
 
         quetz_src = os.path.dirname(quetz.__file__)
         uvicorn.run(
@@ -538,6 +564,7 @@ def start(
             proxy_headers=proxy_headers,
             host=host,
             log_level=log_level,
+            log_config=logging_config,
         )
 
     if supervisor:
@@ -604,7 +631,7 @@ def delete(
 
     deployment_dir = Path(path)
     if not _is_deployment(deployment_dir):
-        typer.echo(f'No Quetz deployment found at {path}.', err=True)
+        logger.error(f'No Quetz deployment found at {path}')
         raise typer.Abort()
 
     if not force and not typer.confirm(f"Delete Quetz deployment at {path}?"):
@@ -639,7 +666,7 @@ def plugin(
                 )
                 exit(1)
 
-            print(f"Installing requirements.txt for {os.path.split(abs_path)[1]}")
+            logger.info(f"Installing requirements.txt for {os.path.split(abs_path)[1]}")
             subprocess.call(
                 [
                     conda_exe_path,
@@ -666,23 +693,27 @@ def plugin(
             exit(1)
         subprocess.call([pip_exe_path, 'install', abs_path])
     else:
-        print(f"Command '{cmd}' not yet understood.")
+        logger.warning(f"Command '{cmd}' not yet understood.")
 
 
 def start_supervisor_daemon(path, num_procs=None):
     from quetz.jobs.runner import Supervisor
     from quetz.tasks.workers import get_worker
 
-    configure_logger(loggers=("quetz",))
-    config = _get_config(path)
+    config = _get_config(QuetzModel, path)
+
+    logger = logging.getLogger("quetz")
+    with working_directory(path):
+        configure_logger(config.logging, loggers=("quetz",))
+
     manager = get_worker(config, num_procs=num_procs)
     with working_directory(path):
-        db = get_session(config.sqlalchemy_database_url)
+        db = get_session(config.sqlalchemy.database_url)
         supervisor = Supervisor(db, manager)
         try:
             supervisor.run()
         except KeyboardInterrupt:
-            logger.info("stopping supervisor")
+            logger.info("Stopping supervisor")
         finally:
             db.close()
 

@@ -1,6 +1,17 @@
-from .oauth2 import OAuthAuthenticator
+from pydantic import SecretStr
+
+from quetz.authentication.oauth2 import OAuthAuthenticator
+from quetz.config import PluginModel
 
 
+class GitlabAuthModel(PluginModel):
+    gitlab_url: str
+    client_id: str
+    client_secret: SecretStr
+
+    class Config:
+        min_anystr_length = 1
+        
 class GitlabAuthenticator(OAuthAuthenticator):
     """Use Gitlab account to authenticate users with Quetz.
 
@@ -8,7 +19,7 @@ class GitlabAuthenticator(OAuthAuthenticator):
 
     .. code::
 
-      [gitlab]
+      [gitlab_authenticator]
       client_id = "fde330aef1fbe39991"
       client_secret = "03728444a12abff17e9444fd231b4379d58f0b"
 
@@ -17,7 +28,7 @@ class GitlabAuthenticator(OAuthAuthenticator):
 
     .. code::
 
-      [gitlab]
+      [gitlab_authenticator]
       url = "https://gitlab.mydomain.org"
       client_id = "fde330aef1fbe39991"
       client_secret = "03728444a12abff17e9444fd231b4379d58f0b"
@@ -80,7 +91,11 @@ class GitlabAuthenticator(OAuthAuthenticator):
 
         return gitlab_profile
 
-    def configure(self, config):
+    @staticmethod
+    def _make_config():
+        return (GitlabAuthModel, ...)
+
+    def configure_plugin(self, config: GitlabAuthModel):
         if config.configured_section("gitlab"):
             self.access_token_url = f'{config.gitlab_url}/oauth/token'
             self.authorize_url = f'{config.gitlab_url}/oauth/authorize'
@@ -95,6 +110,3 @@ class GitlabAuthenticator(OAuthAuthenticator):
 
         else:
             self.is_enabled = False
-
-        # call the configure of base class to set default_channel and default role
-        super().configure(config)
