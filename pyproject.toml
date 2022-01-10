@@ -10,6 +10,25 @@ line_length = 88
 multi_line_output = 3
 include_trailing_comma = true
 
+[tool.tbump.version]
+current = "0.2.0"
+regex = '''
+  (?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)
+  ((?P<channel>a|b|rc|.dev)(?P<release>\d+))?
+'''
+
+[[tool.tbump.field]]
+name = "channel"
+default = ""
+
+[[tool.tbump.field]]
+name = "release"
+default = ""
+
+[tool.tbump.git]
+message_template = "Bump to {new_version}"
+tag_template = "v{new_version}"
+
 [[tool.tbump.file]]
 src = "quetz/_version.py"
-version_template = '({major}, {minor}, {patch})'
+version_template = '({major}, {minor}, {patch}, "{channel}", "{release}")'
