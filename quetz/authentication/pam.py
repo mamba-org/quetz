@@ -65,7 +65,9 @@ try:
                     ConfigEntry("encoding", str, default="utf8", required=False),
                     ConfigEntry("check_account", bool, default=True, required=False),
                     ConfigEntry("admin_groups", list, default=list, required=False),
-                    ConfigEntry("maintainer_groups", list, default=list, required=False),
+                    ConfigEntry(
+                        "maintainer_groups", list, default=list, required=False
+                    ),
                     ConfigEntry("member_groups", list, default=list, required=False),
                 ],
             )
@@ -147,7 +149,10 @@ try:
             username = data['username']
             try:
                 pamela.authenticate(
-                    username, data['password'], service=self.service, encoding=self.encoding
+                    username,
+                    data['password'],
+                    service=self.service,
+                    encoding=self.encoding,
                 )
             except pamela.PAMError as e:
                 logger.warning(
@@ -174,5 +179,6 @@ try:
 
             return username
 
+
 except ImportError:
-    PAMAuthenticator = None
+    PAMAuthenticator = None  # type: ignore
