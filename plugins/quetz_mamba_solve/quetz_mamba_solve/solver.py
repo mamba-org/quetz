@@ -1,12 +1,11 @@
 import os
 import tempfile
 
-import mamba
 from conda.base.context import context
 from conda.common.serialize import json_dump
 from conda.core.index import _supplement_index_with_system
 from conda_build.conda_interface import pkgs_dirs
-from mamba import mamba_api
+import libmambapy
 from mamba.utils import get_index, load_channels
 
 MAMBA_17_UP = mamba.version_info >= (0, 17, 0)
@@ -41,7 +40,7 @@ class MambaSolver:
         self.channels = channels
         self.platform = platform
         self.output_folder = output_folder or "local"
-        self.pool = mamba_api.Pool()
+        self.pool = libmambapy.Pool()
         self.repos = []
         self.index = load_channels(
             self.pool, self.channels, self.repos, platform=platform
@@ -49,7 +48,7 @@ class MambaSolver:
 
         if platform == context.subdir:
             installed_json_f = get_virtual_packages()
-            repo = mamba_api.Repo(self.pool, "installed", installed_json_f.name, "")
+            repo = libmambapy.Repo(self.pool, "installed", installed_json_f.name, "")
             repo.set_installed()
             self.repos.append(repo)
 
@@ -76,7 +75,7 @@ class MambaSolver:
                 os.remove(subdir.cache_path())
                 cp = cp.replace(".solv", ".json")
 
-            self.local_repos[str(channel)] = mamba_api.Repo(
+            self.local_repos[str(channel)] = libmambapy.Repo(
                 self.pool, str(channel), cp, channel.url(with_credentials=True)
             )
             self.local_repos[str(channel)].set_priority(start_prio, 0)
@@ -95,11 +94,11 @@ class MambaSolver:
         solvable : bool
             True if the set of specs has a solution, False otherwise.
         """
-        solver_options = [(mamba_api.SOLVER_FLAG_ALLOW_DOWNGRADE, 1)]
-        api_solver = mamba_api.Solver(self.pool, solver_options)
+        solver_options = [(libmambapy.SOLVER_FLAG_ALLOW_DOWNGRADE, 1)]
+        api_solver = libmambapy.Solver(self.pool, solver_options)
         _specs = specs
 
-        api_solver.add_jobs(_specs, mamba_api.SOLVER_INSTALL)
+        api_solver.add_jobs(_specs, libmambapy.SOLVER_INSTALL)
         success = api_solver.solve()
 
         if not success:
@@ -115,11 +114,7 @@ class MambaSolver:
             print(error_string)
             exit(1)
 
-        package_cache = mamba_api.MultiPackageCache(pkg_cache_path)
-
-        if MAMBA_17_UP:
-            t = mamba_api.Transaction(api_solver, package_cache)
-        else:
-            t = mamba_api.Transaction(api_solver, package_cache, pkg_cache_path[-1])
+        package_cache = libmambapy.MultiPackageCache(pkg_cache_path)
+        t = libmambapy.Transaction(api_solver, package_cache)
 
         return t
