@@ -1,14 +1,12 @@
 import os
 import tempfile
 
+import libmambapy
 from conda.base.context import context
 from conda.common.serialize import json_dump
 from conda.core.index import _supplement_index_with_system
 from conda_build.conda_interface import pkgs_dirs
-import libmambapy
 from mamba.utils import get_index, load_channels
-
-MAMBA_17_UP = mamba.version_info >= (0, 17, 0)
 
 
 def get_virtual_packages():
