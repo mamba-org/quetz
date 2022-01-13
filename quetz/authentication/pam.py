@@ -20,7 +20,8 @@ try:
 
         To enable add the following to your configuration file:
 
-        .. code::
+        .. code-block::
+
           [pamauthenticator]
           # name for the provider, used in the login URL
           provider = "pam"
@@ -32,12 +33,14 @@ try:
 
         On most Linux systems you can add users with:
 
-        .. code::
+        .. code-block::
+
           useradd USERNAME
           # set password interactively with
           passwd USERNAME
 
         .. note::
+
           For this authenticator to work, the user who runs the server must be root or
           be in ``shadow`` group.
         """
