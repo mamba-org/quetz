@@ -10,6 +10,10 @@ line_length = 88
 multi_line_output = 3
 include_trailing_comma = true
 
+[tool.jupyter-releaser.options]
+check-imports =
+  quetz
+
 [tool.tbump.version]
 current = "0.2.0"
 regex = '''
