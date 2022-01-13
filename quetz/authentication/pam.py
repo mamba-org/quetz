@@ -21,27 +21,24 @@ try:
         To enable add the following to your configuration file:
 
         .. code::
+          [pamauthenticator]
+          # name for the provider, used in the login URL
+          provider = "pam"
+          # use the following to translate the Unix groups that
+          # users might belong to user role on Quetz server
+          admin_groups = ["root", "quetz"]
+          maintainer_groups = []
+          user_groups = []
 
-        [pamauthenticator]
-        # name for the provider, used in the login URL
-        provider = "pam"
-        # use the following to translate the Unix groups that
-        # users might belong to user role on Quetz server
-        admin_groups = ["root", "quetz"]
-        maintainer_groups = []
-        user_groups = []
-
-        On most Linux systems you can add users with
+        On most Linux systems you can add users with:
 
         .. code::
+          useradd USERNAME
+          # set password interactively with
+          passwd USERNAME
 
-        useradd USERNAME
-        # set password interactively with
-        passwd USERNAME
-
-
-        Note: For this authenticator to work, the user who runs
-        the server must be root or be in ``shadow`` group.
+        .. note::
+          For this authenticator to work, the user who runs the server must be root or be in ``shadow`` group.
         """
 
         provider: str = 'pam'
