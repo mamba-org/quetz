@@ -5,6 +5,7 @@ quetz.sqlite
 xtensor/
 build
 dist/
+.jupyter_releaser_checkout/
 
 # Build files
 *.egg-info

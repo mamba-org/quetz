@@ -1,4 +1,38 @@
+include *.md
+include alembic.ini
+include dev_config.toml
+include environment.yml
+include init_db.py
+include .coveragerc
+include .flake8
+include .pre-commit-config.yaml
+include .readthedocs.yml
+include mypy.ini
+include download-test-package.sh
+
+recursive-include quetz/migrations *.*
+recursive-include quetz/tests *.*
+recursive-include quetz_db_ext *
+recursive-include quetz_frontend *.*
+
 graft quetz/basic_frontend
 include quetz/config.toml
 graft quetz/templates
-recursive-include quetz/migrations *.py
+
+recursive-exclude plugins *.*
+recursive-exclude quetz_client *.*
+
+exclude set_env_dev.sh
+exclude test-cli-client.sh
+exclude utils/repodata_compare.py
+
+include Dockerfile
+include docker-compose.yml
+recursive-include docker *
+
+recursive-include docs/source *.*
+recursive-include docs/assets *.*
+include docs/make.bat
+include docs/Makefile
+
+global-exclude *.py[cod]
