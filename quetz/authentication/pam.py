@@ -38,7 +38,8 @@ try:
           passwd USERNAME
 
         .. note::
-          For this authenticator to work, the user who runs the server must be root or be in ``shadow`` group.
+          For this authenticator to work, the user who runs the server must be root or
+          be in ``shadow`` group.
         """
 
         provider: str = 'pam'
