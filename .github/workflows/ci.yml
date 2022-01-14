@@ -76,13 +76,23 @@ jobs:
           pip install pytest-github-actions-annotate-failures
 
       - name: Testing server
+        shell: bash -l -eo pipefail {0}
+        env:
+          TEST_DB_BACKEND: ${{ matrix.test_database }}
+          QUETZ_TEST_DBINIT: ${{ matrix.db_init }}
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }}
+          S3_ACCESS_KEY: ${{ secrets.s3_access_key }}
+          S3_SECRET_KEY: ${{ secrets.s3_secret_key }}
+          S3_ENDPOINT: https://s3.sbg.cloud.ovh.net/
+          S3_REGION: sbg
         run: |
           if [ "$TEST_DB_BACKEND" == "postgres" ]; then
             export QUETZ_TEST_DATABASE="postgresql://postgres:mysecretpassword@${POSTGRES_HOST}:${POSTGRES_PORT}/postgres"
             echo "Running with postgres"
           fi
 
-          if [ "$QUETZ_TEST_DBINIT" == "use-migrations"]; then
+          if [ "$QUETZ_TEST_DBINIT" == "use-migrations" ]; then
             echo "Using migrations"
           fi
 
@@ -90,6 +100,16 @@ jobs:
           pytest -v ./quetz/tests/ --cov-config=.coveragerc --cov=. --cov-report=xml
 
       - name: Installing plugin ${{ matrix.plugin }}
+        shell: bash -l -eo pipefail {0}
+        env:
+          TEST_DB_BACKEND: ${{ matrix.test_database }}
+          QUETZ_TEST_DBINIT: ${{ matrix.db_init }}
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }}
+          S3_ACCESS_KEY: ${{ secrets.s3_access_key }}
+          S3_SECRET_KEY: ${{ secrets.s3_secret_key }}
+          S3_ENDPOINT: https://s3.sbg.cloud.ovh.net/
+          S3_REGION: sbg
         run: |
           # add micromamba to path
           export PATH=$(dirname $MAMBA_EXE):$PATH
