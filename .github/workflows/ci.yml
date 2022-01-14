@@ -15,6 +15,20 @@ jobs:
         os: [ubuntu-latest]
         test_database: ["sqlite", "postgres"]
         db_init: ["use-migrations", "create-tables"]
+        plugin:
+          [
+            "quetz_conda_suggest",
+            "quetz_content_trust",
+            "quetz_current_repodata",
+            "quetz_dictauthenticator",
+            "quetz_harverster",
+            "quetz_mamba_solve",
+            "quetz_repodata_patching",
+            "quetz_repodata_zchunk",
+            "quetz_runexports",
+            "quetz_tos",
+            "quetz_transmutation",
+          ]
     services:
       postgres:
         image: postgres
@@ -61,6 +75,8 @@ jobs:
           pip install redis rq
           pip install pytest-github-actions-annotate-failures
 
+      - name: Testing server
+        run: |
           if [ "$TEST_DB_BACKEND" == "postgres" ]; then
             export QUETZ_TEST_DATABASE="postgresql://postgres:mysecretpassword@${POSTGRES_HOST}:${POSTGRES_PORT}/postgres"
             echo "Running with postgres"
@@ -71,24 +87,19 @@ jobs:
           fi
 
           export QUETZ_IS_TEST=1
-
-          echo "testing server"
-
           pytest -v ./quetz/tests/ --cov-config=.coveragerc --cov=. --cov-report=xml
 
-          echo "install and test plugins"
-
+      - name: Installing plugin ${{ matrix.plugin }}
+        run: |
           # add micromamba to path
           export PATH=$(dirname $MAMBA_EXE):$PATH
           echo "adding micromamba to path: $MAMBA_EXE"
 
           pip install --no-deps git+https://git@github.com/regro/libcflib@master
-          for f in ./plugins/quetz_*
-          do
-            echo "Testing plugin" $f
-            quetz plugin install $f
-            pytest -v $f
-          done
+          
+          quetz plugin install ./plugins/${{ matrix.plugin}}
+          pytest -v ./plugins/${{ matrix.plugin }}
+
       - uses: codecov/codecov-action@v1
         with:
           verbose: true
@@ -101,14 +112,14 @@ jobs:
       contents: write
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.10'
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.10"
 
-    - name: Check Release
-      uses: jupyter-server/jupyter_releaser/.github/actions/check-release@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check Release
+        uses: jupyter-server/jupyter_releaser/.github/actions/check-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
