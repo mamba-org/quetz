@@ -164,12 +164,16 @@ pkgstore = config.get_package_store()
 
 
 builtin_authenticators: List[Type[BaseAuthenticator]] = [
-    auth_github.GithubAuthenticator,
-    auth_gitlab.GitlabAuthenticator,
-    auth_google.GoogleAuthenticator,
-    JupyterhubAuthenticator,
-    PAMAuthenticator,
-    AzureADAuthenticator,
+    authenticator
+    for authenticator in [
+        auth_github.GithubAuthenticator,
+        auth_gitlab.GitlabAuthenticator,
+        auth_google.GoogleAuthenticator,
+        JupyterhubAuthenticator,
+        PAMAuthenticator,
+        AzureADAuthenticator,
+    ]
+    if authenticator is not None
 ]
 
 plugin_authenticators: List[Type[BaseAuthenticator]] = [

@@ -57,40 +57,85 @@ jobs:
           S3_REGION: sbg
         run: |
           # install dev dependencies
-          pip install -e .[dev]
+          pip install -e .[all,dev]
           pip install redis rq
           pip install pytest-github-actions-annotate-failures
 
+      - name: Testing server
+        shell: bash -l -eo pipefail {0}
+        env:
+          TEST_DB_BACKEND: ${{ matrix.test_database }}
+          QUETZ_TEST_DBINIT: ${{ matrix.db_init }}
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }}
+          S3_ACCESS_KEY: ${{ secrets.s3_access_key }}
+          S3_SECRET_KEY: ${{ secrets.s3_secret_key }}
+          S3_ENDPOINT: https://s3.sbg.cloud.ovh.net/
+          S3_REGION: sbg
+        run: |
           if [ "$TEST_DB_BACKEND" == "postgres" ]; then
             export QUETZ_TEST_DATABASE="postgresql://postgres:mysecretpassword@${POSTGRES_HOST}:${POSTGRES_PORT}/postgres"
             echo "Running with postgres"
           fi
 
-          if [ "$QUETZ_TEST_DBINIT" == "use-migrations"]; then
+          if [ "$QUETZ_TEST_DBINIT" == "use-migrations" ]; then
             echo "Using migrations"
           fi
 
           export QUETZ_IS_TEST=1
-
-          echo "testing server"
-
           pytest -v ./quetz/tests/ --cov-config=.coveragerc --cov=. --cov-report=xml
 
-          echo "install and test plugins"
+      - name: Test the plugins
+        shell: bash -l -eo pipefail {0}
+        env:
+          TEST_DB_BACKEND: ${{ matrix.test_database }}
+          QUETZ_TEST_DBINIT: ${{ matrix.db_init }}
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }}
+          S3_ACCESS_KEY: ${{ secrets.s3_access_key }}
+          S3_SECRET_KEY: ${{ secrets.s3_secret_key }}
+          S3_ENDPOINT: https://s3.sbg.cloud.ovh.net/
+          S3_REGION: sbg
+        run: |
+          if [ "$TEST_DB_BACKEND" == "postgres" ]; then
+            export QUETZ_TEST_DATABASE="postgresql://postgres:mysecretpassword@${POSTGRES_HOST}:${POSTGRES_PORT}/postgres"
+            echo "Running with postgres"
+          fi
 
           # add micromamba to path
           export PATH=$(dirname $MAMBA_EXE):$PATH
           echo "adding micromamba to path: $MAMBA_EXE"
 
           pip install --no-deps git+https://git@github.com/regro/libcflib@master
+          
           for f in ./plugins/quetz_*
           do
-            echo "Testing plugin" $f
+            echo "::group::Testing plugin${f}"
             quetz plugin install $f
             pytest -v $f
+            echo "::endgroup::"
           done
+
       - uses: codecov/codecov-action@v1
         with:
           verbose: true
           file: ./coverage.xml
 
+  test_release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.10"
+
+      - name: Check Release
+        uses: jupyter-server/jupyter_releaser/.github/actions/check-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

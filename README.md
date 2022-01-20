@@ -26,7 +26,7 @@ It is built upon FastAPI with an API-first approach.
 A quetz server can have many users, channels and packages.
 With quetz, fine-grained permissions on channel and package-name level will be possible.
 
-Quetz also comes with the `quetz-client` that can be used to upload packages to a quetz server instance.
+Quetz has an optional client `quetz-client` that can be used to upload packages to a quetz server instance.
 
 ## Usage
 
