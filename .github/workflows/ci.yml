@@ -110,9 +110,10 @@ jobs:
           
           for f in ./plugins/quetz_*
           do
-            echo "Testing plugin" $f
+            echo "::group::Testing plugin${f}"
             quetz plugin install $f
             pytest -v $f
+            echo "::endgroup::"
           done
 
       - uses: codecov/codecov-action@v1
