@@ -15,20 +15,6 @@ jobs:
         os: [ubuntu-latest]
         test_database: ["sqlite", "postgres"]
         db_init: ["use-migrations", "create-tables"]
-        plugin:
-          [
-            "quetz_conda_suggest",
-            "quetz_content_trust",
-            "quetz_current_repodata",
-            "quetz_dictauthenticator",
-            "quetz_harverster",
-            "quetz_mamba_solve",
-            "quetz_repodata_patching",
-            "quetz_repodata_zchunk",
-            "quetz_runexports",
-            "quetz_tos",
-            "quetz_transmutation",
-          ]
     services:
       postgres:
         image: postgres
@@ -99,7 +85,7 @@ jobs:
           export QUETZ_IS_TEST=1
           pytest -v ./quetz/tests/ --cov-config=.coveragerc --cov=. --cov-report=xml
 
-      - name: Installing plugin ${{ matrix.plugin }}
+      - name: Test the plugins
         shell: bash -l -eo pipefail {0}
         env:
           TEST_DB_BACKEND: ${{ matrix.test_database }}
@@ -111,14 +97,23 @@ jobs:
           S3_ENDPOINT: https://s3.sbg.cloud.ovh.net/
           S3_REGION: sbg
         run: |
+          if [ "$TEST_DB_BACKEND" == "postgres" ]; then
+            export QUETZ_TEST_DATABASE="postgresql://postgres:mysecretpassword@${POSTGRES_HOST}:${POSTGRES_PORT}/postgres"
+            echo "Running with postgres"
+          fi
+
           # add micromamba to path
           export PATH=$(dirname $MAMBA_EXE):$PATH
           echo "adding micromamba to path: $MAMBA_EXE"
 
           pip install --no-deps git+https://git@github.com/regro/libcflib@master
           
-          quetz plugin install ./plugins/${{ matrix.plugin}}
-          pytest -v ./plugins/${{ matrix.plugin }}
+          for f in ./plugins/quetz_*
+          do
+            echo "Testing plugin" $f
+            quetz plugin install $f
+            pytest -v $f
+          done
 
       - uses: codecov/codecov-action@v1
         with:
