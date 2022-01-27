@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 
-
 if __name__ == "__main__":
     key_mgr_file = Path.cwd() / "test_quetz/channels/channel0/key_mgr.json"
 

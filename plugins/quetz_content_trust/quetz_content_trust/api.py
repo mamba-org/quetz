@@ -12,7 +12,6 @@ from quetz.database import get_db_manager
 from quetz.deps import get_rules
 
 from . import db_models
-from .rest_models import SigningKey
 
 router = APIRouter(tags=["content-trust"])
 
@@ -48,6 +47,7 @@ def post_role_file(file: Union[str, bytes], channel_name: str, builder: Callable
     file.file.seek(0, os.SEEK_END)
     file.file.seek(0)
 
+    role = None
     with file.file as f:
         role = assert_role(json.load(f), builder)
         file.file.seek(0)
@@ -92,48 +92,6 @@ def role_builder(
     return builder.get(role, wrong_role)
 
 
-@router.post("/api/content-trust/private-key")
-def post_pkg_mgr_private_key(
-    repodata_signing_key: SigningKey,
-    auth: authorization.Rules = Depends(get_rules),
-):
-    user_id = auth.assert_user()
-    channel_name = repodata_signing_key.channel
-    private_key = repodata_signing_key.private_key
-
-    with get_db_manager() as db:
-        pkg_mgr_key = db_models.RepodataSigningKey(
-            private_key=private_key, user_id=user_id, channel_name=channel_name
-        )
-        db.add(pkg_mgr_key)
-        db.commit()
-
-    return {"keys": [k.public_key for k in query]}
-
-
-@router.post("/api/content-trust/{channel}/claim", status_code=201)
-def post_claim_channel(
-    channel: str,
-    public_key: str = None,
-    auth: authorization.Rules = Depends(get_rules),
-) -> str:
-    auth.assert_user()
-    auth.assert_channel_roles(channel, ["owner"])
-
-    if not public_key:
-        public_key = get_generate_key(auth)["public_key"]
-
-    with get_db_manager() as db:
-        key = db_models.RepodataSigningKey(public_key=public_key)
-
-        claim = db_models.ContentTrustRole(
-            role="pkg_mgr", channel=channel, threshold=1, keys=[key]
-        )
-
-        db.merge(claim)
-        db.commit()
-
-
 @router.post("/api/content-trust/{channel}/roles", status_code=201, tags=["files"])
 def post_role(
     channel: str,
@@ -156,7 +114,8 @@ def post_role(
         if not force and existing_role_count:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"Content trust role '{type}' already exists for channel '{channel}'",
+                detail=f"Content trust role '{type}' already exists "
+                f"for channel '{channel}'",
             )
 
         def get_self_delegation(nullable: bool = False):
@@ -259,35 +218,3 @@ def get_new_key(secret: bool = False):
         res["secret"] = private_key
 
     return res
-
-
-@router.post("/api/content-trust/upload-key-mgr", status_code=201, tags=["files"])
-def post_key_mgr_to_channel(
-    key_mgr_file: UploadFile = File(...),
-    auth: authorization.Rules = Depends(get_rules),
-):
-    auth.assert_channel_roles(channel, ["member"])
-
-    with get_db_manager() as db:
-        print([q.type for q in db.query(db_models.RoleDelegation).all()])
-        print([q.delegator for q in db.query(db_models.RoleDelegation).all()])
-
-        query = (
-            db.query(db_models.RoleDelegation)
-            .filter(
-                db_models.RoleDelegation.type == type if type else True,
-            )
-            .join(db_models.ContentTrustRole.delegations)
-            .filter(db_models.ContentTrustRole.channel == channel)
-            .all()
-        )
-
-        if not query:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Role not found"
-            )
-
-        return {
-            r.type: {"keys": [k.public_key for k in r.keys], "threshold": r.threshold}
-            for r in query
-        }

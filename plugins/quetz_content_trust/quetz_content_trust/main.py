@@ -5,11 +5,9 @@ from sqlalchemy import desc
 
 import quetz
 from quetz.database import get_db_manager
-from quetz.utils import add_temp_static_file
 
 from . import db_models
 from .api import router
-from .repo_signer import RepoSigner
 
 logger = logging.getLogger("quetz")
 

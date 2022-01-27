@@ -35,15 +35,6 @@ def channel_role():
 
 
 @fixture
-def user(db, username):
-    user = User(id=uuid.uuid4().bytes, username=username)
-    db.add(user)
-    db.commit()
-
-    yield user
-
-
-@fixture
 def logged():
     yield True
 

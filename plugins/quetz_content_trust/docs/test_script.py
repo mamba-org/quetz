@@ -1,11 +1,11 @@
-from pathlib import Path
-from libmambapy import bindings as libmamba_api
-
-import os
-import requests
 import json
+import os
 import shutil
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+import requests
+from libmambapy import bindings as libmamba_api
 
 
 def offline_keys():
@@ -121,8 +121,6 @@ def pkg_mgr_role_file(test_data_dir, private_key, public_key):
 
     return filepath
 
-
-import os
 
 if __name__ == "__main__":
     keys = offline_keys()
