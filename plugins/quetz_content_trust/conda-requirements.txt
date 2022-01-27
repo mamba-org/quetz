@@ -1,2 +1,2 @@
-conda_content_trust
+conda-content-trust
 libmambapy
