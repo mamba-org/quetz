@@ -1,3 +1,4 @@
+from enum import unique
 import uuid
 
 from sqlalchemy import BigInteger, Column, Date, ForeignKey, String, Table, func
@@ -20,7 +21,9 @@ association_table = Table(
 class ContentTrustRole(Base):
     __tablename__ = 'content_trust_roles'
 
-    id = Column(UUID, primary_key=False, default=lambda: uuid.uuid4().bytes)
+    id = Column(
+        UUID, primary_key=False, unique=True, default=lambda: uuid.uuid4().bytes
+    )
     type = Column(String, nullable=False, primary_key=True)
     channel = Column(String, nullable=False, primary_key=True)
     version = Column(BigInteger, nullable=False, primary_key=True)
@@ -32,7 +35,6 @@ class ContentTrustRole(Base):
     delegations = relationship(
         "RoleDelegation",
         backref="issuer",
-        # primaryjoin="ContentTrustRole.id==RoleDelegation.delegator_id",
         foreign_keys="RoleDelegation.issuer_id",
         cascade="all, delete-orphan",
     )
