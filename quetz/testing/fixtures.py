@@ -129,8 +129,14 @@ def session_maker(sql_connection, create_tables, auto_rollback):
 
 
 @fixture
-def db(session_maker):
+def expires_on_commit():
+    return True
+
+
+@fixture
+def db(session_maker, expires_on_commit):
     session = session_maker()
+    session.expire_on_commit = expires_on_commit
     yield session
     session.close()
 

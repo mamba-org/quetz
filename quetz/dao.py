@@ -301,8 +301,8 @@ class Dao:
     def create_channel(
         self,
         data: rest_models.Channel,
-        user_id: Optional[bytes],
-        role: Optional[str],
+        user_id: Optional[bytes] = None,
+        role: Optional[str] = None,
         size_limit: Optional[int] = None,
     ):
         if '_' in data.name:
