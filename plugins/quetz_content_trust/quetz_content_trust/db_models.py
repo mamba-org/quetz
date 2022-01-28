@@ -1,5 +1,5 @@
-from enum import unique
 import uuid
+from enum import unique
 
 from sqlalchemy import BigInteger, Column, Date, ForeignKey, String, Table, func
 from sqlalchemy.orm import relationship
