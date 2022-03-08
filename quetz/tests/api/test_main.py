@@ -86,10 +86,10 @@ def test_get_channel_members(auth_client, public_channel, expected_code):
 @pytest.mark.parametrize(
     "role,expected_code",
     [
-        ("owner", 200),
-        ("maintainer", 200),
-        ("member", 200),
-        ("invalid", 403)
+        ("owner", 201),
+        ("maintainer", 201),
+        ("member", 201),
+        ("invalid", 422)
     ]
 )
 def test_post_channel_member(auth_client, public_channel, other_user, role, expected_code):
