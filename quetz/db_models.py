@@ -28,8 +28,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, column_property, relationship
 from sqlalchemy.schema import ForeignKeyConstraint
 
-from quetz.rest_models import T
-
 Base = declarative_base()
 
 UUID = LargeBinary(length=16)
