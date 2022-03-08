@@ -94,30 +94,30 @@ def test_get_channel_members(auth_client, public_channel, expected_code):
 )
 def test_post_channel_member(auth_client, public_channel, other_user, role, expected_code):
 
-    response = auth_client.post(f"/api/channels/{public_channel.name}/members", json={"username": other_user.name, "role": role})
+    response = auth_client.post(f"/api/channels/{public_channel.name}/members", json={"username": other_user.username, "role": role})
 
     assert response.status_code == expected_code
 
 
 def test_post_channel_member_without_profile(auth_client, public_channel, other_user_without_profile):
 
-    response = auth_client.post(f"/api/channels/{public_channel.name}/members", json={"username": other_user_without_profile.name, "role": "member"})
+    response = auth_client.post(f"/api/channels/{public_channel.name}/members", json={"username": other_user_without_profile.username, "role": "member"})
 
     assert response.status_code == 404
 
 
 def test_delete_channel_member(auth_client, public_channel, other_user):
 
-    auth_client.post(f"/api/channels/{public_channel.name}/members", json={"username": other_user.name, "role": "member"})
+    auth_client.post(f"/api/channels/{public_channel.name}/members", json={"username": other_user.username, "role": "member"})
 
-    response = auth_client.delete(f"/api/channels/{public_channel.name}/members", json={"username": other_user.name})
+    response = auth_client.delete(f"/api/channels/{public_channel.name}/members", json={"username": other_user.username})
 
     assert response.status_code == 200
 
 
 def test_delete_channel_member_no_member(auth_client, public_channel, other_user_without_profile):
 
-    response = auth_client.delete(f"/api/channels/{public_channel.name}/members", json={"username": other_user_without_profile.name})
+    response = auth_client.delete(f"/api/channels/{public_channel.name}/members", json={"username": other_user_without_profile.username})
 
     assert response.status_code == 404
 
