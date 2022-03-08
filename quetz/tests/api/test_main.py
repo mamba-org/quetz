@@ -82,6 +82,23 @@ def test_get_channel_members(auth_client, public_channel, expected_code):
     assert response.status_code == expected_code
 
 
+
+@pytest.mark.parametrize(
+    "username,role,expected_code",
+    [
+        ("test-owner", "owner", 200),
+        ("test-maintainer", "maintainer", 200),
+        ("test-member", "member", 200),
+        ("test-invalid", "invalid", 403)
+    ]
+)
+def test_post_channel_member(auth_client, public_channel, username, role, expected_code):
+
+    response = auth_client.post(f"/api/channels/{public_channel.name}/members", json={"username": username, "role": role})
+
+    assert response.status_code == expected_code
+
+
 def test_upload_wrong_file_type(auth_client, public_channel):
     files = {"files": ("my_package-0.1-0.tar.bz", "dfdf")}
     response = auth_client.post(
