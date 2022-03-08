@@ -916,12 +916,19 @@ def post_channel_member(
     new_member: rest_models.PostMember,
     channel: db_models.Channel = Depends(get_channel_or_fail),
     dao: Dao = Depends(get_dao),
+    db=Depends(get_db),
     auth: authorization.Rules = Depends(get_rules),
 ):
 
     auth.assert_add_channel_member(channel.name, new_member.role)
 
-    dao.create_channel_member(channel.name, new_member)
+    channel_member = dao.get_channel_member(channel.name, new_member.username)
+
+    if channel_member:
+        channel_member.role = new_member.role
+        db.commit()
+    else:
+        dao.create_channel_member(channel.name, new_member)
 
 
 @api_router.delete("/channels/{channel_name}/members", tags=["channels"])
