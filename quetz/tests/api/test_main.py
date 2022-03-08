@@ -100,9 +100,9 @@ def test_post_channel_member(auth_client, public_channel, other_user, role, expe
     assert response.status_code == expected_code
 
 
-def test_post_channel_member_without_profile(auth_client, public_channel, other_user_without_profile):
+def test_post_channel_member_unknown_user(auth_client, public_channel):
 
-    response = auth_client.post(f"/api/channels/{public_channel.name}/members", json={"username": other_user_without_profile.username, "role": "member"})
+    response = auth_client.post(f"/api/channels/{public_channel.name}/members", json={"username": "unknown-user", "role": "member"})
 
     assert response.status_code == 404
 
