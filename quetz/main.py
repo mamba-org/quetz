@@ -922,6 +922,12 @@ def post_channel_member(
 
     auth.assert_add_channel_member(channel.name, new_member.role)
 
+    if not dao.get_user_by_username(new_member.username):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"user {new_member.username} not found",
+        )
+
     channel_member = dao.get_channel_member(channel.name, new_member.username)
 
     if channel_member:
