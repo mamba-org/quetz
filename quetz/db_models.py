@@ -28,6 +28,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, column_property, relationship
 from sqlalchemy.schema import ForeignKeyConstraint
 
+from quetz.rest_models import T
+
 Base = declarative_base()
 
 UUID = LargeBinary(length=16)
@@ -122,7 +124,7 @@ class ChannelMember(Base):
         String, ForeignKey('channels.name'), primary_key=True, index=True
     )
     user_id = Column(UUID, ForeignKey('users.id'), primary_key=True, index=True)
-    role = Column(String)
+    role = Column(String, nullable=True)
 
     channel = relationship(
         'Channel', backref=backref("channel_members", cascade="all,delete-orphan")
