@@ -938,7 +938,7 @@ def post_channel_member(
 
 
 @api_router.delete("/channels/{channel_name}/members", tags=["channels"])
-def delete_package_version(
+def delete_channel_member(
     username: str,
     channel: db_models.Channel = Depends(get_channel_or_fail),
     dao: Dao = Depends(get_dao),
