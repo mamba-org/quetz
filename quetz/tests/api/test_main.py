@@ -99,6 +99,13 @@ def test_post_channel_member(auth_client, public_channel, other_user, role, expe
     assert response.status_code == expected_code
 
 
+def test_post_channel_member_without_profile(auth_client, public_channel, other_user_without_profile):
+
+    response = auth_client.post(f"/api/channels/{public_channel.name}/members", json={"username": other_user_without_profile.name, "role": "member"})
+
+    assert response.status_code == 404
+
+
 def test_upload_wrong_file_type(auth_client, public_channel):
     files = {"files": ("my_package-0.1-0.tar.bz", "dfdf")}
     response = auth_client.post(
