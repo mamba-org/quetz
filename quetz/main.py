@@ -920,7 +920,6 @@ def post_channel_member(
     auth: authorization.Rules = Depends(get_rules),
 ):
 
-    auth.assert_add_channel_member(channel.name, new_member.role)
 
     if not dao.get_user_by_username(new_member.username):
         raise HTTPException(
@@ -928,7 +927,10 @@ def post_channel_member(
             detail=f"user {new_member.username} not found",
         )
 
+    auth.assert_list_channel_members(channel.name)
     channel_member = dao.get_channel_member(channel.name, new_member.username)
+
+    auth.assert_add_channel_member(channel.name, new_member.role)
 
     if channel_member:
         channel_member.role = new_member.role
