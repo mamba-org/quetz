@@ -84,17 +84,17 @@ def test_get_channel_members(auth_client, public_channel, expected_code):
 
 
 @pytest.mark.parametrize(
-    "username,role,expected_code",
+    "role,expected_code",
     [
-        ("test-owner", "owner", 200),
-        ("test-maintainer", "maintainer", 200),
-        ("test-member", "member", 200),
-        ("test-invalid", "invalid", 403)
+        ("owner", 200),
+        ("maintainer", 200),
+        ("member", 200),
+        ("invalid", 403)
     ]
 )
-def test_post_channel_member(auth_client, public_channel, username, role, expected_code):
+def test_post_channel_member(auth_client, public_channel, other_user, role, expected_code):
 
-    response = auth_client.post(f"/api/channels/{public_channel.name}/members", json={"username": username, "role": role})
+    response = auth_client.post(f"/api/channels/{public_channel.name}/members", json={"username": other_user.name, "role": role})
 
     assert response.status_code == expected_code
 
