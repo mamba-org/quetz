@@ -921,13 +921,6 @@ def post_channel_member(
 
     auth.assert_add_channel_member(channel.name, new_member.role)
 
-    channel_member = dao.get_channel_member(channel.name, new_member.username)
-    if channel_member:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Member {new_member.username} in {channel.name} exists",
-        )
-
     dao.create_channel_member(channel.name, new_member)
 
 
