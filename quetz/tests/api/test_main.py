@@ -82,7 +82,6 @@ def test_get_channel_members(auth_client, public_channel, expected_code):
     assert response.status_code == expected_code
 
 
-
 @pytest.mark.parametrize(
     "role,expected_code",
     [
@@ -90,34 +89,51 @@ def test_get_channel_members(auth_client, public_channel, expected_code):
         ("maintainer", 201),
         ("member", 201),
         ("invalid", 422),
-    ]
+    ],
 )
-def test_post_channel_member(auth_client, public_channel, other_user, role, expected_code):
+def test_post_channel_member(
+    auth_client, public_channel, other_user, role, expected_code
+):
 
-    response = auth_client.post(f"/api/channels/{public_channel.name}/members", json={"username": other_user.username, "role": role})
+    response = auth_client.post(
+        f"/api/channels/{public_channel.name}/members",
+        json={"username": other_user.username, "role": role},
+    )
 
     assert response.status_code == expected_code
 
 
 def test_post_channel_member_unknown_user(auth_client, public_channel):
 
-    response = auth_client.post(f"/api/channels/{public_channel.name}/members", json={"username": "unknown-user", "role": "member"})
+    response = auth_client.post(
+        f"/api/channels/{public_channel.name}/members",
+        json={"username": "unknown-user", "role": "member"},
+    )
 
     assert response.status_code == 404
 
 
 def test_delete_channel_member(auth_client, public_channel, other_user):
 
-    auth_client.post(f"/api/channels/{public_channel.name}/members", json={"username": other_user.username, "role": "member"})
+    auth_client.post(
+        f"/api/channels/{public_channel.name}/members",
+        json={"username": other_user.username, "role": "member"},
+    )
 
-    response = auth_client.delete(f"/api/channels/{public_channel.name}/members", params={"username": other_user.username})
+    response = auth_client.delete(
+        f"/api/channels/{public_channel.name}/members",
+        params={"username": other_user.username},
+    )
 
     assert response.status_code == 200
 
 
 def test_delete_channel_member_no_member(auth_client, public_channel, other_user):
 
-    response = auth_client.delete(f"/api/channels/{public_channel.name}/members", params={"username": other_user.username})
+    response = auth_client.delete(
+        f"/api/channels/{public_channel.name}/members",
+        params={"username": other_user.username},
+    )
 
     assert response.status_code == 404
 

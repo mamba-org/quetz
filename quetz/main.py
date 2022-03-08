@@ -920,7 +920,6 @@ def post_channel_member(
     auth: authorization.Rules = Depends(get_rules),
 ):
 
-
     if not dao.get_user_by_username(new_member.username):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
