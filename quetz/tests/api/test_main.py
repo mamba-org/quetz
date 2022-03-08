@@ -106,6 +106,22 @@ def test_post_channel_member_without_profile(auth_client, public_channel, other_
     assert response.status_code == 404
 
 
+def test_delete_channel_member(auth_client, public_channel, other_user):
+
+    auth_client.post(f"/api/channels/{public_channel.name}/members", json={"username": other_user.name, "role": "member"})
+
+    response = auth_client.delete(f"/api/channels/{public_channel.name}/members", json={"username": other_user.name})
+
+    assert response.status_code == 200
+
+
+def test_delete_channel_member_no_member(auth_client, public_channel, other_user_without_profile):
+
+    response = auth_client.delete(f"/api/channels/{public_channel.name}/members", json={"username": other_user_without_profile.name})
+
+    assert response.status_code == 404
+
+
 def test_upload_wrong_file_type(auth_client, public_channel):
     files = {"files": ("my_package-0.1-0.tar.bz", "dfdf")}
     response = auth_client.post(
