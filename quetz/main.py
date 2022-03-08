@@ -924,6 +924,30 @@ def post_channel_member(
     dao.create_channel_member(channel.name, new_member)
 
 
+@api_router.delete("/channels/{channel_name}/members", tags=["channels"])
+def delete_package_version(
+    username: str,
+    channel: db_models.Channel = Depends(get_channel_or_fail),
+    dao: Dao = Depends(get_dao),
+    db=Depends(get_db),
+    auth: authorization.Rules = Depends(get_rules),
+):
+
+    auth.assert_list_channel_members(channel.name)
+    channel_member = dao.get_channel_member(channel.name, username)
+
+    if not channel_member:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"channel member {username}/{channel.name} not found",
+        )
+
+    auth.assert_remove_channel_member(channel.name, channel_member.role)
+
+    db.delete(channel_member)
+    db.commit()
+
+
 @api_router.get(
     "/channels/{channel_name}/packages/{package_name}/members",
     response_model=List[rest_models.Member],
