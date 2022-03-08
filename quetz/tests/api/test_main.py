@@ -115,9 +115,9 @@ def test_delete_channel_member(auth_client, public_channel, other_user):
     assert response.status_code == 200
 
 
-def test_delete_channel_member_no_member(auth_client, public_channel, other_user_without_profile):
+def test_delete_channel_member_no_member(auth_client, public_channel, other_user):
 
-    response = auth_client.delete(f"/api/channels/{public_channel.name}/members", params={"username": other_user_without_profile.username})
+    response = auth_client.delete(f"/api/channels/{public_channel.name}/members", params={"username": other_user.username})
 
     assert response.status_code == 404
 
