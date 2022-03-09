@@ -122,7 +122,7 @@ class ChannelMember(Base):
         String, ForeignKey('channels.name'), primary_key=True, index=True
     )
     user_id = Column(UUID, ForeignKey('users.id'), primary_key=True, index=True)
-    role = Column(String, nullable=True)
+    role = Column(String)
 
     channel = relationship(
         'Channel', backref=backref("channel_members", cascade="all,delete-orphan")

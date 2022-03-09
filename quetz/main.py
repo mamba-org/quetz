@@ -896,7 +896,6 @@ def post_package(
 
 @api_router.get(
     "/channels/{channel_name}/members",
-    response_model=List[rest_models.Member],
     tags=["channels"],
 )
 def get_channel_members(
@@ -908,7 +907,13 @@ def get_channel_members(
     auth.assert_list_channel_members(channel.name)
     member_list = dao.get_channel_members(channel.name)
 
-    return member_list
+    return [
+        rest_models.PostMember(
+            username=member.user.username,
+            role=member.role,
+        )
+        for member in member_list
+    ]
 
 
 @api_router.post("/channels/{channel_name}/members", status_code=201, tags=["channels"])
