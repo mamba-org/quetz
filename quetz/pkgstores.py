@@ -558,10 +558,12 @@ class GoogleCloudStorageStore(PackageStore):
 
         self.project = config.get("project")
         self.token = config.get("token")
+        self.cache_timeout = config.get("cache_timeout")
 
         self.fs = gcsfs.GCSFileSystem(
             project=self.project,
             token=self.token if self.token else None,
+            cache_timeout=self.cache_timeout,
         )
 
         self.bucket_prefix = config['bucket_prefix']

@@ -162,6 +162,7 @@ class Config:
                 ConfigEntry("token", str, default=""),
                 ConfigEntry("bucket_prefix", str, default=""),
                 ConfigEntry("bucket_suffix", str, default=""),
+                ConfigEntry("cache_timeout", int, default=None),
             ],
             required=False,
         ),
@@ -403,6 +404,7 @@ class Config:
                     'token': self.gcs_token,
                     'bucket_prefix': self.gcs_bucket_prefix,
                     'bucket_suffix': self.gcs_bucket_suffix,
+                    'cache_timeout': self.gcs_cache_timeout,
                 }
             )
         else:
