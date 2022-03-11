@@ -236,7 +236,7 @@ def test_private_channels(data, client):
     assert response.status_code == 200
     assert len(response.json()) == 2
     assert ('role', data.channel_member.role) in response.json()[0].items()
-    assert response.json()[0]['username'] == data.usera.username
+    assert response.json()[0]['user']['id'] == str(uuid.UUID(bytes=data.usera.id))
 
     # Package #
 

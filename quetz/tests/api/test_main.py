@@ -102,6 +102,16 @@ def test_post_channel_member(
 
     assert response.status_code == expected_code
 
+    if expected_code == 201:
+        response = auth_client.get(f"/api/channels/{public_channel.name}/members")
+        response.raise_for_status()
+        for element in response.json():
+            if element["user"]["username"] == other_user.username:
+                assert element["role"] == role
+                break
+        else:
+            raise RuntimeError(f"User '{other_user.username}' not found.")
+
 
 def test_post_channel_member_unknown_user(auth_client, public_channel):
 
