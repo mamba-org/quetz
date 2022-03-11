@@ -42,15 +42,15 @@ class User(BaseUser):
 Profile.update_forward_refs()
 
 
+Role = Field(None, regex='owner|maintainer|member')
+
+
 class Member(BaseModel):
-    role: str
+    role: str = Role
     user: User
 
     class Config:
         orm_mode = True
-
-
-Role = Field(None, regex='owner|maintainer|member')
 
 
 class Pagination(BaseModel):

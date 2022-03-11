@@ -916,19 +916,56 @@ def post_channel_member(
     new_member: rest_models.PostMember,
     channel: db_models.Channel = Depends(get_channel_or_fail),
     dao: Dao = Depends(get_dao),
+    db=Depends(get_db),
     auth: authorization.Rules = Depends(get_rules),
 ):
 
-    auth.assert_add_channel_member(channel.name, new_member.role)
-
-    channel_member = dao.get_channel_member(channel.name, new_member.username)
-    if channel_member:
+    if not dao.get_user_by_username(new_member.username):
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Member {new_member.username} in {channel.name} exists",
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"user {new_member.username} not found",
         )
 
-    dao.create_channel_member(channel.name, new_member)
+    auth.assert_list_channel_members(channel.name)
+    channel_member = dao.get_channel_member(channel.name, new_member.username)
+
+    auth.assert_add_channel_member(channel.name, new_member.role)
+
+    if channel_member:
+        channel_member.role = new_member.role
+        db.commit()
+    else:
+        dao.create_channel_member(channel.name, new_member)
+
+
+@api_router.delete("/channels/{channel_name}/members", tags=["channels"])
+def delete_channel_member(
+    username: str,
+    channel: db_models.Channel = Depends(get_channel_or_fail),
+    dao: Dao = Depends(get_dao),
+    db=Depends(get_db),
+    auth: authorization.Rules = Depends(get_rules),
+):
+
+    if not dao.get_user_by_username(username):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"user {username} not found",
+        )
+
+    auth.assert_list_channel_members(channel.name)
+    channel_member = dao.get_channel_member(channel.name, username)
+
+    if not channel_member:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"user {username} is not a member of channel {channel.name}",
+        )
+
+    auth.assert_remove_channel_member(channel.name, channel_member.role)
+
+    db.delete(channel_member)
+    db.commit()
 
 
 @api_router.get(

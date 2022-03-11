@@ -82,6 +82,72 @@ def test_get_channel_members(auth_client, public_channel, expected_code):
     assert response.status_code == expected_code
 
 
+@pytest.mark.parametrize(
+    "role,expected_code",
+    [
+        ("owner", 201),
+        ("maintainer", 201),
+        ("member", 201),
+        ("invalid", 422),
+    ],
+)
+def test_post_channel_member(
+    auth_client, public_channel, other_user, role, expected_code
+):
+
+    response = auth_client.post(
+        f"/api/channels/{public_channel.name}/members",
+        json={"username": other_user.username, "role": role},
+    )
+
+    assert response.status_code == expected_code
+
+    if expected_code == 201:
+        response = auth_client.get(f"/api/channels/{public_channel.name}/members")
+        response.raise_for_status()
+        for element in response.json():
+            if element["user"]["username"] == other_user.username:
+                assert element["role"] == role
+                break
+        else:
+            raise RuntimeError(f"User '{other_user.username}' not found.")
+
+
+def test_post_channel_member_unknown_user(auth_client, public_channel):
+
+    response = auth_client.post(
+        f"/api/channels/{public_channel.name}/members",
+        json={"username": "unknown-user", "role": "member"},
+    )
+
+    assert response.status_code == 404
+
+
+def test_delete_channel_member(auth_client, public_channel, other_user):
+
+    auth_client.post(
+        f"/api/channels/{public_channel.name}/members",
+        json={"username": other_user.username, "role": "member"},
+    )
+
+    response = auth_client.delete(
+        f"/api/channels/{public_channel.name}/members",
+        params={"username": other_user.username},
+    )
+
+    assert response.status_code == 200
+
+
+def test_delete_channel_member_no_member(auth_client, public_channel, other_user):
+
+    response = auth_client.delete(
+        f"/api/channels/{public_channel.name}/members",
+        params={"username": other_user.username},
+    )
+
+    assert response.status_code == 404
+
+
 def test_upload_wrong_file_type(auth_client, public_channel):
     files = {"files": ("my_package-0.1-0.tar.bz", "dfdf")}
     response = auth_client.post(
