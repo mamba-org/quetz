@@ -61,7 +61,7 @@
     components: {
       UserAvatar20
     },
-    name: 'Header',
+    name: 'HeaderComponent',
     data() {
       return {
         yourName: '',
