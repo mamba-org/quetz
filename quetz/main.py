@@ -947,13 +947,19 @@ def delete_channel_member(
     auth: authorization.Rules = Depends(get_rules),
 ):
 
+    if not dao.get_user_by_username(username):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"user {username} not found",
+        )
+
     auth.assert_list_channel_members(channel.name)
     channel_member = dao.get_channel_member(channel.name, username)
 
     if not channel_member:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"channel member {username}/{channel.name} not found",
+            detail=f"user {username} is not a member of channel {channel.name}",
         )
 
     auth.assert_remove_channel_member(channel.name, channel_member.role)
