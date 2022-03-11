@@ -27,7 +27,7 @@ dependencies:
   - alembic
   - zchunk
   - s3fs
-  - gcsfs >=2021.10.1
+  - gcsfs >=2022.02
   - sphinx
   - sphinx-book-theme
   - tenacity
