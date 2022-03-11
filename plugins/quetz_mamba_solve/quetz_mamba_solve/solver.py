@@ -1,4 +1,3 @@
-import os
 import tempfile
 
 import libmambapy
@@ -6,7 +5,7 @@ from conda.base.context import context
 from conda.common.serialize import json_dump
 from conda.core.index import _supplement_index_with_system
 from conda_build.conda_interface import pkgs_dirs
-from mamba.utils import get_index, load_channels
+from mamba.utils import load_channels
 
 
 def get_virtual_packages():
@@ -44,40 +43,12 @@ class MambaSolver:
             self.pool, self.channels, self.repos, platform=platform
         )
 
+        # TODO this is wrong...
         if platform == context.subdir:
             installed_json_f = get_virtual_packages()
             repo = libmambapy.Repo(self.pool, "installed", installed_json_f.name, "")
             repo.set_installed()
             self.repos.append(repo)
-
-        self.local_index = []
-        self.local_repos = {}
-        # load local repo, too
-        self.replace_channels()
-
-    def replace_channels(self):
-        self.local_index = get_index(
-            (self.output_folder,), platform=self.platform, prepend=False
-        )
-
-        for _, v in self.local_repos.items():
-            v.clear(True)
-
-        start_prio = len(self.channels) + len(self.index)
-        for subdir, channel in self.local_index:
-            if not subdir.loaded():
-                continue
-
-            cp = subdir.cache_path()
-            if cp.endswith(".solv"):
-                os.remove(subdir.cache_path())
-                cp = cp.replace(".solv", ".json")
-
-            self.local_repos[str(channel)] = libmambapy.Repo(
-                self.pool, str(channel), cp, channel.url(with_credentials=True)
-            )
-            self.local_repos[str(channel)].set_priority(start_prio, 0)
-            start_prio -= 1
 
     def solve(self, specs, pkg_cache_path=pkgs_dirs):
         """Solve given a set of specs.
@@ -113,6 +84,6 @@ class MambaSolver:
             exit(1)
 
         package_cache = libmambapy.MultiPackageCache(pkg_cache_path)
-        t = libmambapy.Transaction(api_solver, package_cache)
+        t = libmambapy.Transaction(api_solver, package_cache, self.repos)
 
         return t
