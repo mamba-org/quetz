@@ -135,6 +135,9 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: install missing dependency
+        run: pip install ipython_genutils
+
       - name: Check Release
         uses: jupyter-server/jupyter_releaser/.github/actions/check-release@v1
         with:
