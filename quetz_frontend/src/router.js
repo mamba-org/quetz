@@ -1,19 +1,19 @@
 import Vue from 'vue';
 import Router from 'vue-router';
-
-import Channels from './views/Channels.vue';
-import Users from './views/Users.vue';
-import ApiKeys from './views/ApiKeys';
-import Packages from './views/Packages';
-import Package from './views/Package';
-import Jobs from './views/Jobs';
-import Tasks from './views/Tasks';
-
-import Header from './components/Header';
-
 import CarbonComponentsVue from '@carbon/vue';
-Vue.use(CarbonComponentsVue);
 
+import ChannelsView from './views/ChannelsView';
+import UsersView from './views/UsersView';
+import ApiKeysView from './views/ApiKeysView';
+import PackagesView from './views/PackagesView';
+import PackageView from './views/PackageView';
+import JobsView from './views/JobsView';
+import TasksView from './views/TasksView';
+
+import HeaderComponent from './components/HeaderComponent';
+
+
+Vue.use(CarbonComponentsVue);
 Vue.use(Router);
 
 export default new Router({
@@ -21,48 +21,47 @@ export default new Router({
     {
       path: '/channels',
       name: 'channels',
-      component: Channels
+      component: ChannelsView
     },
     {
       path: '/',
       name: 'root_channels',
-      component: Channels
+      component: ChannelsView
     },
     {
       path: '/users',
       name: 'users',
-      component: Users
+      component: UsersView
     },
     {
       path: '/api-keys',
       name: 'api-keys',
-      component: ApiKeys
+      component: ApiKeysView
     },
     {
       path: '/channel/:channel_id/packages',
       name: 'packages',
-      component: Packages
+      component: PackagesView
     },
     {
       path: '/jobs/',
       name: 'jobs',
-      component: Jobs
+      component: JobsView
     },
     {
       path: '/jobs/:job_id',
       name: 'tasks',
-      component: Tasks
+      component: TasksView
     },
     {
       path: '/channel/:channel_id/packages/:package',
       name: 'package',
-      component: Package
+      component: PackageView
     },
     {
       path: '/header',
       name: 'header',
-      component: Header
-    }
-  ],
-  mode: 'history'
+      component: HeaderComponent
+    }],
+    mode: 'history'
 });
