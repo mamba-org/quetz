@@ -2,6 +2,9 @@
 requires = ["setuptools>=41", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.pytest.ini_options]
+asyncio_mode="strict"
+
 [tool.black]
 skip-string-normalization = true
 
