@@ -7,7 +7,7 @@ from quetz.dao import Dao
 from quetz.tasks.workers import job_wrapper
 
 
-class TestWorker:
+class MockWorker:
     "synchronous worker for testing"
 
     def __init__(

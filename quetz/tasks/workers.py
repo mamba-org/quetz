@@ -260,7 +260,7 @@ class FutureJob(AbstractJob):
 
     async def wait(self, waittime=0.1):
         while not self.done:
-            asyncio.sleep(waittime)
+            await asyncio.sleep(waittime)
         if self.status == "failed":
             raise self._future.exception()
 

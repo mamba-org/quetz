@@ -46,7 +46,12 @@ def user(db, user_without_profile):
 
     yield user_without_profile
 
-    db.delete(profile)
+    db.query(Profile).filter(
+        Profile.name == profile.name,
+        Profile.avatar_url == profile.avatar_url,
+        Profile.user_id == user_without_profile.id,
+    ).delete()
+
     db.commit()
 
 

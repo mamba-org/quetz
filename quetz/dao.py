@@ -99,6 +99,8 @@ class Upsert(Insert):
     incr: increment
     """
 
+    inherit_cache = False
+
     def __init__(self, table, values, index_elements, column, incr=1):
         self.values = values
         self.index_elements = index_elements
@@ -802,6 +804,7 @@ class Dao:
             .with_for_update()
             .filter(Package.channel_name == channel_name)
             .filter(Package.name == package_name)
+            .join(PackageVersion)
             .filter(PackageVersion.package_format == package_format)
             .filter(PackageVersion.platform == platform)
         ).first()

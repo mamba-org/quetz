@@ -39,7 +39,7 @@ class AuthenticatorRegistry:
         )
 
         if len(self.enabled_authenticators) > 1:
-            logger.warn(
+            logger.warning(
                 "You have registered multiple authentication providers."
                 "Please note that this is currently discouraged in production setups!"
             )
