@@ -18,7 +18,7 @@ from quetz.condainfo import CondaInfo
 from quetz.config import Config
 from quetz.jobs.models import Job
 from quetz.jobs.runner import Supervisor
-from quetz.testing.mockups import TestWorker
+from quetz.testing.mockups import MockWorker
 
 
 @pytest.fixture
@@ -135,7 +135,7 @@ def test_permissions_channel_endpoints(
 @pytest.fixture
 def sync_supervisor(db, dao, config):
     "supervisor with synchronous test worker"
-    manager = TestWorker(config, db, dao)
+    manager = MockWorker(config, db, dao)
     supervisor = Supervisor(db, manager)
     return supervisor
 

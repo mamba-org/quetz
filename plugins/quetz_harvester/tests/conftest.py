@@ -10,7 +10,7 @@ from quetz.dao import Dao
 from quetz.db_models import ApiKey, Profile, User
 from quetz.jobs.runner import Supervisor
 from quetz.rest_models import Channel, Package
-from quetz.testing.mockups import TestWorker
+from quetz.testing.mockups import MockWorker
 
 pytest_plugins = "quetz.testing.fixtures"
 
@@ -51,7 +51,7 @@ def auth_client(client, user):
 
 @pytest.fixture
 def supervisor(config, db, dao):
-    manager = TestWorker(config, db, dao)
+    manager = MockWorker(config, db, dao)
     supervisor = Supervisor(db, manager)
     return supervisor
 

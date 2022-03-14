@@ -24,12 +24,12 @@ from quetz.tasks.mirror import (
     handle_repodata_package,
     initial_sync_mirror,
 )
-from quetz.testing.mockups import TestWorker
+from quetz.testing.mockups import MockWorker
 
 
 @pytest.fixture
 def job_supervisor(db, config, dao, dummy_remote_session_object):
-    manager = TestWorker(config, db, dao, dummy_remote_session_object)
+    manager = MockWorker(config, db, dao, dummy_remote_session_object)
     supervisor = Supervisor(db, manager)
     return supervisor
 

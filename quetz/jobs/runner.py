@@ -22,6 +22,7 @@ logger = logging.getLogger('quetz.tasks')
 
 
 class any_true(FunctionElement):
+    inherit_cache = True
     name = "anytrue"
     type = Boolean()
 
@@ -37,6 +38,7 @@ def pg_any(element, compiler, **kw):
 
 
 class all_true(FunctionElement):
+    inherit_cache = True
     name = "alltrue"
     type = Boolean()
 

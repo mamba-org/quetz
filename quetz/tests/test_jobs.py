@@ -16,7 +16,7 @@ from quetz.jobs.models import Job, JobStatus, Task, TaskStatus
 from quetz.jobs.runner import Supervisor, mk_sql_expr, parse_conda_spec
 from quetz.rest_models import Channel, Package
 from quetz.tasks.workers import SubprocessWorker
-from quetz.testing.mockups import TestWorker
+from quetz.testing.mockups import MockWorker
 
 pytest_plugins = ("pytest_asyncio",)
 
@@ -891,7 +891,7 @@ def package_version_job(db, user, package_version):
 @pytest.fixture
 def sync_supervisor(db, dao, config):
     "supervisor with synchronous test worker"
-    manager = TestWorker(config, db, dao)
+    manager = MockWorker(config, db, dao)
     supervisor = Supervisor(db, manager)
     return supervisor
 

@@ -124,9 +124,8 @@ class ChannelMember(Base):
     user_id = Column(UUID, ForeignKey('users.id'), primary_key=True, index=True)
     role = Column(String)
 
-    channel = relationship(
-        'Channel', backref=backref("channel_members", cascade="all,delete-orphan")
-    )
+    channel = relationship('Channel', back_populates="members")
+
     user = relationship(
         'User', backref=backref("channel_members", cascade="all,delete-orphan")
     )
@@ -210,9 +209,9 @@ class Channel(Base):
     mirrors = relationship("ChannelMirror", cascade="all, delete", uselist=True)
 
     members_count = column_property(
-        select([func.count(ChannelMember.user_id)]).where(
-            ChannelMember.channel_name == name
-        ),
+        select([func.count(ChannelMember.user_id)])
+        .where(ChannelMember.channel_name == name)
+        .scalar_subquery(),  # type: ignore
         deferred=True,
     )
 
@@ -224,7 +223,9 @@ class Channel(Base):
             return {}
 
     packages_count = column_property(
-        select([func.count(Package.name)]).where(Package.channel_name == name),
+        select([func.count(Package.name)])
+        .where(Package.channel_name == name)
+        .scalar_subquery(),  # type: ignore
         deferred=True,
     )
 
@@ -263,9 +264,11 @@ class PackageMember(Base):
         'Package',
         backref=backref("members", cascade="all,delete"),
         primaryjoin="and_(Package.name == foreign(PackageMember.package_name),"
-        "Package.channel_name == Channel.name)",
+        "Package.channel_name == PackageMember.channel_name)",
     )
-    channel = relationship('Channel')
+    channel = relationship(
+        'Channel', backref=backref("package_members", cascade="all,delete")
+    )
     user = relationship('User', backref=backref("packages", cascade="all,delete"))
 
     def __repr__(self):

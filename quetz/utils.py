@@ -162,7 +162,8 @@ def apply_custom_query(search_type, db, keywords, filters):
                         f'%{each_keyword}%'
                     )
         keyword_conditions.append(each_keyword_condition)
-    query = db.filter(and_(*keyword_conditions))
+
+    query = db.filter(and_(True, *keyword_conditions))
 
     for each_filter in filters:
         key, values = each_filter

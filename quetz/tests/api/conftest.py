@@ -5,7 +5,7 @@ import pytest
 
 from quetz.config import Config
 from quetz.dao import Dao
-from quetz.db_models import Identity, Profile, User
+from quetz.db_models import Identity, PackageVersion, Profile, User
 from quetz.rest_models import Channel, Package
 
 
@@ -128,7 +128,7 @@ def make_package_version(
     yield _make_package_version
 
     for version in versions:
-        db.delete(version)
+        db.query(PackageVersion).filter(PackageVersion.id == version.id).delete()
     db.commit()
 
 
