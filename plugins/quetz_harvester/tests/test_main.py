@@ -1,9 +1,16 @@
+import sys
 from pathlib import Path
+
+import pytest
 
 from quetz.db_models import PackageVersion
 from quetz.jobs.models import Job, Task, TaskStatus
 
 
+@pytest.mark.skipif(
+    sys.version_info >= (3, 10),
+    reason="xonsh pinning used by libcflib not compatible with python 3.10",
+)
 def test_harvest_endpoint_and_job(
     api_key, auth_client, db, config, supervisor, package_version, app, channel_name
 ):

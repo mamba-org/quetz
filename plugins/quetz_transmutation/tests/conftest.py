@@ -57,14 +57,6 @@ def api_key(db, user):
 
 
 @pytest.fixture
-def auth_client(client, user):
-    """authenticated client"""
-    response = client.get(f"/api/dummylogin/{user.username}")
-    assert response.status_code == 200
-    return client
-
-
-@pytest.fixture
 def supervisor(config, db):
     manager = SubprocessWorker(config)
     supervisor = Supervisor(db, manager)
