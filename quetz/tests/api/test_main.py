@@ -1,9 +1,37 @@
 import datetime
+import io
 from unittest.mock import ANY
 
 import pytest
 
 from quetz.metrics.db_models import PackageVersionMetric
+from quetz.tasks.indexing import update_indexes
+
+
+def test_index_html(package_version, channel_name, client, mocker):
+    def serve_path(channel_name, path):
+        if path.endswith("index.html"):
+            return io.BytesIO(b"index.html content")
+        else:
+            raise IsADirectoryError
+
+    pkgstore = mocker.Mock()
+    pkgstore.get_filemetadata.return_value = (0, 0, "")
+    pkgstore.url.side_effect = lambda chan, p: f"{chan}/{p}"
+    pkgstore.serve_path.side_effect = serve_path
+    mocker.patch("quetz.main.pkgstore", pkgstore)
+
+    for url in [
+        f"/get/{channel_name}",
+        f"/get/{channel_name}/",
+        f"/get/{channel_name}/index.html",
+        f"/get/{channel_name}/linux-64",
+        f"/get/{channel_name}/linux-64/",
+        f"/get/{channel_name}/linux-64/index.html",
+    ]:
+        response = client.get(url, allow_redirects=False)
+        assert response.status_code == 200
+        assert response.text == "index.html content"
 
 
 def test_get_package_list(package_version, package_name, channel_name, client):

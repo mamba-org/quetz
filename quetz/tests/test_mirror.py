@@ -459,7 +459,6 @@ def test_synchronisation_sha(
     n_new_packages,
     arch,
     package_version,
-    mocker,
 ):
     pkgstore = config.get_package_store()
     rules = Rules("", {"user_id": str(uuid.UUID(bytes=user.id))}, db)
@@ -521,7 +520,6 @@ def test_synchronisation_no_checksums_in_db(
     n_new_packages,
     arch,
     package_version,
-    mocker,
 ):
 
     package_info = '{"size": 5000, "subdirs":["noarch"]}'
@@ -562,7 +560,15 @@ def test_synchronisation_no_checksums_in_db(
     assert len(versions) == n_new_packages + 1
 
 
-def test_download_remote_file(client, owner, dummy_repo):
+@pytest.fixture(params=[True, False])
+def main_pkgstore_redirect(request, config, monkeypatch):
+    from quetz import main
+
+    monkeypatch.setattr(main.pkgstore, "redirect_enabled", request.param)
+    return request.param
+
+
+def test_download_remote_file(client, owner, dummy_repo, main_pkgstore_redirect):
     """Test downloading from cache."""
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -605,7 +611,9 @@ def test_download_remote_file(client, owner, dummy_repo):
     assert dummy_repo == [("http://host/test_file_2.txt")]
 
 
-def test_download_remote_file_in_parallel(client, owner, dummy_repo):
+def test_download_remote_file_in_parallel(
+    client, owner, dummy_repo, main_pkgstore_redirect
+):
     """Test downloading in parallel."""
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -636,7 +644,7 @@ def test_download_remote_file_in_parallel(client, owner, dummy_repo):
     assert dummy_repo == [(f"http://host/{test_file}")]
 
 
-def test_proxy_repodata_cached(client, owner, dummy_repo):
+def test_proxy_repodata_cached(client, owner, dummy_repo, main_pkgstore_redirect):
     """Test downloading from cache."""
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -652,13 +660,15 @@ def test_proxy_repodata_cached(client, owner, dummy_repo):
     )
     assert response.status_code == 201
 
-    response = client.get("/get/proxy-channel-2/repodata.json")
-    assert response.status_code == 200
-    assert response.content == b"Hello world!"
-
-    response = client.get("/get/proxy-channel-2/repodata.json")
-    assert response.status_code == 200
-    assert response.content == b"Hello world!"
+    for i in range(2):
+        response = client.get(
+            "/get/proxy-channel-2/repodata.json", allow_redirects=False
+        )
+        if main_pkgstore_redirect:
+            assert 300 <= response.status_code < 400
+        else:
+            assert response.status_code == 200
+            assert response.content == b"Hello world!"
 
     # repodata.json was cached locally and downloaded from the
     # the remote only once
@@ -674,7 +684,9 @@ def test_method_not_implemented_for_proxies(client, proxy_channel):
     assert "not implemented" in response.json()["detail"]
 
 
-def test_api_methods_for_mirror_channels(client, mirror_channel):
+def test_api_methods_for_mirror_channels(
+    client, mirror_channel, main_pkgstore_redirect
+):
     """mirror-mode channels should have all standard API calls"""
 
     response = client.get("/api/channels/{}/packages".format(mirror_channel.name))
@@ -683,9 +695,13 @@ def test_api_methods_for_mirror_channels(client, mirror_channel):
 
     response = client.get(
         "/get/{}/missing/path/file.json".format(mirror_channel.name),
+        allow_redirects=False,
     )
-    assert response.status_code == 404
-    assert "file.json not found" in response.json()["detail"]
+    if main_pkgstore_redirect:
+        assert 300 <= response.status_code < 400
+    else:
+        assert response.status_code == 404
+        assert "file.json not found" in response.json()["detail"]
 
 
 @pytest.mark.parametrize(
@@ -820,7 +836,9 @@ empty_archive = b""
         ]
     ],
 )
-def test_wrong_package_format(client, dummy_repo, owner, job_supervisor):
+def test_wrong_package_format(
+    client, dummy_repo, owner, job_supervisor, main_pkgstore_redirect
+):
 
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -1062,7 +1080,7 @@ def test_includelist_and_excludelist_mirror_channel(owner, client):
 
 
 @pytest.mark.parametrize("mirror_mode", ["proxy", "mirror"])
-def test_proxylist_mirror_channel(owner, client, mirror_mode):
+def test_proxylist_mirror_channel(owner, client, mirror_mode, main_pkgstore_redirect):
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 

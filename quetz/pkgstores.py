@@ -572,8 +572,6 @@ class GoogleCloudStorageStore(PackageStore):
 
     @property
     def support_redirect(self):
-        # `gcsfs` currently doesnt support signing yet. Once this is implemented we
-        # can enable this again.
         return True
 
     @contextlib.contextmanager

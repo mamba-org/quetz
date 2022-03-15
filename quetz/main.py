@@ -1608,10 +1608,8 @@ def serve_path(
     session=Depends(get_remote_session),
     dao: Dao = Depends(get_dao),
 ):
-
-    chunk_size = 10_000
-
     is_package_request = path.endswith((".tar.bz2", ".conda"))
+    is_repodata_request = path.endswith(".json")
 
     package_name = None
     if is_package_request:
@@ -1630,65 +1628,74 @@ def serve_path(
         except ValueError:
             pass
 
+    # if we exclude the package from syncing, redirect to original URL
     if is_package_request and channel.mirror_channel_url:
-        # if we exclude the package from syncing, redirect to original URL
         channel_proxylist = json.loads(channel.channel_metadata).get('proxylist', [])
         if channel_proxylist and package_name and package_name in channel_proxylist:
             return RedirectResponse(f"{channel.mirror_channel_url}/{path}")
 
+    fsize = fmtime = fetag = None
+
     if channel.mirror_channel_url and channel.mirror_mode == "proxy":
         repository = RemoteRepository(channel.mirror_channel_url, session)
-        if not pkgstore.file_exists(channel.name, path):
+        if is_repodata_request:
+            # Invalidate repodata.json and current_repodata.json after channel.ttl seconds
+            try:
+                fsize, fmtime, fetag = pkgstore.get_filemetadata(channel.name, path)
+                cache_miss = time.time() - fmtime >= channel.ttl
+            except FileNotFoundError:
+                cache_miss = True
+        else:
+            cache_miss = not pkgstore.file_exists(channel.name, path)
+        if cache_miss:
             download_remote_file(repository, pkgstore, channel.name, path)
-        elif path.endswith(".json"):
-            # repodata.json and current_repodata.json are cached locally
-            # for channel.ttl seconds
-            _, fmtime, _ = pkgstore.get_filemetadata(channel.name, path)
-            if time.time() - fmtime >= channel.ttl:
-                download_remote_file(repository, pkgstore, channel.name, path)
+            fsize = fmtime = fetag = None
 
-    if (
-        is_package_request or pkgstore.kind == "LocalStore"
-    ) and pkgstore.support_redirect:
-        return RedirectResponse(pkgstore.url(channel.name, path))
+    gzip_exists = (
+        is_repodata_request
+        and accept_encoding
+        and 'gzip' in accept_encoding
+        and pkgstore.file_exists(channel.name, path + ".gz")
+    )
 
-    def iter_chunks(fid):
-        while True:
-            data = fid.read(chunk_size)
-            if not data:
-                break
-            yield data
+    # Redirect response
+    if (is_package_request or is_repodata_request) and pkgstore.support_redirect:
+        return RedirectResponse(
+            pkgstore.url(channel.name, path + ".gz" if gzip_exists else path)
+        )
 
-    if path == "" or path.endswith("/"):
-        path += "index.html"
-    package_content_iter = None
-
-    headers = {}
-    if accept_encoding and 'gzip' in accept_encoding and path.endswith('.json'):
-        # return gzipped response
+    # Streaming response
+    def serve_file(path):
         try:
-            package_content_iter = iter_chunks(
-                pkgstore.serve_path(channel.name, path + '.gz')
-            )
-            path += '.gz'
-            headers['Content-Encoding'] = 'gzip'
-            headers['Content-Type'] = 'application/json'
-        except FileNotFoundError:
-            pass
-
-    while not package_content_iter:
-        try:
-            package_content_iter = iter_chunks(pkgstore.serve_path(channel.name, path))
-
+            return pkgstore.serve_path(channel.name, path)
         except FileNotFoundError:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"{channel.name}/{path} not found",
             )
-        except IsADirectoryError:
-            path += "/index.html"
 
-    fsize, fmtime, fetag = pkgstore.get_filemetadata(channel.name, path)
+    if gzip_exists:
+        path += '.gz'
+        package_content = serve_file(path)
+        headers = {
+            'Content-Encoding': 'gzip',
+            'Content-Type': 'application/json',
+        }
+    else:
+        if path == "" or path.endswith("/"):
+            path += "index.html"
+            package_content = serve_file(path)
+        else:
+            try:
+                package_content = serve_file(path)
+            except IsADirectoryError:
+                path += "/index.html"
+                package_content = serve_file(path)
+        headers = {}
+
+    if fsize is None:
+        # Maybe we already got (fsize, fmtime, fetag) above
+        fsize, fmtime, fetag = pkgstore.get_filemetadata(channel.name, path)
     headers.update(
         {
             'Cache-Control': f'max-age={channel.ttl}',
@@ -1697,6 +1704,8 @@ def serve_path(
             'ETag': fetag,
         }
     )
+    chunk_size = 10_000
+    package_content_iter = iter(lambda: package_content.read(chunk_size), b"")
     return StreamingResponse(package_content_iter, headers=headers)
 
 
