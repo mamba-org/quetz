@@ -3,7 +3,7 @@ name: docker build and push
 on:
   push:
     branches:
-      - master
+      - main
     tags:
       - '**'
 
@@ -14,7 +14,7 @@ jobs:
       IMAGE_NAME: mambaorg/quetz
     steps:
       - name: Set Docker image for main branch
-        if: ${{ github.ref == 'refs/heads/master' }}
+        if: ${{ github.ref == 'refs/heads/main' }}
         run: echo "DOCKER_IMAGES=${IMAGE_NAME}:latest" >> $GITHUB_ENV
 
       - name: Set Docker image for tag
