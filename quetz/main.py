@@ -1651,37 +1651,38 @@ def serve_path(
             download_remote_file(repository, pkgstore, channel.name, path)
             fsize = fmtime = fetag = None
 
-    gzip_exists = (
-        is_repodata_request
-        and accept_encoding
-        and 'gzip' in accept_encoding
-        and pkgstore.file_exists(channel.name, path + ".gz")
-    )
-
     # Redirect response
     if (is_package_request or is_repodata_request) and pkgstore.support_redirect:
-        return RedirectResponse(
-            pkgstore.url(channel.name, path + ".gz" if gzip_exists else path)
-        )
+        return RedirectResponse(pkgstore.url(channel.name, path))
 
     # Streaming response
-    def serve_file(path):
+    if is_repodata_request and accept_encoding and 'gzip' in accept_encoding:
+        # return gzipped response
         try:
-            return pkgstore.serve_path(channel.name, path)
+            package_content = pkgstore.serve_path(channel.name, path + ".gz")
+            have_gzip = True
         except FileNotFoundError:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"{channel.name}/{path} not found",
-            )
+            have_gzip = False
+    else:
+        have_gzip = False
 
-    if gzip_exists:
+    if have_gzip:
         path += '.gz'
-        package_content = serve_file(path)
         headers = {
             'Content-Encoding': 'gzip',
             'Content-Type': 'application/json',
         }
     else:
+
+        def serve_file(path):
+            try:
+                return pkgstore.serve_path(channel.name, path)
+            except FileNotFoundError:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"{channel.name}/{path} not found",
+                )
+
         if path == "" or path.endswith("/"):
             path += "index.html"
             package_content = serve_file(path)
@@ -1693,7 +1694,7 @@ def serve_path(
                 package_content = serve_file(path)
         headers = {}
 
-    if fsize is None:
+    if fsize is None or fetag is None or fmtime is None:  # check all for mypy
         # Maybe we already got (fsize, fmtime, fetag) above
         fsize, fmtime, fetag = pkgstore.get_filemetadata(channel.name, path)
     headers.update(

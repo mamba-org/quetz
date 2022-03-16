@@ -5,7 +5,6 @@ from unittest.mock import ANY
 import pytest
 
 from quetz.metrics.db_models import PackageVersionMetric
-from quetz.tasks.indexing import update_indexes
 
 
 def test_index_html(package_version, channel_name, client, mocker):
