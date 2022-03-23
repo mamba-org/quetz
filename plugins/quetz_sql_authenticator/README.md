@@ -4,7 +4,7 @@ An authenticator that stores credentials as sha256-hashed values in a SQL databa
 
 ### Dependencies
 
-This plugin has `sqlmodel` as an additional dependency.
+This plugin has `sqlmodel` and `passlib` as an additional dependencies.
 Also, you might need certain database drivers, like `psycopg2`, depending on what SQL backend you use.
 
 ### Installation

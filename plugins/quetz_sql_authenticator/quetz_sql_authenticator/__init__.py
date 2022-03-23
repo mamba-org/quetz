@@ -1,11 +1,10 @@
-import secrets
-
+from passlib.hash import pbkdf2_sha256
 from sqlmodel import Session, create_engine, select
 
 from quetz.authentication.base import SimpleAuthenticator
 from quetz.config import Config, ConfigEntry, ConfigSection
 
-from .utils import Credentials, calculate_hash
+from .utils import Credentials
 
 
 class UsernameNotFound(RuntimeError):
@@ -61,5 +60,5 @@ class SQLAuthenticator(SimpleAuthenticator):
                 password_hashed = _get_password_hashed(data["username"], session)
             except UsernameNotFound:
                 password_hashed = ""
-        if secrets.compare_digest(calculate_hash(data["password"]), password_hashed):
+        if pbkdf2_sha256.verify(data["password"], password_hashed):
             return data["username"]

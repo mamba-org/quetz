@@ -1,10 +1,16 @@
 import os
 
 import click
+from passlib.hash import pbkdf2_sha256
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlmodel import Session, SQLModel, create_engine, select
 
-from .utils import Credentials, calculate_hash
+from .utils import Credentials
+
+
+def calculate_hash(value: str) -> str:
+    """Calculate hash from value."""
+    return pbkdf2_sha256.hash(value)
 
 
 @click.group()
