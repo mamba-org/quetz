@@ -12,13 +12,13 @@ class UsernameNotFound(RuntimeError):
     """Error that is thrown when the username is not found."""
 
 
-def _get_password_hashed(username_hashed: str, session: Session) -> str:
+def _get_password_hashed(username: str, session: Session) -> str:
     result = session.exec(
-        select(Credentials).where(Credentials.username == username_hashed)
+        select(Credentials).where(Credentials.username == username)
     ).first()
     if result:
         return result.password
-    raise UsernameNotFound(username_hashed)
+    raise UsernameNotFound(username)
 
 
 _CONFIG_NAME = "sql_authenticator"
@@ -58,9 +58,7 @@ class SQLAuthenticator(SimpleAuthenticator):
         """Authenticate."""
         with Session(self._engine) as session:
             try:
-                password_hashed = _get_password_hashed(
-                    calculate_hash(data["username"]), session
-                )
+                password_hashed = _get_password_hashed(data["username"], session)
             except UsernameNotFound:
                 password_hashed = ""
         if secrets.compare_digest(calculate_hash(data["password"]), password_hashed):

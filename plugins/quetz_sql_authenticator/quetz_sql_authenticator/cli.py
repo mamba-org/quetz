@@ -21,9 +21,7 @@ def _cli():
     default=os.environ.get("QUETZ_SQL_AUTHENTICATOR_DATABASE_URL"),
 )
 def _create(username: str, password: str, database_url: str) -> None:
-    credentials = Credentials(
-        username=calculate_hash(username), password=calculate_hash(password)
-    )
+    credentials = Credentials(username=username, password=calculate_hash(password))
     with Session(create_engine(database_url)) as session:
         try:
             session.add(credentials)
@@ -43,9 +41,7 @@ def _create(username: str, password: str, database_url: str) -> None:
     default=os.environ.get("QUETZ_SQL_AUTHENTICATOR_DATABASE_URL"),
 )
 def _update(username: str, password: str, database_url: str) -> None:
-    statement = select(Credentials).where(
-        Credentials.username == calculate_hash(username)
-    )
+    statement = select(Credentials).where(Credentials.username == username)
     with Session(create_engine(database_url)) as session:
         try:
             credentials = session.exec(statement).one()
@@ -65,9 +61,7 @@ def _update(username: str, password: str, database_url: str) -> None:
     default=os.environ.get("QUETZ_SQL_AUTHENTICATOR_DATABASE_URL"),
 )
 def _delete(username: str, database_url: str) -> None:
-    statement = select(Credentials).where(
-        Credentials.username == calculate_hash(username)
-    )
+    statement = select(Credentials).where(Credentials.username == username)
     with Session(create_engine(database_url)) as session:
         try:
             credentials = session.exec(statement).one()
