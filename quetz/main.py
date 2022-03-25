@@ -1602,11 +1602,12 @@ async def stop_sync_donwload_counts():
 @app.head("/get/{channel_name}/{path:path}")
 @app.get("/get/{channel_name}/{path:path}")
 def serve_path(
-    path,
+    path: str,
     channel: db_models.Channel = Depends(get_channel_allow_proxy),
     accept_encoding: Optional[str] = Header(None),
-    session=Depends(get_remote_session),
+    session: dict = Depends(get_remote_session),
     dao: Dao = Depends(get_dao),
+    content_type: Optional[str] = Header(None),
 ):
     is_package_request = path.endswith((".tar.bz2", ".conda"))
     is_repodata_request = path.endswith(".json")
@@ -1653,7 +1654,9 @@ def serve_path(
 
     # Redirect response
     if (is_package_request or is_repodata_request) and pkgstore.support_redirect:
-        return RedirectResponse(pkgstore.url(channel.name, path))
+        return RedirectResponse(
+            pkgstore.url(channel.name, path, content_type=content_type)
+        )
 
     # Streaming response
     if is_repodata_request and accept_encoding and 'gzip' in accept_encoding:

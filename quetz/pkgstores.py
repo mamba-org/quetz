@@ -15,7 +15,7 @@ import tempfile
 from contextlib import contextmanager
 from os import PathLike
 from threading import Lock
-from typing import IO, BinaryIO, List, NoReturn, Tuple, Union
+from typing import IO, BinaryIO, List, NoReturn, Optional, Tuple, Union
 
 import fsspec
 from tenacity import retry, retry_if_exception_type, stop_after_attempt
@@ -73,7 +73,7 @@ class PackageStore(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def url(self, channel: str, src: str, expires: int = 0) -> str:
+    def url(self, channel: str, src: str, expires: int = 0, content_type=None) -> str:
         pass
 
     @abc.abstractmethod
@@ -199,7 +199,11 @@ class LocalStore(PackageStore):
         channel_dir = os.path.join(self.channels_dir, channel)
         return [os.path.relpath(f, channel_dir) for f in self.fs.find(channel_dir)]
 
-    def url(self, channel: str, src: str, expires=0):
+    def url(
+        self, channel: str, src: str, expires=0, content_type: Optional[str] = None
+    ):
+        # Note: content_type is ignored because it's not needed
+
         if self.redirect_enabled:
             # generate url + secret if necessary
             if self.redirect_secret:
@@ -376,7 +380,11 @@ class S3Store(PackageStore):
         with self._get_fs() as fs:
             return [remove_prefix(f, channel_bucket) for f in fs.find(channel_bucket)]
 
-    def url(self, channel: str, src: str, expires=3600):
+    def url(
+        self, channel: str, src: str, expires=3600, content_type: Optional[str] = None
+    ):
+        if content_type is not None:
+            raise NotImplementedError("'content_type' is not supported for S3")
         # expires is in seconds, so the default is 60 minutes!
         with self._get_fs() as fs:
             return fs.url(path.join(self._bucket_map(channel), src), expires)
@@ -517,9 +525,12 @@ class AzureBlobStore(PackageStore):
                 remove_prefix(f, channel_container) for f in fs.find(channel_container)
             ]
 
-    def url(self, channel: str, src: str, expires=3600):
+    def url(
+        self, channel: str, src: str, expires=3600, content_type: Optional[str] = None
+    ):
         # expires is in seconds, so the default is 60 minutes!
         with self._get_fs() as fs:
+            # Note: content_type is ignored because it's not needed
             return fs.url(path.join(self._container_map(channel), src), expires)
 
     def get_filemetadata(self, channel: str, src: str):
@@ -666,7 +677,7 @@ class GoogleCloudStorageStore(PackageStore):
                 remove_prefix(f, channel_container) for f in fs.find(channel_container)
             ]
 
-    def url(self, channel: str, src: str, expires=3600):
+    def url(self, channel: str, src: str, expires=3600, content_type=None):
         # expires is in seconds, so the default is 60 minutes!
         with self._get_fs() as fs:
             expiration_timestamp = (
@@ -674,7 +685,9 @@ class GoogleCloudStorageStore(PackageStore):
                 + expires
             )
             redirect_url = fs.sign(
-                path.join(self._bucket_map(channel), src), expiration_timestamp
+                path.join(self._bucket_map(channel), src),
+                expiration_timestamp,
+                content_type=content_type,
             )
             return redirect_url
 

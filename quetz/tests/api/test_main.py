@@ -16,7 +16,7 @@ def test_index_html(package_version, channel_name, client, mocker):
 
     pkgstore = mocker.Mock()
     pkgstore.get_filemetadata.return_value = (0, 0, "")
-    pkgstore.url.side_effect = lambda chan, p: f"{chan}/{p}"
+    pkgstore.url.side_effect = lambda chan, p, **ignored: f"{chan}/{p}"
     pkgstore.serve_path.side_effect = serve_path
     mocker.patch("quetz.main.pkgstore", pkgstore)
 
