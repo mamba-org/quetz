@@ -2,7 +2,6 @@ import os
 
 import click
 from passlib.hash import pbkdf2_sha256
-from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from .utils import Credentials
@@ -29,13 +28,9 @@ def _cli():
 def _create(username: str, password: str, database_url: str) -> None:
     credentials = Credentials(username=username, password=calculate_hash(password))
     with Session(create_engine(database_url)) as session:
-        try:
-            session.add(credentials)
-            session.commit()
-        except IntegrityError:
-            click.echo(f"ERROR: User '{username}' already exists.")
-        else:
-            click.echo(f"INFO: User '{username}' created successfully.")
+        session.add(credentials)
+        session.commit()
+    click.echo(f"INFO: User '{username}' created successfully.")
 
 
 @_cli.command("update")
@@ -49,14 +44,10 @@ def _create(username: str, password: str, database_url: str) -> None:
 def _update(username: str, password: str, database_url: str) -> None:
     statement = select(Credentials).where(Credentials.username == username)
     with Session(create_engine(database_url)) as session:
-        try:
-            credentials = session.exec(statement).one()
-        except NoResultFound:
-            click.echo(f"ERROR: User '{username}' not found.")
-        else:
-            credentials.password = calculate_hash(password)
-            session.commit()
-            click.echo(f"INFO: User '{username}' successfully updated.")
+        credentials = session.exec(statement).one()
+        credentials.password = calculate_hash(password)
+        session.commit()
+    click.echo(f"INFO: User '{username}' successfully updated.")
 
 
 @_cli.command("delete")
@@ -69,14 +60,10 @@ def _update(username: str, password: str, database_url: str) -> None:
 def _delete(username: str, database_url: str) -> None:
     statement = select(Credentials).where(Credentials.username == username)
     with Session(create_engine(database_url)) as session:
-        try:
-            credentials = session.exec(statement).one()
-        except NoResultFound:
-            click.echo(f"ERROR: User '{username}' not found.")
-        else:
-            session.delete(credentials)
-            session.commit()
-            click.echo(f"INFO: User '{username}' successfully deleted.")
+        credentials = session.exec(statement).one()
+        session.delete(credentials)
+        session.commit()
+    click.echo(f"INFO: User '{username}' successfully deleted.")
 
 
 @_cli.command("reset")
