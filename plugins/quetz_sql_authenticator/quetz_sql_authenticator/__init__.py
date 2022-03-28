@@ -59,6 +59,6 @@ class SQLAuthenticator(SimpleAuthenticator):
             try:
                 password_hashed = _get_password_hashed(data["username"], session)
             except UsernameNotFound:
-                password_hashed = ""
+                return
         if pbkdf2_sha256.verify(data["password"], password_hashed):
             return data["username"]
