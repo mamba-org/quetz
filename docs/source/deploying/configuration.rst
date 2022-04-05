@@ -163,14 +163,14 @@ Quetz can store packages in Google Cloud Storage. To configure, use the followin
     bucket_prefix="..."
     bucket_suffix="..."
     cache_timeout="..."
-    bucket_location="..."
+    region="..."
 
 :project: The Google Cloud Project ID to work under
 :token: A token to pass the `gcsfs`. See the `gcsfs documention <https://gcsfs.readthedocs.io/en/latest/index.html#credentials>`_ for valid values.
 :bucket_prefix:
 :bucket_suffix: channel buckets on GCS are created with the following semantics: ``{bucket_prefix}{channel_name}{bucket_suffix}``
 :cache_timeout: Timeout in s after which local GCS cache entries are invalidated. Set to a value <=0 to disable caching completely. Default is that entries are never invalidated.
-:bucket_location: Location where new buckets are created. You can find a list of available locations here: https://cloud.google.com/storage/docs/locations#available-locations.
+:region: Location where new buckets are created. You can find a list of available locations here: https://cloud.google.com/storage/docs/locations#available-locations.
 
 ``local_store`` section
 ^^^^^^^^^^^^^^^^^^^^^^^
