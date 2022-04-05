@@ -163,6 +163,7 @@ class Config:
                 ConfigEntry("bucket_prefix", str, default=""),
                 ConfigEntry("bucket_suffix", str, default=""),
                 ConfigEntry("cache_timeout", int, default=None),
+                ConfigEntry("bucket_location", str, default=None),
             ],
             required=False,
         ),
@@ -405,6 +406,7 @@ class Config:
                     'bucket_prefix': self.gcs_bucket_prefix,
                     'bucket_suffix': self.gcs_bucket_suffix,
                     'cache_timeout': self.gcs_cache_timeout,
+                    'bucket_location': self.bucket_location,
                 }
             )
         else:
