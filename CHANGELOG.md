@@ -2,6 +2,28 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## 0.4.1
+
+([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.4.0...bd2d1fc0a8c99d90662645b9bf485f940ae06e8a))
+
+### Enhancements made
+
+- Make GCS bucket location configurable [#512](https://github.com/mamba-org/quetz/pull/512) ([@janjagusch](https://github.com/janjagusch))
+
+### Maintenance and upkeep improvements
+
+- Fix CI [#513](https://github.com/mamba-org/quetz/pull/513) ([@janjagusch](https://github.com/janjagusch))
+- small test refactor, skip harvester tests on python 3.10 [#505](https://github.com/mamba-org/quetz/pull/505) ([@wolfv](https://github.com/wolfv))
+- Unpin h2 [#500](https://github.com/mamba-org/quetz/pull/500) ([@janjagusch](https://github.com/janjagusch))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2022-03-14&to=2022-04-06&type=c))
+
+[@codecov-commenter](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Acodecov-commenter+updated%3A2022-03-14..2022-04-06&type=Issues) | [@janjagusch](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ajanjagusch+updated%3A2022-03-14..2022-04-06&type=Issues) | [@wolfv](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Awolfv+updated%3A2022-03-14..2022-04-06&type=Issues)
+
+<!-- <END NEW CHANGELOG ENTRY> -->
+
 ## 0.4.0
 
 ([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.3.0...5f2832c0b39ef56c44c17a0460bc876ae350fae8))
@@ -38,5 +60,3 @@
 ([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2022-02-04&to=2022-03-14&type=c))
 
 [@codecov-commenter](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Acodecov-commenter+updated%3A2022-02-04..2022-03-14&type=Issues) | [@dependabot](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Adependabot+updated%3A2022-02-04..2022-03-14&type=Issues) | [@janjagusch](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ajanjagusch+updated%3A2022-02-04..2022-03-14&type=Issues) | [@SophieHallstedtQC](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3ASophieHallstedtQC+updated%3A2022-02-04..2022-03-14&type=Issues) | [@wolfv](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Awolfv+updated%3A2022-02-04..2022-03-14&type=Issues)
-
-<!-- <END NEW CHANGELOG ENTRY> -->
