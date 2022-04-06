@@ -6,7 +6,7 @@ dependencies:
   - pip
   - fastapi
   - typer
-  - authlib
+  - authlib=0.15.5
   - psycopg2
   - httpx=0.20.0
   - sqlalchemy
