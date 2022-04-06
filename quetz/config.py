@@ -406,7 +406,7 @@ class Config:
                     'bucket_prefix': self.gcs_bucket_prefix,
                     'bucket_suffix': self.gcs_bucket_suffix,
                     'cache_timeout': self.gcs_cache_timeout,
-                    'region': self.region,
+                    'region': self.gcs_region,
                 }
             )
         else:
