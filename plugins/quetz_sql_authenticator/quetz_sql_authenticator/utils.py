@@ -1,8 +1,10 @@
-from sqlmodel import Field, SQLModel
+from sqlalchemy import Column, String
+
+from quetz.db_models import Base
 
 
-class Credentials(SQLModel, table=True):  # type: ignore
-    """Table for storing username and password, sha-256 hashed."""
+class Credentials(Base):
+    __tablename__ = "credentials"
 
-    username: str = Field(primary_key=True)
-    password: str
+    username = Column("username", String, primary_key=True)
+    password = Column("password", String)
