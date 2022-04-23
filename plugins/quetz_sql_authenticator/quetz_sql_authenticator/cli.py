@@ -4,7 +4,7 @@ import click
 from passlib.hash import pbkdf2_sha256
 from sqlmodel import Session, SQLModel, create_engine, select
 
-from .utils import Credentials
+from .db_models import Credentials
 
 
 def calculate_hash(value: str) -> str:

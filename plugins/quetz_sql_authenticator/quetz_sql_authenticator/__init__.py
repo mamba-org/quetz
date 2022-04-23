@@ -4,7 +4,7 @@ from sqlmodel import Session, create_engine, select
 from quetz.authentication.base import SimpleAuthenticator
 from quetz.config import Config, ConfigEntry, ConfigSection
 
-from .utils import Credentials
+from .db_models import Credentials
 
 
 class UsernameNotFound(RuntimeError):
