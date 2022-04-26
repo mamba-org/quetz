@@ -387,7 +387,7 @@ class S3Store(PackageStore):
             infodata = fs.info(filepath)
 
             mtime = infodata['LastModified'].timestamp()
-            msize = infodata['Size']
+            msize = infodata['size']
             etag = infodata['ETag']
 
             return (msize, mtime, etag)
