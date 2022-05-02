@@ -87,7 +87,12 @@ from quetz.rest_models import ChannelActionEnum, CPRole
 from quetz.tasks import indexing
 from quetz.tasks.common import Task
 from quetz.tasks.mirror import RemoteRepository, download_remote_file
-from quetz.utils import TicToc, generate_random_key, parse_query
+from quetz.utils import (
+    TicToc,
+    background_task_wrapper,
+    generate_random_key,
+    parse_query,
+)
 
 from .condainfo import CondaInfo
 
@@ -1298,8 +1303,9 @@ def post_file_to_channel(
 
     dao.update_channel_size(channel.name)
 
+    wrapped_bg_task = background_task_wrapper(indexing.update_indexes, logger)
     # Background task to update indexes
-    background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel.name)
+    background_tasks.add_task(wrapped_bg_task, dao, pkgstore, channel.name)
 
 
 @retry(

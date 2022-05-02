@@ -5,12 +5,19 @@ import bz2
 import distutils
 import gzip
 import hashlib
+import inspect
+import logging
 import secrets
 import shlex
 import string
+import sys
 import time
+import traceback
+import uuid
 from datetime import datetime, timezone
+from functools import wraps
 from pathlib import Path
+from typing import Any, Callable
 from urllib.parse import unquote
 
 from sqlalchemy import String, and_, cast, collate, not_, or_
@@ -227,3 +234,35 @@ class TicToc:
 def generate_random_key(length=32):
     alphabet = string.ascii_letters + string.digits
     return ''.join(secrets.choice(alphabet) for i in range(length))
+
+
+def background_task_wrapper(func: Callable, logger: logging.Logger) -> Callable:
+    task_name = func.__name__
+
+    @wraps(func)
+    async def wrapper(*args: Any, **kwargs: Any) -> None:
+        task_id = uuid.uuid4()
+
+        try:
+            func(*args, **kwargs)
+            logger.info(f"[{task_id}] Finished {task_name} successfully")
+        except Exception as e:
+            logger.error(f"[{task_id}] Failed Permanently {task_name} with error: {e}")
+
+            func_args = inspect.signature(func).bind(*args, **kwargs).arguments
+
+            func_args_str = ", ".join(
+                "{}={!r}".format(*item) for item in func_args.items()
+            )
+
+            logger.error(
+                f"[{task_id}] Started {task_name} with arguments: {func_args_str}"
+            )
+
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+
+            traceback.print_exception(
+                exc_type, exc_value, exc_traceback, limit=25, file=sys.stdout
+            )
+
+    return wrapper
