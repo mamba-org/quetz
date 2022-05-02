@@ -128,8 +128,8 @@ try:
                 common = set(role_gids) & set(user_gids)
                 if common:
                     logger.info(
-                        "pam authenticator: user {username} found in group {common}"
-                        "setting {role} permissions"
+                        f"pam authenticator: user {username} found in group {common}, "
+                        f"setting {role} permissions"
                     )
                     return role.value
 
