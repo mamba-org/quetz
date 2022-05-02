@@ -10,7 +10,13 @@ from urllib.parse import urljoin, urlparse, urlunparse
 import appdirs
 import requests
 import toml
-from conda_verify.verify import Verify
+
+try:
+    from conda_verify.verify import Verify
+
+    verify_available = True
+except ImportError:
+    verify_available = False
 
 import quetz_client
 
@@ -101,9 +107,12 @@ def upload_packages(args):
                 ):
                     package_file_names.append(os.path.join(root, file))
 
-    verifier = Verify()
+    if args.verify and not verify_available:
+        raise RuntimeError("Cannot verify package: conda-verify is not installed.")
 
-    if args.verify:
+    if args.verify and verify_available:
+        verifier = Verify()
+
         verify_ignore = args.verify_ignore.split(',') if args.verify_ignore else None
         for package in package_file_names:
             verifier.verify_package(
