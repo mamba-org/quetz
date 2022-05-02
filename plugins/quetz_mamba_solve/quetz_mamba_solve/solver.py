@@ -84,6 +84,6 @@ class MambaSolver:
             exit(1)
 
         package_cache = libmambapy.MultiPackageCache(pkg_cache_path)
-        t = libmambapy.Transaction(api_solver, package_cache, self.repos)
+        t = libmambapy.Transaction(api_solver, package_cache)
 
         return t
