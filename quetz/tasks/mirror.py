@@ -20,7 +20,7 @@ from quetz.db_models import PackageVersion
 from quetz.errors import DBError
 from quetz.pkgstores import PackageStore
 from quetz.tasks import indexing
-from quetz.utils import TicToc, check_package_membership
+from quetz.utils import TicToc, add_static_file, check_package_membership
 
 # copy common subdirs from conda:
 # https://github.com/conda/conda/blob/a78a2387f26a188991d771967fc33aa1fb5bb810/conda/base/constants.py#L63
@@ -121,7 +121,12 @@ def download_remote_file(
         logger.debug(f"Downloading {path} from {channel} to pkgstore")
         remote_file = repository.open(path)
         data_stream = remote_file.file
-        pkgstore.add_package(data_stream, channel, path)
+
+        if path.endswith('.json'):
+            add_static_file(data_stream.read(), channel, None, path, pkgstore)
+        else:
+            pkgstore.add_package(data_stream, channel, path)
+
     pkgstore.delete_download_lock(channel, path)
 
 
