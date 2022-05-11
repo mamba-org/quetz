@@ -147,6 +147,10 @@ try:
             if data is None:
                 return None
 
+            host = None
+            if request.client:
+                host = request.client.host
+
             username = data['username']
             try:
                 pamela.authenticate(
@@ -156,12 +160,7 @@ try:
                     encoding=self.encoding,
                 )
             except pamela.PAMError as e:
-                logger.warning(
-                    "PAM Authentication failed (%s@%s): %s",
-                    username,
-                    request.client.host,
-                    e,
-                )
+                logger.warning(f"PAM Authentication failed ({username}@{host}): {e}")
                 return None
 
             if self.check_account:
@@ -170,12 +169,7 @@ try:
                         username, service=self.service, encoding=self.encoding
                     )
                 except pamela.PAMError as e:
-                    logger.warning(
-                        "PAM Account Check failed (%s@%s): %s",
-                        username,
-                        request.client.host,
-                        e,
-                    )
+                    logger.warning(f"PAM Account Check failed ({username}@{host}): {e}")
                     return None
 
             return username
