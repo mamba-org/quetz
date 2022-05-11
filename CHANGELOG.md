@@ -2,6 +2,35 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## 0.4.3
+
+([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.4.2...42f9b9dca2f37058bc193fed890cd9524117576f))
+
+### Enhancements made
+
+- allow upload usage without conda-verify installed [#524](https://github.com/mamba-org/quetz/pull/524) ([@wolfv](https://github.com/wolfv))
+- log errors of background tasks [#523](https://github.com/mamba-org/quetz/pull/523) ([@wolfv](https://github.com/wolfv))
+
+### Bugs fixed
+
+- fix compatibility with latest starlette [#530](https://github.com/mamba-org/quetz/pull/530) ([@wolfv](https://github.com/wolfv))
+- fix proxy channels noarch and gzip repodata [#529](https://github.com/mamba-org/quetz/pull/529) ([@wolfv](https://github.com/wolfv))
+- Fix PAM authentication log message [#526](https://github.com/mamba-org/quetz/pull/526) ([@riccardoporreca](https://github.com/riccardoporreca))
+- fix mamba 0.23.0 compat [#525](https://github.com/mamba-org/quetz/pull/525) ([@wolfv](https://github.com/wolfv))
+- Use infodata['size'] for s3fs [#521](https://github.com/mamba-org/quetz/pull/521) ([@atrawog](https://github.com/atrawog))
+
+### Maintenance and upkeep improvements
+
+- Move httpx as dependency [#507](https://github.com/mamba-org/quetz/pull/507) ([@fcollonval](https://github.com/fcollonval))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2022-04-07&to=2022-05-11&type=c))
+
+[@atrawog](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Aatrawog+updated%3A2022-04-07..2022-05-11&type=Issues) | [@codecov-commenter](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Acodecov-commenter+updated%3A2022-04-07..2022-05-11&type=Issues) | [@fcollonval](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Afcollonval+updated%3A2022-04-07..2022-05-11&type=Issues) | [@riccardoporreca](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ariccardoporreca+updated%3A2022-04-07..2022-05-11&type=Issues) | [@wolfv](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Awolfv+updated%3A2022-04-07..2022-05-11&type=Issues)
+
+<!-- <END NEW CHANGELOG ENTRY> -->
+
 ## 0.4.2
 
 ([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.4.1...4c65023b11c1ee1bf4c3351429c9cb365e10b6ba))
@@ -15,8 +44,6 @@
 ([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2022-04-06&to=2022-04-06&type=c))
 
 [@janjagusch](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ajanjagusch+updated%3A2022-04-06..2022-04-06&type=Issues)
-
-<!-- <END NEW CHANGELOG ENTRY> -->
 
 ## 0.4.1
 
