@@ -15,7 +15,7 @@ import tempfile
 from contextlib import contextmanager
 from os import PathLike
 from threading import Lock
-from typing import IO, BinaryIO, List, NoReturn, Tuple, Union
+from typing import IO, List, NoReturn, Tuple, Union
 
 import fsspec
 from tenacity import retry, retry_if_exception_type, stop_after_attempt
@@ -29,7 +29,7 @@ except ImportError:
 
 from quetz.errors import ConfigError
 
-File = BinaryIO
+File = IO[bytes]
 
 StrPath = Union[str, PathLike]
 

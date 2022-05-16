@@ -2,6 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 import asyncio
 import datetime
+import hashlib
 import json
 import logging
 import os
@@ -12,7 +13,7 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from email.utils import formatdate
-from tempfile import SpooledTemporaryFile
+from tempfile import SpooledTemporaryFile, TemporaryFile
 from typing import List, Optional, Tuple, Type
 
 import pydantic
@@ -1286,6 +1287,77 @@ def post_file_to_package(
 ):
     handle_package_files(package.channel, files, dao, auth, force, package=package)
     dao.update_channel_size(package.channel_name)
+
+
+@api_router.post(
+    "/channels/{channel_name}/upload/{filename}", status_code=201, tags=["upload"]
+)
+async def post_upload(
+    request: Request,
+    channel_name: str,
+    filename: str,
+    sha256: str,
+    force: bool = False,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    logger.debug(
+        f"Uploading file {filename} with checksum {sha256} to channel {channel_name}"
+    )
+
+    upload_hash = hashlib.sha256()
+
+    body = TemporaryFile()
+    async for chunk in request.stream():
+        body.write(chunk)
+        upload_hash.update(chunk)
+
+    if sha256 and upload_hash.hexdigest() != sha256:
+        raise HTTPException(
+            status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="Wrong SHA256 checksum"
+        )
+
+    user_id = auth.assert_user()
+    auth.assert_create_package(channel_name)
+    condainfo = CondaInfo((body), filename)
+    dest = os.path.join(condainfo.info["subdir"], filename)
+
+    pkgstore.add_package(body, channel_name, dest)
+
+    package_name = str(condainfo.info.get("name"))
+    package_data = rest_models.Package(
+        name=package_name,
+        summary=str(condainfo.about.get("summary", "n/a")),
+        description=str(condainfo.about.get("description", "n/a")),
+    )
+    if not dao.get_package(channel_name, package_name):
+        dao.create_package(
+            channel_name,
+            package_data,
+            user_id,
+            authorization.OWNER,
+        )
+
+    try:
+        version = dao.create_version(
+            channel_name=channel_name,
+            package_name=package_name,
+            package_format=condainfo.package_format,
+            platform=condainfo.info["subdir"],
+            version=condainfo.info["version"],
+            build_number=condainfo.info["build_number"],
+            build_string=condainfo.info["build"],
+            size=condainfo.info["size"],
+            filename=filename,
+            info=json.dumps(condainfo.info),
+            uploader_id=user_id,
+            upsert=force,
+        )
+    except IntegrityError:
+        logger.debug(f"duplicate package '{package_name}' in channel '{channel_name}'")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Duplicate")
+
+    pm.hook.post_add_package_version(version=version, condainfo=condainfo)
 
 
 @api_router.post("/channels/{channel_name}/files/", status_code=201, tags=["files"])
