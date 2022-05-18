@@ -290,6 +290,9 @@ def initial_sync_mirror(
 ):
 
     force = True  # needed for updating packages
+    logger.info(
+        f"Running channel mirroring {channel_name}/{arch} from {remote_repository.host}"
+    )
 
     for repodata_fn in ["repodata_from_packages.json", "repodata.json"]:
         try:
@@ -347,7 +350,7 @@ def initial_sync_mirror(
 
         def handle_batch(update_batch):
             # i_batch += 1
-            logger.debug(f"Handling batch: {update_batch}")
+            logger.info(f"Handling batch: {[p[1] for p in update_batch]}")
             if not update_batch:
                 return False
 
@@ -517,7 +520,7 @@ def synchronize_packages(
     use_repodata: bool = False,
 ):
 
-    logger.debug(f"executing synchronize_packages task in a process {os.getpid()}")
+    logger.info(f"executing synchronize_packages task in a process {os.getpid()}")
 
     new_channel = dao.get_channel(channel_name)
 
