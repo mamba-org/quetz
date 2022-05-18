@@ -303,7 +303,15 @@ def _is_deployment(base_dir: Path):
     ):
         config = Config(str(config_file.resolve()))
         with working_directory(base_dir):
-            return database_exists(config.sqlalchemy_database_url)
+            if not database_exists(config.sqlalchemy_database_url):
+                logger.error(
+                    "Cannot verify that specified database exists. "
+                    + config.sqlalchemy_database_url
+                )
+                return False
+            else:
+                return True
+
     return False
 
 
