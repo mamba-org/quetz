@@ -29,12 +29,12 @@ class any_true(FunctionElement):
 
 @compiles(any_true, 'sqlite')
 def sqlite_any(element, compiler, **kw):
-    return 'max(%s)' % compiler.process(element.clauses, **kw)
+    return f'max({compiler.process(element.clauses, **kw)})'
 
 
 @compiles(any_true, 'postgresql')
 def pg_any(element, compiler, **kw):
-    return 'bool_or(%s)' % compiler.process(element.clauses, **kw)
+    return f'bool_or({compiler.process(element.clauses, **kw)})'
 
 
 class all_true(FunctionElement):
@@ -45,12 +45,12 @@ class all_true(FunctionElement):
 
 @compiles(all_true, 'sqlite')
 def sqlite_all(element, compiler, **kw):
-    return 'min(%s)' % compiler.process(element.clauses, **kw)
+    return f'min({compiler.process(element.clauses, **kw)})'
 
 
 @compiles(all_true, 'postgresql')
 def pg_all(element, compiler, **kw):
-    return 'bool_and(%s)' % compiler.process(element.clauses, **kw)
+    return f'bool_and({compiler.process(element.clauses, **kw)}'
 
 
 def build_queue(job):

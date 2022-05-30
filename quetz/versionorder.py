@@ -219,7 +219,7 @@ class VersionOrder:
         return self.norm_version
 
     def __repr__(self):
-        return "%s(\"%s\")" % (self.__class__.__name__, self)
+        return f'{self.__class__.__name__}("{self}")'
 
     def _eq(self, t1, t2):
         for v1, v2 in zip_longest(t1, t2, fillvalue=[]):

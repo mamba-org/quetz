@@ -67,10 +67,7 @@ class date_trunc(FunctionElement):
 def pg_date_trunc(element, compiler, **kw):
     pg_map = {"H": "hour", "D": "day", "M": "month", "Y": "year"}
     period, date = list(element.clauses)
-    return "date_trunc('%s', %s)" % (
-        pg_map[period.value.value],
-        compiler.process(date, **kw),
-    )
+    return f"date_trunc('{pg_map[period.value.value]}', {compiler.process(date, **kw)})"
 
 
 @compiles(date_trunc, 'sqlite')
