@@ -146,8 +146,9 @@ def upsert_sql(element, compiler, **kw):
 
     stmt = insert(table).values(values)
     raw_sql = compiler.process(stmt)
-    upsert_stmt = "ON CONFLICT ({}) DO UPDATE SET {}={}+{}".format(
-        ",".join(index_elements), column.name, column.name, incr
+    upsert_stmt = (
+        f"ON CONFLICT ({','.join(index_elements)}) "
+        f"DO UPDATE SET {column.name}={column.name}+{incr}"
     )
 
     return raw_sql + " " + upsert_stmt
@@ -1053,7 +1054,7 @@ class Dao:
                     if user_email:
                         raise IntegrityError(
                             f"User {username} already registered "
-                            "with email {user_email.email}",
+                            f"with email {user_email.email}",
                             "",
                             "",
                         )

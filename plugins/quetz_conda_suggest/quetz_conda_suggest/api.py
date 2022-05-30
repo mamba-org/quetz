@@ -15,7 +15,7 @@ router = APIRouter()
 
 @router.get("/api/channels/{channel_name}/{subdir}/conda-suggest")
 def get_conda_suggest(channel_name, subdir, db: Session = Depends(get_db)):
-    map_filename = "{0}.{1}.map".format(channel_name, subdir)
+    map_filename = f"{channel_name}.{subdir}.map"
     map_filepath = pkgstore.url(channel_name, f"{subdir}/{map_filename}")
     try:
         if pkgstore.support_redirect:

@@ -98,7 +98,7 @@ def handle_file(channel_name, condainfo, dao, user_id):
         dao.rollback()
         logger.error(
             f"Duplicate package {channel_name}/{package_name}"
-            + "-{condainfo.info['version']}"
+            + f"-{condainfo.info['version']}"
         )
     dao.db.commit()
 
