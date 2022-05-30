@@ -920,9 +920,7 @@ def test_disabled_methods_for_mirror_channels(
     assert "not implemented" in response.json()["detail"]
 
     files = {"files": ("my_package-0.1.tar.bz", "dfdf")}
-    response = client.post(
-        f"/api/channels/{mirror_channel.name}/files/", files=files
-    )
+    response = client.post(f"/api/channels/{mirror_channel.name}/files/", files=files)
     assert response.status_code == 405
     assert "not implemented" in response.json()["detail"]
 
@@ -968,10 +966,7 @@ def test_repo_without_channeldata(
 
     assert dummy_repo[0] == "http://mirror3_host/channeldata.json"
     for arch in expected_archs:
-        assert (
-            f"http://mirror3_host/{arch}/repodata_from_packages.json"
-            in dummy_repo
-        )
+        assert f"http://mirror3_host/{arch}/repodata_from_packages.json" in dummy_repo
     if expected_archs is KNOWN_SUBDIRS:
         assert len(dummy_repo) == len(expected_archs) * 2 + 1
     else:
