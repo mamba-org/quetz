@@ -50,7 +50,7 @@ def sqlite_all(element, compiler, **kw):
 
 @compiles(all_true, 'postgresql')
 def pg_all(element, compiler, **kw):
-    return f'bool_and({compiler.process(element.clauses, **kw)}'
+    return f'bool_and({compiler.process(element.clauses, **kw)})'
 
 
 def build_queue(job):
