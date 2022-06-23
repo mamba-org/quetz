@@ -30,14 +30,21 @@ def member_user(db):
 def tos(db, owner_user):
     tos = db_models.TermsOfService(
         uploader_id=owner_user.id,
-        filename="tos.txt",
+        filename="tos_en.txt",
+        language="EN"
+    )
+
+    tos2 = db_models.TermsOfService(
+        uploader_id=owner_user.id,
+        filename="tos_fr.txt",
+        language="FR"
     )
 
     db.add(tos)
+    db.add(tos2)
     db.commit()
 
-    yield tos
-
+    yield [tos,tos2]
 
 @fixture
 def tos_file(config):
