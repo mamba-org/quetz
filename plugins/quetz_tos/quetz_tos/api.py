@@ -35,8 +35,11 @@ def post_file(file):
 
 @router.get("/api/tos", tags=['Terms of Service'])
 def get_current_tos(db: Session = Depends(get_db)):
+    lang = request.args.get('language')
+
     current_tos = (
-        db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).first()
+        #db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).first()
+        db.query(TermsOfService).filter_by(language == f"{lang}").first()
     )
     if current_tos:
         f = pkgstore.serve_path("root", current_tos.filename)
@@ -46,6 +49,7 @@ def get_current_tos(db: Session = Depends(get_db)):
             "content": data_bytes.decode('utf-8'),
             "uploader_id": str(uuid.UUID(bytes=current_tos.uploader_id)),
             "filename": current_tos.filename,
+            "language": current_tos.language,
             "time_created": current_tos.time_created,
         }
     else:

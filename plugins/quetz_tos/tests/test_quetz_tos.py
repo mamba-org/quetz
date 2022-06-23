@@ -39,9 +39,15 @@ def test_tos_upload_by_owner(client, owner_user):
     assert response.status_code == 201
     assert response.content == b'null'
 
-
 def test_get_tos(client, tos_file, tos):
-    response = client.get('/api/tos')
+    params = {'language': 'EN'}
+    response = client.get('/api/tos', params=params)
+    assert response.json()['filename'] == 'tos.txt'
+    assert response.json()['content'] == 'demo tos'
+
+def test_get_tos_fr(client, tos_file, tos):
+    params = {'language': 'FR'}
+    response = client.get('/api/tos', params=params)
     assert response.json()['filename'] == 'tos.txt'
     assert response.json()['content'] == 'demo tos'
 
