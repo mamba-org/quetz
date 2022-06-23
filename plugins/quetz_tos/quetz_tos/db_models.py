@@ -12,6 +12,7 @@ class TermsOfService(Base):
     id = Column(UUID, primary_key=True, default=lambda: uuid.uuid4().bytes)
     uploader_id = Column(UUID)
     filename = Column(String)
+    language = Column(String)
     time_created = Column(DateTime, nullable=False, server_default=func.now())
 
 

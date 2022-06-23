@@ -34,10 +34,17 @@ def post_file(file):
 
 
 @router.get("/api/tos", tags=['Terms of Service'])
-def get_current_tos(db: Session = Depends(get_db)):
-    current_tos = (
-        db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).first()
+def get_current_tos(lang: str = "EN", db: Session = Depends(get_db)):
+
+    terms_of_services = (
+        db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).all()
     )
+    current_tos = None
+    for tos in terms_of_services:
+        if tos.language == lang:
+            current_tos = tos
+            break
+
     if current_tos:
         f = pkgstore.serve_path("root", current_tos.filename)
         data_bytes = f.read()
@@ -46,6 +53,7 @@ def get_current_tos(db: Session = Depends(get_db)):
             "content": data_bytes.decode('utf-8'),
             "uploader_id": str(uuid.UUID(bytes=current_tos.uploader_id)),
             "filename": current_tos.filename,
+            "language": current_tos.language,
             "time_created": current_tos.time_created,
         }
     else:
@@ -105,11 +113,15 @@ def sign_current_tos(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"{tos_id} is not a valid hexadecimal string",
             )
-        selected_tos = (
-            db.query(TermsOfService)
-            .filter(TermsOfService.id == tos_id_bytes)
-            .one_or_none()
+        terms_of_services = (
+            db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).all()
         )
+        selected_tos = None
+        for tos in terms_of_services:
+            if tos.id == tos_id_bytes:
+                selected_tos = tos
+                break
+
         if not selected_tos:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -150,6 +162,7 @@ def sign_current_tos(
 
 @router.post("/api/tos/upload", status_code=201, tags=['Terms of Service'])
 def upload_tos(
+    lang: str = "EN",
     db: Session = Depends(get_db),
     auth: authorization.Rules = Depends(get_rules),
     tos_file: UploadFile = File(...),
@@ -158,6 +171,6 @@ def upload_tos(
         ["owner"], "To upload new Terms of Services you need to be a server owner."
     )
     filename = post_file(tos_file)
-    tos = TermsOfService(uploader_id=user_id, filename=filename)
+    tos = TermsOfService(uploader_id=user_id, filename=filename, language=lang)
     db.add(tos)
     db.commit()

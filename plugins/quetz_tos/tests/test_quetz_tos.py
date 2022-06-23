@@ -9,40 +9,78 @@ def plugins():
     return ["quetz-tos"]
 
 
-def upload_tos(client):
-    tos_filename = "tos.txt"
-    tos_content = "demo tos"
-    url = "/api/tos/upload"
+def upload_tos_en(client):
+    tos_en_filename = "tos_en.txt"
+    tos_en_content = "demo tos"
+    url = "/api/tos/upload?lang=EN"
 
-    files_to_upload = {'tos_file': (tos_filename, io.StringIO(tos_content))}
+    files_to_upload = {'tos_file': (tos_en_filename, io.StringIO(tos_en_content))}
 
     response = client.post(url, files=files_to_upload)
     return response
 
 
-def test_tos_upload_by_member(client, member_user):
+def upload_tos_fr(client):
+    tos_fr_filename = "tos_fr.txt"
+    tos_fr_content = "demo tos"
+    url = "/api/tos/upload?lang=FR"
+
+    files_to_upload = {'tos_file': (tos_fr_filename, io.StringIO(tos_fr_content))}
+
+    response = client.post(url, files=files_to_upload)
+    return response
+
+
+def test_tos_en_upload_by_member(client, member_user):
     response = client.get("/api/dummylogin/alice")
     assert response.status_code == 200
 
-    response = upload_tos(client)
+    response = upload_tos_en(client)
     assert response.status_code == 403
     assert response.json()['detail'] == [
         'To upload new Terms of Services you need to be a server owner.'
     ]
 
 
-def test_tos_upload_by_owner(client, owner_user):
+def test_tos_fr_upload_by_member(client, member_user):
+    response = client.get("/api/dummylogin/alice")
+    assert response.status_code == 200
+
+    response = upload_tos_fr(client)
+    assert response.status_code == 403
+    assert response.json()['detail'] == [
+        'To upload new Terms of Services you need to be a server owner.'
+    ]
+
+
+def test_tos_en_upload_by_owner(client, owner_user):
     response = client.get("/api/dummylogin/madhurt")
     assert response.status_code == 200
 
-    response = upload_tos(client)
+    response = upload_tos_en(client)
     assert response.status_code == 201
     assert response.content == b'null'
 
 
-def test_get_tos(client, tos_file, tos):
-    response = client.get('/api/tos')
-    assert response.json()['filename'] == 'tos.txt'
+def test_tos_fr_upload_by_owner(client, owner_user):
+    response = client.get("/api/dummylogin/madhurt")
+    assert response.status_code == 200
+
+    response = upload_tos_fr(client)
+    assert response.status_code == 201
+    assert response.content == b'null'
+
+
+def test_get_tos_en(client, tos_file, tos):
+    response = client.get('/api/tos?lang=EN')
+    assert response.json()['filename'] == 'tos_en.txt'
+    assert response.json()['content'] == 'demo tos'
+
+
+def test_get_tos_fr(client, tos_file, tos):
+    response = client.get('/api/tos?lang=FR')
+
+    assert response.json()['filename'] == 'tos_fr.txt'
     assert response.json()['content'] == 'demo tos'
 
 
@@ -95,6 +133,7 @@ def test_check_additional_permissions_hook_with_member(
 def test_check_additional_permissions_hook_with_member_signed(
     db, client, member_user, tos, tos_file, tos_sign
 ):
+    print(f"################################ member::: <{member_user}>")
     response = client.get("/api/dummylogin/alice")
     assert response.status_code == 200
 

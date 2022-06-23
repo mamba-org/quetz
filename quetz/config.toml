@@ -4,8 +4,8 @@ client_id = "{}"
 client_secret = "{}"
 
 [sqlalchemy]
-database_url = "{}"
+database_url = "sqlite:///./quetz.sqlite"
 
 [session]
-secret = "{}"
-https_only = {}
+secret = "432cc757ba955d93f56b85366708429fda237e66c1d3d840432c3288a39b2ed8"
+https_only = false
