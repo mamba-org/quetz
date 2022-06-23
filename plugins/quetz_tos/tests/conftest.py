@@ -49,7 +49,9 @@ def tos(db, owner_user):
 @fixture
 def tos_file(config):
     pkgstore = config.get_package_store()
-    pkgstore.add_file(b"demo tos", "root", "tos.txt")
+    pkgstore.add_file(b"demo tos", "root", "tos_en.txt")
+    pkgstore.add_file(b"demo tos", "root", "tos_fr.txt")
+    
 
 
 @fixture
