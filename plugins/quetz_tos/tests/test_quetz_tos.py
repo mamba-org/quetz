@@ -9,14 +9,27 @@ def plugins():
     return ["quetz-tos"]
 
 
-def upload_tos(client):
-    tos_filename = "tos.txt"
-    tos_content = "demo tos"
+def upload_tos_en(client):
+    params = {'language': 'EN'}
+    tos_en_filename = "tos_en.txt"
+    tos_en_content = "demo tos"
     url = "/api/tos/upload"
 
-    files_to_upload = {'tos_file': (tos_filename, io.StringIO(tos_content))}
+    files_to_upload = {'tos_file': (tos_en_filename, io.StringIO(tos_en_content))}
 
-    response = client.post(url, files=files_to_upload)
+    response = client.post(url, params=params, files=files_to_upload)
+    return response
+
+
+def upload_tos_fr(client):
+    params = {'language': 'FR'}
+    tos_fr_filename = "tos_fr.txt"
+    tos_fr_content = "demo tos"
+    url = "/api/tos/upload"
+
+    files_to_upload = {'tos_file': (tos_fr_filename, io.StringIO(tos_fr_content))}
+
+    response = client.post(url, params=params, files=files_to_upload)
     return response
 
 
@@ -31,13 +44,23 @@ def test_tos_upload_by_member(client, member_user):
     ]
 
 
-def test_tos_upload_by_owner(client, owner_user):
+def test_tos_en_upload_by_owner(client, owner_user):
     response = client.get("/api/dummylogin/madhurt")
     assert response.status_code == 200
 
-    response = upload_tos(client)
+    response = upload_tos_en(client)
     assert response.status_code == 201
     assert response.content == b'null'
+
+
+def test_tos_fr_upload_by_owner(client, owner_user):
+    response = client.get("/api/dummylogin/madhurt")
+    assert response.status_code == 200
+
+    response = upload_tos_fr(client)
+    assert response.status_code == 201
+    assert response.content == b'null'
+
 
 def test_get_tos(client, tos_file, tos):
     params = {'language': 'EN'}

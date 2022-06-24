@@ -121,8 +121,9 @@ def sign_current_tos(
         )
 
 
-@router.post("/api/tos/upload", status_code=201, tags=['Terms of Service'])
+@router.post("/api/tos/upload/?{lang}", status_code=201, tags=['Terms of Service'])
 def upload_tos(
+    lang: str,
     db: Session = Depends(get_db),
     auth: authorization.Rules = Depends(get_rules),
     tos_file: UploadFile = File(...),
@@ -131,6 +132,6 @@ def upload_tos(
         ["owner"], "To upload new Terms of Services you need to be a server owner."
     )
     filename = post_file(tos_file)
-    tos = TermsOfService(uploader_id=user_id, filename=filename)
+    tos = TermsOfService(uploader_id=user_id, filename=filename,language=lang)
     db.add(tos)
     db.commit()
