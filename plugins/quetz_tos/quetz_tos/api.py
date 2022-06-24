@@ -33,9 +33,9 @@ def post_file(file):
     return file.filename
 
 
-@router.get("/api/tos", tags=['Terms of Service'])
-def get_current_tos(db: Session = Depends(get_db)):
-    lang = request.args.get('language')
+@router.get("/api/tos/?{lang}", tags=['Terms of Service'])
+def get_current_tos(lang: str, db: Session = Depends(get_db)):
+    #lang = request.args.get('language')
 
     current_tos = (
         #db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).first()
