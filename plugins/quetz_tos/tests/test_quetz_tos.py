@@ -75,16 +75,18 @@ def test_tos_fr_upload_by_owner(client, owner_user):
 
 def test_get_tos(client, tos_file, tos):
     params = {'language': 'EN'}
-    response = client.get('/api/tos', params=params)
+    response = client.get('/api/tos?lang=EN')
+    # response = client.get('/api/tos', params=params)
     print(response.json())
-    assert response.json()['filename'] == 'tos.txt'
+    assert response.json()['filename'] == 'tos_en.txt'
     assert response.json()['content'] == 'demo tos'
 
 def test_get_tos_fr(client, tos_file, tos):
     params = {'language': 'FR'}
-    response = client.get('/api/tos', params=params)
+    # response = client.get('/api/tos', params=params)
+    response = client.get('/api/tos?lang=FR') 
     print(response.json())
-    assert response.json()['filename'] == 'tos.txt'
+    assert response.json()['filename'] == 'tos_fr.txt'
     assert response.json()['content'] == 'demo tos'
 
 
