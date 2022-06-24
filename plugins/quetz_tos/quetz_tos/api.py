@@ -41,6 +41,7 @@ def get_current_tos(lang: str, db: Session = Depends(get_db)):
         #db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).first()
         db.query(TermsOfService).filter_by(language == f"{lang}").first()
     )
+    print (current_tos)
     if current_tos:
         f = pkgstore.serve_path("root", current_tos.filename)
         data_bytes = f.read()
