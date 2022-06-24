@@ -33,11 +33,22 @@ def upload_tos_fr(client):
     return response
 
 
-def test_tos_upload_by_member(client, member_user):
+def test_tos_en_upload_by_member(client, member_user):
     response = client.get("/api/dummylogin/alice")
     assert response.status_code == 200
 
-    response = upload_tos(client)
+    response = upload_tos_en(client)
+    assert response.status_code == 403
+    assert response.json()['detail'] == [
+        'To upload new Terms of Services you need to be a server owner.'
+    ]
+
+
+def test_tos_fr_upload_by_member(client, member_user):
+    response = client.get("/api/dummylogin/alice")
+    assert response.status_code == 200
+
+    response = upload_tos_fr(client)
     assert response.status_code == 403
     assert response.json()['detail'] == [
         'To upload new Terms of Services you need to be a server owner.'
