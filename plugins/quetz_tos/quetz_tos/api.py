@@ -130,9 +130,9 @@ def sign_current_tos(
         )
 
 
-@router.post("/api/tos/upload?{lang}", status_code=201, tags=['Terms of Service'])
+@router.post("/api/tos/upload", status_code=201, tags=['Terms of Service'])
 def upload_tos(
-    lang: str,
+    lang: str = "EN",
     db: Session = Depends(get_db),
     auth: authorization.Rules = Depends(get_rules),
     tos_file: UploadFile = File(...),

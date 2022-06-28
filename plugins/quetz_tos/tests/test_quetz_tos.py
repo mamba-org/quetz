@@ -10,26 +10,26 @@ def plugins():
 
 
 def upload_tos_en(client):
-    params = {'language': 'EN'}
+    #params = {'language': 'EN'}
     tos_en_filename = "tos_en.txt"
     tos_en_content = "demo tos"
-    url = "/api/tos/upload"
+    url = "/api/tos/upload?lang=EN"
 
     files_to_upload = {'tos_file': (tos_en_filename, io.StringIO(tos_en_content))}
 
-    response = client.post(url, params=params, files=files_to_upload)
+    response = client.post(url, files=files_to_upload)
     return response
 
 
 def upload_tos_fr(client):
-    params = {'language': 'FR'}
+    # params = {'language': 'FR'}
     tos_fr_filename = "tos_fr.txt"
     tos_fr_content = "demo tos"
-    url = "/api/tos/upload"
+    url = "/api/tos/upload?lang=FR"
 
     files_to_upload = {'tos_file': (tos_fr_filename, io.StringIO(tos_fr_content))}
 
-    response = client.post(url, params=params, files=files_to_upload)
+    response = client.post(url, files=files_to_upload)
     return response
 
 
