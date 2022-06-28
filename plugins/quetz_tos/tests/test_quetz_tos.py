@@ -10,7 +10,6 @@ def plugins():
 
 
 def upload_tos_en(client):
-    #params = {'language': 'EN'}
     tos_en_filename = "tos_en.txt"
     tos_en_content = "demo tos"
     url = "/api/tos/upload?lang=EN"
@@ -22,7 +21,6 @@ def upload_tos_en(client):
 
 
 def upload_tos_fr(client):
-    # params = {'language': 'FR'}
     tos_fr_filename = "tos_fr.txt"
     tos_fr_content = "demo tos"
     url = "/api/tos/upload?lang=FR"
@@ -74,19 +72,13 @@ def test_tos_fr_upload_by_owner(client, owner_user):
 
 
 def test_get_tos_en(client, tos_file, tos):
-    # params = {'language': 'EN'}
     response = client.get('/api/tos?lang=EN')
-    # response = client.get('/api/tos', params=params)
-    print(response.json())
     assert response.json()['filename'] == 'tos_en.txt'
     assert response.json()['content'] == 'demo tos'
 
 def test_get_tos_fr(client, tos_file, tos):
-    
-    # params = {'language': 'FR'}
-    # response = client.get('/api/tos', params=params)
     response = client.get('/api/tos?lang=FR') 
-    print(response.json())
+    
     assert response.json()['filename'] == 'tos_fr.txt'
     assert response.json()['content'] == 'demo tos'
 
