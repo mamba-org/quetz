@@ -49,6 +49,7 @@ def get_current_tos(lang: str = "EN", db: Session = Depends(get_db)):
         if tos.language == lang:
             current_tos = tos
             break
+
     print (current_tos)
     if current_tos:
         f = pkgstore.serve_path("root", current_tos.filename)
@@ -129,7 +130,7 @@ def sign_current_tos(
         )
 
 
-@router.post("/api/tos/upload/?{lang}", status_code=201, tags=['Terms of Service'])
+@router.post("/api/tos/upload?{lang}", status_code=201, tags=['Terms of Service'])
 def upload_tos(
     lang: str,
     db: Session = Depends(get_db),
