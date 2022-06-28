@@ -38,7 +38,7 @@ def post_file(file):
 #def get_current_tos(lang: str, db: Session = Depends(get_db)):
 def get_current_tos(lang: str = "EN", db: Session = Depends(get_db)):
 
-    current_tos = (
+    terms_of_services = (
         #db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).first()
         #db.query(TermsOfService).filter_by(language == f"{lang}").first()
         db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).all()
