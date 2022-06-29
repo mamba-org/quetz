@@ -56,12 +56,14 @@ def tos_file(config):
 
 @fixture
 def tos_sign(db, tos, member_user):
-    tos_sign = db_models.TermsOfServiceSignatures(
-        tos_id=tos.id,
-        user_id=member_user.id,
-    )
+    all_signed_tos=[]
+    for a_tos in tos:        
+        tos_sign = db_models.TermsOfServiceSignatures(
+            tos_id=a_tos.id,
+            user_id=member_user.id,
+        )
 
-    db.add(tos_sign)
+        db.add(tos_sign)
+        all_signed_tos.append(tos_sign)
     db.commit()
-
-    yield tos_sign
+    yield all_signed_tos
