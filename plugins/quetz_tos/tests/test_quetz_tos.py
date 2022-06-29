@@ -132,6 +132,7 @@ def test_check_additional_permissions_hook_with_member(
 def test_check_additional_permissions_hook_with_member_signed(
     db, client, member_user, tos, tos_file, tos_sign
 ):
+    print (f"################################ member::: <{member_user}>")
     response = client.get("/api/dummylogin/alice")
     assert response.status_code == 200
 

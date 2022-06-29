@@ -82,11 +82,15 @@ def sign_current_tos(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"{tos_id} is not a valid hexadecimal string",
             )
-        selected_tos = (
-            db.query(TermsOfService)
-            .filter(TermsOfService.id == tos_id_bytes)
-            .one_or_none()
+        terms_of_services = (
+            db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).all()
         )
+        selected_tos = None
+        for tos in terms_of_services:
+            if tos.id == tos_id_bytes:
+                selected_tos = tos
+                break
+        
         if not selected_tos:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
