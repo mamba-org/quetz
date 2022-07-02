@@ -20,6 +20,7 @@
 # Quetz
 
 [![Documentation Status](https://readthedocs.org/projects/quetz/badge/?version=latest)](https://quetz.readthedocs.io/en/latest/?badge=latest)
+[![Docker Version](https://img.shields.io/docker/v/mambaorg/quetz/latest?label=docker)](https://hub.docker.com/r/mambaorg/quetz/tags)
 
 The quetz project is an open source server for conda packages.
 It is built upon FastAPI with an API-first approach.
