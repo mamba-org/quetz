@@ -54,6 +54,32 @@ def get_current_tos(db: Session = Depends(get_db)):
             detail="terms of service file not found",
         )
 
+@router.get("/api/tos/sign", status_code=201, tags=['Terms of Service'])
+def sign_current_tos(
+    db: Session = Depends(get_db),
+    dao: dao.Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    user_id = auth.assert_user()
+    current_tos = (
+        db.query(TermsOfService)
+        .order_by(TermsOfService.time_created.desc())
+        .first()
+    )
+
+    if current_tos:
+        signature = (
+            db.query(TermsOfServiceSignatures)
+            .filter(TermsOfServiceSignatures.user_id == user_id)
+            .filter(TermsOfServiceSignatures.tos_id == current_tos.id)
+            .one_or_none()
+        )
+        return True if signature else False
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="terms of service file not found",
+        )
 
 @router.post("/api/tos/sign", status_code=201, tags=['Terms of Service'])
 def sign_current_tos(
