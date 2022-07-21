@@ -55,8 +55,8 @@ def get_current_tos(db: Session = Depends(get_db)):
         )
 
 
-@router.get("/api/tos/sign", status_code=201, tags=['Terms of Service'])
-def get_sign_current_tos(
+@router.get("/api/tos/status", status_code=201, tags=['Terms of Service'])
+def get_current_tos_status(
     db: Session = Depends(get_db),
     dao: dao.Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
@@ -72,7 +72,14 @@ def get_sign_current_tos(
             .filter(TermsOfServiceSignatures.tos_id == current_tos.id)
             .one_or_none()
         )
-        return True if signature else False
+        if signature:
+            return {
+                "tos_id": str(uuid.UUID(bytes=signature.tos_id)),
+                "user_id": str(uuid.UUID(bytes=signature.user_id)),
+                "time_created": signature.time_created,
+            }
+        else:
+            return None
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
