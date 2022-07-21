@@ -458,8 +458,8 @@ def test_create_exists_errors(cli_args):
         res = runner.invoke(cli.app, cli_args)
         assert res.exit_code == 1
         assert (
-            res.output == "Use the start command to start a deployment "
-            "or specify --delete with --copy-conf or --create-conf.\nAborted.\n"
+            res.output.strip() == "Use the start command to start a deployment "
+            "or specify --delete with --copy-conf or --create-conf.\nAborted."
         )
 
 
