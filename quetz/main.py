@@ -848,6 +848,7 @@ def get_package(package: db_models.Package = Depends(get_package_or_fail)):
     tags=["packages"],
 )
 def delete_package(
+    background_tasks: BackgroundTasks,
     package: db_models.Package = Depends(get_package_or_fail),
     db=Depends(get_db),
     auth: authorization.Rules = Depends(get_rules),
@@ -869,6 +870,10 @@ def delete_package(
         pkgstore.delete_file(channel_name, filename)
 
     dao.update_channel_size(channel_name)
+
+    wrapped_bg_task = background_task_wrapper(indexing.update_indexes, logger)
+    # Background task to update indexes
+    background_tasks.add_task(wrapped_bg_task, dao, pkgstore, channel_name)
 
 
 @api_router.post(
