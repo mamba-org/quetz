@@ -861,6 +861,10 @@ def delete_package(
         os.path.join(version.platform, version.filename)
         for version in package.package_versions  # type: ignore
     ]
+
+    # get current platform containing the package
+    platforms = set([version.platform for version in package.package_versions])
+
     channel_name = package.channel_name
 
     db.delete(package)
@@ -873,7 +877,7 @@ def delete_package(
 
     wrapped_bg_task = background_task_wrapper(indexing.update_indexes, logger)
     # Background task to update indexes
-    background_tasks.add_task(wrapped_bg_task, dao, pkgstore, channel_name)
+    background_tasks.add_task(wrapped_bg_task, dao, pkgstore, channel_name, platforms)
 
 
 @api_router.post(
