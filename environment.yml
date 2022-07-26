@@ -29,7 +29,7 @@ dependencies:
   - s3fs
   - gcsfs >=2022.03
   - sphinx
-  - sphinx-book-theme
+  - sphinx-book-theme>=0.3
   - tenacity
   - xattr
   - aiofiles

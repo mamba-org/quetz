@@ -456,11 +456,13 @@ def test_create_exists_errors(cli_args):
     """Create command raises if deployment exists and not force deleted."""
     with mock.patch("quetz.cli._is_deployment", lambda x: True):
         res = runner.invoke(cli.app, cli_args)
+        print(res.output)
         assert res.exit_code == 1
         assert (
-            res.output == "Use the start command to start a deployment "
-            "or specify --delete with --copy-conf or --create-conf.\nAborted!\n"
+            "Use the start command to start a deployment or specify"
+            " --delete with --copy-conf or --create-conf." in res.output
         )
+        assert "Aborted" in res.output
 
 
 @pytest.fixture()
