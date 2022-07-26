@@ -863,7 +863,10 @@ def delete_package(
     ]
 
     # get current platform containing the package
-    platforms = set([version.platform for version in package.package_versions])
+    platforms = set([
+        version.platform
+        for version in package.package_versions  # type: ignore
+    ])
 
     channel_name = package.channel_name
 
