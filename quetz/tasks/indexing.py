@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from jinja2 import Environment, PackageLoader, select_autoescape
+from jinja2.exceptions import UndefinedError
 
 import quetz.config
 from quetz import channel_data, repo_data
@@ -35,8 +36,11 @@ logger = logging.getLogger("quetz")
 def _iec_bytes(n):
     # Return human-readable string representing n in bytes in IEC format
     for e, f in _iec_prefixes:
-        if n >= e:
-            return f.format(n / e)
+        try:
+            if n >= e:
+                return f.format(n / e)
+        except UndefinedError:
+            logger.debug("Package size is undefined.")
     return f"{n} B"
 
 

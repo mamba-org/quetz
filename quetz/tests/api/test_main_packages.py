@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import BinaryIO
 
@@ -10,6 +11,7 @@ from quetz.config import Config
 from quetz.db_models import ChannelMember, Package, PackageMember, PackageVersion
 from quetz.errors import ValidationError
 from quetz.pkgstores import PackageStore
+from quetz.tasks.indexing import update_indexes
 
 
 @pytest.mark.parametrize("package_role", [OWNER, MAINTAINER, MEMBER])
@@ -68,6 +70,14 @@ def test_delete_package_versions_with_package(
 
     assert package_version.package_name == public_package.name
 
+    update_indexes(dao, pkgstore, public_channel.name)
+
+    package_filenames = [
+        os.path.join(version.platform, version.filename)
+        for version in public_package.package_versions  # type: ignore
+    ]
+    init_files = sorted(pkgstore.list_files(public_channel.name))
+
     response = auth_client.delete(
         f"/api/channels/{public_channel.name}/packages/{public_package.name}"
     )
@@ -85,9 +95,12 @@ def test_delete_package_versions_with_package(
 
     assert len(versions) == 0
 
-    files = pkgstore.list_files(public_channel.name)
+    for filename in package_filenames:
+        init_files.remove(filename)
 
-    assert len(files) == 0
+    files = sorted(pkgstore.list_files(public_channel.name))
+
+    assert files == init_files
 
 
 def test_get_package_version(auth_client, public_channel, package_version, dao):
