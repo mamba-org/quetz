@@ -28,38 +28,32 @@ def member_user(db):
 
 @fixture
 def tos(db, owner_user):
-    tos = db_models.TermsOfService(
-        uploader_id=owner_user.id, filename="tos_en.txt", language="EN"
-    )
+    tos_en = db_models.TermsOfServiceFile(filename="tos_en.txt", language="EN")
+    tos_fr = db_models.TermsOfServiceFile(filename="tos_fr.txt", language="FR")
 
-    tos2 = db_models.TermsOfService(
-        uploader_id=owner_user.id, filename="tos_fr.txt", language="FR"
-    )
+    tos = db_models.TermsOfService(uploader_id=owner_user.id, files=[tos_en, tos_fr])
 
     db.add(tos)
-    db.add(tos2)
     db.commit()
 
-    yield [tos, tos2]
+    yield tos
 
 
 @fixture
 def tos_file(config):
     pkgstore = config.get_package_store()
-    pkgstore.add_file(b"demo tos", "root", "tos_en.txt")
-    pkgstore.add_file(b"demo tos", "root", "tos_fr.txt")
+    pkgstore.add_file(b"demo tos en", "root", "tos_en.txt")
+    pkgstore.add_file(b"demo tos fr", "root", "tos_fr.txt")
 
 
 @fixture
 def tos_sign(db, tos, member_user):
-    all_signed_tos = []
-    for a_tos in tos:
-        tos_sign = db_models.TermsOfServiceSignatures(
-            tos_id=a_tos.id,
-            user_id=member_user.id,
-        )
+    tos_sign = db_models.TermsOfServiceSignatures(
+        tos_id=tos.id,
+        user_id=member_user.id,
+    )
 
-        db.add(tos_sign)
-        all_signed_tos.append(tos_sign)
+    db.add(tos_sign)
     db.commit()
-    yield all_signed_tos
+
+    yield tos_sign

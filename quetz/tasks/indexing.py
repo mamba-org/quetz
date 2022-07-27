@@ -252,7 +252,8 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
     tmp_suffix = uuid.uuid4().hex
     after_upload_move = []
     for path in tempdir_path.rglob('*.*'):
-        # check whether the path is an actual file. this fixes https://github.com/mamba-org/quetz/issues/540
+        # check whether the path is an actual file.
+        # this fixes https://github.com/mamba-org/quetz/issues/540
         if not path.is_file():
             continue
         rel_path = path.relative_to(tempdir_path)

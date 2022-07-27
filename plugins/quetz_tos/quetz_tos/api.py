@@ -1,15 +1,16 @@
 import os
 import uuid
 from tempfile import SpooledTemporaryFile
+from typing import List
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm.session import Session
 
 from quetz import authorization, dao
 from quetz.config import Config
 from quetz.deps import get_dao, get_db, get_rules
 
-from .db_models import TermsOfService, TermsOfServiceSignatures
+from .db_models import TermsOfService, TermsOfServiceFile, TermsOfServiceSignatures
 
 router = APIRouter()
 config = Config()
@@ -34,33 +35,36 @@ def post_file(file):
 
 
 @router.get("/api/tos", tags=['Terms of Service'])
-def get_current_tos(lang: str = "EN", db: Session = Depends(get_db)):
-
-    terms_of_services = (
-        db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).all()
+def get_current_tos(db: Session = Depends(get_db)):
+    current_tos = (
+        db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).first()
     )
-    current_tos = None
-    for tos in terms_of_services:
-        if tos.language == lang:
-            current_tos = tos
-            break
 
-    if current_tos:
-        f = pkgstore.serve_path("root", current_tos.filename)
-        data_bytes = f.read()
-        return {
-            "id": str(uuid.UUID(bytes=current_tos.id)),
-            "content": data_bytes.decode('utf-8'),
-            "uploader_id": str(uuid.UUID(bytes=current_tos.uploader_id)),
-            "filename": current_tos.filename,
-            "language": current_tos.language,
-            "time_created": current_tos.time_created,
-        }
-    else:
+    if current_tos is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="terms of service file not found",
+            detail="terms of service not found",
         )
+
+    tos_files = []
+    for tos_file in current_tos.files:
+        f = pkgstore.serve_path("root", tos_file.filename)
+        data_bytes = f.read()
+
+        tos_files.append(
+            {
+                "content": data_bytes.decode('utf-8'),
+                "filename": tos_file.filename,
+                "language": tos_file.language,
+            }
+        )
+
+    return {
+        "id": str(uuid.UUID(bytes=current_tos.id)),
+        "uploader_id": str(uuid.UUID(bytes=current_tos.uploader_id)),
+        "files": tos_files,
+        "time_created": current_tos.time_created,
+    }
 
 
 @router.get("/api/tos/status", status_code=201, tags=['Terms of Service'])
@@ -162,15 +166,31 @@ def sign_current_tos(
 
 @router.post("/api/tos/upload", status_code=201, tags=['Terms of Service'])
 def upload_tos(
-    lang: str = "EN",
+    lang: List[str] = Query(...),
     db: Session = Depends(get_db),
     auth: authorization.Rules = Depends(get_rules),
-    tos_file: UploadFile = File(...),
+    tos_files: List[UploadFile] = File(...),
 ):
     user_id = auth.assert_server_roles(
         ["owner"], "To upload new Terms of Services you need to be a server owner."
     )
-    filename = post_file(tos_file)
-    tos = TermsOfService(uploader_id=user_id, filename=filename, language=lang)
+
+    if len(lang) != len(tos_files):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Number of languages '{lang}' does not "
+                "match the number of uploaded files"
+            ),
+        )
+
+    filenames = [post_file(tos_file) for tos_file in tos_files]
+
+    tos_files = [
+        TermsOfServiceFile(filename=filename, language=language)
+        for filename, language in zip(filenames, lang)
+    ]
+    tos = TermsOfService(uploader_id=user_id, files=tos_files)
+
     db.add(tos)
     db.commit()
