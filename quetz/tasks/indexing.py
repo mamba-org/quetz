@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from jinja2 import Environment, PackageLoader, select_autoescape
+from jinja2.exceptions import UndefinedError
 
 import quetz.config
 from quetz import channel_data, repo_data
@@ -35,8 +36,11 @@ logger = logging.getLogger("quetz")
 def _iec_bytes(n):
     # Return human-readable string representing n in bytes in IEC format
     for e, f in _iec_prefixes:
-        if n >= e:
-            return f.format(n / e)
+        try:
+            if n >= e:
+                return f.format(n / e)
+        except UndefinedError:
+            logger.debug("Package size is undefined.")
     return f"{n} B"
 
 
@@ -252,7 +256,8 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
     tmp_suffix = uuid.uuid4().hex
     after_upload_move = []
     for path in tempdir_path.rglob('*.*'):
-        # check whether the path is an actual file. this fixes https://github.com/mamba-org/quetz/issues/540
+        # check whether the path is an actual file.
+        # this fixes https://github.com/mamba-org/quetz/issues/540
         if not path.is_file():
             continue
         rel_path = path.relative_to(tempdir_path)
