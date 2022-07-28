@@ -1,7 +1,7 @@
 import os
 import uuid
 from tempfile import SpooledTemporaryFile
-from typing import List
+from typing import List, Union
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm.session import Session
@@ -35,7 +35,7 @@ def post_file(file):
 
 
 @router.get("/api/tos", tags=['Terms of Service'])
-def get_current_tos(db: Session = Depends(get_db)):
+def get_current_tos(lang: Union[str, None] = None, db: Session = Depends(get_db)):
     current_tos = (
         db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).first()
     )
@@ -51,12 +51,19 @@ def get_current_tos(db: Session = Depends(get_db)):
         f = pkgstore.serve_path("root", tos_file.filename)
         data_bytes = f.read()
 
-        tos_files.append(
-            {
-                "content": data_bytes.decode('utf-8'),
-                "filename": tos_file.filename,
-                "language": tos_file.language,
-            }
+        if lang is None or lang == tos_file.language:
+            tos_files.append(
+                {
+                    "content": data_bytes.decode('utf-8'),
+                    "filename": tos_file.filename,
+                    "language": tos_file.language,
+                }
+            )
+
+    if lang is not None and not tos_files:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"terms of service for language {lang} not found",
         )
 
     return {

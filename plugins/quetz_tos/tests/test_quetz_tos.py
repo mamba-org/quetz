@@ -52,6 +52,14 @@ def test_get_tos(client, tos_file, tos):
     assert response.json()['files'][1]['filename'] == 'tos_fr.txt'
     assert response.json()['files'][1]['content'] == 'demo tos fr'
 
+    response = client.get('/api/tos?lang=CH')
+    assert response.status_code == 404
+
+    response = client.get('/api/tos?lang=FR')
+    assert response.status_code == 200
+    assert len(response.json()['files']) == 1
+    assert response.json()['files'][0]['language'] == 'FR'
+
 
 def test_tos_sign(client, member_user, tos_file, tos):
     response = client.get("/api/dummylogin/alice")
