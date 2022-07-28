@@ -1506,6 +1506,11 @@ def handle_package_files(
 
     for file, condainfo in zip(files, conda_infos):
         logger.debug(f"Handling {condainfo.info['name']} -> {file.filename}")
+
+        def _delete_file(condainfo, filename):
+            dest = os.path.join(condainfo.info["subdir"], file.filename)
+            pkgstore.delete_file(channel.name, dest)
+
         package_type = "tar.bz2" if file.filename.endswith(".tar.bz2") else "conda"
         UPLOAD_COUNT.labels(
             channel=channel.name,
@@ -1521,11 +1526,13 @@ def handle_package_files(
         # check that the filename matches the package name
         # TODO also validate version and build string
         if parts[0] != condainfo.info["name"]:
+            _delete_file(condainfo, file.filename)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="filename does not match package name",
             )
         if package and (parts[0] != package.name or package_name != package.name):
+            _delete_file(condainfo, file.filename)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
@@ -1533,10 +1540,6 @@ def handle_package_files(
                     f"does not match the uploaded package name '{parts[0]}'"
                 ),
             )
-
-        def _delete_file(condainfo, filename):
-            dest = os.path.join(condainfo.info["subdir"], file.filename)
-            pkgstore.delete_file(channel.name, dest)
 
         if not package and not dao.get_package(channel.name, package_name):
 
