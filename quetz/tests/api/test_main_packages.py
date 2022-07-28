@@ -1,4 +1,6 @@
+import json
 import os
+import time
 from pathlib import Path
 from typing import BinaryIO
 
@@ -324,6 +326,74 @@ def test_upload_package_version_wrong_filename(
     assert "do not match" in detail
     assert "my-package" in detail
     assert not os.path.exists(package_dir)
+
+
+@pytest.mark.parametrize("package_name", ["test-package"])
+def test_upload_duplicate_package_version(
+    auth_client,
+    public_channel,
+    public_package,
+    package_name,
+    db,
+    config,
+    remove_package_versions,
+):
+    pkgstore = config.get_package_store()
+
+    package_filename = "test-package-0.1-0.tar.bz2"
+    package_filename_copy = "test-package-0.1-0_copy.tar.bz2"
+
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/packages/"
+            f"{public_package.name}/files/",
+            files=files,
+        )
+
+    package_dir = Path(pkgstore.channels_dir) / public_channel.name / 'linux-64'
+    with open(package_dir / 'repodata.json', 'r') as fd:
+        repodata_init = json.load(fd)
+
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/packages/"
+            f"{public_package.name}/files/",
+            files=files,
+        )
+    assert response.status_code == 409
+    detail = response.json()['detail']
+    assert "Duplicate" in detail
+
+    # Change the archive to test force update
+    os.remove(package_filename)
+    os.rename(package_filename_copy, package_filename)
+
+    # Ensure the 'time_modified' value change in repodata.json
+    time.sleep(1)
+
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/packages/"
+            f"{public_package.name}/files/",
+            files=files,
+            data={"force": True},
+        )
+
+    assert response.status_code == 201
+
+    with open(package_dir / 'repodata.json', 'r') as fd:
+        repodata = json.load(fd)
+
+    assert repodata_init["info"] == repodata["info"]
+    assert repodata_init["packages"].keys() == repodata["packages"].keys()
+    repodata_init_pkg = repodata_init["packages"][package_filename]
+    repodata_pkg = repodata["packages"][package_filename]
+    assert repodata_init_pkg["time_modified"] != repodata_pkg["time_modified"]
+    assert repodata_init_pkg["md5"] != repodata_pkg["md5"]
+    assert repodata_init_pkg["sha256"] != repodata_pkg["sha256"]
 
 
 @pytest.mark.parametrize("package_name", ["test-package"])
