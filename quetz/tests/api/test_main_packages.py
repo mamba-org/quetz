@@ -12,7 +12,6 @@ from quetz.condainfo import CondaInfo
 from quetz.config import Config
 from quetz.db_models import ChannelMember, Package, PackageMember, PackageVersion
 from quetz.errors import ValidationError
-from quetz.pkgstores import PackageStore
 from quetz.tasks.indexing import update_indexes
 
 
@@ -74,10 +73,22 @@ def test_delete_package_versions_with_package(
 
     update_indexes(dao, pkgstore, public_channel.name)
 
+    # Get package files
     package_filenames = [
         os.path.join(version.platform, version.filename)
         for version in public_package.package_versions  # type: ignore
     ]
+
+    # Get repodata content
+    package_dir = Path(pkgstore.channels_dir) / public_channel.name / 'linux-64'
+    with open(package_dir / 'repodata.json', 'r') as fd:
+        repodata = json.load(fd)
+
+    # Check that all packages are initially in repodata
+    for filename in package_filenames:
+        assert os.path.basename(filename) in repodata["packages"].keys()
+
+    # Get channel files
     init_files = sorted(pkgstore.list_files(public_channel.name))
 
     response = auth_client.delete(
@@ -97,9 +108,19 @@ def test_delete_package_versions_with_package(
 
     assert len(versions) == 0
 
+    # Check that repodata content has been updated
+    with open(package_dir / 'repodata.json', 'r') as fd:
+        repodata = json.load(fd)
+
+    assert repodata["info"] == repodata["info"]
+
+    # Remove package files from files list
+    # Check that packages have been removed from repodata
     for filename in package_filenames:
         init_files.remove(filename)
+        assert os.path.basename(filename) not in repodata["packages"]
 
+    # Check that the package tree files is the same except for package files
     files = sorted(pkgstore.list_files(public_channel.name))
 
     assert files == init_files
@@ -314,10 +335,6 @@ def test_upload_package_version_wrong_filename(
             files=files,
         )
 
-    with open(package_filename, "rb") as fid:
-        condainfo = CondaInfo(fid, package_filename)
-        condainfo._parse_conda()
-
     package_dir = Path(pkgstore.channels_dir) / public_channel.name / 'linux-64'
 
     assert response.status_code == 400
@@ -351,10 +368,12 @@ def test_upload_duplicate_package_version(
             files=files,
         )
 
+    # Get repodata content
     package_dir = Path(pkgstore.channels_dir) / public_channel.name / 'linux-64'
     with open(package_dir / 'repodata.json', 'r') as fd:
         repodata_init = json.load(fd)
 
+    # Try submitting the same package without 'force' flag
     with open(package_filename, "rb") as fid:
         files = {"files": (package_filename, fid)}
         response = auth_client.post(
@@ -373,6 +392,7 @@ def test_upload_duplicate_package_version(
     # Ensure the 'time_modified' value change in repodata.json
     time.sleep(1)
 
+    # Submit the same package with 'force' flag
     with open(package_filename, "rb") as fid:
         files = {"files": (package_filename, fid)}
         response = auth_client.post(
@@ -384,6 +404,7 @@ def test_upload_duplicate_package_version(
 
     assert response.status_code == 201
 
+    # Check that repodata content has been updated
     with open(package_dir / 'repodata.json', 'r') as fd:
         repodata = json.load(fd)
 
@@ -423,13 +444,22 @@ def test_check_channel_size_limits(
 
 
 def test_delete_package_version(
-    auth_client, public_channel, package_version, dao, pkgstore: PackageStore, db
+    auth_client, public_channel, package_version, dao, pkgstore, db
 ):
     assert public_channel.size > 0
     assert public_channel.size == package_version.size
 
     filename = "test-package-0.1-0.tar.bz2"
     platform = "linux-64"
+
+    update_indexes(dao, pkgstore, public_channel.name)
+
+    # Get repodata content and check that package is inside
+    package_dir = Path(pkgstore.channels_dir) / public_channel.name / 'linux-64'
+    with open(package_dir / 'repodata.json', 'r') as fd:
+        repodata = json.load(fd)
+    assert filename in repodata["packages"].keys()
+
     response = auth_client.delete(
         f"/api/channels/{public_channel.name}/"
         f"packages/{package_version.package_name}/versions/{platform}/{filename}"
@@ -450,6 +480,11 @@ def test_delete_package_version(
 
     db.refresh(public_channel)
     assert public_channel.size == 0
+
+    # Check that repodata content has been updated
+    with open(package_dir / 'repodata.json', 'r') as fd:
+        repodata = json.load(fd)
+    assert filename not in repodata["packages"].keys()
 
 
 def test_package_name_length_limit(auth_client, public_channel, db):

@@ -1090,6 +1090,7 @@ def delete_package_version(
     filename: str,
     channel_name: str,
     package_name: str,
+    background_tasks: BackgroundTasks,
     dao: Dao = Depends(get_dao),
     db=Depends(get_db),
     auth: authorization.Rules = Depends(get_rules),
@@ -1114,6 +1115,10 @@ def delete_package_version(
     pkgstore.delete_file(channel_name, path)
 
     dao.update_channel_size(channel_name)
+
+    wrapped_bg_task = background_task_wrapper(indexing.update_indexes, logger)
+    # Background task to update indexes
+    background_tasks.add_task(wrapped_bg_task, dao, pkgstore, channel_name, [platform])
 
 
 @api_router.get(
