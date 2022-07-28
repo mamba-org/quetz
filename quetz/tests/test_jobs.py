@@ -31,16 +31,6 @@ def sqlite_in_memory():
     return False
 
 
-@pytest.fixture
-def package_name():
-    return "my-package"
-
-
-@pytest.fixture
-def channel_name():
-    return "my-channel"
-
-
 def add_package_version(
     filename, package_version, channel_name, user, dao, package_name=None
 ):
@@ -96,16 +86,6 @@ def package_version(
 
     db.delete(version)
     db.commit()
-
-
-@pytest.fixture
-def channel_role():
-    return "owner"
-
-
-@pytest.fixture
-def package_role():
-    return "owner"
 
 
 @pytest.fixture

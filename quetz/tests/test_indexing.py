@@ -1,16 +1,10 @@
 import json
-import os
 from pathlib import Path
+
 import pytest
 
-from quetz.config import Config
-from quetz.dao import Dao
-from quetz.db_models import Channel as Channel_model
-from quetz.tasks.indexing import update_indexes
-from quetz.rest_models import Channel, Package
 from quetz import channel_data
-
-from .api.conftest import *
+from quetz.tasks.indexing import update_indexes
 
 
 @pytest.fixture
@@ -18,12 +12,7 @@ def empty_channeldata(dao):
     return channel_data.export(dao, "")
 
 
-def test_update_indexes_empty_channel(
-    config: Config,
-    public_channel,
-    dao,
-    empty_channeldata
-):
+def test_update_indexes_empty_channel(config, public_channel, dao, empty_channeldata):
     pkgstore = config.get_package_store()
 
     update_indexes(dao, pkgstore, public_channel.name)
@@ -50,11 +39,7 @@ def test_update_indexes_empty_channel(
 
 
 def test_update_indexes_empty_package(
-    config: Config,
-    public_channel,
-    public_package,
-    dao,
-    empty_channeldata
+    config, public_channel, public_package, dao, empty_channeldata
 ):
     pkgstore = config.get_package_store()
 
@@ -87,13 +72,8 @@ def test_update_indexes_empty_package(
 
 
 def test_update_indexes_with_package_version(
-    config: Config,
-    public_channel,
-    public_package,
-    package_version,
-    dao
+    config, public_channel, public_package, package_version, dao
 ):
-    platform="linux-64"
     pkgstore = config.get_package_store()
 
     update_indexes(dao, pkgstore, public_channel.name)

@@ -3,20 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from quetz.config import Config
-from quetz.dao import Dao
-from quetz.db_models import Identity, PackageVersion, Profile, User
+from quetz.db_models import Identity, Profile, User
 from quetz.rest_models import Channel, Package
-
-
-@pytest.fixture
-def package_name():
-    return "my-package"
-
-
-@pytest.fixture
-def channel_name():
-    return "my-channel"
 
 
 @pytest.fixture
@@ -43,7 +31,9 @@ def private_package(dao, other_user, private_channel):
 
 
 @pytest.fixture
-def private_package_version(dao, private_channel, private_package, other_user, config):
+def private_package_version(
+    dao, private_channel, private_package, other_user, config, package_name
+):
     package_format = "tarbz2"
     package_info = "{}"
     channel_name = private_channel.name
@@ -77,68 +67,6 @@ def private_package_version(dao, private_channel, private_package, other_user, c
     return version
 
 
-@pytest.fixture
-def make_package_version(
-    db,
-    user,
-    public_channel,
-    channel_name,
-    package_name,
-    public_package,
-    dao: Dao,
-    config: Config,
-):
-
-    pkgstore = config.get_package_store()
-
-    versions = []
-
-    def _make_package_version(filename, version_number, platform="linux-64"):
-        filename = Path(filename)
-        with open(filename, "rb") as fid:
-            pkgstore.add_file(fid.read(), channel_name, platform / filename)
-        package_format = "tarbz2"
-        package_info = "{}"
-        version = dao.create_version(
-            channel_name,
-            package_name,
-            package_format,
-            platform,
-            version_number,
-            0,
-            "",
-            str(filename),
-            package_info,
-            user.id,
-            size=11,
-        )
-
-        dao.update_package_channeldata(
-            channel_name,
-            package_name,
-            {'name': package_name, 'subdirs': [platform]},
-        )
-
-        dao.update_channel_size(channel_name)
-
-        versions.append(version)
-
-        return version
-
-    yield _make_package_version
-
-    for version in versions:
-        db.query(PackageVersion).filter(PackageVersion.id == version.id).delete()
-    db.commit()
-
-
-@pytest.fixture
-def package_version(db, make_package_version):
-    version = make_package_version("test-package-0.1-0.tar.bz2", "0.1")
-
-    return version
-
-
 @pytest.fixture()
 def other_user_without_profile(db):
     user = User(id=uuid.uuid4().bytes, username="other")
@@ -161,37 +89,6 @@ def other_user(other_user_without_profile, db):
     db.add(identity)
     db.commit()
     yield other_user_without_profile
-
-
-@pytest.fixture
-def channel_role():
-    return "owner"
-
-
-@pytest.fixture
-def package_role():
-    return "owner"
-
-
-@pytest.fixture
-def public_channel(dao: Dao, user, channel_role, channel_name):
-
-    channel_data = Channel(name=channel_name, private=False)
-    channel = dao.create_channel(channel_data, user.id, channel_role)
-
-    return channel
-
-
-@pytest.fixture
-def public_package(db, user, public_channel, dao, package_role, package_name):
-
-    package_data = Package(name=package_name)
-
-    package = dao.create_package(
-        public_channel.name, package_data, user.id, package_role
-    )
-
-    return package
 
 
 @pytest.fixture

@@ -13,16 +13,6 @@ from quetz.metrics.db_models import IntervalType, PackageVersionMetric, round_ti
 
 
 @pytest.fixture
-def package_name():
-    return "my-package"
-
-
-@pytest.fixture
-def channel_name():
-    return "my-channel"
-
-
-@pytest.fixture
 def channel(dao, db, user, channel_name):
 
     channel_data = rest_models.Channel(name=channel_name, private=False)
