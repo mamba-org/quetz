@@ -307,7 +307,8 @@ def test_upload_package_version_wrong_filename(
     with open(package_filename, "rb") as fid:
         files = {"files": (package_filename, fid)}
         response = auth_client.post(
-            f"/api/channels/{public_channel.name}/packages/" f"{package_name}/files/",
+            f"/api/channels/{public_channel.name}/packages/"
+            f"{public_package.name}/files/",
             files=files,
         )
 
