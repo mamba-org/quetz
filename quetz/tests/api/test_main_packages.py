@@ -271,12 +271,16 @@ def test_upload_package_version(
         condainfo = CondaInfo(fid, package_filename)
         condainfo._parse_conda()
 
+    package_dir = Path(pkgstore.channels_dir) / public_channel.name / 'linux-64'
+
     if package_name == "my-package":
         assert response.status_code == 400
         detail = response.json()['detail']
+        assert "package endpoint" in detail
         assert "does not match" in detail
         assert "test-package" in detail
         assert "my-package" in detail
+        assert package_filename not in os.listdir(package_dir)
     else:
         assert response.status_code == 201
         db.refresh(public_channel)
@@ -284,6 +288,41 @@ def test_upload_package_version(
         assert pkgstore.serve_path(
             public_channel.name, str(Path(condainfo.info['subdir']) / package_filename)
         )
+        assert package_filename in os.listdir(package_dir)
+
+
+def test_upload_package_version_wrong_filename(
+    auth_client,
+    public_channel,
+    public_package,
+    package_name,
+    db,
+    config,
+    remove_package_versions,
+):
+    pkgstore = config.get_package_store()
+
+    package_filename = "my-package-0.1-0.tar.bz2"
+    os.rename("test-package-0.1-0.tar.bz2", package_filename)
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/packages/" f"{package_name}/files/",
+            files=files,
+        )
+
+    with open(package_filename, "rb") as fid:
+        condainfo = CondaInfo(fid, package_filename)
+        condainfo._parse_conda()
+
+    package_dir = Path(pkgstore.channels_dir) / public_channel.name / 'linux-64'
+
+    assert response.status_code == 400
+    detail = response.json()['detail']
+    assert "info file" in detail
+    assert "do not match" in detail
+    assert "my-package" in detail
+    assert not os.path.exists(package_dir)
 
 
 @pytest.mark.parametrize("package_name", ["test-package"])
