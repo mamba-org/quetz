@@ -10,11 +10,6 @@ from quetz.tasks.reindexing import reindex_packages_from_store
 
 
 @pytest.fixture
-def channel_name():
-    return "my-channel"
-
-
-@pytest.fixture
 def pkgstore(config):
     pkgstore = config.get_package_store()
     return pkgstore
