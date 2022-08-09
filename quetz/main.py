@@ -1055,6 +1055,35 @@ def get_package_versions(
 
 
 @api_router.get(
+    "/paginated/channels/{channel_name}/packages/{package_name}/versions",
+    response_model=rest_models.PaginatedResponse[rest_models.PackageVersion],
+    tags=["packages"],
+)
+def get_paginated_package_versions(
+    package: db_models.Package = Depends(get_package_or_fail),
+    dao: Dao = Depends(get_dao),
+    skip: int = 0,
+    limit: int = PAGINATION_LIMIT,
+    time_created__ge: datetime.datetime = None,
+    version_match_str: str = None,
+):
+
+    version_profile_list = dao.get_package_versions(
+        package, time_created__ge, version_match_str, skip, limit
+    )
+    version_list = []
+
+    for version, profile, api_key_profile in version_profile_list['result']:
+        version_data = rest_models.PackageVersion.from_orm(version)
+        version_list.append(version_data)
+
+    return {
+        'pagination': version_profile_list['pagination'],
+        'result': version_list,
+    }
+
+
+@api_router.get(
     "/channels/{channel_name}/packages/{package_name}/versions/{platform}/{filename}",
     response_model=rest_models.PackageVersion,
     tags=["packages"],
