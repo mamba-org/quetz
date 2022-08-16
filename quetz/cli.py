@@ -298,7 +298,6 @@ def _is_deployment(base_dir: Path):
     config_file = base_dir.joinpath("config.toml")
     if (
         base_dir.exists()
-        and config_file.exists()
         and base_dir.joinpath("channels").exists()
     ):
         config = Config(str(config_file.resolve()))
@@ -474,9 +473,6 @@ def create(
 def _get_config(path: Union[Path, str]) -> Config:
     """get config path"""
     config_file = Path(path) / 'config.toml'
-    if not config_file.exists():
-        typer.echo(f'Could not find config at {config_file}')
-        raise typer.Abort()
 
     config = Config(str(config_file.resolve()))
     if not os.environ.get(_env_prefix + _env_config_file):

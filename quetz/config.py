@@ -234,13 +234,13 @@ class Config:
     def __new__(cls, deployment_config: str = None):
         if not deployment_config and None in cls._instances:
             return cls._instances[None]
+
         try:
             path = os.path.abspath(cls.find_file(deployment_config))
         except TypeError:
-            raise ValueError(
-                "Environment Variable QUETZ_CONFIG_FILE \
-                 should be set to name / path of the config file"
-            )
+            # if not config path exists, set it to empty string.
+            path = ""
+
         if path not in cls._instances:
             config = super().__new__(cls)
             config.init(path)
@@ -257,7 +257,6 @@ class Config:
     @classmethod
     def find_file(cls, deployment_config: str = None):
         config_file_env = os.getenv(f"{_env_prefix}{_env_config_file}")
-
         deployment_config_files = []
         for f in (deployment_config, config_file_env):
             if f and os.path.isfile(f):
@@ -284,14 +283,15 @@ class Config:
 
         self.config: Dict[str, Any] = {}
 
-        self.config.update(self._read_config(path))
+        # only try to get config from config file if it exists.
+        if path:
+            self.config.update(self._read_config(path))
 
         self._trigger_update_config()
 
     def _trigger_update_config(self):
         def set_entry_attr(entry, section=""):
             env_var_value = os.getenv(entry.env_var(section))
-
             # Override the configuration files if an env variable is defined for
             # the entry.
             if env_var_value:
