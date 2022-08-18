@@ -550,18 +550,16 @@ def database_url_environment_variables() -> None:
 
 @pytest.fixture()
 def mandatory_environment_variables(
-    database_url_environment_variables: None,
-    session_secret_environment_variables: None
+    database_url_environment_variables: None, session_secret_environment_variables: None
 ) -> None:
     yield
 
 
 @pytest.mark.timeout(1)
 def test_start_without_database_url(
-    empty_config_on_exit: None,
-    session_secret_environment_variables:  None
+    empty_config_on_exit: None, session_secret_environment_variables: None
 ):
-    """ Error starting server without database url """
+    """Error starting server without database url"""
     res = runner.invoke(cli.app, ["start"])
     assert res.exit_code == 1
     assert "'database_url' unset" in str(res.exception)
@@ -569,10 +567,9 @@ def test_start_without_database_url(
 
 @pytest.mark.timeout(1)
 def test_start_without_session_secret(
-    empty_config_on_exit: None,
-    database_url_environment_variables: None
+    empty_config_on_exit: None, database_url_environment_variables: None
 ):
-    """ Error starting server without session secret """
+    """Error starting server without session secret"""
     res = runner.invoke(cli.app, ["start"])
     assert res.exit_code == 1
     assert "'secret' unset" in str(res.exception)
@@ -580,10 +577,9 @@ def test_start_without_session_secret(
 
 @pytest.mark.timeout(1)
 def test_start_server_local_without_deployment(
-    empty_config_on_exit: None,
-    mandatory_environment_variables: None
+    empty_config_on_exit: None, mandatory_environment_variables: None
 ):
-    """ Error starting server without deployment directory """
+    """Error starting server without deployment directory"""
     res = runner.invoke(cli.app, ["start"])
     assert res.exit_code == 1
     assert "The specified directory is not a deployment" in res.output

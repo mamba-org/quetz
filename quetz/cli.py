@@ -297,10 +297,7 @@ def _fill_test_database(db: Session) -> NoReturn:
 
 def _is_deployment(base_dir: Path):
     config_file = base_dir.joinpath("config.toml")
-    if (
-        base_dir.exists()
-        and base_dir.joinpath("channels").exists()
-    ):
+    if base_dir.exists() and base_dir.joinpath("channels").exists():
         config = Config(str(config_file.resolve()))
         with working_directory(base_dir):
             if not database_exists(config.sqlalchemy_database_url):
@@ -474,7 +471,6 @@ def create(
 def _get_config(path: Union[Path, str]) -> Config:
     """get config path"""
     config_file = Path(path) / 'config.toml'
-
     config = Config(str(config_file.resolve()))
     if not os.environ.get(_env_prefix + _env_config_file):
         os.environ[_env_prefix + _env_config_file] = str(config_file.resolve())
@@ -518,10 +514,12 @@ def start(
         path = os.getcwd()
 
     config = _get_config(deployment_folder)
+
     if not _is_deployment(deployment_folder):
         if isinstance(config.get_package_store(), pkgstores.LocalStore):
             typer.echo(
-                'The specified directory is not a deployment and the package store is set as local.\n'
+                'The specified directory is not a deployment and the package store '
+                'is set as local.\n'
                 'Use the create or run command to create a deployment.',
                 err=True,
             )

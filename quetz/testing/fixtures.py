@@ -3,9 +3,9 @@ import shutil
 import tempfile
 from typing import List
 
+import pytest
 from alembic.command import upgrade as alembic_upgrade
 from fastapi.testclient import TestClient
-import pytest
 
 import quetz
 from quetz.cli import _alembic_config
@@ -16,7 +16,9 @@ from quetz.db_models import Base
 
 
 def pytest_configure(config):
-    pytest.quetz_variables = {var: value for var, value in os.environ.items() if var.startswith("QUETZ_")}
+    pytest.quetz_variables = {
+        var: value for var, value in os.environ.items() if var.startswith("QUETZ_")
+    }
     for var in pytest.quetz_variables:
         del os.environ[var]
 

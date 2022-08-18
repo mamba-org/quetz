@@ -6,7 +6,6 @@ import logging.config
 import os
 from distutils.util import strtobool
 from secrets import token_bytes
-from tokenize import String
 from typing import (
     Any,
     Dict,
@@ -18,7 +17,6 @@ from typing import (
     Type,
     Union,
 )
-from xmlrpc.client import Boolean
 
 import appdirs
 import pluggy
@@ -367,9 +365,11 @@ class Config:
             except toml.TomlDecodeError as e:
                 raise ConfigError(f"failed to load config file '{filename}': {e}")
 
-    def _find_first_level_config(self, section_name: str) -> Union[ConfigSection, ConfigEntry, None]:
+    def _find_first_level_config(
+        self, section_name: str
+    ) -> Union[ConfigSection, ConfigEntry, None]:
 
-        """ Find the section or entry at first level of config_map.
+        """Find the section or entry at first level of config_map.
 
         Parameters
         ----------
@@ -387,7 +387,7 @@ class Config:
         return None
 
     def _get_environ_config(self) -> Dict[str, Any]:
-        """ Looks into environment variables if some matches with config_map.
+        """Looks into environment variables if some matches with config_map.
 
         Returns
         -------
@@ -397,7 +397,11 @@ class Config:
         config: Dict[str, Any] = {}
 
         # get QUETZ environment variables.
-        quetz_var = {key: value for key, value in os.environ.items() if key.startswith(_env_prefix)}
+        quetz_var = {
+            key: value
+            for key, value in os.environ.items()
+            if key.startswith(_env_prefix)
+        }
         for var, value in quetz_var.items():
             splitted_key = var.split('_')
             config_key = splitted_key[1].lower()
@@ -405,7 +409,7 @@ class Config:
 
             # look for the first level of config_map.
             # It must be done in loop as the key itself can contains '_'.
-            while (idx < len(splitted_key)):
+            while idx < len(splitted_key):
                 first_level = self._find_first_level_config(config_key)
                 if first_level:
                     break
@@ -422,7 +426,9 @@ class Config:
             elif isinstance(first_level, ConfigSection):
                 entry = "_".join(splitted_key[idx:]).lower()
                 # the entry does not exist in section, the variable is useless.
-                if not entry in [section_entry.name for section_entry in first_level.entries]:
+                if entry not in [
+                    section_entry.name for section_entry in first_level.entries
+                ]:
                     continue
                 # add the entry to the config.
                 if first_level.name not in config:
