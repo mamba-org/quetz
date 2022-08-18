@@ -21,6 +21,7 @@ from importlib_metadata import entry_points
 from sqlalchemy.orm.session import Session
 from sqlalchemy_utils.functions import database_exists
 
+from quetz import pkgstores
 from quetz.config import (
     Config,
     _env_config_file,
@@ -235,7 +236,7 @@ def _fill_test_database(db: Session) -> NoReturn:
                 private=False,
             )
 
-            for package_index in range(random.randint(5, 10)):
+            for package_index in range(random.randint(30, 60)):
                 package = Package(
                     name=f'package{package_index}',
                     summary=f'package {package_index} summary text',
@@ -510,16 +511,21 @@ def start(
 
     logger.info(f"deploying quetz from directory {path}")
 
-    deployment_folder = Path(path)
-    _get_config(deployment_folder)
+    if path:
+        deployment_folder = Path(path)
+    else:
+        deployment_folder = Path("")
+        path = os.getcwd()
 
+    config = _get_config(deployment_folder)
     if not _is_deployment(deployment_folder):
-        typer.echo(
-            'The specified directory is not a deployment.\n'
-            'Use the create or run command to create a deployment.',
-            err=True,
-        )
-        raise typer.Abort()
+        if isinstance(config.get_package_store(), pkgstores.LocalStore):
+            typer.echo(
+                'The specified directory is not a deployment and the package store is set as local.\n'
+                'Use the create or run command to create a deployment.',
+                err=True,
+            )
+            raise typer.Abort()
 
     if supervisor:
         logger.info("starting supervisor")
