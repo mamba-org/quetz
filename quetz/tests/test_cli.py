@@ -456,7 +456,6 @@ def test_create_exists_errors(cli_args):
     """Create command raises if deployment exists and not force deleted."""
     with mock.patch("quetz.cli._is_deployment", lambda x: True):
         res = runner.invoke(cli.app, cli_args)
-        print(res.output)
         assert res.exit_code == 1
         assert (
             "Use the start command to start a deployment or specify"
@@ -531,3 +530,60 @@ def test_create_missing_copy_conf(
     )
     assert res.exit_code == 1
     assert "Config file to copy does not exist" in res.output
+
+
+@pytest.fixture()
+def session_secret_environment_variables() -> None:
+    os.environ["QUETZ_SESSION_SECRET"] = "test"
+    yield
+    if "QUETZ_SESSION_SECRET" in os.environ:
+        del os.environ["QUETZ_SESSION_SECRET"]
+
+
+@pytest.fixture()
+def database_url_environment_variables() -> None:
+    os.environ["QUETZ_SQLALCHEMY_DATABASE_URL"] = "sqlite:///./test_quetz/quetz.sqlite"
+    yield
+    if "QUETZ_SQLALCHEMY_DATABASE_URL" in os.environ:
+        del os.environ["QUETZ_SQLALCHEMY_DATABASE_URL"]
+
+
+@pytest.fixture()
+def mandatory_environment_variables(
+    database_url_environment_variables: None,
+    session_secret_environment_variables: None
+) -> None:
+    yield
+
+
+@pytest.mark.timeout(1)
+def test_start_without_database_url(
+    empty_config_on_exit: None,
+    session_secret_environment_variables:  None
+):
+    """ Error starting server without database url """
+    res = runner.invoke(cli.app, ["start"])
+    assert res.exit_code == 1
+    assert "'database_url' unset" in str(res.exception)
+
+
+@pytest.mark.timeout(1)
+def test_start_without_session_secret(
+    empty_config_on_exit: None,
+    database_url_environment_variables: None
+):
+    """ Error starting server without session secret """
+    res = runner.invoke(cli.app, ["start"])
+    assert res.exit_code == 1
+    assert "'secret' unset" in str(res.exception)
+
+
+@pytest.mark.timeout(1)
+def test_start_server_local_without_deployment(
+    empty_config_on_exit: None,
+    mandatory_environment_variables: None
+):
+    """ Error starting server without deployment directory """
+    res = runner.invoke(cli.app, ["start"])
+    assert res.exit_code == 1
+    assert "The specified directory is not a deployment" in res.output

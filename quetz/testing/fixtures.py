@@ -5,7 +5,7 @@ from typing import List
 
 from alembic.command import upgrade as alembic_upgrade
 from fastapi.testclient import TestClient
-from pytest import fixture
+import pytest
 
 import quetz
 from quetz.cli import _alembic_config
@@ -15,13 +15,24 @@ from quetz.database import get_engine, get_session_maker
 from quetz.db_models import Base
 
 
-@fixture
+def pytest_configure(config):
+    pytest.quetz_variables = {var: value for var, value in os.environ.items() if var.startswith("QUETZ_")}
+    for var in pytest.quetz_variables:
+        del os.environ[var]
+
+
+def pytest_unconfigure(config):
+    for var, value in pytest.quetz_variables.items():
+        os.environ[var] = value
+
+
+@pytest.fixture
 def sqlite_in_memory():
     """whether to create a sqlite DB in memory or on the filesystem."""
     return True
 
 
-@fixture
+@pytest.fixture
 def sqlite_url(sqlite_in_memory):
     if sqlite_in_memory:
         yield "sqlite:///:memory:"
@@ -33,19 +44,19 @@ def sqlite_url(sqlite_in_memory):
             sql_path.cleanup()
 
 
-@fixture
+@pytest.fixture
 def database_url(sqlite_url):
     db_url = os.environ.get("QUETZ_TEST_DATABASE", sqlite_url)
     return db_url
 
 
-@fixture
+@pytest.fixture
 def sql_echo():
     """whether to activate SQL echo during the tests or not."""
     return False
 
 
-@fixture
+@pytest.fixture
 def engine(database_url, sql_echo):
     sql_echo = bool(os.environ.get("QUETZ_TEST_ECHO_SQL", sql_echo))
     engine = get_engine(database_url, echo=sql_echo, reuse_engine=False)
@@ -53,7 +64,7 @@ def engine(database_url, sql_echo):
     engine.dispose()
 
 
-@fixture
+@pytest.fixture
 def use_migrations() -> bool:
     USE_MIGRATIONS = "use-migrations"
     CREATE_TABLES = "create-tables"
@@ -68,21 +79,21 @@ def use_migrations() -> bool:
         )
 
 
-@fixture
+@pytest.fixture
 def sql_connection(engine):
     connection = engine.connect()
     yield connection
     connection.close()
 
 
-@fixture
+@pytest.fixture
 def alembic_config(database_url, sql_connection):
     alembic_config = _alembic_config(database_url)
     alembic_config.attributes["connection"] = sql_connection
     return alembic_config
 
 
-@fixture
+@pytest.fixture
 def create_tables(alembic_config, engine, use_migrations):
 
     if use_migrations:
@@ -91,7 +102,7 @@ def create_tables(alembic_config, engine, use_migrations):
         Base.metadata.create_all(engine)
 
 
-@fixture
+@pytest.fixture
 def auto_rollback():
     """Whether to revert automatically the changes in the database after each test.
 
@@ -105,7 +116,7 @@ def auto_rollback():
     return True
 
 
-@fixture
+@pytest.fixture
 def session_maker(sql_connection, create_tables, auto_rollback):
 
     # run the tests with a separate external DB transaction
@@ -128,12 +139,12 @@ def session_maker(sql_connection, create_tables, auto_rollback):
         trans.rollback()
 
 
-@fixture
+@pytest.fixture
 def expires_on_commit():
     return True
 
 
-@fixture
+@pytest.fixture
 def db(session_maker, expires_on_commit):
     session = session_maker()
     session.expire_on_commit = expires_on_commit
@@ -141,7 +152,7 @@ def db(session_maker, expires_on_commit):
     session.close()
 
 
-@fixture
+@pytest.fixture
 def config_auth():
     return """
 [github]
@@ -151,7 +162,7 @@ client_secret = "bbb"
 """
 
 
-@fixture
+@pytest.fixture
 def config_base(database_url, plugins, config_auth):
     return f"""
 {config_auth}
@@ -168,34 +179,34 @@ enabled = {plugins}
 """
 
 
-@fixture
+@pytest.fixture
 def config_extra():
     return ""
 
 
-@fixture
+@pytest.fixture
 def config_str(config_base, config_extra):
     return "\n".join([config_base, config_extra])
 
 
-@fixture
+@pytest.fixture
 def home():
     return os.path.abspath(os.path.curdir)
 
 
-@fixture
+@pytest.fixture
 def config_dir(home):
     path = tempfile.mkdtemp()
     yield path
     shutil.rmtree(path)
 
 
-@fixture(scope="session")
+@pytest.fixture(scope="session")
 def test_data_dir():
     return os.path.join(os.path.dirname(quetz.__file__), "tests", "data")
 
 
-@fixture
+@pytest.fixture
 def config(config_str, config_dir, test_data_dir):
 
     config_path = os.path.join(config_dir, "config.toml")
@@ -212,18 +223,20 @@ def config(config_str, config_dir, test_data_dir):
 
     Config._instances = {}
     config = Config()
+    print(config_dir)
     yield config
-    del os.environ["QUETZ_CONFIG_FILE"]
+    if "QUETZ_CONFIG_FILE" in os.environ:
+        del os.environ["QUETZ_CONFIG_FILE"]
     Config._instances = {}
     os.chdir(old_dir)
 
 
-@fixture
+@pytest.fixture
 def plugins() -> List[str]:
     return []
 
 
-@fixture
+@pytest.fixture
 def app(config, db, mocker):
 
     # frontend router catches all urls
@@ -255,13 +268,13 @@ def app(config, db, mocker):
     app.dependency_overrides.pop(get_db)
 
 
-@fixture
+@pytest.fixture
 def client(app):
     client = TestClient(app)
     return client
 
 
-@fixture
+@pytest.fixture
 def auth_client(client, user):
     """authenticated client"""
     response = client.get(f"/api/dummylogin/{user.username}")
@@ -269,6 +282,6 @@ def auth_client(client, user):
     return client
 
 
-@fixture
+@pytest.fixture
 def dao(db) -> Dao:
     return Dao(db)
