@@ -20,6 +20,8 @@ except ImportError:
 
 import quetz_client
 
+ALLOWED_SUBCOMMANDS = ["upload", "apikey", "create-channel"]
+
 config_dir = appdirs.user_config_dir("quetz_client")
 api_keys_location = os.path.join(config_dir, 'config.toml')
 
@@ -148,6 +150,7 @@ def upload_packages(args):
 
 
 def main():
+
     parser = argparse.ArgumentParser()
 
     subparsers = parser.add_subparsers(
@@ -221,7 +224,15 @@ def main():
     create_channel_parser.add_argument("-d", "--description", default="")
     create_channel_parser.add_argument("-p", "--private", action='store_true')
 
-    args = parser.parse_args()
+    # This first pass of parsing is used to find one of the allowed subcommands.
+    # If there is no subcommand, then "upload" is used by default.
+    firstp = argparse.ArgumentParser()
+    args, extras = firstp.parse_known_args()
+
+    if extras[0] not in ALLOWED_SUBCOMMANDS:
+        extras.insert(0, "upload")
+
+    args = parser.parse_args(extras)
 
     if args.cmd == 'apikey':
         get_api_key(args)

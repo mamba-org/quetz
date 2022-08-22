@@ -210,7 +210,6 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
     for sdir in subdirs:
         logger.debug(f"creating indexes for subdir {sdir} of channel {channel_name}")
         raw_repodata = repo_data.export(dao, channel_name, sdir)
-
         try:
             logger.debug(f"Starting post_index_creation for {sdir} of {channel_name}")
             pm.hook.post_index_creation(
@@ -230,7 +229,7 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
         )
 
     try:
-        logger.debug(f"Starting post_package_indexing for {sdir} of {channel_name}")
+        logger.debug(f"Starting post_package_indexing for {channel_name}")
         pm.hook.post_package_indexing(
             tempdir=tempdir_path,
             channel_name=channel_name,
@@ -238,7 +237,7 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
             files=files,
             packages=packages,
         )
-        logger.debug(f"Finished post_package_indexing for {sdir} of {channel_name}")
+        logger.debug(f"Finished post_package_indexing for {channel_name}")
     except Exception:
         logger.exception("Exception post_package_indexing:")
 
