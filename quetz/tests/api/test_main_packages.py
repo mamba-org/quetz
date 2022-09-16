@@ -126,6 +126,22 @@ def test_delete_package_versions_with_package(
     assert files == init_files
 
 
+def test_get_paginated_package_versions(
+    auth_client, public_channel, package_version, dao
+):
+    response = auth_client.get(
+        f"/api/paginated/channels/{public_channel.name}/"
+        f"packages/{package_version.package_name}/versions"
+    )
+
+    assert response.status_code == 200
+    assert isinstance(response.json().get('pagination'), dict)
+    assert response.json().get('pagination').get('all_records_count') == 1
+
+    assert isinstance(response.json().get('result'), list)
+    assert len(response.json().get('result')) == 1
+
+
 def test_get_package_version(auth_client, public_channel, package_version, dao):
     filename = "test-package-0.1-0.tar.bz2"
     platform = "linux-64"

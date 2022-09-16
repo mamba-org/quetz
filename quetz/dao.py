@@ -898,7 +898,12 @@ class Dao:
         return package_version
 
     def get_package_versions(
-        self, package, time_created_ge: datetime = None, version_match_str: str = None
+        self,
+        package,
+        time_created_ge: datetime = None,
+        version_match_str: str = None,
+        skip: int = 0,
+        limit: int = -1,
     ):
         ApiKeyProfile = aliased(Profile)
 
@@ -926,7 +931,10 @@ class Dao:
                     "database_plugin_path correctly for support!"
                 )
 
-        return query.all()
+        if limit < 0:
+            return query.all()
+        else:
+            return get_paginated_result(query, skip, limit)
 
     def get_package_version_by_filename(
         self, channel_name: str, package_name: str, filename: str, platform: str
