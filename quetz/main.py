@@ -603,7 +603,6 @@ def get_channel_mirrors(
 
 @api_router.delete(
     "/channels/{channel_name}/mirrors/{mirror_id}",
-    response_model=List[rest_models.ChannelMirror],
     tags=["channels"],
 )
 def delete_channel_mirror(
@@ -844,7 +843,6 @@ def get_package(package: db_models.Package = Depends(get_package_or_fail)):
 
 @api_router.delete(
     "/channels/{channel_name}/packages/{package_name}",
-    response_model=rest_models.Package,
     tags=["packages"],
 )
 def delete_package(
@@ -1111,7 +1109,6 @@ def get_package_version(
 
 @api_router.delete(
     "/channels/{channel_name}/packages/{package_name}/versions/{platform}/{filename}",
-    response_model=rest_models.PackageVersion,
     tags=["packages"],
 )
 def delete_package_version(
