@@ -2,6 +2,7 @@ import os
 import shutil
 import sys
 import tempfile
+from multiprocessing import Process
 from pathlib import Path
 from unittest import mock
 from unittest.mock import MagicMock
@@ -15,6 +16,7 @@ from typer.testing import CliRunner
 from quetz import cli
 from quetz.config import Config
 from quetz.db_models import Base, Identity, User
+from quetz.testing.utils import Interrupt
 
 runner = CliRunner()
 
@@ -533,7 +535,13 @@ def test_create_missing_copy_conf(
 
 
 @pytest.fixture()
-def session_secret_environment_variables() -> None:
+def create_channels_dir(config_dir) -> None:
+    os.mkdir(Path(config_dir).resolve() / "channels")
+    yield
+
+
+@pytest.fixture()
+def session_secret_environment_variable() -> None:
     os.environ["QUETZ_SESSION_SECRET"] = "test"
     yield
     if "QUETZ_SESSION_SECRET" in os.environ:
@@ -541,23 +549,31 @@ def session_secret_environment_variables() -> None:
 
 
 @pytest.fixture()
-def database_url_environment_variables() -> None:
-    os.environ["QUETZ_SQLALCHEMY_DATABASE_URL"] = "sqlite:///./test_quetz/quetz.sqlite"
+def database_url_environment_variable(database_url) -> None:
+    os.environ["QUETZ_SQLALCHEMY_DATABASE_URL"] = database_url
     yield
     if "QUETZ_SQLALCHEMY_DATABASE_URL" in os.environ:
         del os.environ["QUETZ_SQLALCHEMY_DATABASE_URL"]
 
 
 @pytest.fixture()
+def s3_environment_variable() -> None:
+    os.environ["QUETZ_S3_ACCESS_KEY"] = "fake_key"
+    yield
+    if "QUETZ_S3_ACCESS_KEY" in os.environ:
+        del os.environ["QUETZ_S3_ACCESS_KEY"]
+
+
+@pytest.fixture()
 def mandatory_environment_variables(
-    database_url_environment_variables: None, session_secret_environment_variables: None
+    database_url_environment_variable: None, session_secret_environment_variable: None
 ) -> None:
     yield
 
 
 @pytest.mark.timeout(1)
 def test_start_without_database_url(
-    empty_config_on_exit: None, session_secret_environment_variables: None
+    empty_config_on_exit: None, session_secret_environment_variable: None
 ):
     """Error starting server without database url"""
     res = runner.invoke(cli.app, ["start"])
@@ -567,7 +583,7 @@ def test_start_without_database_url(
 
 @pytest.mark.timeout(1)
 def test_start_without_session_secret(
-    empty_config_on_exit: None, database_url_environment_variables: None
+    empty_config_on_exit: None, database_url_environment_variable: None
 ):
     """Error starting server without session secret"""
     res = runner.invoke(cli.app, ["start"])
@@ -580,6 +596,65 @@ def test_start_server_local_without_deployment(
     empty_config_on_exit: None, mandatory_environment_variables: None
 ):
     """Error starting server without deployment directory"""
+
     res = runner.invoke(cli.app, ["start"])
     assert res.exit_code == 1
     assert "The specified directory is not a deployment" in res.output
+
+
+@pytest.mark.parametrize("sqlite_in_memory", [False])
+@pytest.mark.timeout(1)
+def test_start_server_local_with_deployment_and_config_file(
+    empty_config_on_exit: None, config, config_dir, create_channels_dir, create_tables
+):
+    """Starting server with deployment directory"""
+
+    p = Process(target=cli.app, args=(["start", config_dir, "--port", "8001"],))
+    with Interrupt():
+        p.start()
+    p.join()
+
+    assert p.exitcode == 0
+
+
+@pytest.mark.parametrize("sqlite_in_memory", [False])
+@pytest.mark.timeout(1)
+def test_start_server_local_with_deployment_without_config_file(
+    empty_config_on_exit: None,
+    config_dir,
+    create_channels_dir,
+    create_tables,
+    mandatory_environment_variables: None,
+):
+    """
+    Starting server with deployment directory but no config file,
+    using environmental variables instead
+    """
+
+    p = Process(target=cli.app, args=(["start", config_dir, "--port", "8001"],))
+    with Interrupt():
+        p.start()
+    p.join()
+
+    assert p.exitcode == 0
+
+
+@pytest.mark.parametrize("sqlite_in_memory", [False])
+@pytest.mark.timeout(1)
+def test_start_server_s3_without_deployment_without_config_file(
+    empty_config_on_exit: None,
+    create_tables,
+    mandatory_environment_variables: None,
+    s3_environment_variable: None,
+):
+    """
+    Starting server without deployment directory and no config file,
+    using environmental variables and remote storage.
+    """
+
+    p = Process(target=cli.app, args=(["start", "--port", "8001"],))
+    with Interrupt():
+        p.start()
+    p.join()
+
+    assert p.exitcode == 0
