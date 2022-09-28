@@ -225,7 +225,6 @@ def config(config_str, config_dir, test_data_dir):
 
     Config._instances = {}
     config = Config()
-    print(config_dir)
     yield config
     if "QUETZ_CONFIG_FILE" in os.environ:
         del os.environ["QUETZ_CONFIG_FILE"]
