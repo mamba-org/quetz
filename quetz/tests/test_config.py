@@ -25,8 +25,6 @@ def test_config_without_file_path_set(config_str):
 
     # we need to check whether Config was not initialised before
     assert not Config._instances
-    with pytest.raises(ValueError, match="Environment"):
-        Config()
 
     # check if it works with path even if QUETZ_CONFIG_FILE is
     # not defined
