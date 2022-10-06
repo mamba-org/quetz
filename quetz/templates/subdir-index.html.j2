@@ -54,7 +54,7 @@
     </tr>
 {% for path in add_files %}
     <tr>
-      <td>{{ path.name | opt_href(["/channels", title, path.name] | join("/")) }}</td>
+      <td>{{ path.name | opt_href(path.name) }}</td>
       <td class="s">{{ path.size | iec_bytes }}</td>
       <td>{% if path.timestamp %}{{ path.timestamp|strftime("%Y-%m-%d %H:%M:%S %z") }}{% endif %}</td>
       <td>{{ path.sha256 }}</td>
@@ -63,7 +63,7 @@
 {%- endfor %}
 {% for fn, record in packages.items() %}
     <tr>
-      <td>{{ fn | opt_href(["/channels", title, fn] | join("/") ) }}</td>
+      <td>{{ fn | opt_href(fn) }}</td>
       <td class="s">{{ record.size | iec_bytes }}</td>
       <td>{% if record.timestamp %}{{ record.timestamp|strftime("%Y-%m-%d %H:%M:%S %z") }}{% endif %}</td>
       <td>{{ record.sha256 }}</td>
