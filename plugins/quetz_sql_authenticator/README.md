@@ -1,6 +1,6 @@
 ## SQL Authenticator
 
-An authenticator that stores credentials as sha256-hashed values in a SQL database. Ships with CLI tools for CRUD operations on the credentials table.
+An authenticator that stores credentials in a SQL database using passlib. Ships with CLI tools for CRUD operations on the credentials table.
 
 ### Dependencies
 

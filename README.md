@@ -140,7 +140,7 @@ Channels are created with the following semantics:
 
 The s3 backend is currently designed for one bucket per channel. It may be possible to put all channels in one bucket, but that will require some code tweaks
 
-If you're using IAM roles, dont set `access_key` and `secret_key` or set them to empty strings `""`.
+If you're using IAM roles, don't set `access_key` and `secret_key` or set them to empty strings `""`.
 
 ## Google OAuth 2.0 OpenID Connect
 
