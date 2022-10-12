@@ -1140,7 +1140,7 @@ def delete_package_version(
     path = os.path.join(platform, filename)
     pkgstore.delete_file(channel_name, path)
 
-    dao.cleanup_channel_db(channel_name)
+    dao.cleanup_channel_db(channel_name, package_name)
     dao.update_channel_size(channel_name)
 
     wrapped_bg_task = background_task_wrapper(indexing.update_indexes, logger)
