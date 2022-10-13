@@ -335,14 +335,21 @@ class Dao:
 
         return channel
 
-    def cleanup_channel_db(self, channel_name: str, package_name: Optional[str] = None, dry_run: bool = False):
+    def cleanup_channel_db(
+        self,
+        channel_name: str,
+        package_name: Optional[str] = None,
+        dry_run: bool = False,
+    ):
         # remove all Packages without PackageVersions
         package_without_package_versions = []
         all_packages = self.db.query(Package).filter(
             Package.channel_name == channel_name
         )
         if package_name:
-            all_packages = all_packages.filter(PackageVersion.package_name == package_name)
+            all_packages = all_packages.filter(
+                PackageVersion.package_name == package_name
+            )
         for each_package in all_packages:
             all_package_versions = (
                 self.db.query(PackageVersion)
@@ -375,7 +382,9 @@ class Dao:
             Package.channel_name == channel_name
         )
         if package_name:
-            all_packages = all_packages.filter(PackageVersion.package_name == package_name)
+            all_packages = all_packages.filter(
+                PackageVersion.package_name == package_name
+            )
         for each_package in all_packages:
             if each_package.channeldata is not None:
                 each_package_channeldata = json.loads(each_package.channeldata)
@@ -406,7 +415,9 @@ class Dao:
             Package.channel_name == channel_name
         )
         if package_name:
-            all_packages = all_packages.filter(PackageVersion.package_name == package_name)
+            all_packages = all_packages.filter(
+                PackageVersion.package_name == package_name
+            )
         for x, each_package in enumerate(all_packages):
             all_versions_for_each_package = (
                 self.db.query(PackageVersion)
@@ -437,7 +448,9 @@ class Dao:
         if not package_name:
             logger.info(f"Done sorting package versions for {channel_name}")
         else:
-            logger.info(f"Done sorting package versions for {channel_name}/{package_name}")
+            logger.info(
+                f"Done sorting package versions for {channel_name}/{package_name}"
+            )
 
     def create_channel_mirror(
         self, channel_name: str, url: str, api_endpoint: str, metrics_endpoint: str

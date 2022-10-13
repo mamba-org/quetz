@@ -455,7 +455,7 @@ def create(
             config = Config()
             db_path = os.getcwd()
         except Exception as e:
-            logger.warn(msg=e)
+            logger.warning(msg=e)
             typer.echo(
                 'No configuration file provided.\n'
                 'Use --create-conf or --copy-conf to produce a config file\n'
