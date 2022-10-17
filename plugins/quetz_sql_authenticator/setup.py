@@ -15,9 +15,7 @@ setup(
         "quetz.migrations": [
             "quetz-sql-authenticator = quetz_sql_authenticator.migrations"
         ],
-        "quetz.models": [
-            "quetz-sql-authenticator = quetz_sql_authenticator.db_models"
-        ],
+        "quetz.models": ["quetz-sql-authenticator = quetz_sql_authenticator.db_models"],
     },
     packages=[
         "quetz_sql_authenticator",

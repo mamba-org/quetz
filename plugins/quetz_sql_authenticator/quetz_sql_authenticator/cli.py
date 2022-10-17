@@ -1,5 +1,3 @@
-import os
-
 import click
 from passlib.hash import pbkdf2_sha256
 
@@ -35,9 +33,7 @@ def _create(username: str, password: str) -> None:
 def _update(username: str, password: str) -> None:
     with get_db_manager() as db:
         credentials = (
-            db.query(Credentials)
-            .filter(Credentials.username == username)
-            .one_or_none()
+            db.query(Credentials).filter(Credentials.username == username).one_or_none()
         )
         if credentials is None:
             raise click.ClickException(f"ERROR: User '{username}' not found.")
@@ -51,9 +47,7 @@ def _update(username: str, password: str) -> None:
 def _delete(username: str) -> None:
     with get_db_manager() as db:
         credentials = (
-            db.query(Credentials)
-            .filter(Credentials.username == username)
-            .one_or_none()
+            db.query(Credentials).filter(Credentials.username == username).one_or_none()
         )
         if credentials is None:
             raise click.ClickException(f"ERROR: User '{username}' not found.")
@@ -65,10 +59,7 @@ def _delete(username: str) -> None:
 @_cli.command("reset")
 def _reset(database_url: str) -> None:
     with get_db_manager() as db:
-        credentials_count = (
-            db.query(Credentials)
-            .count()
-        )
+        credentials_count = db.query(Credentials).count()
     click.echo(f"WARNING: Resetting the table will delete {credentials_count} users.")
     while (
         reset_database := input("Are you sure you want to reset the table? [Y/n]")

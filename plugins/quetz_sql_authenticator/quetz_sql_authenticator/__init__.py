@@ -1,7 +1,6 @@
 from passlib.hash import pbkdf2_sha256
 
 from quetz.authentication.base import SimpleAuthenticator
-from quetz.config import Config, ConfigEntry, ConfigSection
 from quetz.database import get_db_manager
 
 from .db_models import Credentials
@@ -14,9 +13,7 @@ class UsernameNotFound(RuntimeError):
 def _get_password_hashed(username: str) -> str:
     with get_db_manager() as db:
         credentials = (
-            db.query(Credentials)
-            .filter(Credentials.username == username)
-            .one_or_none()
+            db.query(Credentials).filter(Credentials.username == username).one_or_none()
         )
         if credentials is None:
             raise UsernameNotFound(f"Username '{username}' not found.")
