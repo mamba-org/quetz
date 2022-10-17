@@ -180,6 +180,5 @@ try:
 
             return username
 
-
 except ImportError:
     PAMAuthenticator = None  # type: ignore
