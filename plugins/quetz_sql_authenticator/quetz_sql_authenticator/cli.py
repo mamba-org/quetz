@@ -2,6 +2,7 @@ import os
 
 import click
 from passlib.hash import pbkdf2_sha256
+
 from quetz.database import get_db_manager
 
 from .db_models import Credentials
