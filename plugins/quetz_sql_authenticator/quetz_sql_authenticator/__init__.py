@@ -31,7 +31,7 @@ class SQLAuthenticator(SimpleAuthenticator):
     async def authenticate(self, request, data, **kwargs):
         """Authenticate."""
         try:
-            password_hashed = _get_password_hashed(data["username"], session)
+            password_hashed = _get_password_hashed(data["username"])
         except UsernameNotFound:
             return
         if pbkdf2_sha256.verify(data["password"], password_hashed):
