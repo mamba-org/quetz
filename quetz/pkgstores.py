@@ -15,7 +15,7 @@ import tempfile
 from contextlib import contextmanager
 from os import PathLike
 from threading import Lock
-from typing import IO, BinaryIO, List, NoReturn, Tuple, Union
+from typing import IO, List, NoReturn, Tuple, Union
 
 import fsspec
 from tenacity import retry, retry_if_exception_type, stop_after_attempt
@@ -29,7 +29,7 @@ except ImportError:
 
 from quetz.errors import ConfigError
 
-File = BinaryIO
+File = IO[bytes]
 
 StrPath = Union[str, PathLike]
 
@@ -387,7 +387,7 @@ class S3Store(PackageStore):
             infodata = fs.info(filepath)
 
             mtime = infodata['LastModified'].timestamp()
-            msize = infodata['Size']
+            msize = infodata['size']
             etag = infodata['ETag']
 
             return (msize, mtime, etag)
@@ -559,11 +559,13 @@ class GoogleCloudStorageStore(PackageStore):
         self.project = config.get("project")
         self.token = config.get("token")
         self.cache_timeout = config.get("cache_timeout")
+        self.region = config.get("region")
 
         self.fs = gcsfs.GCSFileSystem(
             project=self.project,
             token=self.token if self.token else None,
             cache_timeout=self.cache_timeout,
+            default_location=self.region,
         )
 
         self.bucket_prefix = config['bucket_prefix']

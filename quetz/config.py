@@ -163,6 +163,7 @@ class Config:
                 ConfigEntry("bucket_prefix", str, default=""),
                 ConfigEntry("bucket_suffix", str, default=""),
                 ConfigEntry("cache_timeout", int, default=None),
+                ConfigEntry("region", str, default=None),
             ],
             required=False,
         ),
@@ -233,13 +234,13 @@ class Config:
     def __new__(cls, deployment_config: str = None):
         if not deployment_config and None in cls._instances:
             return cls._instances[None]
+
         try:
             path = os.path.abspath(cls.find_file(deployment_config))
         except TypeError:
-            raise ValueError(
-                "Environment Variable QUETZ_CONFIG_FILE \
-                 should be set to name / path of the config file"
-            )
+            # if not config path exists, set it to empty string.
+            path = ""
+
         if path not in cls._instances:
             config = super().__new__(cls)
             config.init(path)
@@ -256,7 +257,6 @@ class Config:
     @classmethod
     def find_file(cls, deployment_config: str = None):
         config_file_env = os.getenv(f"{_env_prefix}{_env_config_file}")
-
         deployment_config_files = []
         for f in (deployment_config, config_file_env):
             if f and os.path.isfile(f):
@@ -283,20 +283,17 @@ class Config:
 
         self.config: Dict[str, Any] = {}
 
-        self.config.update(self._read_config(path))
+        # only try to get config from config file if it exists.
+        if path:
+            self.config.update(self._read_config(path))
 
+        self.config.update(self._get_environ_config())
         self._trigger_update_config()
 
     def _trigger_update_config(self):
         def set_entry_attr(entry, section=""):
-            env_var_value = os.getenv(entry.env_var(section))
 
-            # Override the configuration files if an env variable is defined for
-            # the entry.
-            if env_var_value:
-                value = entry.casted(env_var_value)
-            else:
-                value = self._get_value(entry, section)
+            value = self._get_value(entry, section)
 
             setattr(self, entry.full_name(section), value)
 
@@ -368,6 +365,78 @@ class Config:
             except toml.TomlDecodeError as e:
                 raise ConfigError(f"failed to load config file '{filename}': {e}")
 
+    def _find_first_level_config(
+        self, section_name: str
+    ) -> Union[ConfigSection, ConfigEntry, None]:
+
+        """Find the section or entry at first level of config_map.
+
+        Parameters
+        ----------
+        section_name : str
+            The name of the section to find.
+
+        Returns
+        -------
+        section : Union[ConfigSection, ConfigEntry, None]
+            The section or entry found, else None.
+        """
+        for item in self._config_map:
+            if section_name == item.name:
+                return item
+        return None
+
+    def _get_environ_config(self) -> Dict[str, Any]:
+        """Looks into environment variables if some matches with config_map.
+
+        Returns
+        -------
+        configuration : Dict[str, str]
+            The mapping of configuration variables found in environment variables.
+        """
+        config: Dict[str, Any] = {}
+
+        # get QUETZ environment variables.
+        quetz_var = {
+            key: value
+            for key, value in os.environ.items()
+            if key.startswith(_env_prefix)
+        }
+        for var, value in quetz_var.items():
+            splitted_key = var.split('_')
+            config_key = splitted_key[1].lower()
+            idx = 2
+
+            # look for the first level of config_map.
+            # It must be done in loop as the key itself can contains '_'.
+            while idx < len(splitted_key):
+                first_level = self._find_first_level_config(config_key)
+                if first_level:
+                    break
+                config_key += f"_{ splitted_key[idx].lower()}"
+                idx += 1
+
+            # no first_level found, the variable is useless.
+            if not first_level:
+                continue
+            # the first level is an entry, add it to the config.
+            if isinstance(first_level, ConfigEntry):
+                config[first_level.name] = value
+            # the first level is a section.
+            elif isinstance(first_level, ConfigSection):
+                entry = "_".join(splitted_key[idx:]).lower()
+                # the entry does not exist in section, the variable is useless.
+                if entry not in [
+                    section_entry.name for section_entry in first_level.entries
+                ]:
+                    continue
+                # add the entry to the config.
+                if first_level.name not in config:
+                    config[first_level.name]: Dict[str, Any] = {}
+                config[first_level.name]["_".join(splitted_key[idx:]).lower()] = value
+
+        return config
+
     def get_package_store(self) -> pkgstores.PackageStore:
         """Return the appropriate package store as set in the config.
 
@@ -405,6 +474,7 @@ class Config:
                     'bucket_prefix': self.gcs_bucket_prefix,
                     'bucket_suffix': self.gcs_bucket_suffix,
                     'cache_timeout': self.gcs_cache_timeout,
+                    'region': self.gcs_region,
                 }
             )
         else:

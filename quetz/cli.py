@@ -21,6 +21,7 @@ from importlib_metadata import entry_points
 from sqlalchemy.orm.session import Session
 from sqlalchemy_utils.functions import database_exists
 
+from quetz import pkgstores
 from quetz.config import (
     Config,
     _env_config_file,
@@ -235,7 +236,7 @@ def _fill_test_database(db: Session) -> NoReturn:
                 private=False,
             )
 
-            for package_index in range(random.randint(5, 10)):
+            for package_index in range(random.randint(30, 60)):
                 package = Package(
                     name=f'package{package_index}',
                     summary=f'package {package_index} summary text',
@@ -296,14 +297,25 @@ def _fill_test_database(db: Session) -> NoReturn:
 
 def _is_deployment(base_dir: Path):
     config_file = base_dir.joinpath("config.toml")
-    if (
-        base_dir.exists()
-        and config_file.exists()
-        and base_dir.joinpath("channels").exists()
-    ):
-        config = Config(str(config_file.resolve()))
-        with working_directory(base_dir):
-            return database_exists(config.sqlalchemy_database_url)
+    if base_dir.exists() and base_dir.joinpath("channels").exists():
+        # If the config file exists, we assume that the database path
+        # is set there (it only matters for sqlite database).
+        if config_file.exists():
+            config = Config(str(config_file.resolve()))
+            db_path = base_dir
+        else:
+            config = Config()
+            db_path = Path(os.getcwd())
+        with working_directory(db_path):
+            if not database_exists(config.sqlalchemy_database_url):
+                logger.error(
+                    "Cannot verify that specified database exists. "
+                    + config.sqlalchemy_database_url
+                )
+                return False
+            else:
+                return True
+
     return False
 
 
@@ -400,6 +412,11 @@ def create(
     deployment_folder = Path(path).resolve()
     config_file = deployment_folder / "config.toml"
 
+    # Working directory when creating a local database (eg: sqlite).
+    # If a config file is created, it will be in the deployment folder,
+    # otherwise it will be from cwd.
+    db_path = path
+
     if _is_deployment(deployment_folder):
         if exists_ok:
             logger.info(
@@ -430,12 +447,22 @@ def create(
         raise typer.Abort()
 
     if not config_file.exists() and not create_conf and not copy_conf:
-        typer.echo(
-            'No configuration file provided.\n'
-            'Use --create-conf or --copy-conf to produce a config file.',
-            err=True,
-        )
-        raise typer.Abort()
+        try:
+            # If no config file is provided or created, try to get config
+            # from environmental variables.
+            # If the config file does not exist, we assume that the database URL
+            # is set from current directory (it only matters for sqlite database).
+            config = Config()
+            db_path = os.getcwd()
+        except Exception as e:
+            logger.warn(msg=e)
+            typer.echo(
+                'No configuration file provided.\n'
+                'Use --create-conf or --copy-conf to produce a config file\n'
+                'or set up $QUETZ_SQLALCHEMY_DATABASE_URL and $QUETZ_SESSION_SECRET',
+                err=True,
+            )
+            raise typer.Abort()
 
     if copy_conf:
         if not os.path.exists(copy_conf):
@@ -455,7 +482,8 @@ def create(
     config = Config(str(config_file))
 
     deployment_folder.joinpath('channels').mkdir(exist_ok=True)
-    with working_directory(path):
+
+    with working_directory(db_path):
         db = get_session(config.sqlalchemy_database_url)
         _run_migrations(config.sqlalchemy_database_url)
         if dev:
@@ -466,10 +494,6 @@ def create(
 def _get_config(path: Union[Path, str]) -> Config:
     """get config path"""
     config_file = Path(path) / 'config.toml'
-    if not config_file.exists():
-        typer.echo(f'Could not find config at {config_file}')
-        raise typer.Abort()
-
     config = Config(str(config_file.resolve()))
     if not os.environ.get(_env_prefix + _env_config_file):
         os.environ[_env_prefix + _env_config_file] = str(config_file.resolve())
@@ -506,16 +530,23 @@ def start(
 
     logger.info(f"deploying quetz from directory {path}")
 
-    deployment_folder = Path(path)
-    _get_config(deployment_folder)
+    if path:
+        deployment_folder = Path(path)
+    else:
+        deployment_folder = Path("")
+        path = os.getcwd()
+
+    config = _get_config(deployment_folder)
 
     if not _is_deployment(deployment_folder):
-        typer.echo(
-            'The specified directory is not a deployment.\n'
-            'Use the create or run command to create a deployment.',
-            err=True,
-        )
-        raise typer.Abort()
+        if isinstance(config.get_package_store(), pkgstores.LocalStore):
+            typer.echo(
+                'The specified directory is not a deployment and the package store '
+                'is set as local.\n'
+                'Use the create or run command to create a deployment.',
+                err=True,
+            )
+            raise typer.Abort()
 
     if supervisor:
         logger.info("starting supervisor")
@@ -669,14 +700,18 @@ def plugin(
         print(f"Command '{cmd}' not yet understood.")
 
 
-def start_supervisor_daemon(path, num_procs=None):
+def start_supervisor_daemon(path: Path, num_procs=None):
     from quetz.jobs.runner import Supervisor
     from quetz.tasks.workers import get_worker
 
     configure_logger(loggers=("quetz",))
     config = _get_config(path)
     manager = get_worker(config, num_procs=num_procs)
-    with working_directory(path):
+
+    # If the config file exists, we assume that the database path
+    # is set there (it only matters for sqlite database).
+    db_path = path if path.joinpath("config.toml").exists() else os.getcwd()
+    with working_directory(db_path):
         db = get_session(config.sqlalchemy_database_url)
         supervisor = Supervisor(db, manager)
         try:
@@ -695,7 +730,7 @@ def watch_job_queue(
     ),
 ) -> None:
 
-    start_supervisor_daemon(path, num_procs)
+    start_supervisor_daemon(Path(path), num_procs)
 
 
 if __name__ == "__main__":

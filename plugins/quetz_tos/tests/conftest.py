@@ -28,10 +28,10 @@ def member_user(db):
 
 @fixture
 def tos(db, owner_user):
-    tos = db_models.TermsOfService(
-        uploader_id=owner_user.id,
-        filename="tos.txt",
-    )
+    tos_en = db_models.TermsOfServiceFile(filename="tos_en.txt", language="EN")
+    tos_fr = db_models.TermsOfServiceFile(filename="tos_fr.txt", language="FR")
+
+    tos = db_models.TermsOfService(uploader_id=owner_user.id, files=[tos_en, tos_fr])
 
     db.add(tos)
     db.commit()
@@ -42,7 +42,8 @@ def tos(db, owner_user):
 @fixture
 def tos_file(config):
     pkgstore = config.get_package_store()
-    pkgstore.add_file(b"demo tos", "root", "tos.txt")
+    pkgstore.add_file(b"demo tos en", "root", "tos_en.txt")
+    pkgstore.add_file(b"demo tos fr", "root", "tos_fr.txt")
 
 
 @fixture

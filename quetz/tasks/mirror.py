@@ -20,7 +20,7 @@ from quetz.db_models import PackageVersion
 from quetz.errors import DBError
 from quetz.pkgstores import PackageStore
 from quetz.tasks import indexing
-from quetz.utils import TicToc, check_package_membership
+from quetz.utils import TicToc, add_static_file, check_package_membership
 
 # copy common subdirs from conda:
 # https://github.com/conda/conda/blob/a78a2387f26a188991d771967fc33aa1fb5bb810/conda/base/constants.py#L63
@@ -121,7 +121,12 @@ def download_remote_file(
         logger.debug(f"Downloading {path} from {channel} to pkgstore")
         remote_file = repository.open(path)
         data_stream = remote_file.file
-        pkgstore.add_package(data_stream, channel, path)
+
+        if path.endswith('.json'):
+            add_static_file(data_stream.read(), channel, None, path, pkgstore)
+        else:
+            pkgstore.add_package(data_stream, channel, path)
+
     pkgstore.delete_download_lock(channel, path)
 
 
@@ -285,6 +290,9 @@ def initial_sync_mirror(
 ):
 
     force = True  # needed for updating packages
+    logger.info(
+        f"Running channel mirroring {channel_name}/{arch} from {remote_repository.host}"
+    )
 
     for repodata_fn in ["repodata_from_packages.json", "repodata.json"]:
         try:
@@ -342,7 +350,7 @@ def initial_sync_mirror(
 
         def handle_batch(update_batch):
             # i_batch += 1
-            logger.debug(f"Handling batch: {update_batch}")
+            logger.info(f"Handling batch: {[p[1] for p in update_batch]}")
             if not update_batch:
                 return False
 
@@ -512,7 +520,7 @@ def synchronize_packages(
     use_repodata: bool = False,
 ):
 
-    logger.debug(f"executing synchronize_packages task in a process {os.getpid()}")
+    logger.info(f"executing synchronize_packages task in a process {os.getpid()}")
 
     new_channel = dao.get_channel(channel_name)
 

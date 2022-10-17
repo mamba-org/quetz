@@ -20,6 +20,7 @@
 # Quetz
 
 [![Documentation Status](https://readthedocs.org/projects/quetz/badge/?version=latest)](https://quetz.readthedocs.io/en/latest/?badge=latest)
+[![Docker Version](https://img.shields.io/docker/v/mambaorg/quetz/latest?label=docker)](https://hub.docker.com/r/mambaorg/quetz/tags)
 
 The quetz project is an open source server for conda packages.
 It is built upon FastAPI with an API-first approach.
@@ -187,7 +188,7 @@ database_url = "postgresql://postgres:mysecretpassword@localhost:5432/quetz"
 Finally, you can create and run a new quetz deployment based on this configuration (we assume that you saved it in file `config_postgres.toml`):
 
 ```bash
-quetz run postgres_quetz --copy-conf config_postgres.toml 
+quetz run postgres_quetz --copy-conf config_postgres.toml
 ```
 
 Note that this recipe will create an ephemeral PostgreSQL database and it will delete all data after the `some-postgres` container is stopped and removed. To make the data persistent, please check the documentation of the `postgres` [image](https://hub.docker.com/_/postgres/)  or your container orchestration system (Kubernetes or similar).

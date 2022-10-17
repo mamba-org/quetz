@@ -2,6 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 import asyncio
 import datetime
+import hashlib
 import json
 import logging
 import os
@@ -12,7 +13,7 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from email.utils import formatdate
-from tempfile import SpooledTemporaryFile
+from tempfile import SpooledTemporaryFile, TemporaryFile
 from typing import List, Optional, Tuple, Type
 
 import pydantic
@@ -87,7 +88,12 @@ from quetz.rest_models import ChannelActionEnum, CPRole
 from quetz.tasks import indexing
 from quetz.tasks.common import Task
 from quetz.tasks.mirror import RemoteRepository, download_remote_file
-from quetz.utils import TicToc, generate_random_key, parse_query
+from quetz.utils import (
+    TicToc,
+    background_task_wrapper,
+    generate_random_key,
+    parse_query,
+)
 
 from .condainfo import CondaInfo
 
@@ -597,7 +603,6 @@ def get_channel_mirrors(
 
 @api_router.delete(
     "/channels/{channel_name}/mirrors/{mirror_id}",
-    response_model=List[rest_models.ChannelMirror],
     tags=["channels"],
 )
 def delete_channel_mirror(
@@ -717,7 +722,8 @@ def post_channel(
 
     channel = dao.create_channel(new_channel, user_id, authorization.OWNER, size_limit)
     pkgstore.create_channel(new_channel.name)
-    indexing.update_indexes(dao, pkgstore, new_channel.name)
+    if not is_proxy:
+        indexing.update_indexes(dao, pkgstore, new_channel.name)
 
     # register mirror
     if is_mirror and register_mirror:
@@ -837,10 +843,10 @@ def get_package(package: db_models.Package = Depends(get_package_or_fail)):
 
 @api_router.delete(
     "/channels/{channel_name}/packages/{package_name}",
-    response_model=rest_models.Package,
     tags=["packages"],
 )
 def delete_package(
+    background_tasks: BackgroundTasks,
     package: db_models.Package = Depends(get_package_or_fail),
     db=Depends(get_db),
     auth: authorization.Rules = Depends(get_rules),
@@ -853,6 +859,12 @@ def delete_package(
         os.path.join(version.platform, version.filename)
         for version in package.package_versions  # type: ignore
     ]
+
+    # get current platform containing the package
+    platforms = set(
+        [version.platform for version in package.package_versions]  # type: ignore
+    )
+
     channel_name = package.channel_name
 
     db.delete(package)
@@ -862,6 +874,10 @@ def delete_package(
         pkgstore.delete_file(channel_name, filename)
 
     dao.update_channel_size(channel_name)
+
+    wrapped_bg_task = background_task_wrapper(indexing.update_indexes, logger)
+    # Background task to update indexes
+    background_tasks.add_task(wrapped_bg_task, dao, pkgstore, channel_name, platforms)
 
 
 @api_router.post(
@@ -1037,6 +1053,35 @@ def get_package_versions(
 
 
 @api_router.get(
+    "/paginated/channels/{channel_name}/packages/{package_name}/versions",
+    response_model=rest_models.PaginatedResponse[rest_models.PackageVersion],
+    tags=["packages"],
+)
+def get_paginated_package_versions(
+    package: db_models.Package = Depends(get_package_or_fail),
+    dao: Dao = Depends(get_dao),
+    skip: int = 0,
+    limit: int = PAGINATION_LIMIT,
+    time_created__ge: datetime.datetime = None,
+    version_match_str: str = None,
+):
+
+    version_profile_list = dao.get_package_versions(
+        package, time_created__ge, version_match_str, skip, limit
+    )
+    version_list = []
+
+    for version, profile, api_key_profile in version_profile_list['result']:
+        version_data = rest_models.PackageVersion.from_orm(version)
+        version_list.append(version_data)
+
+    return {
+        'pagination': version_profile_list['pagination'],
+        'result': version_list,
+    }
+
+
+@api_router.get(
     "/channels/{channel_name}/packages/{package_name}/versions/{platform}/{filename}",
     response_model=rest_models.PackageVersion,
     tags=["packages"],
@@ -1064,7 +1109,6 @@ def get_package_version(
 
 @api_router.delete(
     "/channels/{channel_name}/packages/{package_name}/versions/{platform}/{filename}",
-    response_model=rest_models.PackageVersion,
     tags=["packages"],
 )
 def delete_package_version(
@@ -1072,6 +1116,7 @@ def delete_package_version(
     filename: str,
     channel_name: str,
     package_name: str,
+    background_tasks: BackgroundTasks,
     dao: Dao = Depends(get_dao),
     db=Depends(get_db),
     auth: authorization.Rules = Depends(get_rules),
@@ -1096,6 +1141,10 @@ def delete_package_version(
     pkgstore.delete_file(channel_name, path)
 
     dao.update_channel_size(channel_name)
+
+    wrapped_bg_task = background_task_wrapper(indexing.update_indexes, logger)
+    # Background task to update indexes
+    background_tasks.add_task(wrapped_bg_task, dao, pkgstore, channel_name, [platform])
 
 
 @api_router.get(
@@ -1282,6 +1331,81 @@ def post_file_to_package(
     handle_package_files(package.channel, files, dao, auth, force, package=package)
     dao.update_channel_size(package.channel_name)
 
+    wrapped_bg_task = background_task_wrapper(indexing.update_indexes, logger)
+    # Background task to update indexes
+    background_tasks.add_task(wrapped_bg_task, dao, pkgstore, package.channel_name)
+
+
+@api_router.post(
+    "/channels/{channel_name}/upload/{filename}", status_code=201, tags=["upload"]
+)
+async def post_upload(
+    request: Request,
+    channel_name: str,
+    filename: str,
+    sha256: str,
+    force: bool = False,
+    dao: Dao = Depends(get_dao),
+    auth: authorization.Rules = Depends(get_rules),
+):
+    logger.debug(
+        f"Uploading file {filename} with checksum {sha256} to channel {channel_name}"
+    )
+
+    upload_hash = hashlib.sha256()
+
+    body = TemporaryFile()
+    async for chunk in request.stream():
+        body.write(chunk)
+        upload_hash.update(chunk)
+
+    if sha256 and upload_hash.hexdigest() != sha256:
+        raise HTTPException(
+            status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="Wrong SHA256 checksum"
+        )
+
+    user_id = auth.assert_user()
+    auth.assert_create_package(channel_name)
+    condainfo = CondaInfo((body), filename)
+    dest = os.path.join(condainfo.info["subdir"], filename)
+
+    pkgstore.add_package(body, channel_name, dest)
+
+    package_name = str(condainfo.info.get("name"))
+    package_data = rest_models.Package(
+        name=package_name,
+        summary=str(condainfo.about.get("summary", "n/a")),
+        description=str(condainfo.about.get("description", "n/a")),
+    )
+    if not dao.get_package(channel_name, package_name):
+        dao.create_package(
+            channel_name,
+            package_data,
+            user_id,
+            authorization.OWNER,
+        )
+
+    try:
+        version = dao.create_version(
+            channel_name=channel_name,
+            package_name=package_name,
+            package_format=condainfo.package_format,
+            platform=condainfo.info["subdir"],
+            version=condainfo.info["version"],
+            build_number=condainfo.info["build_number"],
+            build_string=condainfo.info["build"],
+            size=condainfo.info["size"],
+            filename=filename,
+            info=json.dumps(condainfo.info),
+            uploader_id=user_id,
+            upsert=force,
+        )
+    except IntegrityError:
+        logger.debug(f"duplicate package '{package_name}' in channel '{channel_name}'")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Duplicate")
+
+    pm.hook.post_add_package_version(version=version, condainfo=condainfo)
+
 
 @api_router.post("/channels/{channel_name}/files/", status_code=201, tags=["files"])
 def post_file_to_channel(
@@ -1298,8 +1422,9 @@ def post_file_to_channel(
 
     dao.update_channel_size(channel.name)
 
+    wrapped_bg_task = background_task_wrapper(indexing.update_indexes, logger)
     # Background task to update indexes
-    background_tasks.add_task(indexing.update_indexes, dao, pkgstore, channel.name)
+    background_tasks.add_task(wrapped_bg_task, dao, pkgstore, channel.name)
 
 
 @retry(
@@ -1416,6 +1541,11 @@ def handle_package_files(
 
     for file, condainfo in zip(files, conda_infos):
         logger.debug(f"Handling {condainfo.info['name']} -> {file.filename}")
+
+        def _delete_file(condainfo, filename):
+            dest = os.path.join(condainfo.info["subdir"], file.filename)
+            pkgstore.delete_file(channel.name, dest)
+
         package_type = "tar.bz2" if file.filename.endswith(".tar.bz2") else "conda"
         UPLOAD_COUNT.labels(
             channel=channel.name,
@@ -1431,11 +1561,13 @@ def handle_package_files(
         # check that the filename matches the package name
         # TODO also validate version and build string
         if parts[0] != condainfo.info["name"]:
+            _delete_file(condainfo, file.filename)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="filename does not match package name",
             )
         if package and (parts[0] != package.name or package_name != package.name):
+            _delete_file(condainfo, file.filename)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
@@ -1443,10 +1575,6 @@ def handle_package_files(
                     f"does not match the uploaded package name '{parts[0]}'"
                 ),
             )
-
-        def _delete_file(condainfo, filename):
-            dest = os.path.join(condainfo.info["subdir"], file.filename)
-            pkgstore.delete_file(channel.name, dest)
 
         if not package and not dao.get_package(channel.name, package_name):
 

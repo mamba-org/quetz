@@ -19,16 +19,6 @@ from quetz.rest_models import Channel, Package
 from quetz.versionorder import VersionOrder
 
 
-@pytest.fixture
-def package_name():
-    return "my-package"
-
-
-@pytest.fixture
-def channel_name():
-    return "my-channel"
-
-
 def test_versionorder():
     versions = [
         ("0.4", [[0], [0], [4]]),

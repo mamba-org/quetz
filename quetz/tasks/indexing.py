@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from jinja2 import Environment, PackageLoader, select_autoescape
+from jinja2.exceptions import UndefinedError
 
 import quetz.config
 from quetz import channel_data, repo_data
@@ -35,8 +36,11 @@ logger = logging.getLogger("quetz")
 def _iec_bytes(n):
     # Return human-readable string representing n in bytes in IEC format
     for e, f in _iec_prefixes:
-        if n >= e:
-            return f.format(n / e)
+        try:
+            if n >= e:
+                return f.format(n / e)
+        except UndefinedError:
+            logger.debug("Package size is undefined.")
     return f"{n} B"
 
 
@@ -144,10 +148,7 @@ def validate_packages(dao, pkgstore, channel_name):
                         f"File size differs for {filename}: "
                         f"{f['size']} vs {db_dict[filename]}"
                     )
-                    pkgstore.delete_file(
-                        channel_name,
-                        f"{subdir}/{filename}",
-                    )
+                    pkgstore.delete_file(channel_name, f"{subdir}/{filename}")
                     db_pkg_to_delete = (
                         dao.db.query(PackageVersion)
                         .filter(
@@ -209,12 +210,14 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
     for sdir in subdirs:
         logger.debug(f"creating indexes for subdir {sdir} of channel {channel_name}")
         raw_repodata = repo_data.export(dao, channel_name, sdir)
-
-        pm.hook.post_index_creation(
-            raw_repodata=raw_repodata,
-            channel_name=channel_name,
-            subdir=sdir,
-        )
+        try:
+            logger.debug(f"Starting post_index_creation for {sdir} of {channel_name}")
+            pm.hook.post_index_creation(
+                raw_repodata=raw_repodata, channel_name=channel_name, subdir=sdir
+            )
+            logger.debug("Finished post_index_creation for {sdir} of {channel_name}")
+        except Exception:
+            logger.exception("Exception post_index_creation:")
 
         files[sdir] = []
         packages[sdir] = raw_repodata["packages"]
@@ -225,13 +228,18 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
             repodata, channel_name, sdir, "repodata.json", tempdir_path, files
         )
 
-    pm.hook.post_package_indexing(
-        tempdir=tempdir_path,
-        channel_name=channel_name,
-        subdirs=subdirs,
-        files=files,
-        packages=packages,
-    )
+    try:
+        logger.debug(f"Starting post_package_indexing for {channel_name}")
+        pm.hook.post_package_indexing(
+            tempdir=tempdir_path,
+            channel_name=channel_name,
+            subdirs=subdirs,
+            files=files,
+            packages=packages,
+        )
+        logger.debug(f"Finished post_package_indexing for {channel_name}")
+    except Exception:
+        logger.exception("Exception post_package_indexing:")
 
     for sdir in subdirs:
         # Generate subdir index.html
@@ -247,6 +255,10 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
     tmp_suffix = uuid.uuid4().hex
     after_upload_move = []
     for path in tempdir_path.rglob('*.*'):
+        # check whether the path is an actual file.
+        # this fixes https://github.com/mamba-org/quetz/issues/540
+        if not path.is_file():
+            continue
         rel_path = path.relative_to(tempdir_path)
         to_upload = open(path, 'rb')
         if len(rel_path.parts) == 2:

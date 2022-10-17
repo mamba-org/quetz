@@ -10,11 +10,12 @@ def plugins():
 
 
 def upload_tos(client):
-    tos_filename = "tos.txt"
-    tos_content = "demo tos"
-    url = "/api/tos/upload"
+    url = "/api/tos/upload?lang=EN&lang=FR"
 
-    files_to_upload = {'tos_file': (tos_filename, io.StringIO(tos_content))}
+    files_to_upload = (
+        ('tos_files', ("tos_en.txt", io.StringIO("demo tos en"))),
+        ('tos_files', ("tos_fr.txt", io.StringIO("demo tos fr"))),
+    )
 
     response = client.post(url, files=files_to_upload)
     return response
@@ -42,8 +43,22 @@ def test_tos_upload_by_owner(client, owner_user):
 
 def test_get_tos(client, tos_file, tos):
     response = client.get('/api/tos')
-    assert response.json()['filename'] == 'tos.txt'
-    assert response.json()['content'] == 'demo tos'
+
+    assert response.json()['files'][0]['language'] == 'EN'
+    assert response.json()['files'][0]['filename'] == 'tos_en.txt'
+    assert response.json()['files'][0]['content'] == 'demo tos en'
+
+    assert response.json()['files'][1]['language'] == 'FR'
+    assert response.json()['files'][1]['filename'] == 'tos_fr.txt'
+    assert response.json()['files'][1]['content'] == 'demo tos fr'
+
+    response = client.get('/api/tos?lang=CH')
+    assert response.status_code == 404
+
+    response = client.get('/api/tos?lang=FR')
+    assert response.status_code == 200
+    assert len(response.json()['files']) == 1
+    assert response.json()['files'][0]['language'] == 'FR'
 
 
 def test_tos_sign(client, member_user, tos_file, tos):

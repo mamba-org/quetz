@@ -6,7 +6,7 @@ dependencies:
   - pip
   - fastapi
   - typer
-  - authlib
+  - authlib=0.15.5
   - psycopg2
   - httpx=0.20.0
   - sqlalchemy
@@ -27,9 +27,9 @@ dependencies:
   - alembic
   - zchunk
   - s3fs
-  - gcsfs >=2022.02
+  - gcsfs >=2022.03
   - sphinx
-  - sphinx-book-theme
+  - sphinx-book-theme>=0.3
   - tenacity
   - xattr
   - aiofiles

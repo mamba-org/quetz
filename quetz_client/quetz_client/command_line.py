@@ -10,9 +10,17 @@ from urllib.parse import urljoin, urlparse, urlunparse
 import appdirs
 import requests
 import toml
-from conda_verify.verify import Verify
+
+try:
+    from conda_verify.verify import Verify
+
+    verify_available = True
+except ImportError:
+    verify_available = False
 
 import quetz_client
+
+ALLOWED_SUBCOMMANDS = ["upload", "apikey", "create-channel"]
 
 config_dir = appdirs.user_config_dir("quetz_client")
 api_keys_location = os.path.join(config_dir, 'config.toml')
@@ -101,9 +109,12 @@ def upload_packages(args):
                 ):
                     package_file_names.append(os.path.join(root, file))
 
-    verifier = Verify()
+    if args.verify and not verify_available:
+        raise RuntimeError("Cannot verify package: conda-verify is not installed.")
 
-    if args.verify:
+    if args.verify and verify_available:
+        verifier = Verify()
+
         verify_ignore = args.verify_ignore.split(',') if args.verify_ignore else None
         for package in package_file_names:
             verifier.verify_package(
@@ -139,6 +150,7 @@ def upload_packages(args):
 
 
 def main():
+
     parser = argparse.ArgumentParser()
 
     subparsers = parser.add_subparsers(
@@ -212,7 +224,15 @@ def main():
     create_channel_parser.add_argument("-d", "--description", default="")
     create_channel_parser.add_argument("-p", "--private", action='store_true')
 
-    args = parser.parse_args()
+    # This first pass of parsing is used to find one of the allowed subcommands.
+    # If there is no subcommand, then "upload" is used by default.
+    firstp = argparse.ArgumentParser()
+    args, extras = firstp.parse_known_args()
+
+    if extras[0] not in ALLOWED_SUBCOMMANDS:
+        extras.insert(0, "upload")
+
+    args = parser.parse_args(extras)
 
     if args.cmd == 'apikey':
         get_api_key(args)
