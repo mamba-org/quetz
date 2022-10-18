@@ -20,7 +20,7 @@ def upgrade():
     op.create_table(
         'credentials',
         sa.Column('username', sa.String(), nullable=False),
-        sa.Column('password', sa.String(), nullable=True),
+        sa.Column('password', sa.String(), nullable=False),
         sa.PrimaryKeyConstraint('username'),
     )
     with op.batch_alter_table('channels', schema=None) as batch_op:
