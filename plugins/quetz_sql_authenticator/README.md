@@ -1,41 +1,16 @@
 ## SQL Authenticator
 
-An authenticator that stores credentials in a SQL database using passlib. Ships with CLI tools for CRUD operations on the credentials table.
+An authenticator that stores credentials in the Quetz SQL database using passlib. Ships with CLI tools for CRUD operations on the credentials table.
 
 ### Dependencies
 
-This plugin has `sqlmodel` and `passlib` as an additional dependencies.
-Also, you might need certain database drivers, like `psycopg2`, depending on what SQL backend you use.
+This plugin depends on `passlib`.
 
 ### Installation
 
 ```
 pip install -e .
 ```
-
-### Infrastructure
-
-The authenticator expects to connect to a SQL database with a `credentials` table in the following format.
-
-```py
-from sqlmodel import Field, SQLModel
-
-class Credentials(SQLModel, table=True):
-    """Table for storing username and password, sha-256 hashed."""
-    username: str = Field(primary_key=True)
-    password: str
-```
-
-### Configure
-
-Add the following section to your `config.toml`:
-
-```toml
-[sql_authenticator]
-database_url = "SQLALCHEMY_URL"
-```
-
-Where `SQLALCHEMY_URL` is a [SQLAlchemy URL](https://docs.sqlalchemy.org/en/14/core/engines.html), pointing to your database.
 
 ### Usage
 
