@@ -664,22 +664,44 @@ def test_package_current_version(
 ):
     # test platforms, current_version and url
     make_package_version("test-package-0.1-0.tar.bz2", "0.1", platform="linux-64")
-    make_package_version("test-package-0.1-0.tar.bz2", "0.1", platform="noarch")
-    make_package_version("test-package-0.2-0.tar.bz2", "0.2", platform="linux-64")
-    v = make_package_version("test-package-0.2-0.tar.bz2", "0.2", platform="os-x")
+    v1n = make_package_version("test-package-0.1-0.tar.bz2", "0.1", platform="noarch")
+    v2l = make_package_version("test-package-0.2-0.tar.bz2", "0.2", platform="linux-64")
+    v2o = make_package_version("test-package-0.2-0.tar.bz2", "0.2", platform="os-x")
 
     response = auth_client.get(
-        endpoint.format(channel_name=channel_name, package_name=v.package_name)
+        endpoint.format(channel_name=channel_name, package_name=v2o.package_name)
     )
     assert response.status_code == 200
 
     package_data = response.json()
-
     if isinstance(package_data, list):
         assert len(package_data) == 1
         package_data = package_data[0]
+    assert package_data['current_version'] == v2o.version
 
-    assert package_data['current_version'] == "0.2"
+    # delete v0.2 os-x and linux-64 package
+    response = auth_client.delete(
+        f"/api/channels/{channel_name}/"
+        f"packages/{v2o.package_name}/versions/{v2o.platform}/{v2o.filename}"
+    )
+    assert response.status_code == 200
+    response = auth_client.delete(
+        f"/api/channels/{channel_name}/"
+        f"packages/{v2l.package_name}/versions/{v2l.platform}/{v2l.filename}"
+    )
+    assert response.status_code == 200
+
+    # require current version to be 0.1
+    response = auth_client.get(
+        endpoint.format(channel_name=channel_name, package_name=v1n.package_name)
+    )
+    assert response.status_code == 200
+
+    package_data = response.json()
+    if isinstance(package_data, list):
+        assert len(package_data) == 1
+        package_data = package_data[0]
+    assert package_data['current_version'] == v1n.version
 
 
 @pytest.mark.parametrize("package_name", ["test-package"])
