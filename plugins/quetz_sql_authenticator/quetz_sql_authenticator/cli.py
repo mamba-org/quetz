@@ -57,7 +57,7 @@ def _delete(username: str) -> None:
 
 
 @_cli.command("reset")
-def _reset(database_url: str) -> None:
+def _reset() -> None:
     with get_db_manager() as db:
         credentials_count = db.query(Credentials).count()
     click.echo(f"WARNING: Resetting the table will delete {credentials_count} users.")
