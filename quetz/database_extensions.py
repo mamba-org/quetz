@@ -45,7 +45,8 @@ if search_path:
     if (plugin_path / "libquetz_pg.so").exists():
         pg_plugin = str((plugin_path / "libquetz_pg.so").resolve())
         logger.info(
-            "Looking for database extension: " "{plugin_path / 'libquetz_pg.so'}: FOUND"
+            "Looking for database extension: "
+            f"{plugin_path / 'libquetz_pg.so'}: FOUND"
         )
     else:
         logger.info(

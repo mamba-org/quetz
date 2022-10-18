@@ -215,7 +215,7 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
             pm.hook.post_index_creation(
                 raw_repodata=raw_repodata, channel_name=channel_name, subdir=sdir
             )
-            logger.debug("Finished post_index_creation for {sdir} of {channel_name}")
+            logger.debug(f"Finished post_index_creation for {sdir} of {channel_name}")
         except Exception:
             logger.exception("Exception post_index_creation:")
 

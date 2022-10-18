@@ -94,7 +94,7 @@ def update_user_from_profile(
         if user_email and user_email.user_id != user.id:
             raise IntegrityError(
                 f"User {user.profile.name} already registered"
-                " with email {user_email.email}",
+                f" with email {user_email.email}",
                 "",
                 "",
             )

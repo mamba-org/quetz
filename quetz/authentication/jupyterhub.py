@@ -140,7 +140,7 @@ class JupyterhubAuthenticator(OAuthAuthenticator):
         return github_profile
 
     async def _get_user_for_token(self, token):
-        headers = {'Authorization': 'token {}'.format(self.client_secret)}
+        headers = {'Authorization': f'token {self.client_secret}'}
         access_token = quote(token['access_token'], safe='')
 
         # authlib client will be place token in query params

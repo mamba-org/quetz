@@ -248,12 +248,12 @@ def test_create_mirror_channel_permissions(
 def test_get_mirror_url(proxy_channel, local_channel, client):
     """test configuring mirror url"""
 
-    response = client.get("/api/channels/{}".format(proxy_channel.name))
+    response = client.get(f"/api/channels/{proxy_channel.name}")
 
     assert response.status_code == 200
     assert response.json()["mirror_channel_url"] == "http://host"
 
-    response = client.get("/api/channels/{}".format(local_channel.name))
+    response = client.get(f"/api/channels/{local_channel.name}")
     assert response.status_code == 200
     assert not response.json()["mirror_channel_url"]
 
@@ -669,7 +669,7 @@ def test_proxy_repodata_cached(client, owner, dummy_repo):
 
 def test_method_not_implemented_for_proxies(client, proxy_channel):
 
-    response = client.post("/api/channels/{}/packages".format(proxy_channel.name))
+    response = client.post(f"/api/channels/{proxy_channel.name}/packages")
     assert response.status_code == 405
     assert "not implemented" in response.json()["detail"]
 
@@ -677,12 +677,12 @@ def test_method_not_implemented_for_proxies(client, proxy_channel):
 def test_api_methods_for_mirror_channels(client, mirror_channel):
     """mirror-mode channels should have all standard API calls"""
 
-    response = client.get("/api/channels/{}/packages".format(mirror_channel.name))
+    response = client.get(f"/api/channels/{mirror_channel.name}/packages")
     assert response.status_code == 200
     assert not response.json()
 
     response = client.get(
-        "/get/{}/missing/path/file.json".format(mirror_channel.name),
+        f"/get/{mirror_channel.name}/missing/path/file.json",
     )
     assert response.status_code == 404
     assert "file.json not found" in response.json()["detail"]
@@ -902,7 +902,7 @@ def test_write_methods_for_local_channels(auth_client, local_channel, db):
     assert response.status_code == 200
 
     response = auth_client.post(
-        "/api/channels/{}/packages".format(local_channel.name),
+        f"/api/channels/{local_channel.name}/packages",
         json={"name": "my_package"},
     )
     assert response.status_code == 201
@@ -915,19 +915,17 @@ def test_disabled_methods_for_mirror_channels(
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 
-    response = client.post("/api/channels/{}/packages".format(mirror_channel.name))
+    response = client.post(f"/api/channels/{mirror_channel.name}/packages")
     assert response.status_code == 405
     assert "not implemented" in response.json()["detail"]
 
     files = {"files": ("my_package-0.1.tar.bz", "dfdf")}
-    response = client.post(
-        "/api/channels/{}/files/".format(mirror_channel.name), files=files
-    )
+    response = client.post(f"/api/channels/{mirror_channel.name}/files/", files=files)
     assert response.status_code == 405
     assert "not implemented" in response.json()["detail"]
 
     response = client.post(
-        "/api/channels/{}/packages/mirror_package/files/".format(mirror_channel.name),
+        f"/api/channels/{mirror_channel.name}/packages/mirror_package/files/",
         files=files,
     )
     assert response.status_code == 405
@@ -968,10 +966,7 @@ def test_repo_without_channeldata(
 
     assert dummy_repo[0] == "http://mirror3_host/channeldata.json"
     for arch in expected_archs:
-        assert (
-            "http://mirror3_host/{}/repodata_from_packages.json".format(arch)
-            in dummy_repo
-        )
+        assert f"http://mirror3_host/{arch}/repodata_from_packages.json" in dummy_repo
     if expected_archs is KNOWN_SUBDIRS:
         assert len(dummy_repo) == len(expected_archs) * 2 + 1
     else:

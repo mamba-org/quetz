@@ -67,10 +67,7 @@ class date_trunc(FunctionElement):
 def pg_date_trunc(element, compiler, **kw):
     pg_map = {"H": "hour", "D": "day", "M": "month", "Y": "year"}
     period, date = list(element.clauses)
-    return "date_trunc('%s', %s)" % (
-        pg_map[period.value.value],
-        compiler.process(date, **kw),
-    )
+    return f"date_trunc('{pg_map[period.value.value]}', {compiler.process(date, **kw)})"
 
 
 @compiles(date_trunc, 'sqlite')
@@ -146,8 +143,9 @@ def upsert_sql(element, compiler, **kw):
 
     stmt = insert(table).values(values)
     raw_sql = compiler.process(stmt)
-    upsert_stmt = "ON CONFLICT ({}) DO UPDATE SET {}={}+{}".format(
-        ",".join(index_elements), column.name, column.name, incr
+    upsert_stmt = (
+        f"ON CONFLICT ({','.join(index_elements)}) "
+        f"DO UPDATE SET {column.name}={column.name}+{incr}"
     )
 
     return raw_sql + " " + upsert_stmt
@@ -1086,7 +1084,7 @@ class Dao:
                     if user_email:
                         raise IntegrityError(
                             f"User {username} already registered "
-                            "with email {user_email.email}",
+                            f"with email {user_email.email}",
                             "",
                             "",
                         )

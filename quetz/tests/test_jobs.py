@@ -710,7 +710,7 @@ def test_filter_jobs_by_status(auth_client, db, user, status, job_ids):
 
     db.commit()
 
-    query = "&".join(["status={}".format(s) for s in status])
+    query = "&".join([f"status={s}" for s in status])
 
     response = auth_client.get(f"/api/jobs?{query}")
 

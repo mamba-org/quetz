@@ -252,7 +252,7 @@ def background_task_wrapper(func: Callable, logger: logging.Logger) -> Callable:
             func_args = inspect.signature(func).bind(*args, **kwargs).arguments
 
             func_args_str = ", ".join(
-                "{}={!r}".format(*item) for item in func_args.items()
+                f"{name}={repr(value)}" for name, value in func_args.items()
             )
 
             logger.error(

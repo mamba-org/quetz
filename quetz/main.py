@@ -1021,7 +1021,7 @@ def post_package_member(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
                 f"Member {new_member.username} in "
-                "{package.channel.name}/{package.name} exists"
+                f"{package.channel.name}/{package.name} exists"
             ),
         )
 
@@ -1572,7 +1572,7 @@ def handle_package_files(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
-                    f"requested package endpoint '{package.name}'"
+                    f"requested package endpoint '{package.name}' "
                     f"does not match the uploaded package name '{parts[0]}'"
                 ),
             )

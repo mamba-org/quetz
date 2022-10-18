@@ -232,8 +232,8 @@ class Channel(Base):
     def __repr__(self):
         return (
             f"<Channel name={self.name}, "
-            "description={self.description}, "
-            "private={self.private}>"
+            f"description={self.description}, "
+            f"private={self.private}>"
         )
 
 
