@@ -61,18 +61,13 @@ def _reset() -> None:
     with get_db_manager() as db:
         credentials_count = db.query(Credentials).count()
     click.echo(f"WARNING: Resetting the table will delete {credentials_count} users.")
-    while (
-        reset_database := input("Are you sure you want to reset the table? [Y/n]")
-    ) not in ("Y", "n"):
-        pass
+    if click.confirm("Are you sure you want to reset the table? [Y/n]"):
+        with get_db_manager() as db:
+            db.query(Credentials).delete()
+            db.commit()
+        click.echo("INFO: Table reset successful.")
     else:
-        if reset_database == "Y":
-            with get_db_manager() as db:
-                db.query(Credentials).delete()
-                db.commit()
-            click.echo("INFO: Table reset successful.")
-        else:
-            click.echo("INFO: Table reset aborted.")
+        click.echo("INFO: Table reset aborted.")
 
 
 if __name__ == "__main__":
