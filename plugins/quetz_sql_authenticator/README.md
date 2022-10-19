@@ -9,7 +9,7 @@ This plugin depends on `passlib`.
 ### Installation
 
 ```
-pip install -e .
+quetz plugin install plugins/quetz_sql_authenticator
 ```
 
 ### Usage
