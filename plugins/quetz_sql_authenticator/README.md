@@ -2,10 +2,6 @@
 
 An authenticator that stores credentials in the Quetz SQL database using passlib. Ships with CLI tools for CRUD operations on the credentials table.
 
-### Dependencies
-
-This plugin depends on `passlib`.
-
 ### Installation
 
 ```

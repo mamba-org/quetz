@@ -2,7 +2,7 @@ from contextlib import contextmanager
 from unittest import mock
 
 from click.testing import CliRunner
-from quetz_sql_authenticator.cli import _create, _delete, _reset, calculate_hash
+from quetz_sql_authenticator.cli import _calculate_hash, _create, _delete, _reset
 from quetz_sql_authenticator.db_models import Credentials
 
 
@@ -12,7 +12,8 @@ def test_invalid_login(client):
         "/auth/sql/authorize",
         data={"username": "testuser", "password": "testpassword"},
     )
-    assert response.status_code == 200
+    # Unauthorized
+    assert response.status_code == 401
     assert "login failed" in response.text
 
 
@@ -20,7 +21,7 @@ def test_invalid_login(client):
 def test_valid_login(client, db):
     # Insert user
     credentials = Credentials(
-        username="testuser", password=calculate_hash("testpassword")
+        username="testuser", password=_calculate_hash("testpassword")
     )
     db.add(credentials)
 

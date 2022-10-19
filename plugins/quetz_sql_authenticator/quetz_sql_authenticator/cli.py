@@ -6,7 +6,7 @@ from quetz.database import get_db_manager
 from .db_models import Credentials
 
 
-def calculate_hash(value: str) -> str:
+def _calculate_hash(value: str) -> str:
     """Calculate hash from value."""
     return pbkdf2_sha256.hash(value)
 
@@ -29,7 +29,7 @@ def _cli():
 @click.argument("username")
 @click.argument("password")
 def _create(username: str, password: str) -> None:
-    credentials = Credentials(username=username, password=calculate_hash(password))
+    credentials = Credentials(username=username, password=_calculate_hash(password))
     with get_db_manager() as db:
         db.add(credentials)
         db.commit()
@@ -46,7 +46,7 @@ def _update(username: str, password: str) -> None:
         )
         if credentials is None:
             raise click.ClickException(f"ERROR: User '{username}' not found.")
-        credentials.password = calculate_hash(password)
+        credentials.password = _calculate_hash(password)
         db.commit()
     click.echo(f"INFO: User '{username}' successfully updated.")
 

@@ -1,15 +1,15 @@
 """empty message
 
-Revision ID: b604694f20e2
+Revision ID: 470dc7d54b3f
 Revises:
-Create Date: 2022-10-17 16:05:45.154611
+Create Date: 2022-10-19 10:21:32.915191
 
 """
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = 'b604694f20e2'
+revision = '470dc7d54b3f'
 down_revision = None
 branch_labels = ('quetz-sql-authenticator',)
 depends_on = 'quetz'
