@@ -1,5 +1,5 @@
 """
-Define common dependencies for fastapi depenendcy-injection system
+Define common dependencies for fastapi dependency injection system
 """
 
 import logging

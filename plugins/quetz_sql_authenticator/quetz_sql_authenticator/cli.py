@@ -13,6 +13,15 @@ def calculate_hash(value: str) -> str:
 
 @click.group()
 def _cli():
+    """
+    Manage the credentials of the SQL Authenticator plugin.
+    The `QUETZ_CONFIG_FILE` environment variable must be set to the path of the QUETZ
+    configuration file, e.g. `/home/user/quetz_server/config.toml`.
+
+    If the Database URL specified in the configuration file is a relative path to a
+    SQLite database, you need to make sure to run the CLI from the directory
+    that that path is relative to.
+    """
     pass
 
 
