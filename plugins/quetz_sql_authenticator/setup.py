@@ -6,8 +6,9 @@ setup(
     name="quetz-sql-authenticator",
     install_requires=["passlib"],
     entry_points={
+        "quetz": ["quetz-sql-authenticator = quetz_sql_authenticator.main"],
         "quetz.authenticator": [
-            "sql-authenticator = quetz_sql_authenticator:SQLAuthenticator"
+            "sql-authenticator = quetz_sql_authenticator.main:SQLAuthenticator"
         ],
         "console_scripts": [
             "quetz-sql-authenticator = quetz_sql_authenticator.cli:_cli"
