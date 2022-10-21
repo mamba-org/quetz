@@ -53,6 +53,29 @@ def test_create_user(db):
         )
 
 
+# Test create user
+# def test_create_user_api(client, db):
+#     response = client.get(
+#         f"/api/channels/a/b/conda-suggest"
+#     )
+#     print(response.url)
+#     # Unauthorized
+#     assert "login failed" in response.text
+
+#     # Check that user is in table
+#     assert (
+#         db.query(Credentials)
+#         .filter(Credentials.username == "testuser")
+#         .one_or_none()
+#         is not None
+#     )
+
+
+def test_conda_suggest_endpoint_without_upload(client):
+    response = client.get(f"/api/hello")  # noqa
+    assert response.status_code == 200
+
+
 def test_delete_user(db):
     @contextmanager
     def get_db():

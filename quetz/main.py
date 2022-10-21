@@ -199,7 +199,9 @@ for auth_cls in builtin_authenticators + plugin_authenticators:
 
 pm = get_plugin_manager()
 api_router = APIRouter()
+print("before hook call")
 plugin_routers = pm.hook.register_router()
+print(plugin_routers)
 
 for router in plugin_routers:
     app.include_router(router)

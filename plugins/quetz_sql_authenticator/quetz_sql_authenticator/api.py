@@ -10,6 +10,8 @@ from .db_models import Credentials
 
 router = APIRouter()
 
+print("HEOIJO")
+
 
 @router.get(
     "/api/sqlauth/credentials/{username}",
@@ -20,6 +22,8 @@ def _get(
     auth: authorization.Rules = Depends(get_rules),
     db: Session = Depends(get_db),
 ):
+    auth.assert_assign_user_role([SERVER_OWNER, SERVER_MAINTAINER])
+
     # Get user from db
     db_credentials = (
         db.query(Credentials).filter(Credentials.username == username).one_or_none()
@@ -27,10 +31,15 @@ def _get(
     if db_credentials is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User {username} not found",
+            detail=f"User {username} not foun",
         )
 
     return username
+
+
+@router.get("/api/hello")
+def hello():
+    return "hello"
 
 
 @router.post("/api/sqlauth/credentials/{username}", tags=["sqlauth"])

@@ -248,6 +248,7 @@ def app(config, db, mocker):
     from quetz.deps import get_db
     from quetz.main import app
 
+    # raise Exception("asdasdasdasdasd")
     # mocking is required for some functions that do not use fastapi
     # dependency injection (mainly non-request functions)
     def get_session_mock(*args, **kwargs):
@@ -271,6 +272,7 @@ def app(config, db, mocker):
 
 @pytest.fixture
 def client(app):
+    # raise Exception("AAAAAAAA")
     client = TestClient(app)
     return client
 
