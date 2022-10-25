@@ -11,6 +11,11 @@ from .db_models import Credentials
 router = APIRouter()
 
 
+def _calculate_hash(value: str) -> str:
+    """Calculate hash from value."""
+    return pbkdf2_sha256.hash(value)
+
+
 @router.get(
     "/api/sqlauth/credentials/{username}",
     tags=["sqlauth"],
@@ -29,7 +34,7 @@ def _get(
     if db_credentials is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User {username} not foun",
+            detail=f"User {username} not found",
         )
 
     return username
@@ -44,7 +49,9 @@ def _create(
 ) -> None:
     auth.assert_assign_user_role([SERVER_OWNER, SERVER_MAINTAINER])
 
-    credentials = Credentials(username=username, password=pbkdf2_sha256.hash(password))
+    credentials = Credentials(
+        username=username, password_hash=_calculate_hash(password)
+    )
     db.add(credentials)
     db.commit()
 
@@ -68,7 +75,7 @@ def _update(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User {username} not found",
         )
-    credentials.password = pbkdf2_sha256.hash(password)
+    credentials.password = _calculate_hash(password)
     db.commit()
 
     return username
@@ -95,7 +102,7 @@ def _delete(
     return username
 
 
-@router.get("/api/sqlauth/reset", tags=["sqlauth"])
+@router.post("/api/sqlauth/reset", tags=["sqlauth"])
 def _reset(
     auth: authorization.Rules = Depends(get_rules), db: Session = Depends(get_db)
 ) -> None:

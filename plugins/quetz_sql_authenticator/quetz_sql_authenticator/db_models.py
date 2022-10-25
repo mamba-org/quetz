@@ -7,4 +7,4 @@ class Credentials(Base):
     __tablename__ = "credentials"
 
     username = Column("username", String, primary_key=True)
-    password = Column("password", String, nullable=False)
+    password_hash = Column("password", String, nullable=False)

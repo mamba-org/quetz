@@ -1,14 +1,9 @@
 import click
-from passlib.hash import pbkdf2_sha256
 
 from quetz.database import get_db_manager
 
+from .api import _calculate_hash
 from .db_models import Credentials
-
-
-def _calculate_hash(value: str) -> str:
-    """Calculate hash from value."""
-    return pbkdf2_sha256.hash(value)
 
 
 @click.group()
@@ -29,7 +24,9 @@ def _cli():
 @click.argument("username")
 @click.argument("password")
 def _create(username: str, password: str) -> None:
-    credentials = Credentials(username=username, password=_calculate_hash(password))
+    credentials = Credentials(
+        username=username, password_hash=_calculate_hash(password)
+    )
     with get_db_manager() as db:
         db.add(credentials)
         db.commit()
