@@ -1,6 +1,6 @@
 ## SQL Authenticator
 
-An authenticator that stores credentials in the Quetz SQL database using passlib. Ships with CLI tools for CRUD operations on the credentials table.
+An authenticator that stores credentials in the Quetz SQL database using passlib. It ships with REST routets for CRUD operations on the credentials table.
 
 ### Installation
 
@@ -12,20 +12,16 @@ quetz plugin install plugins/quetz_sql_authenticator
 
 The authenticator should be active now. You can login by navigating to `<HOST>/auth/sql/login`.
 
-### CLI Tool
+### CRUD operations
 
-The authenticator provides a CLI tool to create, update, and delete credentials and to reset the entire table.
+The authenticator provides REST routes to create, update, and delete credentials and to reset the entire table.
 
-#### Dependencies
+`GET /api/sqlauth/credentials/{username}`: Verify that a user exists.
 
-The CLI tools has `click` as an additional dependency.
+`POST /api/sqlauth/credentials/{username}?password={password}`: Create a new user.
 
-#### Usage
+`PUT /api/sqlauth/credentials/{username}?password={password}`: Update a user's password.
 
-You need to set the `QUETZ_CONFIG_FILE` environment variable to the path of your Quetz configuration file, e.g. `/home/user/quetz_server/config.toml`. Otherwise, the CLI tool will not be able to find the database.
+`DELETE /api/sqlauth/credentials/{username}`: Delete a user.
 
-If the Database URL specified in the configuration file is a relative path to a
-SQLite database, you need to make sure to run the CLI from the directory
-that that path is relative to.
-
-Please check `quetz-sql-authenticator --help` for more details.
+`DELETE /api/sqlauth/credentials`: Delete all users.
