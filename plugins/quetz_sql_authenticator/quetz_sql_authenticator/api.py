@@ -102,7 +102,7 @@ def _delete(
     return username
 
 
-@router.post("/api/sqlauth/reset", tags=["sqlauth"])
+@router.delete("/api/sqlauth/credentials", tags=["sqlauth"])
 def _reset(
     auth: authorization.Rules = Depends(get_rules), db: Session = Depends(get_db)
 ) -> None:

@@ -160,8 +160,8 @@ def test_reset(client, db, testuser, testpassword):
         is not None
     )
 
-    response = client.post(
-        "/api/sqlauth/reset",
+    response = client.delete(
+        "/api/sqlauth/credentials",
     )
 
     # Check that user is not in table
