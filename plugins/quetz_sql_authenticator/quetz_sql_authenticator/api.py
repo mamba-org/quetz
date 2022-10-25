@@ -25,7 +25,8 @@ def _get(
     auth: authorization.Rules = Depends(get_rules),
     db: Session = Depends(get_db),
 ) -> str:
-    auth.assert_assign_user_role([SERVER_OWNER, SERVER_MAINTAINER])
+    """Verify that a specific user exists."""
+    auth.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
     # Get user from db
     db_credentials = (
@@ -40,6 +41,24 @@ def _get(
     return username
 
 
+@router.get(
+    "/api/sqlauth/credentials/{username}",
+    tags=["sqlauth"],
+)
+def _get_all(
+    username: str,
+    auth: authorization.Rules = Depends(get_rules),
+    db: Session = Depends(get_db),
+) -> str:
+    """List all users."""
+    auth.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
+
+    # Get users from db
+    db_credentials = db.query(Credentials).select(Credentials.username)
+
+    return db_credentials
+
+
 @router.post("/api/sqlauth/credentials/{username}", tags=["sqlauth"])
 def _create(
     username: str,
@@ -47,7 +66,7 @@ def _create(
     auth: authorization.Rules = Depends(get_rules),
     db: Session = Depends(get_db),
 ) -> str:
-    auth.assert_assign_user_role([SERVER_OWNER, SERVER_MAINTAINER])
+    auth.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
     credentials = Credentials(
         username=username, password_hash=_calculate_hash(password)
@@ -65,7 +84,7 @@ def _update(
     auth: authorization.Rules = Depends(get_rules),
     db: Session = Depends(get_db),
 ) -> str:
-    auth.assert_assign_user_role([SERVER_OWNER, SERVER_MAINTAINER])
+    auth.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
     credentials = (
         db.query(Credentials).filter(Credentials.username == username).one_or_none()
@@ -87,7 +106,7 @@ def _delete(
     auth: authorization.Rules = Depends(get_rules),
     db: Session = Depends(get_db),
 ) -> str:
-    auth.assert_assign_user_role([SERVER_OWNER, SERVER_MAINTAINER])
+    auth.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
     credentials = (
         db.query(Credentials).filter(Credentials.username == username).one_or_none()
@@ -100,13 +119,3 @@ def _delete(
     db.delete(credentials)
     db.commit()
     return username
-
-
-@router.delete("/api/sqlauth/credentials", tags=["sqlauth"])
-def _reset(
-    auth: authorization.Rules = Depends(get_rules), db: Session = Depends(get_db)
-) -> None:
-    auth.assert_assign_user_role([SERVER_OWNER, SERVER_MAINTAINER])
-
-    db.query(Credentials).delete()
-    db.commit()

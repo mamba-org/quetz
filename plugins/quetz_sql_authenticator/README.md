@@ -16,6 +16,8 @@ The authenticator should be active now. You can login by navigating to `<HOST>/a
 
 The authenticator provides REST routes to create, update, and delete credentials and to reset the entire table.
 
+`GET /api/sqlauth/credentials/`: List all users.
+
 `GET /api/sqlauth/credentials/{username}`: Verify that a user exists.
 
 `POST /api/sqlauth/credentials/{username}?password={password}`: Create a new user.
@@ -23,5 +25,3 @@ The authenticator provides REST routes to create, update, and delete credentials
 `PUT /api/sqlauth/credentials/{username}?password={password}`: Update a user's password.
 
 `DELETE /api/sqlauth/credentials/{username}`: Delete a user.
-
-`DELETE /api/sqlauth/credentials`: Delete all users.
