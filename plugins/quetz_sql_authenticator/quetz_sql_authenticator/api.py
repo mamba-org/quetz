@@ -24,7 +24,7 @@ def _get(
     username: str,
     auth: authorization.Rules = Depends(get_rules),
     db: Session = Depends(get_db),
-):
+) -> str:
     auth.assert_assign_user_role([SERVER_OWNER, SERVER_MAINTAINER])
 
     # Get user from db
@@ -46,7 +46,7 @@ def _create(
     password: str,
     auth: authorization.Rules = Depends(get_rules),
     db: Session = Depends(get_db),
-) -> None:
+) -> str:
     auth.assert_assign_user_role([SERVER_OWNER, SERVER_MAINTAINER])
 
     credentials = Credentials(
@@ -64,7 +64,7 @@ def _update(
     password: str,
     auth: authorization.Rules = Depends(get_rules),
     db: Session = Depends(get_db),
-) -> None:
+) -> str:
     auth.assert_assign_user_role([SERVER_OWNER, SERVER_MAINTAINER])
 
     credentials = (
@@ -86,7 +86,7 @@ def _delete(
     username: str,
     auth: authorization.Rules = Depends(get_rules),
     db: Session = Depends(get_db),
-) -> None:
+) -> str:
     auth.assert_assign_user_role([SERVER_OWNER, SERVER_MAINTAINER])
 
     credentials = (
