@@ -71,7 +71,7 @@ def test_create_user(db):
 #     )
 
 
-def test_conda_suggest_endpoint_without_upload(client):
+def test_sample_test(client):
     response = client.get(f"/api/hello")  # noqa
     assert response.status_code == 200
 
