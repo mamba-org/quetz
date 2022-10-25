@@ -42,11 +42,10 @@ def _get(
 
 
 @router.get(
-    "/api/sqlauth/credentials/{username}",
+    "/api/sqlauth/credentials",
     tags=["sqlauth"],
 )
 def _get_all(
-    username: str,
     auth: authorization.Rules = Depends(get_rules),
     db: Session = Depends(get_db),
 ) -> str:
@@ -54,9 +53,9 @@ def _get_all(
     auth.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
     # Get users from db
-    db_credentials = db.query(Credentials).select(Credentials.username)
+    db_credentials = db.query(Credentials)
 
-    return db_credentials
+    return [c.username for c in db_credentials]
 
 
 @router.post("/api/sqlauth/credentials/{username}", tags=["sqlauth"])
@@ -66,6 +65,7 @@ def _create(
     auth: authorization.Rules = Depends(get_rules),
     db: Session = Depends(get_db),
 ) -> str:
+    """Create a new user."""
     auth.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
     credentials = Credentials(
@@ -84,6 +84,7 @@ def _update(
     auth: authorization.Rules = Depends(get_rules),
     db: Session = Depends(get_db),
 ) -> str:
+    """Update a user's password."""
     auth.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
     credentials = (
@@ -106,6 +107,7 @@ def _delete(
     auth: authorization.Rules = Depends(get_rules),
     db: Session = Depends(get_db),
 ) -> str:
+    """Delete a user."""
     auth.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
     credentials = (
