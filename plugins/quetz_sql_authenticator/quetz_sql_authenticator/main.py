@@ -10,7 +10,6 @@ from .db_models import Credentials
 
 @quetz.hookimpl
 def register_router():
-    # raise Exception("HEOIJOASIDJAOSIJDOASIJDOAISJDOAISDJ")
     return router
 
 

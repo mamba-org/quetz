@@ -10,8 +10,6 @@ from .db_models import Credentials
 
 router = APIRouter()
 
-print("HEOIJO")
-
 
 @router.get(
     "/api/sqlauth/credentials/{username}",
@@ -35,11 +33,6 @@ def _get(
         )
 
     return username
-
-
-@router.get("/api/hello")
-def hello():
-    return "hello"
 
 
 @router.post("/api/sqlauth/credentials/{username}", tags=["sqlauth"])

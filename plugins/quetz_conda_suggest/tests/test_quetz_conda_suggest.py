@@ -11,9 +11,13 @@ from quetz_conda_suggest import db_models
 from quetz.condainfo import CondaInfo
 
 
-def test_conda_suggest_endpoint_without_upload(client):
-    response = client.get(f"/api/channels/a/b/conda-suggest")  # noqa
+def test_conda_suggest_endpoint_without_upload(client, channel, subdir):
+    response = client.get(
+        f"/api/channels/{channel.name}/{subdir}/conda-suggest"
+    )  # noqa
     assert response.status_code == 200
+    assert response.content == b'null'
+    assert response.json() == None  # noqa: E711
 
 
 def test_post_add_package_version(package_version, db, config):

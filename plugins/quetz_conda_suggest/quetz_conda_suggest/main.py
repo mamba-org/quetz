@@ -17,7 +17,6 @@ pkgstore = config.get_package_store()
 
 @quetz.hookimpl
 def register_router():
-    # raise Exception("HEOIJOASIDJAOSIJDOASIJDOAISJDOAISDJ")
     return router
 
 
