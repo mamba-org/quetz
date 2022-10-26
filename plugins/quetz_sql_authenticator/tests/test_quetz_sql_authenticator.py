@@ -14,6 +14,61 @@ def test_invalid_login(client, testuser, testpassword):
     assert "login failed" in response.text
 
 
+def test_changing_password(owner_client, client, db, testuser, testpassword):
+    # Create user
+    response = owner_client.post(
+        f"/api/sqlauth/credentials/{testuser}?password={testpassword}",
+    )
+    assert response.status_code == 200
+
+    # Assert user is in table
+    assert (
+        db.query(Credentials).filter(Credentials.username == testuser).one_or_none()
+        is not None
+    )
+
+    # Test login
+    response = client.post(
+        "/auth/sql/authorize",
+        data={"username": testuser, "password": testpassword},
+    )
+    # Assert that we get a redirect to the main page
+    assert response.status_code == 303
+
+    # Login in as owner again
+    response = client.get("/api/dummylogin/test_owner")
+    assert response.status_code == 200
+
+    # Change password
+    newpassword = "newpassword"
+    response = owner_client.put(
+        f"/api/sqlauth/credentials/{testuser}?password={newpassword}",
+    )
+    assert response.status_code == 200
+
+    # Check password in table
+    credentials = (
+        db.query(Credentials).filter(Credentials.username == testuser).one_or_none()
+    )
+    assert pbkdf2_sha256.verify(newpassword, credentials.password_hash)
+
+    # Test that old password does not work
+    response = client.post(
+        "/auth/sql/authorize",
+        data={"username": testuser, "password": testpassword},
+    )
+    assert response.status_code == 200
+    assert "login failed" in response.text
+
+    # Test that new password works
+    response = client.post(
+        "/auth/sql/authorize",
+        data={"username": testuser, "password": newpassword},
+    )
+    # Assert that we get a redirect to the main page
+    assert response.status_code == 303
+
+
 def test_valid_login(client, db, testuser, testpassword):
     # Insert user
     credentials = Credentials(
