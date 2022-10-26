@@ -149,7 +149,7 @@ def test_update_user(owner_client, db, testuser, testpassword):
         db.query(Credentials)
         .filter(Credentials.username == testuser)
         .one_or_none()
-        .password
+        .password_hash
     )
 
     assert pbkdf2_sha256.verify(newpassword, password_hash)
