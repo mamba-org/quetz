@@ -109,7 +109,7 @@ class BaseAuthenticationHandlers:
         user_dict = await self._authenticate(request, dao, config)
 
         if user_dict is None:
-            return Response("login failed", status_code=401)
+            return Response("login failed")
 
         if isinstance(user_dict, str):
             # wrap string in a dictionary
