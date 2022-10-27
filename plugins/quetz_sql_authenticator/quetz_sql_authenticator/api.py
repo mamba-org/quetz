@@ -75,7 +75,8 @@ def _create(
     db.add(credentials)
     try:
         db.commit()
-    except IntegrityError:
+    except IntegrityError as e:
+        breakpoint()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"""

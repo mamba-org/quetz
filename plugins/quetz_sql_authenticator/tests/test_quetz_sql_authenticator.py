@@ -12,6 +12,17 @@ def test_invalid_login(client, testuser, testpassword):
     assert response.status_code == 200
     assert "login failed" in response.text
 
+def test_double_create(owner_client, testuser, testpassword):
+    response = owner_client.post(
+        f"/api/sqlauth/credentials/{testuser}?password={testpassword}",
+    )
+    assert response.status_code == 200
+
+    response = owner_client.post(
+        f"/api/sqlauth/credentials/{testuser}?password={testpassword}",
+    )
+    assert response.status_code == 409
+
 
 def test_changing_password(owner_client, client, db, testuser, testpassword):
     # Create user
