@@ -154,7 +154,12 @@ def db(session_maker, expires_on_commit, auto_rollback, request):
     rollback_support_marker = request.node.get_closest_marker(
         "support_sqlalchemy_rollback"
     )
-    if rollback_support_marker is True and auto_rollback:
+    # breakpoint()
+    if (
+        rollback_support_marker is not None
+        and rollback_support_marker.args[0] is True
+        and auto_rollback
+    ):
         # See https://docs.sqlalchemy.org/en/13/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites # noqa
         # We do this setup to support calling `rollback()` within tests
         # start the session in a SAVEPOINT...
