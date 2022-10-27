@@ -76,14 +76,21 @@ def _create(
     try:
         db.commit()
     except IntegrityError as e:
-        breakpoint()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"""
-            A database error occured.
-            This is most likely due to the user {username} already existing.
-            """,
-        )
+        db.rollback()
+        if "UNIQUE constraint failed: credentials.username" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"""
+                The username {username} already exists.
+                """,
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"""
+                A database error occured: {e}
+                """,
+            )
     return username
 
 
