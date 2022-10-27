@@ -1,3 +1,4 @@
+import pytest
 from passlib.hash import pbkdf2_sha256
 from quetz_sql_authenticator.api import _calculate_hash
 from quetz_sql_authenticator.db_models import Credentials
@@ -94,7 +95,7 @@ def test_update_user(owner_client, db, testuser, testpassword):
         db.query(Credentials)
         .filter(Credentials.username == testuser)
         .one_or_none()
-        .password
+        .password_hash
     )
 
     assert pbkdf2_sha256.verify(newpassword, password_hash)
@@ -173,3 +174,71 @@ def test_get_all_users_unauthorized(member_client):
 
     assert response.status_code == 403
     assert "this operation requires owner or maintainer roles" in response.text
+
+
+@pytest.mark.support_sqlalchemy_rollback(True)
+def test_double_create(owner_client, testuser, testpassword):
+    response = owner_client.post(
+        f"/api/sqlauth/credentials/{testuser}?password={testpassword}",
+    )
+    assert response.status_code == 200
+
+    response = owner_client.post(
+        f"/api/sqlauth/credentials/{testuser}?password={testpassword}",
+    )
+    assert response.status_code == 409
+
+
+def test_changing_password(owner_client, client, db, testuser, testpassword):
+    # Create user
+    response = owner_client.post(
+        f"/api/sqlauth/credentials/{testuser}?password={testpassword}",
+    )
+    assert response.status_code == 200
+
+    # Assert user is in table
+    assert (
+        db.query(Credentials).filter(Credentials.username == testuser).one_or_none()
+        is not None
+    )
+
+    # Test login
+    response = client.post(
+        "/auth/sql/authorize",
+        data={"username": testuser, "password": testpassword},
+    )
+    # Assert that we get a redirect to the main page
+    assert response.status_code == 303
+
+    # Login in as owner again
+    response = client.get("/api/dummylogin/test_owner")
+    assert response.status_code == 200
+
+    # Change password
+    newpassword = "newpassword"
+    response = owner_client.put(
+        f"/api/sqlauth/credentials/{testuser}?password={newpassword}",
+    )
+    assert response.status_code == 200
+
+    # Check password in table
+    credentials = (
+        db.query(Credentials).filter(Credentials.username == testuser).one_or_none()
+    )
+    assert pbkdf2_sha256.verify(newpassword, credentials.password_hash)
+
+    # Test that old password does not work
+    response = client.post(
+        "/auth/sql/authorize",
+        data={"username": testuser, "password": testpassword},
+    )
+    assert response.status_code == 200
+    assert "login failed" in response.text
+
+    # Test that new password works
+    response = client.post(
+        "/auth/sql/authorize",
+        data={"username": testuser, "password": newpassword},
+    )
+    # Assert that we get a redirect to the main page
+    assert response.status_code == 303

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from passlib.hash import pbkdf2_sha256
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.session import Session
 
 from quetz import authorization
@@ -72,8 +73,24 @@ def _create(
         username=username, password_hash=_calculate_hash(password)
     )
     db.add(credentials)
-    db.commit()
-
+    try:
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        if "UNIQUE constraint failed: credentials.username" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"""
+                The username {username} already exists.
+                """,
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"""
+                A database error occured: {e}
+                """,
+            )
     return username
 
 
@@ -95,7 +112,7 @@ def _update(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User {username} not found",
         )
-    credentials.password = _calculate_hash(password)
+    credentials.password_hash = _calculate_hash(password)
     db.commit()
 
     return username
