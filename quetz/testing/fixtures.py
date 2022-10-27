@@ -6,7 +6,6 @@ from typing import List
 import pytest
 from alembic.command import upgrade as alembic_upgrade
 from fastapi.testclient import TestClient
-from sqlalchemy import event
 
 import quetz
 from quetz.cli import _alembic_config
@@ -14,6 +13,8 @@ from quetz.config import Config
 from quetz.dao import Dao
 from quetz.database import get_engine, get_session_maker
 from quetz.db_models import Base
+
+# from sqlalchemy import event
 
 
 def pytest_configure(config):
@@ -151,21 +152,21 @@ def expires_on_commit():
 def db(session_maker, expires_on_commit, auto_rollback):
     session = session_maker()
 
-    if auto_rollback:
-        # start the session in a SAVEPOINT...
-        session.begin_nested()
+    # if auto_rollback:
+    #     # start the session in a SAVEPOINT...
+    #     session.begin_nested()
 
-        # then each time that SAVEPOINT ends, reopen it
-        @event.listens_for(session, "after_transaction_end")
-        def restart_savepoint(session, transaction):
-            if transaction.nested and not transaction._parent.nested:
+    #     # then each time that SAVEPOINT ends, reopen it
+    #     @event.listens_for(session, "after_transaction_end")
+    #     def restart_savepoint(session, transaction):
+    #         if transaction.nested and not transaction._parent.nested:
 
-                # ensure that state is expired the way
-                # session.commit() at the top level normally does
-                # (optional step)
-                session.expire_all()
+    #             # ensure that state is expired the way
+    #             # session.commit() at the top level normally does
+    #             # (optional step)
+    #             session.expire_all()
 
-                session.begin_nested()
+    #             session.begin_nested()
 
     session.expire_on_commit = expires_on_commit
     yield session
