@@ -1,6 +1,7 @@
 import uuid
 
 import pytest
+from sqlalchemy import event
 
 from quetz.authorization import SERVER_MEMBER, SERVER_OWNER
 from quetz.db_models import Profile, User
@@ -77,3 +78,29 @@ def _delete_user(db, username):
     user = db.query(User).filter(User.username == username).one()
     db.delete(user)
     db.commit()
+
+
+@pytest.fixture
+def db(session_maker, expires_on_commit, auto_rollback, request):
+    session = session_maker()
+
+    # We overwrite this fixture to support rollbacks within
+    # the test by wrapping the test in a nested transaction.
+    # We start a new nested transaction when a transaction
+    # ends using the `after_transaction_end` event.
+    # See https://docs.sqlalchemy.org/en/13/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites # noqa
+    # for why this is necessary and how this works.
+
+    if auto_rollback:
+        session.begin_nested()
+
+        # each time the nested transaction ends, reopen it
+        @event.listens_for(session, "after_transaction_end")
+        def restart_savepoint(session, transaction):
+            if transaction.nested and not transaction._parent.nested:
+                session.expire_all()
+                session.begin_nested()
+
+    session.expire_on_commit = expires_on_commit
+    yield session
+    session.close()
