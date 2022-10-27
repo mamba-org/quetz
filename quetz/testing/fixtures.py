@@ -154,7 +154,7 @@ def db(session_maker, expires_on_commit, auto_rollback, request):
     rollback_support_marker = request.node.get_closest_marker(
         "support_sqlalchemy_rollback"
     )
-    # breakpoint()
+
     if (
         rollback_support_marker is not None
         and rollback_support_marker.args[0] is True
