@@ -151,30 +151,30 @@ def expires_on_commit():
 def db(session_maker, expires_on_commit, auto_rollback, request):
     session = session_maker()
 
+    # If this marker is set to True, database rollbacks are
+    # supported within the test by wrapping the test in a
+    # nested transaction. We start a new nested transaction
+    # when transaction ends using the `after_transaction_end` event.
+    # See https://docs.sqlalchemy.org/en/13/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites # noqa
+    # for why this is necessary and how this works.
     rollback_support_marker = request.node.get_closest_marker(
         "support_sqlalchemy_rollback"
     )
 
+    # We need to check that the marker is set to True
+    # and that auto_rollback is set to True.
     if (
         rollback_support_marker is not None
         and rollback_support_marker.args[0] is True
         and auto_rollback
     ):
-        # See https://docs.sqlalchemy.org/en/13/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites # noqa
-        # We do this setup to support calling `rollback()` within tests
-        # start the session in a SAVEPOINT...
         session.begin_nested()
 
-        # then each time that SAVEPOINT ends, reopen it
+        # each time the nested transaction ends, reopen it
         @event.listens_for(session, "after_transaction_end")
         def restart_savepoint(session, transaction):
             if transaction.nested and not transaction._parent.nested:
-
-                # ensure that state is expired the way
-                # session.commit() at the top level normally does
-                # (optional step)
                 session.expire_all()
-
                 session.begin_nested()
 
     session.expire_on_commit = expires_on_commit
