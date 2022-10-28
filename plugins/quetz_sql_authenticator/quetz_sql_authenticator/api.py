@@ -87,7 +87,7 @@ def _create(
     )
 
     db.add(credentials)
-    _commit_and_tranform_errors(db)
+    db.commit()
     return username
 
 
@@ -110,7 +110,7 @@ def _update(
             detail=f"User {username} not found",
         )
     credentials.password_hash = _calculate_hash(password)
-    _commit_and_tranform_errors(db)
+    db.commit()
     return username
 
 
@@ -132,23 +132,5 @@ def _delete(
             detail=f"User {username} not found",
         )
     db.delete(credentials)
-    _commit_and_tranform_errors(db)
+    db.commit()
     return username
-
-
-def _commit_and_tranform_errors(db):
-    """Commit changes to the database and transform errors to HTTP status codes."""
-    try:
-        db.commit()
-    except Exception as e:
-        logger.error(
-            f"""
-        quetz-sql-authenticator encountered the following error \
-        while trying to commit changes to the database:
-        {e}
-        """
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An internal error occured.",
-        )
