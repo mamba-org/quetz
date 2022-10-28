@@ -1,6 +1,8 @@
+import logging
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from passlib.hash import pbkdf2_sha256
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.session import Session
 
 from quetz import authorization
@@ -10,6 +12,7 @@ from quetz.deps import get_db, get_rules
 from .db_models import Credentials
 
 router = APIRouter()
+logger = logging.getLogger('quetz-sql-authenticator')
 
 
 def _calculate_hash(value: str) -> str:
@@ -49,7 +52,7 @@ def _get(
 def _get_all(
     auth: authorization.Rules = Depends(get_rules),
     db: Session = Depends(get_db),
-) -> str:
+) -> List[str]:
     """List all users."""
     auth.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
@@ -69,29 +72,22 @@ def _create(
     """Create a new user."""
     auth.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
+    # Check if user already exists
+    db_credentials = (
+        db.query(Credentials).filter(Credentials.username == username).one_or_none()
+    )
+    if db_credentials is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"User {username} already exists",
+        )
+
     credentials = Credentials(
         username=username, password_hash=_calculate_hash(password)
     )
+
     db.add(credentials)
-    try:
-        db.commit()
-    except IntegrityError as e:
-        db.rollback()
-        if "unique" in str(e).lower() and "INSERT INTO credentials" in str(e):
-            # This detection should work for both psycopg2 and sqlite3
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"""
-                The username {username} already exists.
-                """,
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"""
-                A database error occured: {e}
-                """,
-            )
+    _commit_and_tranform_errors(db)
     return username
 
 
@@ -114,8 +110,7 @@ def _update(
             detail=f"User {username} not found",
         )
     credentials.password_hash = _calculate_hash(password)
-    db.commit()
-
+    _commit_and_tranform_errors(db)
     return username
 
 
@@ -137,5 +132,17 @@ def _delete(
             detail=f"User {username} not found",
         )
     db.delete(credentials)
-    db.commit()
+    _commit_and_tranform_errors(db)
     return username
+
+
+def _commit_and_tranform_errors(db):
+    """Commit changes to the database and transform errors to HTTP status codes."""
+    try:
+        db.commit()
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An internal error occured.",
+        )
