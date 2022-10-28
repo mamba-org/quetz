@@ -12,7 +12,7 @@ from quetz.deps import get_db, get_rules
 from .db_models import Credentials
 
 router = APIRouter()
-logger = logging.getLogger('quetz-sql-authenticator')
+logger = logging.getLogger('quetz')
 
 
 def _calculate_hash(value: str) -> str:
@@ -141,7 +141,13 @@ def _commit_and_tranform_errors(db):
     try:
         db.commit()
     except Exception as e:
-        logger.error(e)
+        logger.error(
+            f"""
+        quetz-sql-authenticator encountered the following error \
+        while trying to commit changes to the database:
+        {e}
+        """
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occured.",
