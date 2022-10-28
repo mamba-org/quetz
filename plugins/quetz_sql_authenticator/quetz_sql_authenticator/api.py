@@ -77,7 +77,8 @@ def _create(
         db.commit()
     except IntegrityError as e:
         db.rollback()
-        if "UNIQUE constraint failed: credentials.username" in str(e):
+        if "unique" in str(e).lower() and "INSERT INTO credentials" in str(e):
+            # This detection should work for both psycopg2 and sqlite3
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"""
