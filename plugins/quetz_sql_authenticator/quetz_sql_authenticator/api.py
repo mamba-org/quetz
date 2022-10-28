@@ -1,4 +1,3 @@
-import logging
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,7 +11,6 @@ from quetz.deps import get_db, get_rules
 from .db_models import Credentials
 
 router = APIRouter()
-logger = logging.getLogger('quetz')
 
 
 def _calculate_hash(value: str) -> str:
