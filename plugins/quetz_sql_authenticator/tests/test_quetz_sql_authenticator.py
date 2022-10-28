@@ -1,4 +1,3 @@
-import pytest
 from passlib.hash import pbkdf2_sha256
 from quetz_sql_authenticator.api import _calculate_hash
 from quetz_sql_authenticator.db_models import Credentials
@@ -176,7 +175,6 @@ def test_get_all_users_unauthorized(member_client):
     assert "this operation requires owner or maintainer roles" in response.text
 
 
-@pytest.mark.support_sqlalchemy_rollback(True)
 def test_double_create(owner_client, testuser, testpassword):
     response = owner_client.post(
         f"/api/sqlauth/credentials/{testuser}?password={testpassword}",
