@@ -1,6 +1,7 @@
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from passlib.hash import pbkdf2_sha256
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.session import Session
 
 from quetz import authorization
@@ -49,7 +50,7 @@ def _get(
 def _get_all(
     auth: authorization.Rules = Depends(get_rules),
     db: Session = Depends(get_db),
-) -> str:
+) -> List[str]:
     """List all users."""
     auth.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
@@ -69,28 +70,22 @@ def _create(
     """Create a new user."""
     auth.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
+    # Check if user already exists
+    db_credentials = (
+        db.query(Credentials).filter(Credentials.username == username).one_or_none()
+    )
+    if db_credentials is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"User {username} already exists",
+        )
+
     credentials = Credentials(
         username=username, password_hash=_calculate_hash(password)
     )
+
     db.add(credentials)
-    try:
-        db.commit()
-    except IntegrityError as e:
-        db.rollback()
-        if "UNIQUE constraint failed: credentials.username" in str(e):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"""
-                The username {username} already exists.
-                """,
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"""
-                A database error occured: {e}
-                """,
-            )
+    db.commit()
     return username
 
 
@@ -114,7 +109,6 @@ def _update(
         )
     credentials.password_hash = _calculate_hash(password)
     db.commit()
-
     return username
 
 
