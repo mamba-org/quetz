@@ -8,6 +8,7 @@ dependencies:
   - typer
   - authlib=0.15.5
   - psycopg2
+  - httpx>=0.22.0
   - sqlalchemy
   - sqlalchemy-utils
   - sqlite
