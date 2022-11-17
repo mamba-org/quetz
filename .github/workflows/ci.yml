@@ -86,7 +86,8 @@ jobs:
           pytest -v ./quetz/tests/ --cov-config=.coveragerc --cov=. --cov-report=xml
 
       - name: Test the plugins
-        shell: bash -l -eo pipefail {0}
+        id: test_plugins
+        shell: bash -l {0}
         env:
           TEST_DB_BACKEND: ${{ matrix.test_database }}
           QUETZ_TEST_DBINIT: ${{ matrix.db_init }}
@@ -106,15 +107,25 @@ jobs:
           export PATH=$(dirname $MAMBA_EXE):$PATH
           echo "adding micromamba to path: $MAMBA_EXE"
 
-          pip install --no-deps git+https://git@github.com/regro/libcflib@master
+          pip install --no-deps git+https://git@github.com/regro/libcflib@master || exit 1
           
           for f in ./plugins/quetz_*
           do
             echo "::group::Testing plugin${f}"
             quetz plugin install $f
             pytest -v $f
+            if [ $? -ne 0 ]; then
+              echo "tests_failed=true" >> $GITHUB_OUTPUT
+            fi
             echo "::endgroup::"
           done
+
+      - name: Check if tests failed
+        run: |
+          if [ ${{ steps.test_plugins.outputs.tests_failed }} == "true" ]; then
+            echo "Some of the plugin tests failed!"
+            exit 1
+          fi
 
       - uses: codecov/codecov-action@v1
         with:
