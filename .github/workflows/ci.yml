@@ -118,6 +118,7 @@ jobs:
             set +e
             pytest -v $f
             if [ $? -ne 0 ]; then
+              echo "::error::Tests for plugin $f failed!"
               tests_failed="true"
             fi
             set -e
