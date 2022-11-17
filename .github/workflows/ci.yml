@@ -41,28 +41,9 @@ jobs:
           - 6379:6379
     steps:
       - uses: actions/checkout@v2
+
       - name: install mamba
         uses: mamba-org/provision-with-micromamba@main
-
-      - name: Check status code
-        shell: bash -l -e {0}
-        run: |
-          echo hello
-
-      - name: Step 2
-        shell: bash -l +e -o pipefail {0}
-        run: |
-          set +e
-          cat abc
-          echo hello
-
-      - name: Step 3
-        if: always()
-        shell: bash -l +e {0}
-        run: |
-          cat abc
-          echo hello
-
       - name: test quetz
         shell: bash -l -eo pipefail {0}
         env:
@@ -106,7 +87,7 @@ jobs:
 
       - name: Test the plugins
         id: test_plugins
-        shell: bash -l +e -o pipefail {0}
+        shell: bash -l {0}
         env:
           TEST_DB_BACKEND: ${{ matrix.test_database }}
           QUETZ_TEST_DBINIT: ${{ matrix.db_init }}
@@ -117,7 +98,8 @@ jobs:
           S3_ENDPOINT: https://s3.sbg.cloud.ovh.net/
           S3_REGION: sbg
         run: |
-          cat abc
+          # We want to test all the plugins, regardless of whether one fails
+          set +e
 
           if [ "$TEST_DB_BACKEND" == "postgres" ]; then
             export QUETZ_TEST_DATABASE="postgresql://postgres:mysecretpassword@${POSTGRES_HOST}:${POSTGRES_PORT}/postgres"
@@ -130,24 +112,19 @@ jobs:
 
           pip install --no-deps git+https://git@github.com/regro/libcflib@master || exit 1
           
-          cat abc
-
           for f in ./plugins/quetz_*
           do
-            cat abc
             echo "::group::Testing plugin${f}"
             quetz plugin install $f
             pytest -v $f
             if [ $? -ne 0 ]; then
-              echo "tests_failed=true" >> $GITHUB_OUTPUT
+              $tests_failed = 1
             fi
             echo "::endgroup::"
           done
 
-      - name: Check if tests failed
-        run: |
-          if [ ${{ steps.test_plugins.outputs.tests_failed }} == "true" ]; then
-            echo "Some of the plugin tests failed!"
+          if [ $tests_failed -eq 1 ]; then
+            echo "::error::Some plugin tests failed!"
             exit 1
           fi
 
