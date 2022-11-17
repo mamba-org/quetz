@@ -52,6 +52,7 @@ jobs:
       - name: Step 2
         shell: bash -l +e -o pipefail {0}
         run: |
+          set +e
           cat abc
           echo hello
 
@@ -61,7 +62,7 @@ jobs:
         run: |
           cat abc
           echo hello
-        
+
       - name: test quetz
         shell: bash -l -eo pipefail {0}
         env:
