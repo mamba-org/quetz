@@ -48,7 +48,7 @@ jobs:
           echo hello
 
       - name: Step 2
-        shell: bash -l {0}
+        shell: bash -l +e -o pipefail {0}
         run: |
           cat abc
           echo hello
