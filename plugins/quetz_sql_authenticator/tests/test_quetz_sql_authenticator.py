@@ -23,6 +23,7 @@ def test_valid_login(client, db, testuser, testpassword):
     response = client.post(
         "/auth/sql/authorize",
         data={"username": testuser, "password": testpassword},
+        allow_redirects=False,
     )
     # Assert that we get a redirect to the main page
     assert response.status_code == 303
@@ -204,6 +205,7 @@ def test_changing_password(owner_client, client, db, testuser, testpassword):
     response = client.post(
         "/auth/sql/authorize",
         data={"username": testuser, "password": testpassword},
+        allow_redirects=False,
     )
     # Assert that we get a redirect to the main page
     assert response.status_code == 303
@@ -237,6 +239,7 @@ def test_changing_password(owner_client, client, db, testuser, testpassword):
     response = client.post(
         "/auth/sql/authorize",
         data={"username": testuser, "password": newpassword},
+        allow_redirects=False,
     )
     # Assert that we get a redirect to the main page
     assert response.status_code == 303
