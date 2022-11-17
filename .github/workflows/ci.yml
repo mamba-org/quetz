@@ -48,7 +48,7 @@ jobs:
           echo hello
 
       - name: Step 2
-        shell: bash -l -e -o pipefail {0}
+        shell: bash -l +e -o pipefail {0}
         run: |
           cat abc
           echo hello
@@ -105,7 +105,7 @@ jobs:
 
       - name: Test the plugins
         id: test_plugins
-        shell: bash +e -l -o pipefail {0}
+        shell: bash -l +e -o pipefail {0}
         env:
           TEST_DB_BACKEND: ${{ matrix.test_database }}
           QUETZ_TEST_DBINIT: ${{ matrix.db_init }}
