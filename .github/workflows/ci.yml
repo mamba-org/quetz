@@ -104,6 +104,8 @@ jobs:
           S3_ENDPOINT: https://s3.sbg.cloud.ovh.net/
           S3_REGION: sbg
         run: |
+          cat abc
+
           if [ "$TEST_DB_BACKEND" == "postgres" ]; then
             export QUETZ_TEST_DATABASE="postgresql://postgres:mysecretpassword@${POSTGRES_HOST}:${POSTGRES_PORT}/postgres"
             echo "Running with postgres"
@@ -115,8 +117,11 @@ jobs:
 
           pip install --no-deps git+https://git@github.com/regro/libcflib@master || exit 1
           
+          cat abc
+
           for f in ./plugins/quetz_*
           do
+            cat abc
             echo "::group::Testing plugin${f}"
             quetz plugin install $f
             pytest -v $f
