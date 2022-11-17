@@ -40,12 +40,13 @@ jobs:
         ports:
           - 6379:6379
     steps:
+      - uses: actions/checkout@v2
+
       - name: Check status code
         shell: bash -l {0}
         run: |
           cat abc
           echo hello
-      - uses: actions/checkout@v2
 
       - name: install mamba
         uses: mamba-org/provision-with-micromamba@main
