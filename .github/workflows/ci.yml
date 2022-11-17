@@ -86,7 +86,7 @@ jobs:
           pytest -v ./quetz/tests/ --cov-config=.coveragerc --cov=. --cov-report=xml
 
       - name: Test the plugins
-        id: test_plugins
+        shell: bash -l -eo pipefail {0}
         shell: bash -l {0}
         env:
           TEST_DB_BACKEND: ${{ matrix.test_database }}
@@ -98,8 +98,6 @@ jobs:
           S3_ENDPOINT: https://s3.sbg.cloud.ovh.net/
           S3_REGION: sbg
         run: |
-          # We want to test all the plugins, regardless of whether one fails
-          set +e
 
           if [ "$TEST_DB_BACKEND" == "postgres" ]; then
             export QUETZ_TEST_DATABASE="postgresql://postgres:mysecretpassword@${POSTGRES_HOST}:${POSTGRES_PORT}/postgres"
@@ -110,20 +108,24 @@ jobs:
           export PATH=$(dirname $MAMBA_EXE):$PATH
           echo "adding micromamba to path: $MAMBA_EXE"
 
-          pip install --no-deps git+https://git@github.com/regro/libcflib@master || exit 1
+          pip install --no-deps git+https://git@github.com/regro/libcflib@master
           
           for f in ./plugins/quetz_*
           do
             echo "::group::Testing plugin${f}"
             quetz plugin install $f
+
+            # We want to test all the plugins, regardless of whether one fails
+            set +e
             pytest -v $f
             if [ $? -ne 0 ]; then
               tests_failed="true"
             fi
+            set -e
             echo "::endgroup::"
           done
 
-          if [ "$tests_failed" -eq "true" ]; then
+          if [ "$tests_failed" == "true" ]; then
             echo "::error::Some plugin tests failed!"
             exit 1
           fi
