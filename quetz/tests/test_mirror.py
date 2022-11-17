@@ -792,13 +792,19 @@ def test_add_and_register_mirror(auth_client, dummy_session_mock):
     )
     assert response.status_code == 201
 
+    base_url = auth_client.base_url
+    base_url_path = auth_client.base_url.path
+
     dummy_session_mock.post.assert_called_with(
         "http://mirror3_host/api/channels/my-channel/mirrors",
         json={
-            "url": auth_client.base_url + '/get/mirror-channel',
-            "api_endpoint": auth_client.base_url + '/api/channels/mirror-channel',
-            "metrics_endpoint": auth_client.base_url
-            + '/metrics/channels/mirror-channel',
+            "url": base_url.copy_with(path=base_url_path + 'get/mirror-channel'),
+            "api_endpoint": base_url.copy_with(
+                path=base_url_path + 'api/channels/mirror-channel'
+            ),
+            "metrics_endpoint": base_url.copy_with(
+                path=base_url_path + 'metrics/channels/mirror-channel'
+            ),
         },
         headers={},
     )
@@ -919,7 +925,8 @@ def test_disabled_methods_for_mirror_channels(
     assert response.status_code == 405
     assert "not implemented" in response.json()["detail"]
 
-    files = {"files": ("my_package-0.1.tar.bz", "dfdf")}
+    files = {"files": ("my_package-0.1.tar.bz", b"dfdf")}
+    DUMMY_PACKAGE
     response = client.post(f"/api/channels/{mirror_channel.name}/files/", files=files)
     assert response.status_code == 405
     assert "not implemented" in response.json()["detail"]

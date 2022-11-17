@@ -149,7 +149,7 @@ def test_delete_channel_member_no_member(auth_client, public_channel, other_user
 
 
 def test_upload_wrong_file_type(auth_client, public_channel):
-    files = {"files": ("my_package-0.1-0.tar.bz", "dfdf")}
+    files = {"files": ("my_package-0.1-0.tar.bz", b"dfdf")}
     response = auth_client.post(
         f"/api/channels/{public_channel.name}/files/", files=files
     )

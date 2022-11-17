@@ -393,13 +393,13 @@ def test_private_channels(data, client):
 def test_private_channels_create_package(data, client):
     # public access to public channel
     response = client.post(
-        f'/api/channels/{data.channel1.name}/packages', '{"name": "newpackage1"}'
+        f'/api/channels/{data.channel1.name}/packages', json={"name": "newpackage1"}
     )
     assert response.status_code == 401
 
     # public access to private channel
     response = client.post(
-        f'/api/channels/{data.channel2.name}/packages', '{"name": "newpackage1"}'
+        f'/api/channels/{data.channel2.name}/packages', json={"name": "newpackage1"}
     )
     assert response.status_code == 401
 
