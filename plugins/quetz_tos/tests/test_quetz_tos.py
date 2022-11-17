@@ -1,5 +1,3 @@
-import io
-
 import pytest
 from fastapi import HTTPException
 
@@ -13,8 +11,8 @@ def upload_tos(client):
     url = "/api/tos/upload?lang=EN&lang=FR"
 
     files_to_upload = (
-        ('tos_files', ("tos_en.txt", io.StringIO("demo tos en"))),
-        ('tos_files', ("tos_fr.txt", io.StringIO("demo tos fr"))),
+        ('tos_files', ("tos_en.txt", b"demo tos en")),
+        ('tos_files', ("tos_fr.txt", b"demo tos fr")),
     )
 
     response = client.post(url, files=files_to_upload)
