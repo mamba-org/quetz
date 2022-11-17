@@ -97,7 +97,6 @@ jobs:
           S3_ENDPOINT: https://s3.sbg.cloud.ovh.net/
           S3_REGION: sbg
         run: |
-
           if [ "$TEST_DB_BACKEND" == "postgres" ]; then
             export QUETZ_TEST_DATABASE="postgresql://postgres:mysecretpassword@${POSTGRES_HOST}:${POSTGRES_PORT}/postgres"
             echo "Running with postgres"
@@ -111,18 +110,19 @@ jobs:
           
           for f in ./plugins/quetz_*
           do
-            echo "::group::Testing plugin${f}"
+            echo "::group::Testing plugin ${f}"
             quetz plugin install $f
 
             # We want to test all the plugins, regardless of whether one fails
             set +e
             pytest -v $f
-            if [ $? -ne 0 ]; then
+            pytest_exit_code=$?
+            set -e
+            echo "::endgroup::"
+            if [ $pytest_exit_code -ne 0 ]; then
               echo "::error::Tests for plugin $f failed!"
               tests_failed="true"
             fi
-            set -e
-            echo "::endgroup::"
           done
 
           if [ "$tests_failed" == "true" ]; then
