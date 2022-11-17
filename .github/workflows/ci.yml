@@ -87,7 +87,6 @@ jobs:
 
       - name: Test the plugins
         shell: bash -l -eo pipefail {0}
-        shell: bash -l {0}
         env:
           TEST_DB_BACKEND: ${{ matrix.test_database }}
           QUETZ_TEST_DBINIT: ${{ matrix.db_init }}
