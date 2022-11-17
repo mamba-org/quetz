@@ -43,7 +43,19 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Check status code
+        shell: bash -l -e {0}
+        run: |
+          echo hello
+
+      - name: Step 2
         shell: bash -l {0}
+        run: |
+          cat abc
+          echo hello
+
+      - name: Step 3
+        if: always()
+        shell: bash -l +e {0}
         run: |
           cat abc
           echo hello
