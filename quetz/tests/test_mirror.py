@@ -926,7 +926,6 @@ def test_disabled_methods_for_mirror_channels(
     assert "not implemented" in response.json()["detail"]
 
     files = {"files": ("my_package-0.1.tar.bz", b"dfdf")}
-    DUMMY_PACKAGE
     response = client.post(f"/api/channels/{mirror_channel.name}/files/", files=files)
     assert response.status_code == 405
     assert "not implemented" in response.json()["detail"]

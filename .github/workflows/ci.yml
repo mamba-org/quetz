@@ -118,12 +118,12 @@ jobs:
             quetz plugin install $f
             pytest -v $f
             if [ $? -ne 0 ]; then
-              $tests_failed = 1
+              tests_failed = 1
             fi
             echo "::endgroup::"
           done
 
-          if [ $tests_failed -eq 1 ]; then
+          if [ "$tests_failed" -eq 1 ]; then
             echo "::error::Some plugin tests failed!"
             exit 1
           fi
