@@ -41,6 +41,8 @@ jobs:
           - 6379:6379
     steps:
       - uses: actions/checkout@v2
+      - name: install mamba
+        uses: mamba-org/provision-with-micromamba@main
 
       - name: Check status code
         shell: bash -l -e {0}
@@ -59,9 +61,7 @@ jobs:
         run: |
           cat abc
           echo hello
-
-      - name: install mamba
-        uses: mamba-org/provision-with-micromamba@main
+        
       - name: test quetz
         shell: bash -l -eo pipefail {0}
         env:
