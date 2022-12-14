@@ -110,11 +110,25 @@ jobs:
           
           for f in ./plugins/quetz_*
           do
-            echo "::group::Testing plugin${f}"
+            echo "::group::Testing plugin ${f}"
             quetz plugin install $f
+
+            # We want to test all the plugins, regardless of whether one fails
+            set +e
             pytest -v $f
+            pytest_exit_code=$?
+            set -e
             echo "::endgroup::"
+            if [ $pytest_exit_code -ne 0 ]; then
+              echo "::error::Tests for plugin $f failed!"
+              tests_failed="true"
+            fi
           done
+
+          if [ "$tests_failed" == "true" ]; then
+            echo "::error::Some plugin tests failed!"
+            exit 1
+          fi
 
       - uses: codecov/codecov-action@v1
         with:
