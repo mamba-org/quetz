@@ -2,6 +2,52 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## 0.5.0
+
+([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.4.4...7f77638aa4b94d6eeb3a18158ee6f9184061ef74))
+
+### Enhancements made
+
+- no file or directory mandatory [#558](https://github.com/mamba-org/quetz/pull/558) ([@brichet](https://github.com/brichet))
+- Add an API for paginated package versions [#556](https://github.com/mamba-org/quetz/pull/556) ([@brichet](https://github.com/brichet))
+- Implement multiple languages support for the TermsOfServices [#552](https://github.com/mamba-org/quetz/pull/552) ([@martinRenou](https://github.com/martinRenou))
+- Adds a new endpoint to check if the user already signed the TOS [#548](https://github.com/mamba-org/quetz/pull/548) ([@hbcarlos](https://github.com/hbcarlos))
+- Fix / consistent usage of f-strings [#538](https://github.com/mamba-org/quetz/pull/538) ([@riccardoporreca](https://github.com/riccardoporreca))
+- Add upload endpoint [#533](https://github.com/mamba-org/quetz/pull/533) ([@atrawog](https://github.com/atrawog))
+- Add SQL authenticator [#508](https://github.com/mamba-org/quetz/pull/508) ([@janjagusch](https://github.com/janjagusch))
+
+### Bugs fixed
+
+- Remove `httpx` pin, fix tests, & test plugins individually [#574](https://github.com/mamba-org/quetz/pull/574) ([@simonbohnen](https://github.com/simonbohnen))
+- Fix sqlauth error parsing [#569](https://github.com/mamba-org/quetz/pull/569) ([@simonbohnen](https://github.com/simonbohnen))
+- Fix update route in SQL Authenticator [#568](https://github.com/mamba-org/quetz/pull/568) ([@simonbohnen](https://github.com/simonbohnen))
+- fix OpenAPI spec. by allowing "nullable" values [#564](https://github.com/mamba-org/quetz/pull/564) ([@kuepe-sl](https://github.com/kuepe-sl))
+- fix package_versions.version_order database field after package version deletion [#562](https://github.com/mamba-org/quetz/pull/562) ([@kuepe-sl](https://github.com/kuepe-sl))
+- fix path in HTML templates [#561](https://github.com/mamba-org/quetz/pull/561) ([@kuepe-sl](https://github.com/kuepe-sl))
+- Fixes CI [#559](https://github.com/mamba-org/quetz/pull/559) ([@hbcarlos](https://github.com/hbcarlos))
+- Fix/several typo errors [#557](https://github.com/mamba-org/quetz/pull/557) ([@brichet](https://github.com/brichet))
+- Fixes issues and tests on indexes [#555](https://github.com/mamba-org/quetz/pull/555) ([@brichet](https://github.com/brichet))
+- Remove an uploaded package whose filename does not match the package name [#554](https://github.com/mamba-org/quetz/pull/554) ([@brichet](https://github.com/brichet))
+- Remove package from repodata.json [#551](https://github.com/mamba-org/quetz/pull/551) ([@brichet](https://github.com/brichet))
+- channels with dots in their name cause a crash in indexing [#541](https://github.com/mamba-org/quetz/pull/541) ([@gabm](https://github.com/gabm))
+
+### Maintenance and upkeep improvements
+
+- Fixes CI [#559](https://github.com/mamba-org/quetz/pull/559) ([@hbcarlos](https://github.com/hbcarlos))
+- Fixes issues and tests on indexes [#555](https://github.com/mamba-org/quetz/pull/555) ([@brichet](https://github.com/brichet))
+
+### Other merged PRs
+
+- Add docker badge to README [#547](https://github.com/mamba-org/quetz/pull/547) ([@dhirschfeld](https://github.com/dhirschfeld))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2022-05-19&to=2022-12-16&type=c))
+
+[@atrawog](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Aatrawog+updated%3A2022-05-19..2022-12-16&type=Issues) | [@baszalmstra](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Abaszalmstra+updated%3A2022-05-19..2022-12-16&type=Issues) | [@brichet](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Abrichet+updated%3A2022-05-19..2022-12-16&type=Issues) | [@codecov-commenter](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Acodecov-commenter+updated%3A2022-05-19..2022-12-16&type=Issues) | [@dhirschfeld](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Adhirschfeld+updated%3A2022-05-19..2022-12-16&type=Issues) | [@gabm](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Agabm+updated%3A2022-05-19..2022-12-16&type=Issues) | [@hbcarlos](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ahbcarlos+updated%3A2022-05-19..2022-12-16&type=Issues) | [@janjagusch](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ajanjagusch+updated%3A2022-05-19..2022-12-16&type=Issues) | [@kuepe-sl](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Akuepe-sl+updated%3A2022-05-19..2022-12-16&type=Issues) | [@martinRenou](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3AmartinRenou+updated%3A2022-05-19..2022-12-16&type=Issues) | [@riccardoporreca](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ariccardoporreca+updated%3A2022-05-19..2022-12-16&type=Issues) | [@simonbohnen](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Asimonbohnen+updated%3A2022-05-19..2022-12-16&type=Issues) | [@wolfv](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Awolfv+updated%3A2022-05-19..2022-12-16&type=Issues)
+
+<!-- <END NEW CHANGELOG ENTRY> -->
+
 ## 0.4.4
 
 ([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.4.3...fb4bc9049dfd2de0233d8ae61dd5962e7e2b616e))
@@ -16,8 +62,6 @@
 ([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2022-05-11&to=2022-05-19&type=c))
 
 [@atrawog](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Aatrawog+updated%3A2022-05-11..2022-05-19&type=Issues) | [@wolfv](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Awolfv+updated%3A2022-05-11..2022-05-19&type=Issues)
-
-<!-- <END NEW CHANGELOG ENTRY> -->
 
 ## 0.4.3
 
