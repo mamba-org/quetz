@@ -74,7 +74,7 @@ def create_channel(args):
         # "mirror_mode": "string"
     }
     response = requests.post(url, json=json_data, headers={'X-API-Key': api_key})
-    print(response.json())
+    response.raise_for_status()
 
 
 def urljoin_all(pieces):
