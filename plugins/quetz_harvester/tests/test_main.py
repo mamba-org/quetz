@@ -14,7 +14,6 @@ from quetz.jobs.models import Job, Task, TaskStatus
 def test_harvest_endpoint_and_job(
     api_key, auth_client, db, config, supervisor, package_version, app, channel_name
 ):
-
     response = auth_client.post(
         "/api/jobs", json={"items_spec": "*", "manifest": "quetz-harvester:harvest"}
     )

@@ -168,14 +168,12 @@ class LocalStore(PackageStore):
         self.fs.rm(channel_path, recursive=True)
 
     def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
-
         with self._atomic_open(channel, destination) as f:
             shutil.copyfileobj(package, f)
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
     ) -> NoReturn:
-
         mode = "w" if isinstance(data, str) else "wb"
         with self._atomic_open(channel, destination, mode) as f:
             f.write(data)

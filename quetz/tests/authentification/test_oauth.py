@@ -55,7 +55,6 @@ def login():
 
 @pytest.fixture
 def github_response(login):
-
     response = {
         '/login/oauth/access_token': {'body': {'access_token': 'b'}},
         '/user': {
@@ -157,7 +156,6 @@ def azuread_response(login):
 
 @pytest.fixture
 def jupyter_response(login):
-
     response = {
         '/hub/api/oauth2/token': {
             'body': {'access_token': 'b', 'token_type': 'Bearer'}
@@ -226,7 +224,6 @@ mD1rl6xev7GRoqUYdKYdt9NJyDGEULZ6NbIWyXo3kTp7HdQLRn0BJg==
 
 @pytest.fixture
 def google_response(login):
-
     google_client_id = 'aaa'
     key = GOOGLE_PRIVATE_KEY
     cert = GOOGLE_CERT
@@ -354,7 +351,6 @@ def oauth_server(request, config, app, provider_spec):
 
 @pytest.fixture
 def routed_client(app, oauth_server):
-
     # need to prepend the routes so that frontend routes do not
     # take priority
     for route in oauth_server.router.routes:
@@ -368,7 +364,6 @@ def routed_client(app, oauth_server):
 
 @pytest.mark.parametrize("config_extra", ["[users]\ncreate_default_channel = true"])
 def test_config_create_default_channel(routed_client, db, oauth_server, config):
-
     response = routed_client.get(f'/auth/{oauth_server.provider}/authorize')
 
     assert response.status_code == 200
@@ -395,7 +390,6 @@ def test_config_create_default_channel(routed_client, db, oauth_server, config):
 def test_config_create_user_with_role(
     routed_client, db, oauth_server, config, default_role, expected_role, login
 ):
-
     response = routed_client.get(f'/auth/{oauth_server.provider}/authorize')
 
     assert response.status_code == 200
@@ -442,7 +436,6 @@ def channel(db):
 
 @pytest.mark.parametrize("config_extra", ["[users]\ncreate_default_channel = true"])
 def test_config_create_default_channel_exists(routed_client, db, oauth_server, channel):
-
     response = routed_client.get(f'/auth/{oauth_server.provider}/authorize')
 
     assert response.status_code == 200

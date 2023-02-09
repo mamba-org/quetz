@@ -19,7 +19,6 @@ class OAuthHandlers(BaseAuthenticationHandlers):
     authorize_methods = ["GET"]
 
     def __init__(self, authenticator, app=None):
-
         super().__init__(authenticator, app)
 
         self.router.add_api_route("/revoke", self.revoke, methods=["GET"])
@@ -101,7 +100,6 @@ class OAuthAuthenticator(BaseAuthenticator):
         return {"username": username, "profile": profile, "auth_state": auth_state}
 
     def register(self, client_kwargs=None):
-
         if client_kwargs is None:
             client_kwargs = {}
 

@@ -240,7 +240,6 @@ def handle_repodata_package(
         after=after_log(logger, logging.WARNING),
     )
     def _upload_package(file, channel_name, subdir):
-
         dest = os.path.join(subdir, file.filename)
 
         try:
@@ -288,7 +287,6 @@ def initial_sync_mirror(
     skip_errors: bool = True,
     use_repodata: bool = False,
 ):
-
     force = True  # needed for updating packages
     logger.info(
         f"Running channel mirroring {channel_name}/{arch} from {remote_repository.host}"
@@ -340,7 +338,6 @@ def initial_sync_mirror(
     # for each
     any_updated = False
     with contextlib.ExitStack() as version_stack:
-
         version_checks = [
             version_stack.enter_context(method) for method in version_methods
         ]
@@ -519,7 +516,6 @@ def synchronize_packages(
     excludelist: List[str] = None,
     use_repodata: bool = False,
 ):
-
     logger.info(f"executing synchronize_packages task in a process {os.getpid()}")
 
     new_channel = dao.get_channel(channel_name)

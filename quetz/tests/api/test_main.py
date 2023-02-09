@@ -7,7 +7,6 @@ from quetz.metrics.db_models import PackageVersionMetric
 
 
 def test_get_package_list(package_version, package_name, channel_name, client):
-
     response = client.get("/api/dummylogin/bartosz")
     response = client.get(
         f"/api/channels/{channel_name}/packages/{package_name}/versions"
@@ -35,7 +34,6 @@ def test_get_package_list(package_version, package_name, channel_name, client):
 def test_package_version_list_by_date(
     package_version, package_name, channel_name, client
 ):
-
     now = datetime.datetime.utcnow()
     later = now + datetime.timedelta(minutes=1)
     earlier = now - datetime.timedelta(minutes=1)
@@ -62,7 +60,6 @@ def test_package_version_list_by_date(
     [("owner", 201), ("maintainer", 201), ("member", 403), (None, 403)],
 )
 def test_add_package_permissions(auth_client, public_channel, expected_code):
-
     response = auth_client.post(
         f"/api/channels/{public_channel.name}/packages",
         json={"name": "test-package", "summary": "none", "description": "none"},
@@ -76,7 +73,6 @@ def test_add_package_permissions(auth_client, public_channel, expected_code):
     [("owner", 200), ("maintainer", 200), ("member", 403), (None, 403)],
 )
 def test_get_channel_members(auth_client, public_channel, expected_code):
-
     response = auth_client.get(f"/api/channels/{public_channel.name}/members")
 
     assert response.status_code == expected_code
@@ -94,7 +90,6 @@ def test_get_channel_members(auth_client, public_channel, expected_code):
 def test_post_channel_member(
     auth_client, public_channel, other_user, role, expected_code
 ):
-
     response = auth_client.post(
         f"/api/channels/{public_channel.name}/members",
         json={"username": other_user.username, "role": role},
@@ -114,7 +109,6 @@ def test_post_channel_member(
 
 
 def test_post_channel_member_unknown_user(auth_client, public_channel):
-
     response = auth_client.post(
         f"/api/channels/{public_channel.name}/members",
         json={"username": "unknown-user", "role": "member"},
@@ -124,7 +118,6 @@ def test_post_channel_member_unknown_user(auth_client, public_channel):
 
 
 def test_delete_channel_member(auth_client, public_channel, other_user):
-
     auth_client.post(
         f"/api/channels/{public_channel.name}/members",
         json={"username": other_user.username, "role": "member"},
@@ -139,7 +132,6 @@ def test_delete_channel_member(auth_client, public_channel, other_user):
 
 
 def test_delete_channel_member_no_member(auth_client, public_channel, other_user):
-
     response = auth_client.delete(
         f"/api/channels/{public_channel.name}/members",
         params={"username": other_user.username},

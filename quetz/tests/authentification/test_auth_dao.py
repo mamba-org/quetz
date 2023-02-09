@@ -13,7 +13,6 @@ def find_email(emails, e):
 
 
 def test_get_user_by_identity_new_user(dao, config):
-
     profile = {
         "id": 4567,
         "login": "bartosz",

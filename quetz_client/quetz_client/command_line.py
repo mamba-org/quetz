@@ -150,7 +150,6 @@ def upload_packages(args):
 
 
 def main():
-
     parser = argparse.ArgumentParser()
 
     subparsers = parser.add_subparsers(

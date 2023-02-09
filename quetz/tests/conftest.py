@@ -29,7 +29,6 @@ def user_role():
 
 @fixture
 def user_without_profile(db, user_role):
-
     new_user = User(id=uuid.uuid4().bytes, username="bartosz", role=user_role)
     db.add(new_user)
     db.commit()
@@ -70,7 +69,6 @@ def make_package_version(
     dao: Dao,
     config: Config,
 ):
-
     pkgstore = config.get_package_store()
 
     versions = []
@@ -123,7 +121,6 @@ def package_version(db, make_package_version):
 
 @fixture
 def public_channel(dao: Dao, user, channel_role, channel_name):
-
     channel_data = Channel(name=channel_name, private=False)
     channel = dao.create_channel(channel_data, user.id, channel_role)
 
@@ -132,7 +129,6 @@ def public_channel(dao: Dao, user, channel_role, channel_name):
 
 @fixture
 def public_package(db, user, public_channel, dao, package_role, package_name):
-
     package_data = Package(name=package_name)
 
     package = dao.create_package(

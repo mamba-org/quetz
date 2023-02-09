@@ -43,7 +43,6 @@ def get_config():
 
 
 def get_db(config: Config = Depends(get_config)):
-
     database_url = config.sqlalchemy_database_url
     db = get_db_session(database_url, echo=config.sqlalchemy_echo_sql)
     try:
@@ -89,7 +88,6 @@ def get_tasks_worker(
     session: requests.Session = Depends(get_remote_session),
     config: Config = Depends(get_config),
 ) -> Task:
-
     return Task(auth, dao.db)
 
 
@@ -154,7 +152,6 @@ def get_package_or_fail(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ) -> db_models.Package:
-
     package = dao.get_package(channel_name.lower(), package_name)
 
     if not package:

@@ -52,7 +52,6 @@ def package_file_name(package_name, package_format):
 
 @pytest.fixture
 def channel(dao: "quetz.dao.Dao", channel_name, user):
-
     channel_data = Channel(name=channel_name, private=False)
     channel = dao.create_channel(channel_data, user.id, "owner")
     return channel
@@ -137,7 +136,6 @@ def patched_package_name(package_file_name):
 
 @pytest.fixture
 def patch_content(patched_package_name, revoke_instructions, remove_instructions):
-
     d = {}
 
     package_file_name = patched_package_name
@@ -167,7 +165,6 @@ def patches_subdir():
 
 @pytest.fixture
 def repodata_archive(repodata_file_name, patch_content, archive_format, patches_subdir):
-
     from io import BytesIO
 
     patch_instructions = json.dumps(patch_content).encode('ascii')
@@ -221,7 +218,6 @@ def package_repodata_patches(
     repodata_archive,
     archive_format,
 ):
-
     package_name = repodata_name
     package_data = Package(name=package_name)
 

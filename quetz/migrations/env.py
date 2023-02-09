@@ -29,7 +29,6 @@ target_metadata = Base.metadata
 
 
 def get_url():
-
     db_path = config.get_main_option("sqlalchemy.url")
     if not db_path:
         config_path = context.get_x_argument(as_dictionary=True).get('quetzConfig')
@@ -79,7 +78,6 @@ def run_migrations_online():
     connectable = config.attributes.get('connection', None)
 
     if connectable is None:
-
         connectable = engine_from_config(
             configuration,
             prefix="sqlalchemy.",
