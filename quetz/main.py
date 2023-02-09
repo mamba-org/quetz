@@ -1368,9 +1368,7 @@ async def post_upload(
         )
 
     # Update channeldata info
-    dao.update_package_channeldata(
-        channel_name, package_name, condainfo.channeldata
-    )
+    dao.update_package_channeldata(channel_name, package_name, condainfo.channeldata)
 
     try:
         version = dao.create_version(
