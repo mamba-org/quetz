@@ -1398,7 +1398,6 @@ async def post_upload(
     background_tasks.add_task(wrapped_bg_task, dao, pkgstore, channel_name)
 
 
-
 @api_router.post("/channels/{channel_name}/files/", status_code=201, tags=["files"])
 def post_file_to_channel(
     background_tasks: BackgroundTasks,
