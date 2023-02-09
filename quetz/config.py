@@ -268,7 +268,7 @@ class Config:
             if os.path.isfile(f):
                 return f
 
-    def init(self, path: str) -> NoReturn:
+    def init(self, path: str) -> None:
         """Load configurations from various places.
 
         Order of importance for configuration is:

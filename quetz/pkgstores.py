@@ -77,13 +77,13 @@ class PackageStore(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
+    def add_package(self, package: File, channel: str, destination: str):
         pass
 
     @abc.abstractmethod
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
-    ) -> NoReturn:
+    ) -> None:
         pass
 
     @abc.abstractmethod
@@ -167,14 +167,14 @@ class LocalStore(PackageStore):
         channel_path = path.join(self.channels_dir, name)
         self.fs.rm(channel_path, recursive=True)
 
-    def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
+    def add_package(self, package: File, channel: str, destination: str) -> None:
 
         with self._atomic_open(channel, destination) as f:
             shutil.copyfileobj(package, f)
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
-    ) -> NoReturn:
+    ) -> None:
 
         mode = "w" if isinstance(data, str) else "wb"
         with self._atomic_open(channel, destination, mode) as f:

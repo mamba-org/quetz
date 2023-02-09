@@ -1387,6 +1387,11 @@ async def post_upload(
             authorization.OWNER,
         )
 
+    # Update channeldata info
+    dao.update_package_channeldata(
+        channel_name, package_name, condainfo.channeldata
+    )
+
     try:
         version = dao.create_version(
             channel_name=channel_name,
