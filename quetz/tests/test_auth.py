@@ -144,7 +144,6 @@ def data(db):
 
 
 def test_private_channels(data, client):
-
     response = client.get('/')
     assert len(response.text)
     response = client.get('/api/channels')
@@ -429,7 +428,6 @@ def test_private_channels_create_package(data, client):
 
 
 def test_private_channels_download(db, client, data, channel_dirs):
-
     # succeed on public channel
     response = client.get('/get/testchannel/noarch/current_repodata.json')
     assert response.status_code == 200
@@ -465,7 +463,6 @@ def test_private_channels_download(db, client, data, channel_dirs):
 
 
 def test_create_api_key(data, client):
-
     response = client.get(f"/api/dummylogin/{data.userc.username}")
     assert response.status_code == 200
 
@@ -540,7 +537,6 @@ def test_create_api_key(data, client):
 
 
 def test_use_wildcard_api_key_to_authenticate(data, client):
-
     response = client.get(f"/api/dummylogin/{data.userc.username}")
     assert response.status_code == 200
 
@@ -629,7 +625,6 @@ def test_use_wildcard_api_key_to_authenticate(data, client):
 
 
 def test_authorizations_with_deleted_api_key(data: Data, db):
-
     auth = Rules(data.keya, {}, db)
 
     user_id = auth.get_user()
@@ -648,7 +643,6 @@ def test_authorizations_with_deleted_api_key(data: Data, db):
 
 
 def test_authorizations_with_expired_api_key(data, client):
-
     response = client.get(f"/api/dummylogin/{data.userc.username}")
     assert response.status_code == 200
 

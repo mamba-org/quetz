@@ -26,7 +26,6 @@ def user(db):
 
 @fixture
 def channel(dao, user, db):
-
     channel_data = rest_models.Channel(
         name="test-mirror-channel",
         private=False,
@@ -87,7 +86,6 @@ def package_version(user, channel, db, dao, package):
 
 @fixture
 def package_runexports(package_version, db):
-
     meta = db_models.PackageVersionMetadata(
         version_id=package_version.id,
         data=json.dumps({"weak": ["somepackage > 3.0"]}),

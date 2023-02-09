@@ -72,7 +72,6 @@ def test_init_db(db, config, config_dir, mocker):
 def test_create_user_from_config(
     db, config, config_dir, user_group, expected_role, mocker, user_with_identity
 ):
-
     user = get_user(db, config_dir)
     assert user
 
@@ -84,7 +83,6 @@ def test_create_user_from_config(
 def test_set_user_roles_no_user(
     db, config, config_dir, user_group, mocker: MockerFixture
 ):
-
     user = get_user(db, config_dir)
 
     assert user is None
@@ -120,7 +118,6 @@ def test_set_user_roles_user_has_role(
 
 @pytest.mark.parametrize("config_extra", ['[users]\nadmins = ["dummy:alice"]\n'])
 def test_init_db_create_test_users(db, config, mocker, config_dir):
-
     _run_migrations: MagicMock = mocker.patch("quetz.cli._run_migrations")
 
     def get_db(_):
@@ -180,7 +177,6 @@ def test_make_migrations_quetz(mocker, config, config_dir):
 
 @pytest.fixture(scope="module")
 def dummy_migration_plugin() -> Path:
-
     path = Path(tempfile.mkdtemp(prefix="quetz"))
     plugin_dir = str(path)
     pkg_path = path / "dummy"
@@ -210,7 +206,6 @@ def dummy_migration_plugin() -> Path:
 
 
 def test_make_migrations_plugin(mocker, config, config_dir, dummy_migration_plugin):
-
     revision = mocker.patch("alembic.command.revision")
 
     # initialize a plugin
@@ -246,7 +241,6 @@ def test_make_migrations_plugin(mocker, config, config_dir, dummy_migration_plug
 def test_make_migrations_plugin_with_alembic(
     config, config_dir, dummy_migration_plugin: Path, alembic_config, engine
 ):
-
     # make sure db is up-to-date
     cli._run_migrations(alembic_config=alembic_config)
 
@@ -349,7 +343,6 @@ def downgrade(): pass
 def test_multi_head(
     config, config_dir, dummy_migration_plugin: Path, alembic_config, engine, refresh_db
 ):
-
     quetz_migrations_path = Path(config_dir) / "migrations"
     quetz_versions_path = quetz_migrations_path / "versions"
 

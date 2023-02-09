@@ -6,7 +6,6 @@ from quetz.db_models import ApiKey, ChannelMember, PackageMember, User
 
 
 def test_validate_user_role_names(user, client, other_user, db):
-
     # test validation of role names
 
     response = client.put("/api/users/bartosz/role", json={"role": "UNDEFINED"})
@@ -39,7 +38,6 @@ def test_set_user_role(
     target_user_role,
     expected_status,
 ):
-
     # test changing role
 
     response = auth_client.put(
@@ -49,7 +47,6 @@ def test_set_user_role(
 
     # test if role assigned if previous request was successful
     if response.status_code == 200:
-
         get_response = auth_client.get(f"/api/users/{target_user}/role")
 
         assert get_response.status_code == 200
@@ -70,7 +67,6 @@ def test_set_user_role(
     ],
 )
 def test_get_user_role(auth_client, other_user, target_user, expected_status, db):
-
     # test reading the role
 
     response = auth_client.get(f"/api/users/{target_user}/role")
@@ -79,7 +75,6 @@ def test_get_user_role(auth_client, other_user, target_user, expected_status, db
     expected_role = db.query(User).filter(User.username == target_user).first().role
 
     if response.status_code == 200:
-
         assert response.json()["role"] == expected_role
 
 
@@ -114,7 +109,6 @@ def test_get_user_permissions(
     auth_client,
     expected_status,
 ):
-
     response = auth_client.get(f"/api/users/{target_user}")
 
     assert response.status_code == expected_status
@@ -140,7 +134,6 @@ def test_get_user_permissions(
 def test_get_users_permissions(
     other_user, auth_client, expected_n_users, query, paginated
 ):
-
     if paginated:
         response = auth_client.get(f"/api/paginated/users?q={query}")
         user_list = response.json()["result"]
@@ -155,7 +148,6 @@ def test_get_users_permissions(
 
 @pytest.fixture
 def api_keys(user, other_user, db):
-
     users = [user, other_user]
 
     for key_user in users:
@@ -182,7 +174,6 @@ def api_keys(user, other_user, db):
 def test_delete_user_permission(
     other_user, auth_client, db, user_role, target_user, expected_status, user, api_keys
 ):
-
     response = auth_client.delete(f"/api/users/{target_user}")
 
     deleted_user = db.query(User).filter(User.username == target_user).one_or_none()
@@ -213,7 +204,6 @@ def test_delete_user_permission(
 
 @pytest.mark.parametrize("user_role", ["owner"])
 def test_get_users_without_profile(auth_client, other_user_without_profile, user):
-
     response = auth_client.get("/api/users")
 
     assert response.status_code == 200
@@ -232,7 +222,6 @@ def test_get_users_without_profile(auth_client, other_user_without_profile, user
 def test_list_user_channels(
     user, client, other_user, db, private_channel, http_user, expected_role
 ):
-
     member = ChannelMember(
         channel_name=private_channel.name, user_id=user.id, role="member"
     )

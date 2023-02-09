@@ -69,7 +69,6 @@ def get_channel_metrics(
     end: Optional[datetime] = None,
     dao: Dao = Depends(get_dao),
 ):
-
     metrics = dao.get_channel_metrics(
         channel_name, period, metric_name, platform=platform, start=start, end=end
     )

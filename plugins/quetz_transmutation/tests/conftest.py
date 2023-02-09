@@ -28,7 +28,6 @@ def user_role():
 
 @pytest.fixture
 def user(db, user_role):
-
     new_user = User(id=uuid.uuid4().bytes, username="bartosz", role=user_role)
     profile = Profile(name="Bartosz", avatar_url="http:///avatar", user=new_user)
     db.add(profile)
@@ -43,7 +42,6 @@ def user(db, user_role):
 
 @pytest.fixture
 def api_key(db, user):
-
     key = ApiKey(
         key="apikey",
         time_created=date.today(),
@@ -84,7 +82,6 @@ def package_version(
     dao: Dao,
     config: Config,
 ):
-
     pkgstore = config.get_package_store()
     filename = Path("test-package-0.1-0.tar.bz2")
     with open(filename, "rb") as fid:
@@ -129,7 +126,6 @@ def package_role():
 
 @pytest.fixture
 def public_channel(dao: Dao, user, channel_role, channel_name, db):
-
     channel_data = Channel(name=channel_name, private=False)
     channel = dao.create_channel(channel_data, user.id, channel_role)
 
@@ -140,7 +136,6 @@ def public_channel(dao: Dao, user, channel_role, channel_name, db):
 
 @pytest.fixture
 def public_package(db, user, public_channel, dao, package_role, package_name):
-
     package_data = Package(name=package_name)
 
     package = dao.create_package(

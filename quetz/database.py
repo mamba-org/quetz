@@ -27,7 +27,6 @@ def set_metrics(*args):
 
 
 def get_engine(db_url, echo: bool = False, reuse_engine=True, **kwargs) -> Engine:
-
     if db_url.startswith('sqlite'):
         kwargs.setdefault('connect_args', {'check_same_thread': False})
 

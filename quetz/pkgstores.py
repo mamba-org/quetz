@@ -175,7 +175,6 @@ class LocalStore(PackageStore):
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
     ) -> None:
-
         mode = "w" if isinstance(data, str) else "wb"
         with self._atomic_open(channel, destination, mode) as f:
             f.write(data)

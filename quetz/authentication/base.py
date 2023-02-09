@@ -20,14 +20,12 @@ from . import auth_dao
 
 
 class Email(TypedDict):
-
     email: str
     verified: Boolean
     primary: Boolean
 
 
 class UserProfile(TypedDict):
-
     id: str
     name: str
     avatar_url: str
@@ -66,7 +64,6 @@ class BaseAuthenticationHandlers:
     authorize_methods: List[str]
 
     def __init__(self, authenticator, app=None):
-
         self.authenticator = authenticator
 
         # dependency_overrides_provider kwarg is needed for unit test
@@ -253,7 +250,6 @@ class BaseAuthenticator:
 
 
 class FormHandlers(BaseAuthenticationHandlers):
-
     authorize_methods = ["POST"]
 
     async def login(self, request: Request):

@@ -46,7 +46,6 @@ def package_file_name(package_name, package_format):
 
 @pytest.fixture
 def channel(dao: "quetz.dao.Dao", channel_name, user):
-
     channel_data = Channel(name=channel_name, private=False)
     channel = dao.create_channel(channel_data, user.id, "owner")
     return channel
@@ -132,7 +131,6 @@ def test_repodata_zchunk(
     assert "repodata.json.zck" in content
 
     for fname in ("repodata.json", "repodata.json.zck"):
-
         repodata_path = os.path.join(
             pkgstore.channels_dir, channel_name, "noarch", fname
         )

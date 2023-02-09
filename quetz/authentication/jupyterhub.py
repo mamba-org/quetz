@@ -11,7 +11,6 @@ from .oauth2 import OAuthAuthenticator
 
 
 class JupyterConfigEntry:
-
     config_section = "jupyterhubauthenticator"
     registered_entries: List[ConfigEntry] = []
     config = None
@@ -160,7 +159,6 @@ class JupyterhubAuthenticator(OAuthAuthenticator):
         return resp.status_code == 200
 
     def configure(self, config: Config):
-
         self.is_enabled = JupyterConfigEntry.register(config)
 
         super().configure(config)

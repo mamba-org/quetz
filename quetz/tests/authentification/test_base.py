@@ -13,7 +13,6 @@ class DummyHandlers(BaseAuthenticationHandlers):
 
 
 class DummyAuthenticator(BaseAuthenticator):
-
     handler_cls = DummyHandlers
     provider = 'testprovider'
 
@@ -26,7 +25,6 @@ class DummyAuthenticator(BaseAuthenticator):
 
 @pytest.fixture
 def dummy_authenticator(app, config):
-
     from quetz.main import auth_registry
 
     authenticator = DummyAuthenticator(config)
@@ -37,7 +35,6 @@ def dummy_authenticator(app, config):
 
 
 def test_login_endpoint(app, dummy_authenticator):
-
     client = TestClient(app)
 
     response = client.get(f"/auth/{dummy_authenticator.provider}/login")

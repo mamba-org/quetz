@@ -7,7 +7,6 @@ logger = logging.getLogger("quetz")
 
 
 class AuthenticatorRegistry:
-
     _instance = None
     _router = None
     enabled_authenticators: Dict[str, BaseAuthenticator] = {}

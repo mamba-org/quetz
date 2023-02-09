@@ -116,7 +116,6 @@ def job_wrapper(
     exc_passthrou=False,
     **kwargs,
 ):
-
     # database connections etc. are not serializable
     # so we need to recreate them in the process.
     # This allows us to manage database connectivity prior
@@ -274,7 +273,6 @@ class PoolExecutorWorker(AbstractWorker):
         config: Config,
         executor_args: dict = {},
     ):
-
         if self._executor is None:
             logger.debug(f"creating a new executor of class {self.executor_cls}")
             type(self)._executor = self.executor_cls(**executor_args)
@@ -283,7 +281,6 @@ class PoolExecutorWorker(AbstractWorker):
         self.future = None
 
     def execute(self, func, *args, **kwargs):
-
         self.future = self._executor.submit(
             job_wrapper, func, self.config, *args, **kwargs
         )

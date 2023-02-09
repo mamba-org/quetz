@@ -17,7 +17,6 @@ from quetz.jobs.models import Job, JobStatus, Task, TaskStatus
 async def test_transmutation_endpoint(
     api_key, db, config, supervisor, package_version, app, channel_name
 ):
-
     # we need to use asynchronous http client because the test is async
     async with AsyncClient(app=app, base_url="http://test") as ac:
         response = await ac.post(
@@ -76,7 +75,6 @@ async def test_transmutation_endpoint(
 def test_package_specs(
     auth_client, db, config, supervisor, package_version, spec, n_tasks
 ):
-
     response = auth_client.post(
         "/api/jobs",
         json={"items_spec": spec, "manifest": "quetz-transmutation:transmutation"},
@@ -123,7 +121,6 @@ def test_package_specs(
     ],
 )
 def test_permissions(auth_client, db, expected_status):
-
     response = auth_client.post(
         "/api/jobs",
         json={"items_spec": "*", "manifest": "quetz-transmutation:transmutation"},
