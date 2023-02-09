@@ -14,7 +14,6 @@ from quetz.metrics.db_models import IntervalType, PackageVersionMetric, round_ti
 
 @pytest.fixture
 def channel(dao, db, user, channel_name):
-
     channel_data = rest_models.Channel(name=channel_name, private=False)
     channel = dao.create_channel(channel_data, user.id, "owner")
     yield channel
@@ -72,7 +71,6 @@ def test_create_channel_with_invalid_name(dao, user, db):
 
 
 def test_create_version(dao, package, channel_name, package_name, db, user):
-
     assert (
         not db.query(PackageVersion)
         .filter(PackageVersion.package_name == package_name)
@@ -155,7 +153,6 @@ def test_create_version(dao, package, channel_name, package_name, db, user):
 
 
 def test_update_channel(dao, channel, db):
-
     assert not channel.private
     dao.update_channel(channel.name, {"private": True})
 
@@ -165,7 +162,6 @@ def test_update_channel(dao, channel, db):
 
 
 def test_update_channel_size(dao, channel, db, package_version):
-
     dao.update_channel_size(channel.name)
 
     channel = db.query(Channel).filter(Channel.name == channel.name).one()
@@ -176,7 +172,6 @@ def test_update_channel_size(dao, channel, db, package_version):
 def test_increment_download_count(
     dao: Dao, channel, db, package_version, session_maker
 ):
-
     assert package_version.download_count == 0
     now = datetime.datetime(2020, 10, 1, 10, 1, 10)
     dao.incr_download_count(
@@ -219,7 +214,6 @@ def test_increment_download_count(
 
 
 def test_get_package_version_metrics(dao: Dao, channel, db, package_version):
-
     now = datetime.datetime(2020, 10, 1, 10, 1, 10)
     dao.incr_download_count(
         channel.name, package_version.filename, package_version.platform, timestamp=now
@@ -353,7 +347,6 @@ def test_get_package_version_metrics(dao: Dao, channel, db, package_version):
 def test_get_package_version_metrics_intervals(
     dao: Dao, channel, db, package_version, interval
 ):
-
     now = datetime.datetime(2020, 10, 1, 10, 1, 10)
     dao.incr_download_count(
         channel.name, package_version.filename, package_version.platform, timestamp=now
@@ -381,7 +374,6 @@ def test_get_package_version_metrics_intervals(
 
 
 def test_create_user_with_profile(dao: Dao, user_without_profile):
-
     user = dao.create_user_with_profile(
         user_without_profile.username,
         provider="github",
@@ -423,7 +415,6 @@ def db_extra(database_url):
 
 @pytest.fixture
 def dao_extra(db_extra):
-
     return Dao(db_extra)
 
 

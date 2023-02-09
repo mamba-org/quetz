@@ -119,7 +119,6 @@ def post_role(
             )
 
         def get_self_delegation(nullable: bool = False):
-
             query = (
                 db.query(db_models.RoleDelegation)
                 .filter(

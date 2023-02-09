@@ -31,7 +31,6 @@ def package_files(pkgstore: PackageStore, channel_name, package_filenames):
 
 @pytest.fixture
 def channel(dao, user, channel_name):
-
     channel_data = Channel(name=channel_name, private=False)
     channel = dao.create_channel(channel_data, user.id, "owner")
 

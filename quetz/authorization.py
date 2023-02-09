@@ -73,7 +73,6 @@ class Rules:
         return user_id
 
     def assert_read_user_data(self, requested_user_id: bytes):
-
         user_id = self.assert_user()
 
         if not (requested_user_id == user_id):
@@ -82,7 +81,6 @@ class Rules:
         return user_id
 
     def assert_delete_user(self, requested_user_id: bytes):
-
         user_id = self.assert_user()
 
         if not (requested_user_id == user_id):
@@ -91,7 +89,6 @@ class Rules:
         return user_id
 
     def assert_assign_user_role(self, role: str):
-
         if role == SERVER_MAINTAINER or role == SERVER_OWNER:
             return self.assert_server_roles([SERVER_OWNER])
         if role == SERVER_MEMBER:
@@ -101,7 +98,6 @@ class Rules:
         user_id = self.assert_user()
 
         if not self.has_server_roles(user_id, roles):
-
             detail = (
                 msg or "this operation requires " + " or ".join(roles) + " roles",
             )
@@ -230,7 +226,6 @@ class Rules:
                 return True
 
     def assert_delete_api_key(self, api_key):
-
         user_id = self.assert_user()
 
         if (
@@ -238,7 +233,6 @@ class Rules:
             and not api_key.user_id == user_id
             and not api_key.owner_id == user_id
         ):
-
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="No permission"
             )
@@ -249,35 +243,27 @@ class Rules:
         )
 
     def assert_create_mirror_channel(self):
-
         self.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
     def assert_create_channel(self):
-
         self.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER, SERVER_MEMBER])
 
     def assert_update_channel_info(self, channel_name: str):
-
         self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])
 
     def assert_register_mirror(self, channel_name: str):
-
         self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])
 
     def assert_unregister_mirror(self, channel_name: str):
-
         self.assert_register_mirror(channel_name)
 
     def assert_create_package(self, channel_name: str):
-
         self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])
 
     def assert_create_proxy_channel(self):
-
         self.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
     def assert_list_channel_members(self, channel_name: str):
-
         self.assert_channel_roles(channel_name, [OWNER, MAINTAINER])
 
     def assert_synchronize_mirror(self, channel_name):
@@ -302,7 +288,6 @@ class Rules:
             self.assert_channel_roles(channel.name, [OWNER, MAINTAINER, MEMBER])
 
     def assert_set_channel_size_limit(self):
-
         self.assert_server_roles(
             [SERVER_OWNER, SERVER_MAINTAINER],
             msg="only server maintainer or owner can set channel size limit",

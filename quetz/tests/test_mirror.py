@@ -36,7 +36,6 @@ def job_supervisor(db, config, dao, dummy_remote_session_object):
 
 @pytest.fixture
 def proxy_channel(db):
-
     channel = Channel(
         name="test-proxy-channel", mirror_channel_url="http://host", mirror_mode="proxy"
     )
@@ -59,7 +58,6 @@ def remove_package_versions(db, user):
 
 @pytest.fixture
 def mirror_channel(dao, user, db):
-
     channel_data = rest_models.Channel(
         name="test-mirror-channel",
         private=False,
@@ -77,7 +75,6 @@ def mirror_channel(dao, user, db):
 
 @pytest.fixture
 def local_channel(db):
-
     channel = Channel(name="test-local-channel")
     db.add(channel)
     db.commit()
@@ -140,7 +137,6 @@ def dummy_response(repo_content, status_code):
 
 @pytest.fixture
 def dummy_remote_session_object(app, dummy_response, repo_content, status_code):
-
     if isinstance(repo_content, list):
         repo_content = repo_content.copy()
 
@@ -227,7 +223,6 @@ def test_set_mirror_url(db, client, owner):
 def test_create_mirror_channel_permissions(
     client, user, user_role, db, expected_status, dummy_repo, mirror_mode
 ):
-
     db.query(User).filter(User.id == user.id).update({"role": user_role})
 
     response = client.get("/api/dummylogin/bartosz")
@@ -523,7 +518,6 @@ def test_synchronisation_no_checksums_in_db(
     package_version,
     mocker,
 ):
-
     package_info = '{"size": 5000, "subdirs":["noarch"]}'
     package_version.info = package_info
     db.commit()
@@ -668,7 +662,6 @@ def test_proxy_repodata_cached(client, owner, dummy_repo):
 
 
 def test_method_not_implemented_for_proxies(client, proxy_channel):
-
     response = client.post(f"/api/channels/{proxy_channel.name}/packages")
     assert response.status_code == 405
     assert "not implemented" in response.json()["detail"]
@@ -719,7 +712,6 @@ def test_api_methods_for_mirror_channels(client, mirror_channel):
     ],
 )
 def test_mirror_initial_sync(client, dummy_repo, owner, expected_paths, job_supervisor):
-
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 
@@ -741,7 +733,6 @@ def test_mirror_initial_sync(client, dummy_repo, owner, expected_paths, job_supe
 
 @pytest.mark.parametrize("user_role", ['maintainer'])
 def test_add_mirror_without_sync(auth_client, dummy_repo):
-
     host = "http://mirror3_host"
     response = auth_client.post(
         "/api/channels",
@@ -760,7 +751,6 @@ def test_add_mirror_without_sync(auth_client, dummy_repo):
 
 @pytest.fixture
 def dummy_session_mock(app):
-
     dummy_session = MagicMock()
 
     def get_dummy_session():
@@ -777,7 +767,6 @@ def dummy_session_mock(app):
 
 @pytest.mark.parametrize("user_role", ['maintainer'])
 def test_add_and_register_mirror(auth_client, dummy_session_mock):
-
     host = "http://mirror3_host/get/my-channel"
     response = auth_client.post(
         "/api/channels",
@@ -827,7 +816,6 @@ empty_archive = b""
     ],
 )
 def test_wrong_package_format(client, dummy_repo, owner, job_supervisor):
-
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 
@@ -903,7 +891,6 @@ def test_validate_mirror_parameters(
 
 @pytest.mark.parametrize("user_role", ["maintainer"])
 def test_write_methods_for_local_channels(auth_client, local_channel, db):
-
     response = auth_client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 
@@ -917,7 +904,6 @@ def test_write_methods_for_local_channels(auth_client, local_channel, db):
 def test_disabled_methods_for_mirror_channels(
     client, mirror_channel, mirror_package, user
 ):
-
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 
@@ -954,7 +940,6 @@ def test_disabled_methods_for_mirror_channels(
 def test_repo_without_channeldata(
     owner, client, dummy_repo, expected_archs, job_supervisor
 ):
-
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 
@@ -982,7 +967,6 @@ def test_repo_without_channeldata(
 
 
 def test_sync_mirror_channel(mirror_channel, user, client, dummy_repo):
-
     response = client.put(
         f"/api/channels/{mirror_channel.name}/actions", json={"action": "synchronize"}
     )
@@ -1111,7 +1095,6 @@ def test_sync_local_channel(local_channel, user, client, dummy_repo):
 def test_can_not_sync_proxy_and_local_channels(
     proxy_channel, local_channel, user, client
 ):
-
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 
@@ -1214,7 +1197,6 @@ def local_package(db, local_channel):
 
 @pytest.fixture
 def dummy_user(db):
-
     new_user = User(id=uuid.uuid4().bytes, username="dummyuser", role="owner")
     db.add(new_user)
     db.commit()
@@ -1253,7 +1235,6 @@ def test_create_packages_from_channeldata_update_existing(
 
 
 def test_create_versions_from_repodata(dao, user, local_channel, db):
-
     pkg = Package(name="other-package", channel=local_channel)
     db.add(pkg)
     repodata = json.loads(repodata_json)
@@ -1269,12 +1250,10 @@ def test_create_versions_from_repodata(dao, user, local_channel, db):
 
 @pytest.fixture
 def dummy_package_file(config):
-
     filepath = OTHER_DUMMY_PACKAGE_V2
     fid = open(filepath, 'rb')
 
     class DummyRemoteFile:
-
         filename = filepath.name
         content_type = "application/archive"
         file = fid
@@ -1286,7 +1265,6 @@ def dummy_package_file(config):
 
 @pytest.fixture
 def rules(user, db):
-
     rules = Rules("", {"user_id": str(uuid.UUID(bytes=user.id))}, db)
 
     return rules

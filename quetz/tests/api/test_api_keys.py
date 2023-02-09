@@ -46,7 +46,6 @@ def api_keys(other_user, user, db, dao: Dao):
     ],
 )
 def test_delete_api_key(auth_client, api_keys, db, target_key, expected_status):
-
     response = auth_client.delete(f"/api/api-keys/{target_key}")
 
     assert response.status_code == expected_status
@@ -60,7 +59,6 @@ def test_delete_api_key(auth_client, api_keys, db, target_key, expected_status):
 
 
 def test_delete_api_key_does_not_exist(auth_client):
-
     response = auth_client.delete("/api/api-keys/key")
 
     assert response.status_code == 404
@@ -71,7 +69,6 @@ def test_delete_api_key_does_not_exist(auth_client):
 def test_list_keys_with_channel_roles(
     auth_client, api_keys, db, user, other_user, private_channel
 ):
-
     channel_member = ChannelMember(
         channel=private_channel, user=user, role="maintainer"
     )
@@ -96,7 +93,6 @@ def test_list_keys_with_package_roles(
     private_channel,
     private_package,
 ):
-
     package_member = PackageMember(
         channel=private_channel, package=private_package, user=user, role="maintainer"
     )
@@ -113,7 +109,6 @@ def test_list_keys_with_package_roles(
 
 
 def test_list_keys_subrole(auth_client, dao, user, private_channel):
-
     dao.create_api_key(
         user.id,
         BaseApiKey.parse_obj(
@@ -137,7 +132,6 @@ def test_list_keys_subrole(auth_client, dao, user, private_channel):
 
 
 def test_list_keys_without_roles(auth_client, dao, user):
-
     dao.create_api_key(
         user.id,
         BaseApiKey.parse_obj(dict(description="user-key", roles=[])),
@@ -153,7 +147,6 @@ def test_list_keys_without_roles(auth_client, dao, user):
 
 
 def test_unlist_delete_api_keys(auth_client, api_keys, db, private_channel, user):
-
     channel_member = ChannelMember(
         channel=private_channel, user=user, role="maintainer"
     )

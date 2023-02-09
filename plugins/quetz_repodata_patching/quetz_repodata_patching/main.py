@@ -108,7 +108,6 @@ def _load_instructions(tar, path):
 @quetz.hookimpl(tryfirst=True)
 def post_package_indexing(tempdir: Path, channel_name, subdirs, files, packages):
     with get_db_manager() as db:
-
         query = (
             db.query(PackageVersion)
             .filter(
@@ -131,7 +130,6 @@ def post_package_indexing(tempdir: Path, channel_name, subdirs, files, packages)
             extract_ = extract_from_conda
 
         with extract_(fs) as tar:
-
             for subdir in subdirs:
                 packages[subdir] = {}
                 path = f"{subdir}/patch_instructions.json"

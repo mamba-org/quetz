@@ -3,12 +3,10 @@ from quetz.config import Config, ConfigEntry, ConfigSection
 
 
 class DictionaryAuthenticator(SimpleAuthenticator):
-
     passwords: dict
     provider = "dict"
 
     def configure(self, config: Config):
-
         config.register(
             [
                 ConfigSection(

@@ -94,7 +94,6 @@ try:
             return os.getgrouplist(username, user_gid)
 
         def configure(self, config: Config):
-
             config_options = self._make_config()
             config.register(config_options)
 
@@ -113,7 +112,6 @@ try:
             super().configure(config)
 
         async def user_role(self, request: Request, profile: UserProfile):
-
             mappings = [
                 (ServerRole.OWNER, self.admin_groups),
                 (ServerRole.MAINTAINER, self.maintainer_groups),

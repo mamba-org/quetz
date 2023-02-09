@@ -43,7 +43,6 @@ def test_next_timestamp():
 
 
 def test_get_download_count(auth_client, public_channel, package_version, db, dao: Dao):
-
     timestamps = [
         "2020-01-05T21:01",
         "2020-01-06T22:10",
@@ -133,7 +132,6 @@ def test_get_download_count(auth_client, public_channel, package_version, db, da
 
 @pytest.fixture
 def package_version_factory(channel_name, user, dao, public_package, db):
-
     package_format = "tarbz2"
     package_info = "{}"
     package_name = public_package.name
@@ -141,7 +139,6 @@ def package_version_factory(channel_name, user, dao, public_package, db):
     versions = []
 
     def factory(version, build_str=0, platform="linux-64"):
-
         filename = f"{package_name}-{version}-{build_str}.tar.bz2"
 
         version = dao.create_version(
@@ -170,7 +167,6 @@ def package_version_factory(channel_name, user, dao, public_package, db):
 def test_get_channel_download_count(
     auth_client, public_channel, package_version_factory, db, dao: Dao
 ):
-
     versions = [package_version_factory(str(i)) for i in range(3)]
 
     now = datetime.utcnow()
@@ -223,7 +219,6 @@ def channel_mirror(public_channel, dao: Dao):
 
 
 def test_synchronize_metrics_without_mirrors(public_channel, package_version, dao: Dao):
-
     session = Mock()
 
     synchronize_metrics_from_mirrors(public_channel.name, dao, session)
@@ -239,7 +234,6 @@ def test_synchronize_metrics_without_mirrors(public_channel, package_version, da
 def test_synchronize_metrics_with_mirrors(
     public_channel, package_version, channel_mirror, dao: Dao
 ):
-
     timestamp = datetime(2020, 10, 1, 5, 0)
     first_sync_time = timestamp - timedelta(days=1)
     sync_time = timestamp + timedelta(hours=1)

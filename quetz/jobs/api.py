@@ -61,7 +61,6 @@ def get_job_or_fail(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ) -> job_db_models.Job:
-
     job = dao.get_job(job_id)
 
     if not job:

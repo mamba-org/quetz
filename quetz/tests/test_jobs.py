@@ -34,7 +34,6 @@ def sqlite_in_memory():
 def add_package_version(
     filename, package_version, channel_name, user, dao, package_name=None
 ):
-
     if not package_name:
         package_name = "test-package"
 
@@ -68,7 +67,6 @@ def package_version(
     dao: Dao,
     config: Config,
 ):
-
     pkgstore = config.get_package_store()
 
     filename = "test-package-0.1-0.tar.bz2"
@@ -90,7 +88,6 @@ def package_version(
 
 @pytest.fixture
 def public_channel(dao: Dao, user, channel_role, channel_name, db):
-
     channel_data = Channel(name=channel_name, private=False)
     channel = dao.create_channel(channel_data, user.id, channel_role)
 
@@ -102,7 +99,6 @@ def public_channel(dao: Dao, user, channel_role, channel_name, db):
 
 @pytest.fixture
 def public_package(db, user, public_channel, dao, package_role, package_name):
-
     package_data = Package(name=package_name)
 
     package = dao.create_package(
@@ -114,7 +110,6 @@ def public_package(db, user, public_channel, dao, package_role, package_name):
 
 @pytest.fixture
 def manager(config, db):
-
     manager = SubprocessWorker(config)
     yield manager
     manager._executor.shutdown()
@@ -156,7 +151,6 @@ def dummy_func(package_version: dict):
 
 @pytest.mark.asyncio
 async def test_create_job(db, user, package_version, supervisor):
-
     func_serialized = pickle.dumps(func)
     job = Job(owner_id=user.id, manifest=func_serialized, items_spec="*")
     db.add(job)
@@ -187,7 +181,6 @@ async def test_create_job(db, user, package_version, supervisor):
 async def test_run_tasks_only_on_new_versions(
     db, user, package_version, dao, channel_name, package_name, supervisor
 ):
-
     func_serialized = pickle.dumps(dummy_func)
     job = Job(owner_id=user.id, manifest=func_serialized, items_spec="*")
     db.add(job)
@@ -237,7 +230,6 @@ async def test_run_tasks_only_on_new_versions(
 
 @pytest.mark.asyncio
 async def test_running_task(db, user, package_version, supervisor):
-
     func_serialized = pickle.dumps(long_running)
     job = Job(owner_id=user.id, manifest=func_serialized, items_spec="*")
     db.add(job)
@@ -318,7 +310,6 @@ async def test_restart_worker_process(
 
 @pytest.mark.asyncio
 async def test_failed_task(db, user, package_version, supervisor):
-
     func_serialized = pickle.dumps(failed_func)
     job = Job(owner_id=user.id, manifest=func_serialized, items_spec="*")
     db.add(job)
@@ -340,7 +331,6 @@ async def test_failed_task(db, user, package_version, supervisor):
 
 @pytest.mark.parametrize("items_spec", [""])
 def test_empty_package_spec(db, user, package_version, caplog, items_spec, supervisor):
-
     func_serialized = pickle.dumps(func)
     job = Job(owner_id=user.id, manifest=func_serialized, items_spec=items_spec)
     db.add(job)
@@ -497,7 +487,6 @@ def test_parse_conda_spec():
     ],
 )
 def test_filter_versions(db, user, package_version, spec, n_tasks, supervisor):
-
     func_serialized = pickle.dumps(func)
     job = Job(
         owner_id=user.id,
@@ -516,7 +505,6 @@ def test_filter_versions(db, user, package_version, spec, n_tasks, supervisor):
 
 @pytest.mark.parametrize("user_role", ["owner"])
 def test_refresh_job(auth_client, user, db, package_version, supervisor):
-
     func_serialized = pickle.dumps(dummy_func)
     job = Job(
         owner_id=user.id,
@@ -661,7 +649,6 @@ def test_post_new_job_from_plugin(
 def test_post_new_job_with_handler(
     auth_client, user, db, mock_action, sync_supervisor, package_version
 ):
-
     response = auth_client.post(
         "/api/jobs", json={"items_spec": "*", "manifest": "test_action"}
     )
@@ -743,7 +730,6 @@ def test_validate_query_string(auth_client, query_str, ok):
 
 @pytest.fixture
 def many_jobs(db, user):
-
     n_jobs = 5
     jobs = []
     for i in range(n_jobs):
@@ -767,7 +753,6 @@ def many_jobs(db, user):
 @pytest.mark.parametrize("user_role", ["owner"])
 @pytest.mark.parametrize("skip,limit", [(0, 2), (1, -1), (2, 1), (2, 5)])
 def test_jobs_pagination(auth_client, skip, limit, many_jobs):
-
     n_jobs = len(many_jobs)
 
     response = auth_client.get(f"/api/jobs?skip={skip}&limit={limit}")
@@ -818,7 +803,6 @@ def test_get_tasks(
 
 @pytest.fixture()
 def other_user(db):
-
     other_user = User(id=uuid.uuid4().bytes, username='otheruser')
 
     db.add(other_user)
@@ -925,7 +909,6 @@ def test_update_periodic_action(sync_supervisor, db, action_job, mock_action):
 
 @pytest.mark.parametrize("start_date", [datetime(1960, 1, 1, 10, 0, 0), None])
 def test_run_action_once(sync_supervisor, db, action_job, mock_action, start_date):
-
     # job should start immediatedly
     action_job.start_at = start_date
     db.commit()
@@ -947,7 +930,6 @@ def test_run_action_once(sync_supervisor, db, action_job, mock_action, start_dat
 
 
 def test_run_action_after_delay(sync_supervisor, db, action_job, mock_action, mocker):
-
     action_job.start_at = datetime(3020, 1, 1, 10, 0)
     db.commit()
 
@@ -974,7 +956,6 @@ def test_run_action_after_delay(sync_supervisor, db, action_job, mock_action, mo
 def test_run_periodic_action(
     sync_supervisor, db, action_job, mock_action, mocker, start_date
 ):
-
     action_job.repeat_every_seconds = 10
     action_job.start_date = start_date
     now = datetime.utcnow()

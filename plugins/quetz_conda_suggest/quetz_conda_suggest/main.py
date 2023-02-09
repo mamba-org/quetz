@@ -93,7 +93,7 @@ def generate_channel_suggest_map(db, channel_name, subdir):
             pass
         else:
             files_data = json.loads(each_package.binfiles.data)
-            for (k, v) in files_data.items():
+            for k, v in files_data.items():
                 channel_suggest_map[k] = v
 
     fname = f"{channel_name}.{subdir}.map"

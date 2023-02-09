@@ -125,7 +125,6 @@ def function_with_dao(dao: Dao):
 
 @pytest.fixture
 def db_cleanup(config):
-
     # we can't use the db fixture for cleaning up because
     # it automatically rollsback all operations
 
@@ -142,7 +141,6 @@ def db_cleanup(config):
 
 @pytest.mark.asyncio
 async def test_threading_worker_execute(background_tasks, any_worker, db, config_dir):
-
     any_worker.execute(basic_function, config_dir=config_dir)
 
     await any_worker.wait()
@@ -157,7 +155,6 @@ async def test_threading_worker_execute(background_tasks, any_worker, db, config
 async def test_threading_worker_execute_with_dao(
     background_tasks, any_worker, db, db_cleanup
 ):
-
     any_worker.execute(function_with_dao)
 
     await any_worker.wait()

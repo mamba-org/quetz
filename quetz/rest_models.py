@@ -65,7 +65,6 @@ class MirrorMode(str, Enum):
 
 
 class ChannelBase(BaseModel):
-
     name: str = Field(None, title='The name of the channel', max_length=50)
     description: Optional[str] = Field(
         None, title='The description of the channel', max_length=300, nullable=True
@@ -131,7 +130,6 @@ class ChannelActionEnum(str, Enum):
 
 
 class ChannelMetadata(BaseModel):
-
     includelist: Optional[List[str]] = Field(
         None,
         title="list of packages to include while creating a channel",
@@ -151,7 +149,6 @@ class ChannelMetadata(BaseModel):
 
 
 class Channel(ChannelBase):
-
     metadata: ChannelMetadata = Field(
         default_factory=ChannelMetadata, title="channel metadata", example={}
     )
@@ -216,7 +213,6 @@ class Package(BaseModel):
 
     @validator("platforms", pre=True)
     def parse_list_of_platforms(cls, v):
-
         if isinstance(v, str):
             return v.split(":")
         else:

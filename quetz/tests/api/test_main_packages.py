@@ -20,7 +20,6 @@ from quetz.tasks.indexing import update_indexes
 def test_delete_package(
     auth_client, public_package, public_channel, dao, db, package_role, user
 ):
-
     response = auth_client.delete(
         f"/api/channels/{public_channel.name}/packages/{public_package.name}"
     )
@@ -44,7 +43,6 @@ def test_delete_package(
 def test_delete_package_non_member(
     client, public_package, public_channel, dao, db, other_user
 ):
-
     response = client.get(f"/api/dummylogin/{other_user.username}")
 
     assert response.status_code == 200
@@ -65,7 +63,6 @@ def test_delete_package_non_member(
 def test_delete_package_versions_with_package(
     auth_client, public_channel, public_package, package_version, dao, db, pkgstore
 ):
-
     assert public_channel.size > 0
     assert public_channel.size == package_version.size
 
@@ -228,7 +225,6 @@ def test_delete_package_version_permissions(
     private,
     user_server_role,
 ):
-
     private_channel.private = private
     user.role = user_server_role
 
@@ -504,7 +500,6 @@ def test_delete_package_version(
 
 
 def test_package_name_length_limit(auth_client, public_channel, db):
-
     package_name = "package_" * 100
 
     response = auth_client.post(
@@ -519,7 +514,6 @@ def test_package_name_length_limit(auth_client, public_channel, db):
 
 
 def test_validate_package_names(auth_client, public_channel, remove_package_versions):
-
     valid_package_names = [
         "interesting-package",
         "valid.package.name",
@@ -545,7 +539,6 @@ def test_validate_package_names(auth_client, public_channel, remove_package_vers
     ]
 
     for package_name in invalid_package_names:
-
         response = auth_client.post(
             f"/api/channels/{public_channel.name}/packages", json={"name": package_name}
         )
@@ -568,7 +561,6 @@ def test_validate_package_names_files_endpoint(
     config: Config,
     remove_package_versions,
 ):
-
     pkgstore = config.get_package_store()
 
     package_filename = "test-package-0.1-0.tar.bz2"
@@ -627,7 +619,6 @@ def plugin(app):
 
 
 def test_validation_hook(auth_client, public_channel, plugin, config):
-
     pkgstore = config.get_package_store()
 
     response = auth_client.post(

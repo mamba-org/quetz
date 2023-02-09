@@ -74,7 +74,6 @@ async def test_user_role(config, expected_role):
 
 @pytest.mark.asyncio
 async def test_authenticate(config):
-
     auth = PAMAuthenticator(config)
     request = Request(scope={"type": "http"})
     current_user = getpass.getuser()

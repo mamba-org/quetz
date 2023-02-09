@@ -23,7 +23,6 @@ class MockWorker:
         self.config = config
 
     def execute(self, func: Union[Callable, bytes], *args, **kwargs):
-
         resources = {
             "db": self.db,
             "dao": self.dao,

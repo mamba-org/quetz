@@ -272,8 +272,8 @@ class PackageMember(Base):
     user = relationship('User', backref=backref("packages", cascade="all,delete"))
 
     def __repr__(self):
-        return f'<PackageMember channel_name={self.channel_name}, package_name={self.package_name},\
-        role={self.role}>'
+        return f'<PackageMember channel_name={self.channel_name}, \
+                  package_name={self.package_name}, role={self.role}>'
 
 
 class ApiKey(Base):

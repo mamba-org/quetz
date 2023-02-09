@@ -280,7 +280,6 @@ async def me(
 
 
 def get_users_handler(dao, q, auth, skip, limit):
-
     user_id = auth.assert_user()
 
     results = dao.get_users(skip, limit, q)
@@ -364,7 +363,6 @@ def get_user_packages(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
-
     return list_user_packages(username, dao, auth, 0, -1)
 
 
@@ -456,7 +454,6 @@ def get_user_role(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
-
     user = dao.get_user_by_username(username)
 
     if not user:
@@ -476,7 +473,6 @@ def set_user_role(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
-
     user = dao.get_user_by_username(username)
 
     if not user:
@@ -545,7 +541,6 @@ def post_channel_mirror(
     dao: Dao = Depends(get_dao),
     remote_session: requests.Session = Depends(get_remote_session),
 ):
-
     auth.assert_register_mirror(channel_name)
 
     logger.debug(f"registering mirror {mirror.url}")
@@ -625,7 +620,6 @@ def delete_channel(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
-
     auth.assert_delete_channel(channel)
     dao.delete_channel(channel.name)
     try:
@@ -645,7 +639,6 @@ def put_mirror_channel_actions(
     dao: Dao = Depends(get_dao),
     task: Task = Depends(get_tasks_worker),
 ):
-
     new_job = task.execute_channel_action(
         action.action,
         channel,
@@ -668,7 +661,6 @@ def post_channel(
     config=Depends(get_config),
     session: requests.Session = Depends(get_remote_session),
 ):
-
     user_id = auth.assert_user()
 
     existing_channel = dao.get_channel(new_channel.name)
@@ -764,7 +756,6 @@ def patch_channel(
     channel: db_models.Channel = Depends(get_channel_or_fail),
     db=Depends(get_db),
 ):
-
     auth.assert_update_channel_info(channel.name)
 
     user_attrs = channel_data.dict(exclude_unset=True)
@@ -852,7 +843,6 @@ def delete_package(
     auth: authorization.Rules = Depends(get_rules),
     dao: Dao = Depends(get_dao),
 ):
-
     auth.assert_package_delete(package)
 
     filenames = [
@@ -891,7 +881,6 @@ def post_package(
     auth: authorization.Rules = Depends(get_rules),
     dao: Dao = Depends(get_dao),
 ):
-
     user_id = auth.assert_user()
     auth.assert_create_package(channel.name)
     pm.hook.validate_new_package(
@@ -920,7 +909,6 @@ def get_channel_members(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
-
     auth.assert_list_channel_members(channel.name)
     member_list = dao.get_channel_members(channel.name)
 
@@ -935,7 +923,6 @@ def post_channel_member(
     db=Depends(get_db),
     auth: authorization.Rules = Depends(get_rules),
 ):
-
     if not dao.get_user_by_username(new_member.username):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -962,7 +949,6 @@ def delete_channel_member(
     db=Depends(get_db),
     auth: authorization.Rules = Depends(get_rules),
 ):
-
     if not dao.get_user_by_username(username):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -993,7 +979,6 @@ def get_package_members(
     package: db_models.Package = Depends(get_package_or_fail),
     dao: Dao = Depends(get_dao),
 ):
-
     member_list = dao.get_package_members(package.channel.name, package.name)
 
     return member_list
@@ -1010,7 +995,6 @@ def post_package_member(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
-
     auth.assert_add_package_member(package.channel.name, package.name, new_member.role)
 
     channel_member = dao.get_package_member(
@@ -1039,7 +1023,6 @@ def get_package_versions(
     time_created__ge: datetime.datetime = None,
     version_match_str: str = None,
 ):
-
     version_profile_list = dao.get_package_versions(
         package, time_created__ge, version_match_str
     )
@@ -1065,7 +1048,6 @@ def get_paginated_package_versions(
     time_created__ge: datetime.datetime = None,
     version_match_str: str = None,
 ):
-
     version_profile_list = dao.get_package_versions(
         package, time_created__ge, version_match_str, skip, limit
     )
@@ -1121,7 +1103,6 @@ def delete_package_version(
     db=Depends(get_db),
     auth: authorization.Rules = Depends(get_rules),
 ):
-
     version = dao.get_package_version_by_filename(
         channel_name, package_name, filename, platform
     )
@@ -1240,7 +1221,6 @@ def post_api_key(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
-
     auth.assert_create_api_key_roles(api_key.roles)
 
     user_id = auth.assert_user()
@@ -1578,7 +1558,6 @@ def handle_package_files(
             )
 
         if not package and not dao.get_package(channel.name, package_name):
-
             try:
                 if not channel_proxylist or package_name not in channel_proxylist:
                     pm.hook.validate_new_package(
@@ -1672,7 +1651,6 @@ def invalid_api():
 
 @app.on_event("startup")
 def start_sync_download_counts():
-
     global download_counts
     wait_time = 1  # seconds
 
@@ -1737,7 +1715,6 @@ def serve_path(
     session=Depends(get_remote_session),
     dao: Dao = Depends(get_dao),
 ):
-
     chunk_size = 10_000
 
     is_package_request = path.endswith((".tar.bz2", ".conda"))
