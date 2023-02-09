@@ -1341,6 +1341,7 @@ def post_file_to_package(
     "/channels/{channel_name}/upload/{filename}", status_code=201, tags=["upload"]
 )
 async def post_upload(
+    background_tasks: BackgroundTasks,
     request: Request,
     channel_name: str,
     filename: str,
@@ -1406,6 +1407,11 @@ async def post_upload(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Duplicate")
 
     pm.hook.post_add_package_version(version=version, condainfo=condainfo)
+
+    wrapped_bg_task = background_task_wrapper(indexing.update_indexes, logger)
+    # Background task to update indexes
+    background_tasks.add_task(wrapped_bg_task, dao, pkgstore, channel_name)
+
 
 
 @api_router.post("/channels/{channel_name}/files/", status_code=201, tags=["files"])
