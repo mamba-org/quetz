@@ -12,7 +12,6 @@ from typing import (
     Iterable,
     List,
     NamedTuple,
-    NoReturn,
     Optional,
     Type,
     Union,
