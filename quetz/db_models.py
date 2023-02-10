@@ -24,10 +24,13 @@ from sqlalchemy import (
     func,
     select,
 )
-from sqlalchemy.orm import backref, column_property, declarative_base, relationship
+from sqlalchemy.orm import DeclarativeBase, backref, column_property, relationship
 from sqlalchemy.schema import ForeignKeyConstraint
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
+
 
 UUID = LargeBinary(length=16)
 
