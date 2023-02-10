@@ -152,11 +152,11 @@ def test_run_migrations(
 ):
     db = sql_connection
     with pytest.raises(sa.exc.DatabaseError):
-        db.execute("SELECT * FROM users")
+        db.execute(sa.text("SELECT * FROM users"))
 
     cli._run_migrations(alembic_config=alembic_config)
 
-    db.execute("SELECT * FROM users")
+    db.execute(sa.text("SELECT * FROM users"))
 
 
 def test_make_migrations_quetz(mocker, config, config_dir):
