@@ -799,7 +799,7 @@ class Dao:
         return db_api_key
 
     def get_api_key(self, key):
-        return self.db.query(ApiKey).get(key)
+        return self.db.get(ApiKey, key)
 
     def create_version(
         self,

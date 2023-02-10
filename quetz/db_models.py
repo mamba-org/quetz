@@ -24,8 +24,7 @@ from sqlalchemy import (
     func,
     select,
 )
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import backref, column_property, relationship
+from sqlalchemy.orm import backref, column_property, declarative_base, relationship
 from sqlalchemy.schema import ForeignKeyConstraint
 
 Base = declarative_base()

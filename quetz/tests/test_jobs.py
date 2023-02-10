@@ -631,7 +631,8 @@ def test_post_new_job_from_plugin(
     )
     assert response.status_code == 201
     job_id = response.json()['id']
-    job = db.query(Job).get(job_id)
+    # Get job with id job_id in sqlalchemy 2.0 notation
+    job = db.get(Job, job_id)
     assert job.manifest.decode('ascii') == manifest
 
     sync_supervisor.run_once()
@@ -654,7 +655,7 @@ def test_post_new_job_with_handler(
     )
     assert response.status_code == 201
     job_id = response.json()['id']
-    job = db.query(Job).get(job_id)
+    job = db.get(Job, job_id)
     assert job.status == JobStatus.pending
     assert job.manifest.decode('ascii') == "test_action"
 
