@@ -24,7 +24,12 @@ from sqlalchemy import (
     func,
     select,
 )
-from sqlalchemy.orm import DeclarativeBase, backref, column_property, relationship
+from sqlalchemy.orm import (  # type: ignore
+    DeclarativeBase,
+    backref,
+    column_property,
+    relationship,
+)
 from sqlalchemy.schema import ForeignKeyConstraint
 
 
