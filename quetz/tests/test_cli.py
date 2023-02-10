@@ -142,7 +142,7 @@ def refresh_db(engine, database_url):
     Base.metadata.drop_all(engine)
     try:
         with engine.connect() as connection:
-            connection.execute("DROP TABLE alembic_version")
+            connection.execute(sa.text("DROP TABLE alembic_version"))
     except sa.exc.DatabaseError:
         pass
 
@@ -298,7 +298,7 @@ def test_make_migrations_plugin_with_alembic(
     Base.metadata.drop_all(engine)
     try:
         with engine.connect() as connection:
-            connection.execute("DROP TABLE alembic_version")
+            connection.execute(sa.text("DROP TABLE alembic_version"))
     except sa.exc.DatabaseError:
         pass
 
@@ -428,7 +428,7 @@ def test_multi_head(
 
     try:
         with engine.connect() as connection:
-            connection.execute("DROP TABLE alembic_version")
+            connection.execute(sa.text("DROP TABLE alembic_version"))
     except sa.exc.DatabaseError:
         pass
 
