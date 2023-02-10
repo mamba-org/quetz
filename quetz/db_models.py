@@ -24,18 +24,19 @@ from sqlalchemy import (
     func,
     select,
 )
-from sqlalchemy.orm import (  # type: ignore
-    DeclarativeBase,
-    backref,
-    column_property,
-    relationship,
-)
+from sqlalchemy.orm import backref, column_property, relationship
 from sqlalchemy.schema import ForeignKeyConstraint
 
+try:
+    from sqlalchemy.orm import DeclarativeBase  # type: ignore
 
-class Base(DeclarativeBase):
-    pass
+    class Base(DeclarativeBase):
+        pass
 
+except ImportError:
+    from sqlalchemy.ext.declarative import declarative_base
+
+    Base = declarative_base()
 
 UUID = LargeBinary(length=16)
 
