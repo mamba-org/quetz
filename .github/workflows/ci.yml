@@ -58,7 +58,7 @@ jobs:
         run: |
           # install dev dependencies
           pip install -e .[all,dev]
-          micromamba install sqlalchemy=2.0.2
+          micromamba install -c conda-forge sqlalchemy=2.0.2
           pip install redis rq
           pip install pytest-github-actions-annotate-failures
 
