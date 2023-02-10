@@ -141,7 +141,8 @@ def test_init_db_create_test_users(db, config, mocker, config_dir):
 def refresh_db(engine, database_url):
     Base.metadata.drop_all(engine)
     try:
-        engine.execute("DROP TABLE alembic_version")
+        with engine.connect() as connection:
+            connection.execute("DROP TABLE alembic_version")
     except sa.exc.DatabaseError:
         pass
 
@@ -296,7 +297,8 @@ def test_make_migrations_plugin_with_alembic(
 
     Base.metadata.drop_all(engine)
     try:
-        engine.execute("DROP TABLE alembic_version")
+        with engine.connect() as connection:
+            connection.execute("DROP TABLE alembic_version")
     except sa.exc.DatabaseError:
         pass
 
@@ -425,7 +427,8 @@ def test_multi_head(
         os.remove(p)
 
     try:
-        engine.execute("DROP TABLE alembic_version")
+        with engine.connect() as connection:
+            connection.execute("DROP TABLE alembic_version")
     except sa.exc.DatabaseError:
         pass
 
