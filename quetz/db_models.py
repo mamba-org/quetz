@@ -209,7 +209,7 @@ class Channel(Base):
     mirrors = relationship("ChannelMirror", cascade="all, delete", uselist=True)
 
     members_count = column_property(
-        select([func.count(ChannelMember.user_id)])
+        select(func.count(ChannelMember.user_id))
         .where(ChannelMember.channel_name == name)
         .scalar_subquery(),  # type: ignore
         deferred=True,
@@ -223,7 +223,7 @@ class Channel(Base):
             return {}
 
     packages_count = column_property(
-        select([func.count(Package.name)])
+        select(func.count(Package.name))
         .where(Package.channel_name == name)
         .scalar_subquery(),  # type: ignore
         deferred=True,
