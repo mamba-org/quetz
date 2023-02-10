@@ -15,7 +15,7 @@ import tempfile
 from contextlib import contextmanager
 from os import PathLike
 from threading import Lock
-from typing import IO, List, NoReturn, Tuple, Union
+from typing import IO, List, Tuple, Union
 
 import fsspec
 from tenacity import retry, retry_if_exception_type, stop_after_attempt
@@ -77,13 +77,13 @@ class PackageStore(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
+    def add_package(self, package: File, channel: str, destination: str):
         pass
 
     @abc.abstractmethod
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
-    ) -> NoReturn:
+    ) -> None:
         pass
 
     @abc.abstractmethod
@@ -167,13 +167,13 @@ class LocalStore(PackageStore):
         channel_path = path.join(self.channels_dir, name)
         self.fs.rm(channel_path, recursive=True)
 
-    def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
+    def add_package(self, package: File, channel: str, destination: str) -> None:
         with self._atomic_open(channel, destination) as f:
             shutil.copyfileobj(package, f)
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
-    ) -> NoReturn:
+    ) -> None:
         mode = "w" if isinstance(data, str) else "wb"
         with self._atomic_open(channel, destination, mode) as f:
             f.write(data)
@@ -319,7 +319,7 @@ class S3Store(PackageStore):
         channel_path = self._bucket_map(name)
         self.fs.rm(channel_path, recursive=True, acl="private")
 
-    def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
+    def add_package(self, package: File, channel: str, destination: str) -> None:
         with self._get_fs() as fs:
             bucket = self._bucket_map(channel)
             with fs.open(path.join(bucket, destination), "wb", acl="private") as pkg:
@@ -328,7 +328,7 @@ class S3Store(PackageStore):
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
-    ) -> NoReturn:
+    ) -> None:
         if type(data) is str:
             mode = "w"
         else:
@@ -458,7 +458,7 @@ class AzureBlobStore(PackageStore):
         with self._get_fs() as fs:
             fs.rm(channel_path, recursive=True)
 
-    def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
+    def add_package(self, package: File, channel: str, destination: str) -> None:
         with self._get_fs() as fs:
             container = self._container_map(channel)
             with fs.open(path.join(container, destination), "wb") as pkg:
@@ -467,7 +467,7 @@ class AzureBlobStore(PackageStore):
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
-    ) -> NoReturn:
+    ) -> None:
         if type(data) is str:
             mode = "w"
         else:
@@ -607,7 +607,7 @@ class GoogleCloudStorageStore(PackageStore):
         with self._get_fs() as fs:
             fs.rm(channel_path, recursive=True)
 
-    def add_package(self, package: File, channel: str, destination: str) -> NoReturn:
+    def add_package(self, package: File, channel: str, destination: str) -> None:
         with self._get_fs() as fs:
             container = self._bucket_map(channel)
             with fs.open(path.join(container, destination), "wb") as pkg:
@@ -616,7 +616,7 @@ class GoogleCloudStorageStore(PackageStore):
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
-    ) -> NoReturn:
+    ) -> None:
         if type(data) is str:
             mode = "w"
         else:

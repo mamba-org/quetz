@@ -6,17 +6,7 @@ import logging.config
 import os
 from distutils.util import strtobool
 from secrets import token_bytes
-from typing import (
-    Any,
-    Dict,
-    Iterable,
-    List,
-    NamedTuple,
-    NoReturn,
-    Optional,
-    Type,
-    Union,
-)
+from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Type, Union
 
 import appdirs
 import pluggy
@@ -267,7 +257,7 @@ class Config:
             if os.path.isfile(f):
                 return f
 
-    def init(self, path: str) -> NoReturn:
+    def init(self, path: str) -> None:
         """Load configurations from various places.
 
         Order of importance for configuration is:
