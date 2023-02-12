@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@carbon/themes": "^10.53.0",
-    "@carbon/vue": "^2.40.0",
+    "@carbon/vue": "^2.45.1",
     "core-js": "^3.21.1",
     "vue": "^2.6.14",
     "vue-router": "^3.5.3"
