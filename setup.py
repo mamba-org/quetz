@@ -1,3 +1,3 @@
-from setuptools import find_packages, setup
+import setuptools
 
-setup(packages=find_packages(exclude=["migrations"]))
+setuptools.setup()
