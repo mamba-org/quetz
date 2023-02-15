@@ -41,3 +41,4 @@ dependencies:
   - adlfs
   - importlib_metadata
   - jupyter-releaser
+  - pre-commit
