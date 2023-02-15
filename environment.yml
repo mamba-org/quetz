@@ -40,3 +40,4 @@ dependencies:
   - typing_extensions
   - adlfs
   - importlib_metadata
+  - jupyter-releaser
