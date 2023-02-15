@@ -294,7 +294,7 @@ def package_version(user, mirror_channel, db, dao):
 
 @pytest.fixture
 def owner(user, db):
-    user = db.query(User).get(user.id)
+    user = db.get(User, user.id)
     user.role = "owner"
     db.commit()
     yield user

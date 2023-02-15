@@ -141,7 +141,8 @@ def test_init_db_create_test_users(db, config, mocker, config_dir):
 def refresh_db(engine, database_url):
     Base.metadata.drop_all(engine)
     try:
-        engine.execute("DROP TABLE alembic_version")
+        with engine.connect() as connection:
+            connection.execute(sa.text("DROP TABLE alembic_version"))
     except sa.exc.DatabaseError:
         pass
 
@@ -151,11 +152,11 @@ def test_run_migrations(
 ):
     db = sql_connection
     with pytest.raises(sa.exc.DatabaseError):
-        db.execute("SELECT * FROM users")
+        db.execute(sa.text("SELECT * FROM users"))
 
     cli._run_migrations(alembic_config=alembic_config)
 
-    db.execute("SELECT * FROM users")
+    db.execute(sa.text("SELECT * FROM users"))
 
 
 def test_make_migrations_quetz(mocker, config, config_dir):
@@ -296,7 +297,8 @@ def test_make_migrations_plugin_with_alembic(
 
     Base.metadata.drop_all(engine)
     try:
-        engine.execute("DROP TABLE alembic_version")
+        with engine.connect() as connection:
+            connection.execute(sa.text("DROP TABLE alembic_version"))
     except sa.exc.DatabaseError:
         pass
 
@@ -309,12 +311,11 @@ config = context.config
 from sqlalchemy import MetaData
 target_metadata = MetaData()
 
-connectable = config.attributes.get('connection')
+connection = config.attributes.get('connection')
 
-with connectable.connect() as connection:
-    context.configure(connection=connection, target_metadata=target_metadata)
-    with context.begin_transaction():
-        context.run_migrations()
+context.configure(connection=connection, target_metadata=target_metadata)
+with context.begin_transaction():
+    context.run_migrations()
 """
 
 script_mako = """
@@ -425,7 +426,8 @@ def test_multi_head(
         os.remove(p)
 
     try:
-        engine.execute("DROP TABLE alembic_version")
+        with engine.connect() as connection:
+            connection.execute(sa.text("DROP TABLE alembic_version"))
     except sa.exc.DatabaseError:
         pass
 
