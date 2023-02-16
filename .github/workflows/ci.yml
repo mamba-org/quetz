@@ -152,7 +152,13 @@ jobs:
       - name: install missing dependency
         run: pip install ipython_genutils
 
+      - name: Get branch name
+        id: branch-name
+        uses: tj-actions/branch-names@eee8675bd61ec38bcfbfedd504d8473292ba649e
+
       - name: Check Release
         uses: jupyter-server/jupyter_releaser/.github/actions/check-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          RH_BRANCH: ${{ steps.branch-name.outputs.current_branch }}
