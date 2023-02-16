@@ -12,6 +12,7 @@ import os
 import os.path as path
 import shutil
 import tempfile
+import warnings
 from contextlib import contextmanager
 from os import PathLike
 from threading import Lock
@@ -26,6 +27,7 @@ try:
     has_xattr = True
 except ImportError:
     has_xattr = False
+    warnings.warn("xattr not installed, not using it for file metadata")
 
 from quetz.errors import ConfigError
 
