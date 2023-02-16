@@ -23,6 +23,6 @@ def post_add_package_version(version, condainfo):
             )
             db.add(metadata)
         else:
-            metadata = db.query(db_models.PackageVersionMetadata).get(version.id)
+            metadata = db.get(db_models.PackageVersionMetadata, version.id)
             metadata.data = run_exports
         db.commit()

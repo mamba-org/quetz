@@ -40,7 +40,7 @@ class ContentTrustRole(Base):
 
     # delegator created by 'role_delegations.consumers' relationship backref
 
-    time_created = Column(Date, nullable=False, server_default=func.now())
+    time_created = Column(Date, nullable=False, server_default=func.current_date())
 
 
 class RoleDelegation(Base):
@@ -65,7 +65,7 @@ class RoleDelegation(Base):
     keys = relationship(
         "SigningKey", secondary=association_table, backref="delegations"
     )
-    time_created = Column(Date, nullable=False, server_default=func.now())
+    time_created = Column(Date, nullable=False, server_default=func.current_date())
 
 
 class SigningKey(Base):
@@ -73,6 +73,6 @@ class SigningKey(Base):
 
     public_key = Column(String, primary_key=True)
     private_key = Column(String)
-    time_created = Column(Date, nullable=False, server_default=func.now())
+    time_created = Column(Date, nullable=False, server_default=func.current_date())
     user_id = Column(UUID, ForeignKey('users.id'))
     channel_name = Column(String, ForeignKey('channels.name'))

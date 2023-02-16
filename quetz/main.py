@@ -1351,6 +1351,7 @@ async def post_upload(
     condainfo = CondaInfo((body), filename)
     dest = os.path.join(condainfo.info["subdir"], filename)
 
+    body.seek(0)
     pkgstore.add_package(body, channel_name, dest)
 
     package_name = str(condainfo.info.get("name"))

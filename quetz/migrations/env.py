@@ -75,25 +75,25 @@ def run_migrations_online():
     """
     configuration = config.get_section(config.config_ini_section)
     configuration["sqlalchemy.url"] = get_url()
-    connectable = config.attributes.get('connection', None)
+    connection = config.attributes.get('connection', None)
 
-    if connectable is None:
-        connectable = engine_from_config(
+    if connection is None:
+        engine = engine_from_config(
             configuration,
             prefix="sqlalchemy.",
             poolclass=pool.NullPool,
         )
+        connection = engine.connect()
 
-    with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            compare_type=True,
-            render_as_batch=True,
-        )
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        compare_type=True,
+        render_as_batch=True,
+    )
 
-        with context.begin_transaction():
-            context.run_migrations()
+    with context.begin_transaction():
+        context.run_migrations()
 
 
 if context.is_offline_mode():
