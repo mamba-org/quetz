@@ -16,6 +16,9 @@ include_trailing_comma = true
 [tool.jupyter-releaser.options]
 check-imports = ["quetz"]
 
+[tool.check-wheel-contents]
+ignore = ["W004"]
+
 [tool.tbump.version]
 current = "0.5.0"
 regex = '''
