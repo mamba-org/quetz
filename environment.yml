@@ -40,5 +40,6 @@ dependencies:
   - typing_extensions
   - adlfs
   - importlib_metadata
-  - jupyter-releaser
   - pre-commit
+  - pip:
+    - git+https://github.com/jupyter-server/jupyter_releaser.git@v2
