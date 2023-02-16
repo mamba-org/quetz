@@ -7,6 +7,3 @@ build:
 
 conda:
   environment: environment.yml
-build:
-  tools:
-    python: mambaforge-4.10
