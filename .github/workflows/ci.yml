@@ -162,4 +162,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
         env:
           RH_BRANCH: ${{ steps.branch-name.outputs.current_branch }}
-          RH_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          RH_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
