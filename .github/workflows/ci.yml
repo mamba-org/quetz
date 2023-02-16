@@ -162,5 +162,5 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
         env:
           RH_BRANCH: ${{ steps.branch-name.outputs.current_branch }}
-          RH_REPOSITORY: janjagusch/quetz
+          RH_REPOSITORY: ${{ github.repository }}
           RH_REF: ${{ steps.branch-name.outputs.current_branch }}
