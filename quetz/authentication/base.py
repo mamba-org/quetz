@@ -301,7 +301,9 @@ class SimpleAuthenticator(BaseAuthenticator):
     async def authenticate(
         self, request: Request, data=None, dao=None, config=None, **kwargs
     ) -> Optional[str]:
-        if data["username"] == data["password"]:
+        if data is None:
+            return None
+        elif data["username"] == data["password"]:
             return data['username']
         else:
             return None
