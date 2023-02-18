@@ -33,6 +33,6 @@ repos:
           - types-ujson
         args: [--show-error-codes]
   - repo: https://github.com/Quantco/pre-commit-mirrors-prettier
-    rev: "" # The git sha / tag you want to point to
+    rev: 2.7.1
     hooks:
       - id: prettier-conda
