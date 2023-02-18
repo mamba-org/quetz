@@ -28,9 +28,10 @@ def synchronize_metrics_from_mirrors(
         start_time: Optional[datetime]
         if m.last_synchronised:
             start_time = m.last_synchronised.replace(minute=0, second=0, microsecond=0)
-            query_str.append(f"start={start_time.isoformat()}")
         else:
             start_time = None
+        if isinstance(start_time, datetime):
+            query_str.append(f"start={start_time.isoformat()}")
 
         # exclude incomplete intervals (the current hour)
         end_time = now.replace(minute=0, second=0, microsecond=0)
