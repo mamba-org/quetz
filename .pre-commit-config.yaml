@@ -36,4 +36,4 @@ repos:
     rev: v1.1.294
     hooks:
       - id: pyright
-        entry: pyright --venv-path .venv
+        entry: pyright --venv-path .
