@@ -19,3 +19,6 @@ test_quetz
 # IDE
 .idea/
 .vscode/
+
+.env
+.envrc

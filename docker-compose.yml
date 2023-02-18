@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 services:
   web:
@@ -6,43 +6,53 @@ services:
     container_name: quetz-web
     ports:
       - "8000:8000"
-    build: 
+    build:
       context: .
       dockerfile: ./docker/Dockerfile
     environment:
       - HTTPX_LOG_LEVEL=TRACE
-    command:  ["sh", "-c", "./docker/wait-for-postgres.sh database && quetz start /quetz-deployment --host 0.0.0.0 --port 8000 --reload"]
-    depends_on: 
+    command:
+      [
+        "sh",
+        "-c",
+        "./docker/wait-for-postgres.sh database && quetz start /quetz-deployment --host 0.0.0.0 --port 8000 --reload",
+      ]
+    depends_on:
       - database
       - init-db
     volumes:
       - .:/code
       - quetz_deployment:/quetz-deployment
     env_file:
-        - docker/postgres.env
+      - docker/postgres.env
   init-db:
     image: quetz_dev_image
-    command: ["sh", "-c", "./docker/wait-for-postgres.sh database && quetz create /quetz-deployment --copy-conf /code/docker/docker_config.toml --exists-ok && quetz init-db /quetz-deployment"]
-    depends_on: 
+    command:
+      [
+        "sh",
+        "-c",
+        "./docker/wait-for-postgres.sh database && quetz create /quetz-deployment --copy-conf /code/docker/docker_config.toml --exists-ok && quetz init-db /quetz-deployment",
+      ]
+    depends_on:
       - database
     volumes:
       - .:/code
       - quetz_deployment:/quetz-deployment
     env_file:
-        - docker/postgres.env
+      - docker/postgres.env
   database:
     image: postgres
     volumes:
       - ./docker/postgres.conf:/etc/postgresql/postgresql.conf
     env_file:
-        - docker/postgres.env
+      - docker/postgres.env
   prometheus:
     image: prom/prometheus
     volumes:
       - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml
   grafana:
     image: grafana/grafana
-    ports: 
+    ports:
       - 3000:3000
     volumes:
       - ./docker/graphana_datasources.yml:/etc/grafana/provisioning/datasources/datasource.yaml
@@ -69,4 +79,3 @@ services:
 
 volumes:
   quetz_deployment:
-

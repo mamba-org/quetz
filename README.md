@@ -63,9 +63,9 @@ quetz run test_quetz --copy-conf ./dev_config.toml --dev --reload
 
 Links:
 
-* <http://localhost:8000/> - Login with your github account
-* <http://localhost:8000/api/dummylogin/alice>  - Login with test user, one of [alice | bob | carol | dave]
-* <http://localhost:8000/docs> - Swagger UI for this REST service
+- <http://localhost:8000/> - Login with your github account
+- <http://localhost:8000/api/dummylogin/alice> - Login with test user, one of [alice | bob | carol | dave]
+- <http://localhost:8000/docs> - Swagger UI for this REST service
 
 Download `xtensor` as test package:
 
@@ -191,7 +191,7 @@ Finally, you can create and run a new quetz deployment based on this configurati
 quetz run postgres_quetz --copy-conf config_postgres.toml
 ```
 
-Note that this recipe will create an ephemeral PostgreSQL database and it will delete all data after the `some-postgres` container is stopped and removed. To make the data persistent, please check the documentation of the `postgres` [image](https://hub.docker.com/_/postgres/)  or your container orchestration system (Kubernetes or similar).
+Note that this recipe will create an ephemeral PostgreSQL database and it will delete all data after the `some-postgres` container is stopped and removed. To make the data persistent, please check the documentation of the `postgres` [image](https://hub.docker.com/_/postgres/) or your container orchestration system (Kubernetes or similar).
 
 ### Running tests with PostgreSQL backend
 
@@ -258,17 +258,17 @@ In order to generate an API key the following must be true:
 2. The user must be part of the target channel (you might need to create a channel first, see the previous section on how to create a channel via the swagger docs)
 3. Go to the swagger docs at `<deployment url>:<port>/docs` and POST to `/api/api-keys`:
 
-    ```json
-    {
-      "description": "my-test-token",
-      "roles": [
-        {
-          "role": "owner",
-          "channel": "my-channel"
-        }
-      ]
-    }
-    ```
+   ```json
+   {
+     "description": "my-test-token",
+     "roles": [
+       {
+         "role": "owner",
+         "channel": "my-channel"
+       }
+     ]
+   }
+   ```
 
 4. Then, GET on `/api/api-keys` to retrieve your token
 5. Finally, set this value to QUETZ_API_KEY so you can use quetz-client to interact with the server.
