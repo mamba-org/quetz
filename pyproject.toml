@@ -41,3 +41,18 @@ tag_template = "v{new_version}"
 [[tool.tbump.file]]
 src = "quetz/_version.py"
 version_template = '({major}, {minor}, {patch}, "{channel}", "{release}")'
+
+[tool.pyright]
+include = ["quetz"]
+reportGeneralTypeIssues = false
+reportMissingImports = false
+reportMissingModuleSource = false
+reportMissingTypeStubs = false
+reportOptionalMemberAccess = false
+reportOptionalOperand = false
+reportOptionalSubscript = false
+reportPrivateImportUsage = false
+reportUnboundVariable = false
+reportUndefinedVariable = false
+venv = ".venv"
+venvPath= "."

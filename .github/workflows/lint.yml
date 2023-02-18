@@ -2,12 +2,17 @@ name: lint
 
 on: [push, pull_request]
 
+defaults:
+  run:
+    shell: bash -el {0}
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: mamba-org/provision-with-micromamba@v15
+      - run: ln -s "${CONDA_PREFIX}" .venv # Necessary for pyright.
       - uses: pre-commit/action@v2.0.0
         with:
           extra_args: --all-files --show-diff-on-failure
