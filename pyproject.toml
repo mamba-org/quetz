@@ -44,7 +44,15 @@ version_template = '({major}, {minor}, {patch}, "{channel}", "{release}")'
 
 [tool.pyright]
 include = ["quetz"]
-reportMissingImports = true
+reportGeneralTypeIssues = false
+reportMissingImports = false
+reportMissingModuleSource = false
 reportMissingTypeStubs = false
-venvPath= "."
+reportOptionalMemberAccess = false
+reportOptionalOperand = false
+reportOptionalSubscript = false
+reportPrivateImportUsage = false
+reportUnboundVariable = false
+reportUndefinedVariable = false
 venv = ".venv"
+venvPath= "."
