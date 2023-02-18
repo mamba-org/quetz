@@ -19,7 +19,9 @@ from threading import Lock
 from typing import IO, List, Tuple, Union
 
 import fsspec
-from tenacity import retry, retry_if_exception_type, stop_after_attempt
+from tenacity import retry
+from tenacity.retry import retry_if_exception_type
+from tenacity.stop import stop_after_attempt
 
 try:
     import xattr

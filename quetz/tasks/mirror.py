@@ -10,7 +10,10 @@ from typing import List
 
 import requests
 from fastapi import HTTPException, status
-from tenacity import TryAgain, after_log, retry, stop_after_attempt, wait_exponential
+from tenacity import TryAgain, retry
+from tenacity.after import after_log
+from tenacity.stop import stop_after_attempt
+from tenacity.wait import wait_exponential
 
 from quetz import authorization, rest_models
 from quetz.condainfo import CondaInfo, get_subdir_compat
