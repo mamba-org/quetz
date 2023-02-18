@@ -43,8 +43,8 @@ Then create an environment:
 
 ```bash
 cd quetz
-mamba env create -f environment.yml
-conda activate quetz
+mamba env create -f environment.yml --prefix .venv
+conda activate .venv
 ```
 
 Install `Quetz`:
