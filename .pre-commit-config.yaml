@@ -35,4 +35,5 @@ repos:
   - repo: https://github.com/RobertCraigie/pyright-python
     rev: v1.1.294
     hooks:
-    - id: pyright
+      - id: pyright
+    files: '*.py'
