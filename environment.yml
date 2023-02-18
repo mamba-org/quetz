@@ -1,3 +1,4 @@
+name: quetz
 channels:
   - https://repo.mamba.pm/conda-forge
 dependencies:
