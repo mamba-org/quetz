@@ -42,5 +42,8 @@ dependencies:
   - importlib_metadata
   - pre-commit
   - pytest
+  - redis
+  - pytest-mock
+  - rq
   - pip:
       - git+https://github.com/jupyter-server/jupyter_releaser.git@v2
