@@ -47,4 +47,5 @@ include = ["quetz"]
 exclude = ["typings"]
 reportMissingImports = true
 reportMissingTypeStubs = false
+venvPath= "."
 venv = ".venv"
