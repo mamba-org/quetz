@@ -3,10 +3,10 @@ name: "sphinx docs check"
 on:
   push:
     branches:
-    - main
+      - main
   pull_request:
     branches:
-    - main
+      - main
 
 jobs:
   docs:
@@ -27,4 +27,3 @@ jobs:
         with:
           name: DocumentationHTML
           path: docs/build/html
-

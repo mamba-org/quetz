@@ -1,6 +1,6 @@
 # quetz_runexports
 
-Quetz plugin to extract and expose `run_exports` from package files. 
+Quetz plugin to extract and expose `run_exports` from package files.
 
 ## Installation
 
@@ -11,7 +11,6 @@ pip install -e .
 ```
 
 The plugin should be automatically integrated with quetz server, when you start it.
-
 
 ## Usage
 

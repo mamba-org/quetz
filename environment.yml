@@ -43,4 +43,4 @@ dependencies:
   - pre-commit
   - pytest
   - pip:
-    - git+https://github.com/jupyter-server/jupyter_releaser.git@v2
+      - git+https://github.com/jupyter-server/jupyter_releaser.git@v2

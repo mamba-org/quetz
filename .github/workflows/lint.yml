@@ -11,10 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: install mamba
-        uses: mamba-org/provision-with-micromamba@main
+      - uses: mamba-org/provision-with-micromamba@v15
       - name: Symlink env
         run: ln -s ${CONDA_PREFIX} .venv
       - uses: pre-commit/action@v2.0.0
         with:
           extra_args: --all-files --show-diff-on-failure
+        env:
+          PRE_COMMIT_USE_MICROMAMBA: 1

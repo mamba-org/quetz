@@ -107,7 +107,7 @@ jobs:
           echo "adding micromamba to path: $MAMBA_EXE"
 
           pip install --no-deps git+https://git@github.com/regro/libcflib@master
-          
+
           for f in ./plugins/quetz_*
           do
             echo "::group::Testing plugin ${f}"
