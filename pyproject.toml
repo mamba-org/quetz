@@ -44,5 +44,7 @@ version_template = '({major}, {minor}, {patch}, "{channel}", "{release}")'
 
 [tool.pyright]
 include = ["quetz"]
+exclude = ["typings"]
 reportMissingImports = true
-reportMissingTypeStubs = true
+reportMissingTypeStubs = false
+venv = ".venv"

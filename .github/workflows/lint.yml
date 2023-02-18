@@ -2,12 +2,17 @@ name: lint
 
 on: [push, pull_request]
 
+shell: bash -l -eo pipefail {0}
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - name: install mamba
+        uses: mamba-org/provision-with-micromamba@main
+      - name: Symlink env
+        run: ln -s ${CONDA_PREFIX} .venv
       - uses: pre-commit/action@v2.0.0
         with:
           extra_args: --all-files --show-diff-on-failure
