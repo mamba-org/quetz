@@ -32,7 +32,6 @@ def maintainer(user, db):
     [("owner", 201), ("maintainer", 201), ("member", 201), (None, 403)],
 )
 def test_create_normal_channel_permissions(auth_client, expected_status):
-
     response = auth_client.post(
         "/api/channels",
         json={
@@ -48,7 +47,6 @@ def test_create_normal_channel_permissions(auth_client, expected_status):
 def test_delete_channel_permissions(
     db, auth_client, public_channel, user_role, channel_role
 ):
-
     response = auth_client.delete(f"/api/channels/{public_channel.name}")
 
     channel = (
@@ -69,7 +67,6 @@ def test_delete_channel_permissions(
 def test_delete_channel_with_packages(
     db, auth_client, private_channel, private_package_version, config: Config
 ):
-
     pkg_store = config.get_package_store()
     pkg_store.add_file("test-file", private_channel.name, "test_file.txt")
     pkg_store.add_file("second", private_channel.name, "subdir/second_file.txt")
@@ -123,7 +120,6 @@ def test_permissions_channel_endpoints(
     private_package,
     private_package_version,
 ):
-
     response = auth_client.get(
         endpoint.format(
             channel_name=private_channel.name, package_name=private_package.name
@@ -156,7 +152,6 @@ def test_channel_action_reindex(
     remove_jobs,
     sync_supervisor,
 ):
-
     response = auth_client.put(
         f"/api/channels/{public_channel.name}/actions", json={"action": action}
     )
@@ -222,7 +217,6 @@ def test_create_delayed_action(
     wait_seconds,
     sync_supervisor,
 ):
-
     action = "reindex"
     now = datetime.utcnow()
     if wait_seconds is None:
@@ -261,7 +255,6 @@ def test_create_delayed_action(
     [("owner", 200), ("maintainer", 200), ("member", 403), (None, 403)],
 )
 def test_get_channel_members(auth_client, public_channel, expected_code):
-
     response = auth_client.get(f"/api/channels/{public_channel.name}/members")
 
     assert response.status_code == expected_code
@@ -282,7 +275,6 @@ def remove_jobs(db):
 def test_channel_names_are_case_insensitive(
     auth_client, maintainer, remove_package_versions
 ):
-
     channel_name = "MyChanneL"
 
     response = auth_client.post(
@@ -356,7 +348,6 @@ def test_channel_names_are_case_insensitive(
 
 
 def test_unique_channel_names_are_case_insensitive(auth_client, maintainer):
-
     channel_name = "MyChanneL"
 
     response = auth_client.post(
@@ -381,7 +372,6 @@ def test_unique_channel_names_are_case_insensitive(auth_client, maintainer):
 
 
 def test_unicode_channel_names(auth_client, maintainer):
-
     channel_name = "검은맘바"
 
     response = auth_client.post(
@@ -405,7 +395,6 @@ def test_unicode_channel_names(auth_client, maintainer):
 
 
 def test_accents_make_unique_channel_names(auth_client, maintainer):
-
     channel_names = ["żmija", "zmija", "grün", "grun"]
 
     for i, name in enumerate(channel_names):
@@ -466,7 +455,6 @@ def test_upload_package_version_to_channel(
     [("", None), ("[quotas]\nchannel_quota=100\n", 100), ("[quotas]\n", None)],
 )
 def test_create_channel_default_quotas(auth_client, expected_size_limit, db, config):
-
     name = "test-create-channel-with-quotas"
     response = auth_client.post(
         "/api/channels",
@@ -515,7 +503,6 @@ def test_create_channel_with_limits(auth_client, db, user_role):
 
 @pytest.mark.parametrize("user_role", [SERVER_MAINTAINER, SERVER_OWNER])
 def test_set_channel_size_limit(auth_client, db, public_channel):
-
     assert public_channel.size_limit is None
 
     response = auth_client.patch(
@@ -555,7 +542,6 @@ def test_create_channel_ttl(auth_client, db, user_role, ttl):
 
 @pytest.mark.parametrize("user_role", [SERVER_OWNER])
 def test_update_channel_ttl(auth_client, db, public_channel):
-
     assert public_channel.ttl == 36000
 
     response = auth_client.patch(
@@ -588,7 +574,6 @@ def test_update_channel_forbidden_attributes(
     public_channel,
     attr_dict,
 ):
-
     response = auth_client.patch(
         f"/api/channels/{public_channel.name}",
         json=attr_dict,
@@ -601,7 +586,6 @@ def test_update_channel_forbidden_attributes(
 @pytest.mark.parametrize("user_role", [SERVER_OWNER])
 @pytest.mark.parametrize("name,value", [("private", True)])
 def test_update_channel_attributes(auth_client, db, public_channel, name, value):
-
     response = auth_client.patch(
         f"/api/channels/{public_channel.name}",
         json={name: value},
@@ -625,7 +609,6 @@ def test_update_channel_attributes(auth_client, db, public_channel, name, value)
 def test_update_channel_permissions(
     auth_client, db, public_channel, user_role, channel_role
 ):
-
     response = auth_client.patch(
         f"/api/channels/{public_channel.name}",
         json={"private": False},
@@ -641,7 +624,6 @@ def test_update_channel_permissions(
 
 @pytest.fixture
 def remote_session(app, request, public_channel, auth_client):
-
     mirror_url = f"{auth_client.base_url}/get/{public_channel.name}"
 
     from quetz.main import get_remote_session
@@ -662,7 +644,6 @@ def remote_session(app, request, public_channel, auth_client):
 
 
 def test_register_mirror(auth_client, public_channel, db, remote_session):
-
     mirror_url = "http://mirror_url/get/my-channel"
 
     response = auth_client.post(
@@ -703,7 +684,6 @@ def test_register_mirror(auth_client, public_channel, db, remote_session):
 
 
 def test_url_with_slash(auth_client, public_channel, db, remote_session):
-
     mirror_url = "http://mirror_url"
 
     response = auth_client.post(

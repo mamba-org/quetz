@@ -6,17 +6,7 @@ import logging.config
 import os
 from distutils.util import strtobool
 from secrets import token_bytes
-from typing import (
-    Any,
-    Dict,
-    Iterable,
-    List,
-    NamedTuple,
-    NoReturn,
-    Optional,
-    Type,
-    Union,
-)
+from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Type, Union
 
 import appdirs
 import pluggy
@@ -65,7 +55,6 @@ class ConfigSection(NamedTuple):
 
 
 class Config:
-
     _config_map = [
         ConfigSection(
             "general",
@@ -268,7 +257,7 @@ class Config:
             if os.path.isfile(f):
                 return f
 
-    def init(self, path: str) -> NoReturn:
+    def init(self, path: str) -> None:
         """Load configurations from various places.
 
         Order of importance for configuration is:
@@ -292,7 +281,6 @@ class Config:
 
     def _trigger_update_config(self):
         def set_entry_attr(entry, section=""):
-
             value = self._get_value(entry, section)
 
             setattr(self, entry.full_name(section), value)
@@ -368,7 +356,6 @@ class Config:
     def _find_first_level_config(
         self, section_name: str
     ) -> Union[ConfigSection, ConfigEntry, None]:
-
         """Find the section or entry at first level of config_map.
 
         Parameters
@@ -553,7 +540,6 @@ def colourized_formatter(fmt="", use_colors=True):
 
 
 def get_logger_config(config, loggers):
-
     if hasattr(config, "logging_level"):
         log_level = config.logging_level
     else:

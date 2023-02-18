@@ -2,6 +2,47 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## 0.6.1
+
+([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.6.0...ff885bc0de3505329a6f15adc9c51e112e50c887))
+
+### Maintenance and upkeep improvements
+
+- Remove xattr as hard dependency [#602](https://github.com/mamba-org/quetz/pull/602) ([@SimonBohnenQC](https://github.com/SimonBohnenQC))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2023-02-16&to=2023-02-16&type=c))
+
+[@SimonBohnenQC](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3ASimonBohnenQC+updated%3A2023-02-16..2023-02-16&type=Issues)
+
+<!-- <END NEW CHANGELOG ENTRY> -->
+
+## 0.6.0
+
+([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.5.0...822c9244f13c16d84ff44bd6492a6c2f48e9b4aa))
+
+### Enhancements made
+
+- Remove frontend [#565](https://github.com/mamba-org/quetz/pull/565) ([@wolfv](https://github.com/wolfv))
+
+### Bugs fixed
+
+- Fix upload endpoint [#597](https://github.com/mamba-org/quetz/pull/597) ([@simonbohnen](https://github.com/simonbohnen))
+- Fix upload endpoint [#594](https://github.com/mamba-org/quetz/pull/594) ([@simonbohnen](https://github.com/simonbohnen))
+
+### Maintenance and upkeep improvements
+
+- Update check-release action to v2 [#601](https://github.com/mamba-org/quetz/pull/601) ([@janjagusch](https://github.com/janjagusch))
+- Make `quetz` compatible with SQLAlchemy 2.0 [#598](https://github.com/mamba-org/quetz/pull/598) ([@simonbohnen](https://github.com/simonbohnen))
+- Update pre-commit versions [#592](https://github.com/mamba-org/quetz/pull/592) ([@wolfv](https://github.com/wolfv))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2022-12-16&to=2023-02-16&type=c))
+
+[@codecov-commenter](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Acodecov-commenter+updated%3A2022-12-16..2023-02-16&type=Issues) | [@janjagusch](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ajanjagusch+updated%3A2022-12-16..2023-02-16&type=Issues) | [@simonbohnen](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Asimonbohnen+updated%3A2022-12-16..2023-02-16&type=Issues) | [@wolfv](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Awolfv+updated%3A2022-12-16..2023-02-16&type=Issues)
+
 ## 0.5.0
 
 ([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.4.4...7f77638aa4b94d6eeb3a18158ee6f9184061ef74))
@@ -45,8 +86,6 @@
 ([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2022-05-19&to=2022-12-16&type=c))
 
 [@atrawog](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Aatrawog+updated%3A2022-05-19..2022-12-16&type=Issues) | [@baszalmstra](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Abaszalmstra+updated%3A2022-05-19..2022-12-16&type=Issues) | [@brichet](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Abrichet+updated%3A2022-05-19..2022-12-16&type=Issues) | [@codecov-commenter](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Acodecov-commenter+updated%3A2022-05-19..2022-12-16&type=Issues) | [@dhirschfeld](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Adhirschfeld+updated%3A2022-05-19..2022-12-16&type=Issues) | [@gabm](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Agabm+updated%3A2022-05-19..2022-12-16&type=Issues) | [@hbcarlos](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ahbcarlos+updated%3A2022-05-19..2022-12-16&type=Issues) | [@janjagusch](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ajanjagusch+updated%3A2022-05-19..2022-12-16&type=Issues) | [@kuepe-sl](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Akuepe-sl+updated%3A2022-05-19..2022-12-16&type=Issues) | [@martinRenou](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3AmartinRenou+updated%3A2022-05-19..2022-12-16&type=Issues) | [@riccardoporreca](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ariccardoporreca+updated%3A2022-05-19..2022-12-16&type=Issues) | [@simonbohnen](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Asimonbohnen+updated%3A2022-05-19..2022-12-16&type=Issues) | [@wolfv](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Awolfv+updated%3A2022-05-19..2022-12-16&type=Issues)
-
-<!-- <END NEW CHANGELOG ENTRY> -->
 
 ## 0.4.4
 

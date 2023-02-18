@@ -24,11 +24,19 @@ from sqlalchemy import (
     func,
     select,
 )
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, column_property, relationship
 from sqlalchemy.schema import ForeignKeyConstraint
 
-Base = declarative_base()
+try:
+    from sqlalchemy.orm import DeclarativeBase  # type: ignore
+
+    class Base(DeclarativeBase):
+        pass
+
+except ImportError:
+    from sqlalchemy.ext.declarative import declarative_base
+
+    Base = declarative_base()
 
 UUID = LargeBinary(length=16)
 
@@ -209,7 +217,7 @@ class Channel(Base):
     mirrors = relationship("ChannelMirror", cascade="all, delete", uselist=True)
 
     members_count = column_property(
-        select([func.count(ChannelMember.user_id)])
+        select(func.count(ChannelMember.user_id))
         .where(ChannelMember.channel_name == name)
         .scalar_subquery(),  # type: ignore
         deferred=True,
@@ -223,7 +231,7 @@ class Channel(Base):
             return {}
 
     packages_count = column_property(
-        select([func.count(Package.name)])
+        select(func.count(Package.name))
         .where(Package.channel_name == name)
         .scalar_subquery(),  # type: ignore
         deferred=True,
@@ -272,8 +280,8 @@ class PackageMember(Base):
     user = relationship('User', backref=backref("packages", cascade="all,delete"))
 
     def __repr__(self):
-        return f'<PackageMember channel_name={self.channel_name}, package_name={self.package_name},\
-        role={self.role}>'
+        return f'<PackageMember channel_name={self.channel_name}, \
+                  package_name={self.package_name}, role={self.role}>'
 
 
 class ApiKey(Base):
@@ -281,7 +289,7 @@ class ApiKey(Base):
 
     key = Column(String, primary_key=True, index=True)
     description = Column(String)
-    time_created = Column(Date, nullable=False, server_default=func.now())
+    time_created = Column(Date, nullable=False, server_default=func.current_date())
     expire_at = Column(Date)
     deleted = Column(Boolean, default=False)
     user_id = Column(UUID, ForeignKey('users.id'))

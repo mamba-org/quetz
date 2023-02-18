@@ -202,7 +202,6 @@ def pkg_mgr_role_file(tmp_path, offline_keys, signing_key):
 def signed_package(
     client, channel, root_role_file, key_mgr_role_file, pkg_mgr_role_file
 ):
-
     client.post(
         f"/api/content-trust/{channel.name}/roles?type=root",
         files={"file": (root_role_file.name, open(root_role_file, 'rb'))},

@@ -15,12 +15,10 @@ class PackageVersionMetricItem(BaseModel):
 
 
 class PackageVersionMetricSeries(BaseModel):
-
     series: List[PackageVersionMetricItem]
 
 
 class PackageVersionMetricResponse(PackageVersionMetricSeries):
-
     server_timestamp: datetime = Field(
         default_factory=datetime.utcnow,
         title="server timestamp at which the response was generated",

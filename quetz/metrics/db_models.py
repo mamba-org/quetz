@@ -15,7 +15,6 @@ class IntervalType(Enum):
 
     @property
     def timedelta(self):
-
         if self == IntervalType.hour:
             return timedelta(hours=1)
         if self == IntervalType.day:

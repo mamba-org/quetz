@@ -1,11 +1,3 @@
-# Build the frontend
-FROM node:14 as node
-
-COPY quetz_frontend /quetz_frontend
-RUN cd /quetz_frontend \
-  && npm install \
-  && npm run build
-
 # Build conda environment
 FROM condaforge/mambaforge:4.9.2-7 as conda
 
@@ -21,7 +13,6 @@ FROM debian:buster-slim
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 
-COPY --from=node /quetz_frontend/dist /quetz-frontend
 COPY --from=conda /env /env
 
 # Set WORKDIR to /tmp because quetz always creates a quetz.log file

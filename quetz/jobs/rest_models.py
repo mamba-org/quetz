@@ -63,7 +63,6 @@ def parse_job_manifest(function_name):
 
 
 def parse_job_name(v):
-
     try:
         return v.decode("ascii")
     except UnicodeDecodeError:
@@ -100,7 +99,6 @@ class JobBase(BaseModel):
 
     @validator("manifest", pre=True)
     def validate_job_name(cls, function_name):
-
         if isinstance(function_name, bytes):
             return parse_job_name(function_name)
 

@@ -97,7 +97,6 @@ def alembic_config(database_url, sql_connection):
 
 @pytest.fixture
 def create_tables(alembic_config, engine, use_migrations):
-
     if use_migrations:
         alembic_upgrade(alembic_config, 'heads', sql=False)
     else:
@@ -120,7 +119,6 @@ def auto_rollback():
 
 @pytest.fixture
 def session_maker(sql_connection, create_tables, auto_rollback):
-
     # run the tests with a separate external DB transaction
     # so that we can easily rollback all db changes (even if commited)
     # done by the test client
@@ -210,7 +208,6 @@ def test_data_dir():
 
 @pytest.fixture
 def config(config_str, config_dir, test_data_dir):
-
     config_path = os.path.join(config_dir, "config.toml")
     with open(config_path, "w") as fid:
         fid.write(config_str)
@@ -239,7 +236,6 @@ def plugins() -> List[str]:
 
 @pytest.fixture
 def app(config, db, mocker):
-
     # frontend router catches all urls
     # and takes priority over routes added after (in tests)
     # so we avoid adding it here

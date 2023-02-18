@@ -7,7 +7,6 @@ from quetz import db_models
 
 
 def export(dao, channel_name, subdir):
-
     repodata = {
         "info": {"subdir": subdir},
         "packages": {},

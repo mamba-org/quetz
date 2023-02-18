@@ -52,7 +52,7 @@ def post_add_package_version(version, condainfo):
             )
             db.add(metadata)
         else:
-            metadata = db.query(db_models.CondaSuggestMetadata).get(version.id)
+            metadata = db.get(db_models.CondaSuggestMetadata, version.id)
             metadata.data = json.dumps(suggest_map)
         db.commit()
         generate_channel_suggest_map(db, version.channel_name, subdir)
@@ -93,7 +93,7 @@ def generate_channel_suggest_map(db, channel_name, subdir):
             pass
         else:
             files_data = json.loads(each_package.binfiles.data)
-            for (k, v) in files_data.items():
+            for k, v in files_data.items():
                 channel_suggest_map[k] = v
 
     fname = f"{channel_name}.{subdir}.map"

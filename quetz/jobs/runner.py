@@ -58,7 +58,6 @@ def build_queue(job):
 
 
 def parse_conda_spec(conda_spec: str):
-
     pattern = r'([a-zA-Z\*][^ =<>!~]*)([><!=~,\.0-9]+[0-9])?'
     exprs_list = re.findall(pattern, conda_spec)
 
@@ -307,7 +306,6 @@ class Supervisor:
         return jobs
 
     def _reset_tasks_after_restart(self):
-
         # tasks lost after restart
         n_updated = (
             self.db.query(Task)

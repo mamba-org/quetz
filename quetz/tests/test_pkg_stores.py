@@ -43,7 +43,6 @@ test_dir = os.path.dirname(__file__)
 
 @pytest.mark.parametrize("redirect_enabled", [False, True])
 def test_local_store(redirect_enabled):
-
     temp_dir = os.path.join(test_dir, "test_pkg_store_" + str(int(time.time())))
     os.makedirs(temp_dir, exist_ok=False)
 
@@ -173,7 +172,6 @@ def gcs_store():
 
 @pytest.fixture
 def channel(any_store, channel_name):
-
     any_store.create_channel(channel_name)
 
     yield

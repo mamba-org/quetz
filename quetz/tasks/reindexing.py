@@ -19,14 +19,12 @@ logger = logging.getLogger("quetz.tasks")
 
 
 def uuid_to_bytes(id):
-
     if isinstance(id, str):
         id = uuid.UUID(id).bytes
     return id
 
 
 def handle_condainfo(pkgstore, channel_name, fname):
-
     """Fetch CondaInfo for a package from pkgstaore"""
 
     fid = pkgstore.serve_path(channel_name, fname)
@@ -41,7 +39,6 @@ def handle_condainfo(pkgstore, channel_name, fname):
 
 
 def handle_file(channel_name, condainfo, dao, user_id):
-
     """Add or update conda package info to database"""
 
     filename = os.path.split(condainfo._filename)[-1]
@@ -104,7 +101,6 @@ def handle_file(channel_name, condainfo, dao, user_id):
 
 
 def chunks(lst, n):
-
     """Yield successive n-sized chunks from lst."""
 
     for i in range(0, len(lst), n):

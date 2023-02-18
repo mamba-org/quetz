@@ -19,7 +19,6 @@ create_default_channel = true
 
 
 def test_config_without_file_path_set(config_str):
-
     # the env variable should not be defined for this test to work
     assert not os.environ.get("QUETZ_CONFIG_FILE")
 
@@ -47,7 +46,6 @@ def test_config_users(config):
     "config_extra", ["[users]\nadmins=[]", "[users]\nmaintainers=[]"]
 )
 def test_config_empty_users_section(dao: Dao, user, config):
-
     assert config.configured_section("users")
     assert not config.users_admins
     assert not config.users_maintainers
@@ -57,7 +55,6 @@ def test_config_empty_users_section(dao: Dao, user, config):
 
 
 def test_config_is_singleton(config):
-
     c = Config()
 
     assert c is config
@@ -74,7 +71,6 @@ def test_config_is_singleton(config):
 
 
 def test_config_with_path(config_dir, config_base):
-
     one_path = os.path.join(config_dir, "one_config.toml")
     other_path = os.path.join(config_dir, "other_config.toml")
     with open(one_path, 'w') as fid:

@@ -110,7 +110,6 @@ class Upsert(Insert):
 
 @compiles(Upsert, 'postgresql')
 def upsert_pg(element, compiler, **kw):
-
     index_elements = element.index_elements
     values = element.values
     column = element.column
@@ -453,7 +452,6 @@ class Dao:
     def create_channel_mirror(
         self, channel_name: str, url: str, api_endpoint: str, metrics_endpoint: str
     ):
-
         channel_mirror = ChannelMirror(
             channel_name=channel_name,
             url=url,
@@ -473,7 +471,6 @@ class Dao:
         self.db.commit()
 
     def update_channel(self, channel_name, data: dict):
-
         self.db.query(Channel).filter(Channel.name == channel_name).update(
             data, synchronize_session=False
         )
@@ -493,7 +490,6 @@ class Dao:
         q: Optional[str] = None,
         order_by: Optional[str] = None,
     ):
-
         query = self.db.query(Package).filter(Package.channel_name == channel_name)
 
         if q:
@@ -697,7 +693,6 @@ class Dao:
         self.db.commit()
 
     def get_api_keys_with_members(self, user_id, api_key_id=None):
-
         user_role_api_keys = (
             self.db.query(ApiKey)
             .filter(ApiKey.owner_id == user_id)
@@ -804,7 +799,7 @@ class Dao:
         return db_api_key
 
     def get_api_key(self, key):
-        return self.db.query(ApiKey).get(key)
+        return self.db.get(ApiKey, key)
 
     def create_version(
         self,
@@ -845,7 +840,6 @@ class Dao:
         package_version = existing_versions.one_or_none()
 
         if not package_version:
-
             all_existing_versions = (
                 self.db.query(PackageVersion)
                 .filter(PackageVersion.channel_name == channel_name)
@@ -943,7 +937,6 @@ class Dao:
             query = query.filter(PackageVersion.time_created >= time_created_ge)
 
         if version_match_str:
-
             if version_match:
                 query = query.filter(
                     version_match(PackageVersion.version, version_match_str)
@@ -962,7 +955,6 @@ class Dao:
     def get_package_version_by_filename(
         self, channel_name: str, package_name: str, filename: str, platform: str
     ):
-
         query = (
             self.db.query(PackageVersion)
             .filter(PackageVersion.channel_name == channel_name)
@@ -1015,7 +1007,6 @@ class Dao:
         )
 
         if channel_size_limit is not None:
-
             allowed = (channel_size + size) <= channel_size_limit
 
             if not allowed:
@@ -1024,7 +1015,6 @@ class Dao:
                 )
 
     def update_channel_size(self, channel_name: str):
-
         channel_size = (
             self.db.query(func.sum(PackageVersion.size).label('size'))
             .filter(PackageVersion.channel_name == channel_name)
@@ -1037,8 +1027,10 @@ class Dao:
         self.update_channel(channel_name, {"size": channel_size})
 
     def create_user_with_role(self, user_name: str, role: Optional[str] = None):
-        """create a user without a profile or return a user if already exists and replace
-        role"""
+        """
+        create a user without a profile or return a user if already exists
+        and replace role
+        """
         user = self.db.query(User).filter(User.username == user_name).one_or_none()
         if not user:
             user = User(id=uuid.uuid4().bytes, username=user_name, role=role)
@@ -1162,7 +1154,6 @@ class Dao:
         return get_paginated_result(tasks, skip, limit)
 
     def create_job(self, user_id, job_model):
-
         serialized = job_model.manifest.encode('ascii')
         job = Job(
             owner_id=user_id,
@@ -1183,7 +1174,6 @@ class Dao:
         timestamp: Optional[datetime] = None,
         incr: int = 1,
     ):
-
         metric_name = "download"
 
         self.db.query(PackageVersion).filter(
@@ -1199,7 +1189,6 @@ class Dao:
 
         all_values = []
         for interval in IntervalType:
-
             values = {
                 'channel_name': channel,
                 'platform': platform,
@@ -1242,7 +1231,6 @@ class Dao:
         end: Optional[datetime] = None,
         fill_zeros: bool = False,
     ):
-
         m = PackageVersionMetric
         v = PackageVersion
 
@@ -1309,7 +1297,6 @@ class Dao:
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
     ):
-
         m = PackageVersionMetric
 
         q = (

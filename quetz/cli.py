@@ -103,7 +103,6 @@ def _make_migrations(
     initialize: bool = False,
     alembic_config: Optional[AlembicConfig] = None,
 ) -> None:
-
     if not (db_url or alembic_config):
         raise ValueError("provide either alembic_config or db_url")
 
@@ -163,7 +162,6 @@ def _make_migrations(
 def _set_user_roles(db: Session, config: Config):
     """Initialize the database and add users from config."""
     if config.configured_section("users"):
-
         role_map = [
             (config.users_admins, "owner"),
             (config.users_maintainers, "maintainer"),
@@ -206,7 +204,7 @@ def _set_user_roles(db: Session, config: Config):
         db.commit()
 
 
-def _fill_test_database(db: Session) -> NoReturn:
+def _fill_test_database(db: Session) -> None:
     """Create dummy users and channels to allow further testing in dev mode."""
     from quetz.dao import Dao
 
@@ -630,7 +628,7 @@ def delete(
     force: bool = typer.Option(
         False, help="Enable/disable removal without confirmation prompt"
     ),
-) -> NoReturn:
+) -> None:
     """Delete a Quetz deployment."""
 
     deployment_dir = Path(path)
@@ -647,8 +645,7 @@ def delete(
 @app.command()
 def plugin(
     cmd: str, path: str = typer.Argument(None, help="Path to the plugin folder")
-) -> NoReturn:
-
+) -> None:
     if cmd == 'install':
         abs_path = Path(path).absolute()
         if not (abs_path / "setup.py").exists():
@@ -729,7 +726,6 @@ def watch_job_queue(
         None, help="Number of processes to use. Default: number of CPU cores"
     ),
 ) -> None:
-
     start_supervisor_daemon(Path(path), num_procs)
 
 

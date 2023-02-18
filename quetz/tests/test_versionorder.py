@@ -218,7 +218,6 @@ def test_hexrd():
 
 @pytest.fixture
 def package_with_versions(channel_name, package_name, dao, user, db):
-
     channel_data = Channel(name=channel_name, private=False)
     package_data = Package(name=package_name)
 

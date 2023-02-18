@@ -9,7 +9,6 @@ from quetz.rest_models import Channel, Package
 
 @pytest.fixture
 def private_channel(dao, other_user):
-
     channel_name = "private-channel"
 
     channel_data = Channel(name=channel_name, private=True)
@@ -20,7 +19,6 @@ def private_channel(dao, other_user):
 
 @pytest.fixture
 def private_package(dao, other_user, private_channel):
-
     package_name = "private-package"
     package_data = Package(name=package_name)
     package = dao.create_package(
