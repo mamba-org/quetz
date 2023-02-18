@@ -2,7 +2,9 @@ name: lint
 
 on: [push, pull_request]
 
-shell: bash -l -eo pipefail {0}
+defaults:
+  run:
+    shell: bash -el {0}
 
 jobs:
   lint:
