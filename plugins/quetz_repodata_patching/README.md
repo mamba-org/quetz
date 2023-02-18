@@ -1,7 +1,6 @@
 # quetz_repodata_patching plugin
 
-A plugin for [quetz](https://github.com/mamba-org/quetz) package server that implements the repodata patching. Repodata patching allow for hotfixing package index by changing some metadata in ``repodata.json`` files on the fly. For more information, see [conda-build](https://docs.conda.io/projects/conda-build/en/latest/concepts/generating-index.html#repodata-patching) docs.
-
+A plugin for [quetz](https://github.com/mamba-org/quetz) package server that implements the repodata patching. Repodata patching allow for hotfixing package index by changing some metadata in `repodata.json` files on the fly. For more information, see [conda-build](https://docs.conda.io/projects/conda-build/en/latest/concepts/generating-index.html#repodata-patching) docs.
 
 ## Installing
 

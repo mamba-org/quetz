@@ -42,4 +42,4 @@ dependencies:
   - importlib_metadata
   - pre-commit
   - pip:
-    - git+https://github.com/jupyter-server/jupyter_releaser.git@v2
+      - git+https://github.com/jupyter-server/jupyter_releaser.git@v2

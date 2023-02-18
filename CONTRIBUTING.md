@@ -26,8 +26,8 @@ formatting checks prior to making a commit.
 
 Make sure to include the following with your pull requests:
 
-* description,
-* links to relevant issues,
-* any necessary code changes,
-* unit tests for these changes,
-* changes to relevant documentation sections
+- description,
+- links to relevant issues,
+- any necessary code changes,
+- unit tests for these changes,
+- changes to relevant documentation sections
