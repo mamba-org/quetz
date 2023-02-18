@@ -116,6 +116,7 @@ def add_entry_for_index(files, subdir, fname, data_bytes):
 
 
 def parse_query(search_type, query):
+    accepted_filters = []
     if search_type == 'package':
         accepted_filters = [
             'channel',
@@ -152,6 +153,7 @@ def apply_custom_query(search_type, db, keywords, filters):
     keyword_conditions = []
     negation_argument = None
     for i, each_keyword in enumerate(keywords):
+        each_keyword_condition = None
         if each_keyword == 'NOT':
             negation_argument = keywords[i + 1]
             if search_type == 'package':
@@ -160,6 +162,8 @@ def apply_custom_query(search_type, db, keywords, filters):
                 each_keyword_condition = collate(Channel.name, "und-x-icu").notlike(
                     f'%{negation_argument}%'
                 )
+            else:
+                raise KeyError(search_type)
         else:
             if each_keyword != negation_argument:
                 if search_type == 'package':
@@ -168,6 +172,9 @@ def apply_custom_query(search_type, db, keywords, filters):
                     each_keyword_condition = collate(Channel.name, "und-x-icu").ilike(
                         f'%{each_keyword}%'
                     )
+                else:
+                    raise KeyError(search_type)
+
         keyword_conditions.append(each_keyword_condition)
 
     query = db.filter(and_(True, *keyword_conditions))
@@ -181,6 +188,7 @@ def apply_custom_query(search_type, db, keywords, filters):
         each_filter_conditions = []
         for each_val in values:
             each_val = each_val.strip('"').strip("'")
+            each_val_condition = None
             if search_type == 'package':
                 if key == 'channel':
                     each_val_condition = collate(Channel.name, "und-x-icu").ilike(
@@ -200,6 +208,8 @@ def apply_custom_query(search_type, db, keywords, filters):
                     each_val_condition = PackageVersion.version.ilike(f'%{(each_val)}%')
                 elif key == 'uploader':
                     each_val_condition = User.username.ilike(f'%{(each_val)}%')
+                else:
+                    raise KeyError(key)
             elif search_type == 'channel':
                 if key == 'description':
                     each_val_condition = Channel.description.contains(each_val)
@@ -207,6 +217,10 @@ def apply_custom_query(search_type, db, keywords, filters):
                     each_val_condition = Channel.private.is_(
                         bool(distutils.util.strtobool(each_val))
                     )
+                else:
+                    raise KeyError(key)
+            else:
+                raise KeyError(search_type)
             each_filter_conditions.append(each_val_condition)
         if negate:
             query = query.filter(not_(or_(*each_filter_conditions)))

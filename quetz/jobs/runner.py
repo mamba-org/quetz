@@ -243,6 +243,7 @@ class Supervisor:
         manager = self.manager
         _process_cache = self._process_cache
 
+        action_name = ""
         try:
             action_name = task.job.manifest.decode('ascii')
             action_func = parse_job_manifest(action_name)

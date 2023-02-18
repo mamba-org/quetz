@@ -125,6 +125,8 @@ def get_user_by_identity(
 ) -> User:
     db = dao.db
 
+    user = None
+    identity = None
     try:
         user, identity = db.query(User, Identity).join(Identity).filter(
             Identity.provider == provider

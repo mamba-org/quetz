@@ -142,7 +142,7 @@ def test_repodata_zchunk(
             with open('repodata.json') as f:
                 repodata_unzck = f.read()
 
-            assert repodata == repodata_unzck  # NOQA
+            assert repodata == repodata_unzck  # NOQA # type: ignore
         else:
             with open(repodata_path) as f:
                 repodata = f.read()  # NOQA
