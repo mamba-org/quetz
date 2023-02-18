@@ -12,6 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: mamba-org/provision-with-micromamba@v15
+      - run: ln -s "${CONDA_PREFIX}" .venv
       - uses: pre-commit/action@v2.0.0
         with:
           extra_args: --all-files --show-diff-on-failure
