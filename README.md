@@ -29,6 +29,24 @@ With quetz, fine-grained permissions on channel and package-name level will be p
 
 Quetz has an optional client `quetz-client` that can be used to upload packages to a quetz server instance.
 
+### Table of Contents
+
+- [Usage](#usage)
+- [S3 Backend](#s3-backend)
+- [Google OAuth 2.0 OpenID Connect](#google-oauth-20-openid-connect)
+- [PostgreSQL](#postgresql)
+  - [Running PostgreSQL server with docker](#running-postgresql-server-with-docker)
+  - [Deploying Quetz with PostgreSQL backend](#deploying-quetz-with-postgresql-backend)
+  - [Running tests with PostgreSQL backend](#running-tests-with-postgresql-backend)
+- [Frontend](#frontend)
+- [License](#license)
+- [Using quetz](#using-quetz)
+  - [Create a channel](#create-a-channel)
+  - [Generate an API key](#generate-an-api-key)
+  - [Create a proxy channel](#create-a-proxy-channel)
+  - [Create a mirroring channel](#create-a-mirroring-channel)
+- [Plugins](#plugins)
+
 ## Usage
 
 You should have [mamba](https://github.com/mamba-org/mamba) or conda installed.
