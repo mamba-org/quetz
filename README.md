@@ -39,13 +39,13 @@ Quetz has an optional client `quetz-client` that can be used to upload packages 
   - [Deploying Quetz with PostgreSQL backend](#deploying-quetz-with-postgresql-backend)
   - [Running tests with PostgreSQL backend](#running-tests-with-postgresql-backend)
 - [Frontend](#frontend)
-- [License](#license)
 - [Using quetz](#using-quetz)
   - [Create a channel](#create-a-channel)
   - [Generate an API key](#generate-an-api-key)
   - [Create a proxy channel](#create-a-proxy-channel)
   - [Create a mirroring channel](#create-a-mirroring-channel)
 - [Plugins](#plugins)
+- [License](#license)
 
 ## Usage
 
@@ -244,12 +244,6 @@ npm run watch
 
 This will build the javascript files and place them in `/quetz_frontend/dist/` from where they are automatically picked up by the quetz server.
 
-## License
-
-We use a shared copyright model that enables all contributors to maintain the copyright on their contributions.
-
-This software is licensed under the BSD-3-Clause license. See the [LICENSE](LICENSE) file for details.
-
 ## Using quetz
 
 ### Create a channel
@@ -392,3 +386,9 @@ Quetz offers plugins in the plugins folder of this repo as well as via standalon
 | [quetz_sql_authenticator](https://github.com/mamba-org/quetz-sql-authenticator) | An authenticator that stores credentials in the Quetz SQL database using passlib.                                          |
 | [quetz_tos](plugins/quetz_tos/)                                                 | Enforce signing the terms of service for Quetz users                                                                       |
 | [quetz_transmutation](plugins/quetz_transmutation/)                             | Convert packages to .conda format                                                                                          |
+
+## License
+
+We use a shared copyright model that enables all contributors to maintain the copyright on their contributions.
+
+This software is licensed under the BSD-3-Clause license. See the [LICENSE](LICENSE) file for details.
