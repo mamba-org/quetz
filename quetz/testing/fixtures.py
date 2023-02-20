@@ -136,7 +136,7 @@ def session_maker(sql_connection, create_tables, auto_rollback):
     sql_connection.name = 'sqlite-test'
     yield get_session_maker(sql_connection)
 
-    if auto_rollback:
+    if trans is not None:
         trans.rollback()
 
 
