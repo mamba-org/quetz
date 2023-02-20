@@ -44,5 +44,7 @@ dependencies:
   - pytest
   - pytest-mock
   - rq
+  - libcflib
+  - mamba
   - pip:
       - git+https://github.com/jupyter-server/jupyter_releaser.git@v2
