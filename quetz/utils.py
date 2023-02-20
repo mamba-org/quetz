@@ -152,8 +152,8 @@ def parse_query(search_type, query):
 def apply_custom_query(search_type, db, keywords, filters):
     keyword_conditions = []
     negation_argument = None
+    each_keyword_condition = None
     for i, each_keyword in enumerate(keywords):
-        each_keyword_condition = None
         if each_keyword == 'NOT':
             negation_argument = keywords[i + 1]
             if search_type == 'package':
@@ -174,7 +174,6 @@ def apply_custom_query(search_type, db, keywords, filters):
                     )
                 else:
                     raise KeyError(search_type)
-
         keyword_conditions.append(each_keyword_condition)
 
     query = db.filter(and_(True, *keyword_conditions))
@@ -187,8 +186,8 @@ def apply_custom_query(search_type, db, keywords, filters):
             negate = True
         each_filter_conditions = []
         for each_val in values:
-            each_val = each_val.strip('"').strip("'")
             each_val_condition = None
+            each_val = each_val.strip('"').strip("'")
             if search_type == 'package':
                 if key == 'channel':
                     each_val_condition = collate(Channel.name, "und-x-icu").ilike(
