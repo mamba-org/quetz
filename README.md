@@ -79,7 +79,7 @@ To upload the package, install the [quetz-client](https://github.com/mamba-org/q
 mamba install quetz-client
 ```
 
-To run the upload, you need to set environment variables for the quetz API key (which authenticates you) and the quetz server URL. As we passed the `--dev` flag, a testing API key can be found in quetz's output which you can use for this example.
+To run the upload, you need to set environment variables for the quetz API key (which authenticates you) and the quetz server URL. As we passed the `--dev` flag to quetz, a testing API key can be found in quetz's output which you can use for this example.
 
 ```bash
 export QUETZ_API_KEY=E_KaBFstCKI9hTdPM7DQq56GglRHf2HW7tQtq6si370
