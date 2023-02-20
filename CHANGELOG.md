@@ -2,6 +2,37 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## 0.6.2
+
+([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.6.1...daa8d07d62703601ca236fe4bfaaa23132f781dd))
+
+### Bugs fixed
+
+- Fix unbound variables [#609](https://github.com/mamba-org/quetz/pull/609) ([@janjagusch](https://github.com/janjagusch))
+
+### Maintenance and upkeep improvements
+
+- Enable pyright reportMissingImports [#615](https://github.com/mamba-org/quetz/pull/615) ([@janjagusch](https://github.com/janjagusch))
+- Enable pyright reportMissingModuleSource [#614](https://github.com/mamba-org/quetz/pull/614) ([@janjagusch](https://github.com/janjagusch))
+- Enable pyright reportOptionalMemberAccess [#613](https://github.com/mamba-org/quetz/pull/613) ([@janjagusch](https://github.com/janjagusch))
+- Enable pyright reportOptionalOperand [#612](https://github.com/mamba-org/quetz/pull/612) ([@janjagusch](https://github.com/janjagusch))
+- Enable pyright reportOptionalSubscript [#611](https://github.com/mamba-org/quetz/pull/611) ([@janjagusch](https://github.com/janjagusch))
+- Enable pyright reportPrivateImportUsage [#610](https://github.com/mamba-org/quetz/pull/610) ([@janjagusch](https://github.com/janjagusch))
+- Add prettier pre-commit hook [#608](https://github.com/mamba-org/quetz/pull/608) ([@janjagusch](https://github.com/janjagusch))
+- Add pyright pre-commit hook [#607](https://github.com/mamba-org/quetz/pull/607) ([@janjagusch](https://github.com/janjagusch))
+- Try to fix ReadTheDocs 2 [#605](https://github.com/mamba-org/quetz/pull/605) ([@janjagusch](https://github.com/janjagusch))
+- Fix ReadTheDocs [#604](https://github.com/mamba-org/quetz/pull/604) ([@janjagusch](https://github.com/janjagusch))
+- Move SQL authenticator plugin to own repo [#593](https://github.com/mamba-org/quetz/pull/593) ([@simonbohnen](https://github.com/simonbohnen))
+- Remove old `quetz-client` [#589](https://github.com/mamba-org/quetz/pull/589) ([@simonbohnen](https://github.com/simonbohnen))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2023-02-16&to=2023-02-20&type=c))
+
+[@codecov-commenter](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Acodecov-commenter+updated%3A2023-02-16..2023-02-20&type=Issues) | [@janjagusch](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ajanjagusch+updated%3A2023-02-16..2023-02-20&type=Issues) | [@simonbohnen](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Asimonbohnen+updated%3A2023-02-16..2023-02-20&type=Issues)
+
+<!-- <END NEW CHANGELOG ENTRY> -->
+
 ## 0.6.1
 
 ([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.6.0...ff885bc0de3505329a6f15adc9c51e112e50c887))
@@ -15,8 +46,6 @@
 ([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2023-02-16&to=2023-02-16&type=c))
 
 [@SimonBohnenQC](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3ASimonBohnenQC+updated%3A2023-02-16..2023-02-16&type=Issues)
-
-<!-- <END NEW CHANGELOG ENTRY> -->
 
 ## 0.6.0
 
