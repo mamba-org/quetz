@@ -46,5 +46,6 @@ dependencies:
   - rq
   - libcflib
   - mamba
+  - conda-content-trust
   - pip:
       - git+https://github.com/jupyter-server/jupyter_releaser.git@v2
