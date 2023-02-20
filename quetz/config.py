@@ -396,6 +396,7 @@ class Config:
 
             # look for the first level of config_map.
             # It must be done in loop as the key itself can contains '_'.
+            first_level = None
             while idx < len(splitted_key):
                 first_level = self._find_first_level_config(config_key)
                 if first_level:

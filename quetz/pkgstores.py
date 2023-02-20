@@ -228,6 +228,7 @@ class LocalStore(PackageStore):
         msize = stat_res.st_size
 
         xattr_failed = False
+        etag = ""
         if has_xattr:
             try:
                 # xattr will fail here if executing on e.g. the tmp filesystem
@@ -243,9 +244,11 @@ class LocalStore(PackageStore):
             except OSError:
                 xattr_failed = True
 
-        if not has_xattr or xattr_failed:
+        elif not has_xattr or xattr_failed:
             etag_base = str(mtime) + "-" + str(msize)
             etag = hashlib.md5(etag_base.encode()).hexdigest()
+        else:
+            raise RuntimeError
 
         return (msize, mtime, etag)
 

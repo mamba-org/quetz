@@ -546,6 +546,7 @@ def start(
             )
             raise typer.Abort()
 
+    supervisor_process = None
     if supervisor:
         logger.info("starting supervisor")
         ctx = get_context("spawn")
@@ -569,7 +570,7 @@ def start(
             log_level=log_level,
         )
 
-    if supervisor:
+    if supervisor_process is not None:
         supervisor_process.terminate()
         supervisor_process.join()
 

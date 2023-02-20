@@ -184,9 +184,10 @@ def test_store_add_list_files(any_store, channel, channel_name):
     def assert_files(expected_files, n_retries=3):
         n_retries = 3
 
+        files = []
         for i in range(n_retries):
+            files = pkg_store.list_files(channel_name)
             try:
-                files = pkg_store.list_files(channel_name)
                 assert files == expected_files
             except AssertionError:
                 continue
@@ -214,9 +215,10 @@ def test_move_file(any_store, channel, channel_name):
     def assert_files(expected_files, n_retries=3):
         n_retries = 3
 
+        files = []
         for i in range(n_retries):
+            files = pkg_store.list_files(channel_name)
             try:
-                files = pkg_store.list_files(channel_name)
                 assert files == expected_files
             except AssertionError:
                 continue

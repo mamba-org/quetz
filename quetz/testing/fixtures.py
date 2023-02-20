@@ -39,8 +39,8 @@ def sqlite_url(sqlite_in_memory):
     if sqlite_in_memory:
         yield "sqlite:///:memory:"
     else:
+        sql_path = tempfile.TemporaryDirectory()
         try:
-            sql_path = tempfile.TemporaryDirectory()
             yield f"sqlite:///{sql_path.name}/test_quetz.sqlite"
         finally:
             sql_path.cleanup()
@@ -129,13 +129,14 @@ def session_maker(sql_connection, create_tables, auto_rollback):
 
     # see also: https://docs.sqlalchemy.org/en/13/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites # noqa
 
+    trans = None
     if auto_rollback:
         trans = sql_connection.begin()
 
     sql_connection.name = 'sqlite-test'
     yield get_session_maker(sql_connection)
 
-    if auto_rollback:
+    if trans is not None:
         trans.rollback()
 
 

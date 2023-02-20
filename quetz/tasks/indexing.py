@@ -96,6 +96,8 @@ def validate_packages(dao, pkgstore, channel_name):
         fs_chan = pkgstore._bucket_map(channel_name)
     elif type(pkgstore).__name__ == "LocalStore":
         fs_chan = os.path.abspath(os.path.join(pkgstore.channels_dir, channel_name))
+    else:
+        raise KeyError(type(pkgstore).__name__)
 
     logger.info(f"Checking {fs_chan}")
     ls_dirs = pkgstore.fs.ls(f"{fs_chan}", detail=True)

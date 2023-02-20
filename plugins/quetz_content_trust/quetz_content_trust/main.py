@@ -34,12 +34,12 @@ def post_index_creation(raw_repodata: dict, channel_name, subdir):
             .all()
         )
 
+        signatures = {}
         if query:
             import json
 
             from libmambapy import bindings as libmamba_api
 
-            signatures = {}
             for name, metadata in raw_repodata["packages"].items():
                 sig = libmamba_api.sign(
                     json.dumps(metadata, indent=2, sort_keys=True), query[0].private_key

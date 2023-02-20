@@ -295,6 +295,7 @@ def initial_sync_mirror(
         f"Running channel mirroring {channel_name}/{arch} from {remote_repository.host}"
     )
 
+    repodata = {}
     for repodata_fn in ["repodata_from_packages.json", "repodata.json"]:
         try:
             repo_file = remote_repository.open(os.path.join(arch, repodata_fn))

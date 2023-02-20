@@ -851,6 +851,7 @@ class Dao:
 
             if all_existing_versions:
                 new_version = versionorder.VersionOrder(version)
+                is_newer = False
                 for v in all_existing_versions:
                     # type checker justly complains that v.version could be None
                     # ignoring it before attempting true fix
@@ -860,7 +861,9 @@ class Dao:
                     )
                     if is_newer:
                         break
-                version_order = v.version_order if is_newer else v.version_order + 1
+                version_order = (
+                    v.version_order if is_newer else v.version_order + 1  # type: ignore
+                )
 
                 (
                     self.db.query(PackageVersion)
