@@ -116,6 +116,9 @@ def sign_current_tos(
     user_id = auth.assert_user()
     user = dao.get_user(user_id)
 
+    if user is None:
+        raise RuntimeError(f"User '{user}' not found.")
+
     if tos_id:
         try:
             tos_id_bytes = uuid.UUID(tos_id).bytes
