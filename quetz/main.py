@@ -17,6 +17,7 @@ from tempfile import SpooledTemporaryFile, TemporaryFile
 from typing import List, Optional, Tuple, Type
 
 import pydantic
+import pydantic.error_wrappers
 import requests
 from fastapi import (
     APIRouter,
@@ -41,13 +42,11 @@ from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from tenacity import (
-    after_log,
-    retry,
-    retry_if_result,
-    stop_after_attempt,
-    wait_exponential,
-)
+from tenacity import retry
+from tenacity.after import after_log
+from tenacity.retry import retry_if_result
+from tenacity.stop import stop_after_attempt
+from tenacity.wait import wait_exponential
 
 from quetz import (
     authorization,
@@ -1596,7 +1595,7 @@ def handle_package_files(
                     summary=str(condainfo.about.get("summary", "n/a")),
                     description=str(condainfo.about.get("description", "n/a")),
                 )
-            except pydantic.main.ValidationError as err:
+            except pydantic.error_wrappers.ValidationError as err:
                 _delete_file(condainfo, file.filename)
                 raise errors.ValidationError(
                     "Validation Error for package: "

@@ -14,7 +14,7 @@ from quetz.config import Config
 from quetz.jobs.models import JobStatus, Task, TaskStatus
 
 try:
-    import redis
+    import redis  # type: ignore
     from rq import Queue
 
     rq_available = True
@@ -100,6 +100,8 @@ class WorkerProcess:
     def wait_for_job(self):
         exc = self._parent_conn.recv()
         self._process.join()
+        if self._process.exitcode is None:
+            raise RuntimeError
         if self._process.exitcode > 0:
             raise exc
         return

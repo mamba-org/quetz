@@ -28,7 +28,7 @@ def get_run_exports(
         .first()
     )
 
-    if not package_version.runexports:
+    if package_version is None or not package_version.runexports:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=(

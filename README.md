@@ -27,7 +27,7 @@ It is built upon FastAPI with an API-first approach.
 A quetz server can have many users, channels and packages.
 With quetz, fine-grained permissions on channel and package-name level will be possible.
 
-Quetz has an optional client `quetz-client` that can be used to upload packages to a quetz server instance.
+Quetz has an optional client [`quetz-client`](https://github.com/mamba-org/quetz-client) that can be used to upload packages to a quetz server instance.
 
 ## Usage
 
@@ -74,11 +74,19 @@ Download `xtensor` as test package:
 ./download-test-package.sh
 ```
 
-Run test upload using quetz-client. (For testing purposes, an API key is created for the test user "alice" at server launch and is printed to the terminal, so use that for this example):
+To upload the package, install the [quetz-client](https://github.com/mamba-org/quetz-client):
+
+```bash
+mamba install quetz-client
+```
+
+To run the upload, you need to set environment variables for the quetz API key (which authenticates you) and the quetz server URL. As we passed the `--dev` flag to quetz, a testing API key can be found in quetz's output which you can use for this example.
 
 ```bash
 export QUETZ_API_KEY=E_KaBFstCKI9hTdPM7DQq56GglRHf2HW7tQtq6si370
-quetz-client http://localhost:8000/api/channels/channel0 xtensor/linux-64/xtensor-0.16.1-0.tar.bz2 xtensor/osx-64/xtensor-0.16.1-0.tar.bz2
+export QUETZ_SERVER_URL=http://localhost:8000
+quetz-client post_file_to_channel channel0 xtensor/linux-64/xtensor-0.16.1-0.tar.bz2
+quetz-client post_file_to_channel channel0 xtensor/osx-64/xtensor-0.16.1-0.tar.bz2
 ```
 
 Install the test package with conda:
@@ -226,12 +234,6 @@ npm run watch
 
 This will build the javascript files and place them in `/quetz_frontend/dist/` from where they are automatically picked up by the quetz server.
 
-## License
-
-We use a shared copyright model that enables all contributors to maintain the copyright on their contributions.
-
-This software is licensed under the BSD-3-Clause license. See the [LICENSE](LICENSE) file for details.
-
 ## Using quetz
 
 ### Create a channel
@@ -272,7 +274,7 @@ In order to generate an API key the following must be true:
    ```
 
 4. Then, GET on `/api/api-keys` to retrieve your token
-5. Finally, set this value to QUETZ_API_KEY so you can use quetz-client to interact with the server.
+5. Finally, set the QUETZ_API_KEY environment variable to this value so you can use quetz-client to interact with the server.
 
 ### Create a proxy channel
 
@@ -355,3 +357,28 @@ curl -X PUT localhost:8000/api/channels/mirror-channel/actions \
 ```
 
 Only channel owners or maintainers are allowed to trigger synchronisation, therefore you have to provide a valid API key of a privileged user.
+
+## Plugins
+
+Quetz offers plugins in the plugins folder of this repo as well as via standalone installs. The following plugins are currently available:
+
+| Plugin                                                                          | Description                                                                                                                |
+| ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| [quetz_conda_suggest](plugins/quetz_conda_suggest/)                             | Generate `.map` files for [conda-suggest](https://github.com/conda-incubator/conda-suggest)                                |
+| [quetz_content_trust](plugins/quetz_content_trust/)                             | Generate signed repodata files                                                                                             |
+| [quetz_current_repodata](plugins/quetz_current_repodata/)                       | Trim the repodata to only include latest package versions                                                                  |
+| [quetz_dictauthenticator](plugins/quetz_dictauthenticator/)                     | Demo for creating new authenticators                                                                                       |
+| [quetz_harvester](plugins/quetz_harvester/)                                     | Extract additional metadata from packages using the [libcflib](https://github.com/regro/libcflib) harvester                |
+| [quetz_mamba_solve](plugins/quetz_mamba_solve/)                                 | Export a specific set of package versions for reproducibility                                                              |
+| [quetz_repodata_patching](plugins/quetz_repodata_patching/)                     | [Repodata patching](https://docs.conda.io/projects/conda-build/en/latest/concepts/generating-index.html#repodata-patching) |
+| [quetz_repodata_zchunk](plugins/quetz_repodata_zchunk/)                         | Serve repodata using [zchunk](https://github.com/zchunk/zchunk)                                                            |
+| [quetz_runexports](plugins/quetz_runexports/)                                   | Extract and expose `run_exports` from package files                                                                        |
+| [quetz_sql_authenticator](https://github.com/mamba-org/quetz-sql-authenticator) | An authenticator that stores credentials in the Quetz SQL database using passlib.                                          |
+| [quetz_tos](plugins/quetz_tos/)                                                 | Enforce signing the terms of service for Quetz users                                                                       |
+| [quetz_transmutation](plugins/quetz_transmutation/)                             | Convert packages to .conda format                                                                                          |
+
+## License
+
+We use a shared copyright model that enables all contributors to maintain the copyright on their contributions.
+
+This software is licensed under the BSD-3-Clause license. See the [LICENSE](LICENSE) file for details.

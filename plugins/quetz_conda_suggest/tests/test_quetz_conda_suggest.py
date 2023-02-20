@@ -87,7 +87,10 @@ def test_conda_suggest_endpoint_with_upload(
     existing_files = tar.getmembers()
     existing_files_data = {}
     for each_file in existing_files:
-        each_file_data = tar.extractfile(each_file).read()
+        each_file_extracted = tar.extractfile(each_file)
+        if each_file_extracted is None:
+            raise RuntimeError(each_file)
+        each_file_data = each_file_extracted.read()
         existing_files_data[each_file] = each_file_data
     tar.close()
 
