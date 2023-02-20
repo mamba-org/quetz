@@ -42,7 +42,6 @@ dependencies:
   - importlib_metadata
   - pre-commit
   - pytest
-  - redis
   - pytest-mock
   - rq
   - pip:
