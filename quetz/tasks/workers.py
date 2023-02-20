@@ -14,7 +14,7 @@ from quetz.config import Config
 from quetz.jobs.models import JobStatus, Task, TaskStatus
 
 try:
-    import redis
+    import redis  # type: ignore
     from rq import Queue
 
     rq_available = True
