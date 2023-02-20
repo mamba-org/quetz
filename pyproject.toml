@@ -45,7 +45,7 @@ version_template = '({major}, {minor}, {patch}, "{channel}", "{release}")'
 [tool.pyright]
 include = ["quetz"]
 reportGeneralTypeIssues = false
-reportMissingImports = false
+reportMissingImports = true
 reportMissingModuleSource = true
 reportMissingTypeStubs = false
 reportOptionalMemberAccess = true
