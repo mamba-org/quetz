@@ -25,7 +25,9 @@ class OAuthHandlers(BaseAuthenticationHandlers):
 
     async def login(self, request: Request):
         redirect_uri = request.url_for(f'authorize_{self.authenticator.provider}')
-        return await self.authenticator.client.authorize_redirect(request, redirect_uri)
+        return await self.authenticator.client.authorize_redirect(
+            request, str(redirect_uri)
+        )
 
     async def revoke(self, request):
         client_id = self.client.client_id
