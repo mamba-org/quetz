@@ -222,7 +222,7 @@ class Dao:
 
         return get_paginated_result(query, skip, limit)
 
-    def get_user_by_username(self, username: str):
+    def get_user_by_username(self, username: str) -> Optional[User]:
         return (
             self.db.query(User)
             .filter(User.username == username)
@@ -577,7 +577,7 @@ class Dao:
     def get_channel(self, channel_name: str) -> Optional[Channel]:
         return self.db.query(Channel).filter(Channel.name == channel_name).one_or_none()
 
-    def get_package(self, channel_name: str, package_name: str):
+    def get_package(self, channel_name: str, package_name: str) -> Optional[Package]:
         return (
             self.db.query(Package)
             .join(Channel)
@@ -963,7 +963,7 @@ class Dao:
 
     def get_package_version_by_filename(
         self, channel_name: str, package_name: str, filename: str, platform: str
-    ):
+    ) -> Optional[PackageVersion]:
         query = (
             self.db.query(PackageVersion)
             .filter(PackageVersion.channel_name == channel_name)
