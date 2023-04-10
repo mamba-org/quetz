@@ -944,7 +944,12 @@ def post_channel_member(
         channel_member.role = new_member.role
         db.commit()
     else:
-        dao.create_channel_member(channel.name, new_member)
+        try:
+            dao.create_channel_member(channel.name, new_member)
+        except KeyError as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=error.args[0]
+            ) from error
 
 
 @api_router.delete("/channels/{channel_name}/members", tags=["channels"])
@@ -1015,7 +1020,12 @@ def post_package_member(
             ),
         )
 
-    dao.create_package_member(package.channel.name, package.name, new_member)
+    try:
+        dao.create_package_member(package.channel.name, package.name, new_member)
+    except KeyError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=error.args[0]
+        ) from error
 
 
 @api_router.get(
@@ -1380,7 +1390,14 @@ async def post_upload(
         )
 
     # Update channeldata info
-    dao.update_package_channeldata(channel_name, package_name, condainfo.channeldata)
+    try:
+        dao.update_package_channeldata(
+            channel_name, package_name, condainfo.channeldata
+        )
+    except KeyError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=error.args[0]
+        ) from error
 
     try:
         version = dao.create_version(
@@ -1628,9 +1645,14 @@ def handle_package_files(
             )
 
         # Update channeldata info
-        dao.update_package_channeldata(
-            channel.name, package_name, condainfo.channeldata
-        )
+        try:
+            dao.update_package_channeldata(
+                channel.name, package_name, condainfo.channeldata
+            )
+        except KeyError as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=error.args[0]
+            ) from error
 
         try:
             version = dao.create_version(
