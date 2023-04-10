@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 
 from sqlalchemy import and_, func, insert, or_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.exc import IntegrityError, NoResultFound
+from sqlalchemy.exc import IntegrityError, NoResultFound  # type: ignore
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import Query, Session, aliased, joinedload
 from sqlalchemy.sql.expression import FunctionElement, Insert
