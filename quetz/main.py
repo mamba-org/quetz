@@ -250,6 +250,8 @@ def dummy_login(
     username: str, dao: Dao = Depends(get_dao), session=Depends(get_session)
 ):
     user = dao.get_user_by_username(username)
+    if user is None:
+        raise HTTPException(status_code=404, detail=f"User '{username}' not found.")
 
     logout(session)
     session["user_id"] = str(uuid.UUID(bytes=user.id))
@@ -438,6 +440,11 @@ def delete_user(
     auth: authorization.Rules = Depends(get_rules),
 ):
     user = dao.get_user_by_username(username)
+
+    if not user or not user.profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"User {username} not found"
+        )
 
     auth.assert_delete_user(user.id)
     dao.delete_user(user.id)
@@ -1105,6 +1112,11 @@ def delete_package_version(
     version = dao.get_package_version_by_filename(
         channel_name, package_name, filename, platform
     )
+
+    if not version or not version.package:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Package version not found"
+        )
 
     auth.assert_package_delete(version.package)
 

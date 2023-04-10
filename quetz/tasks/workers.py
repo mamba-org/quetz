@@ -154,6 +154,8 @@ def job_wrapper(
     user_id: Optional[str]
     if task_id:
         task = db.query(Task).filter(Task.id == task_id).one_or_none()
+        if not task:
+            raise KeyError(f"Task '{task_id}' not found")
         # take extra arguments from job definition
         if task.job.extra_args:
             job_extra_args = json.loads(task.job.extra_args)

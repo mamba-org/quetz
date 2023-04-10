@@ -24,5 +24,7 @@ def post_add_package_version(version, condainfo):
             db.add(metadata)
         else:
             metadata = db.get(db_models.PackageVersionMetadata, version.id)
+            if not metadata:
+                raise KeyError(f"No metadata found for version '{version.id}'.")
             metadata.data = run_exports
         db.commit()

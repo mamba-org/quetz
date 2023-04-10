@@ -11,9 +11,9 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 
 from sqlalchemy import and_, func, insert, or_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.orm import Query, Session, aliased, exc, joinedload
+from sqlalchemy.orm import Query, Session, aliased, joinedload
 from sqlalchemy.sql.expression import FunctionElement, Insert
 from sqlalchemy.types import DateTime
 
@@ -193,13 +193,13 @@ class Dao:
     def get_profile(self, user_id):
         try:
             return self.db.query(Profile).filter(Profile.user_id == user_id).one()
-        except exc.NoResultFound:
+        except NoResultFound:
             logger.error("User not found")
 
     def get_user(self, user_id):
         try:
             return self.db.query(User).filter(User.id == user_id).one()
-        except exc.NoResultFound:
+        except NoResultFound:
             logger.error("User not found")
 
     def get_users(self, skip: int, limit: int, q: str, order_by: str = 'username:asc'):
@@ -621,6 +621,8 @@ class Dao:
 
     def update_package_channeldata(self, channel_name, package_name, channeldata):
         package = self.get_package(channel_name, package_name)
+        if package is None:
+            raise KeyError(f"Package '{package_name}' not found.")
         if package.channeldata:
             old_data = json.loads(package.channeldata)
         else:
@@ -651,6 +653,8 @@ class Dao:
 
     def create_channel_member(self, channel_name, new_member):
         user = self.get_user_by_username(new_member.username)
+        if user is None:
+            raise KeyError(f"User '{new_member.username}' not found.")
 
         member = ChannelMember(
             channel_name=channel_name, user_id=user.id, role=new_member.role
@@ -681,6 +685,8 @@ class Dao:
 
     def create_package_member(self, channel_name, package_name, new_member):
         user = self.get_user_by_username(new_member.username)
+        if user is None:
+            raise KeyError(f"User '{new_member.username}' not found.")
 
         member = PackageMember(
             channel_name=channel_name,

@@ -459,6 +459,10 @@ def create_packages_from_channeldata(
         except DBError:
             # package already exists so skip it so we retrieve and update it
             package = dao.get_package(channel_name, package_name)
+            if not package:
+                raise KeyError(
+                    f"Package '{package_name}' not found in channel {channel_name}"
+                )
             package.description = description
             package.summary = summary
         package.url = metadata.get("home", "")

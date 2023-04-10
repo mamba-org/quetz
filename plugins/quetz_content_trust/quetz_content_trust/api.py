@@ -171,6 +171,9 @@ def post_role(
             # mamba API when loading the root role from file
             self_delegation = [r for r in db_role.delegations if r.type == "root"][0]
 
+        if not self_delegation:
+            raise RuntimeError("self_delegation must not be None")
+
         # db_role.delegation = self_delegation
         self_delegation.consumers.append(db_role)
 
