@@ -251,7 +251,10 @@ def dummy_login(
 ):
     user = dao.get_user_by_username(username)
     if user is None:
-        raise HTTPException(status_code=404, detail=f"User '{username}' not found.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User '{username}' not found.",
+        )
 
     logout(session)
     session["user_id"] = str(uuid.UUID(bytes=user.id))
