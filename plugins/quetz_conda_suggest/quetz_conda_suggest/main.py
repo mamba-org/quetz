@@ -53,6 +53,8 @@ def post_add_package_version(version, condainfo):
             db.add(metadata)
         else:
             metadata = db.get(db_models.CondaSuggestMetadata, version.id)
+            if not metadata:
+                raise KeyError(f"Metadata with version '{version.id}' not found")
             metadata.data = json.dumps(suggest_map)
         db.commit()
         generate_channel_suggest_map(db, version.channel_name, subdir)
