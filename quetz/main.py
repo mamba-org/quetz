@@ -253,7 +253,7 @@ def dummy_login(
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User '{username}' not found.",
+            detail=f"User '{username}' not found",
         )
 
     logout(session)
