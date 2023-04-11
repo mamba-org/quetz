@@ -1839,4 +1839,10 @@ def serve_channel_index(
     return serve_path("index.html", channel, accept_encoding, session, dao)
 
 
+@app.get("/health/ready", status_code=status.HTTP_200_OK)
+@app.get("/health/live", status_code=status.HTTP_200_OK)
+def is_ready_live(task: Task = Depends(get_tasks_worker)):
+    return {}
+
+
 frontend.register(app)
