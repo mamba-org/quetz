@@ -1840,12 +1840,8 @@ def serve_channel_index(
 
 
 @app.get("/health/ready", status_code=status.HTTP_200_OK)
-def is_ready(task: Task = Depends(get_tasks_worker)):
-    return {}
-
-
 @app.get("/health/live", status_code=status.HTTP_200_OK)
-def is_live(task: Task = Depends(get_tasks_worker)):
+def is_ready_live(task: Task = Depends(get_tasks_worker)):
     return {}
 
 
