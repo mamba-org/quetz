@@ -14,7 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from email.utils import formatdate
 from tempfile import SpooledTemporaryFile, TemporaryFile
-from typing import List, Optional, Tuple, Type
+from typing import Awaitable, Callable, List, Optional, Tuple, Type
 
 import pydantic
 import pydantic.error_wrappers
@@ -29,12 +29,13 @@ from fastapi import (
     Header,
     HTTPException,
     Request,
+    Response,
     UploadFile,
     responses,
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from importlib_metadata import entry_points
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -162,6 +163,31 @@ class CondaTokenMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(CondaTokenMiddleware)
+
+
+if config.profiling_enable_sampling:
+    try:
+        from pyinstrument.profiler import Profiler
+    except ModuleNotFoundError:
+        logger.warning("'pyinstrument' was not found, proceeding without profiling.")
+    else:
+
+        @app.middleware("http")
+        async def profile_request(
+            request: Request,
+            call_next: Callable[[Request], Awaitable[Response]],
+        ):
+            if not request.query_params.get("profile", False):
+                return await call_next(request)
+            profiler = Profiler(
+                interval=config.profiling_interval_seconds,
+                async_mode="enabled",
+            )
+            profiler.start()
+            await call_next(request)
+            profiler.stop()
+            return HTMLResponse(profiler.output_html())
+
 
 pkgstore = config.get_package_store()
 
