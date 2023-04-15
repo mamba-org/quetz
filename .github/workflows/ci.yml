@@ -83,7 +83,7 @@ jobs:
           fi
 
           export QUETZ_IS_TEST=1
-          pytest -v ./quetz/tests/ --cov-config=.coveragerc --cov=. --cov-report=xml
+          pytest -v ./quetz/tests/ --cov-config=pyproject.toml --cov=. --cov-report=xml
 
       - name: Test the plugins
         shell: bash -l -eo pipefail {0}
