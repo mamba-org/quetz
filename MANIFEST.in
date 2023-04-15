@@ -7,7 +7,6 @@ include .coveragerc
 include .flake8
 include .pre-commit-config.yaml
 include .readthedocs.yml
-include mypy.ini
 include download-test-package.sh
 
 recursive-include quetz/migrations *.*

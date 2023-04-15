@@ -56,3 +56,12 @@ reportUnboundVariable = true
 reportUndefinedVariable = false
 venv = ".venv"
 venvPath= "."
+
+[tool.mypy]
+ignore_missing_imports = true
+plugins = [
+  "sqlmypy"
+]
+disable_error_code = [
+  "misc"
+]
