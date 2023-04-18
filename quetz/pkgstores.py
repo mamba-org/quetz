@@ -81,7 +81,7 @@ class PackageStore(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def add_package(self, package: File, channel: str, destination: str):
+    async def add_package(self, package: File, channel: str, destination: str):
         pass
 
     @abc.abstractmethod
