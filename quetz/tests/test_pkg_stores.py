@@ -220,13 +220,13 @@ def test_store_add_list_files(any_store, channel, channel_name):
     assert type(metadata[1]) is float
     assert type(metadata[2]) is str
 
-
-def test_add_package(any_store, channel, channel_name):
+@pytest.mark.asyncio
+async def test_add_package(any_store, channel, channel_name):
     pkg_store = any_store
 
     data = (Path(__file__).parent / "data" / "test-package-0.1-0.tar.bz2").read_bytes()
 
-    pkg_store.add_package(BytesIO(data), channel_name, "test-package-0.1-0.tar.gz")
+    await pkg_store.add_package(BytesIO(data), channel_name, "test-package-0.1-0.tar.gz")
 
     assert_files(pkg_store, channel_name, ["test-package-0.1-0.tar.gz"])
 
