@@ -18,3 +18,7 @@ file = "quetz.log"
 
 [users]
 admins = ["dummy:alice"]
+
+[profiling]
+enable_sampling = true
+
