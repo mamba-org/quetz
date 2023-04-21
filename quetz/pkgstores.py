@@ -18,6 +18,7 @@ from os import PathLike
 from threading import Lock
 from typing import IO, List, Tuple, Union
 
+import aiofiles
 import fsspec
 from tenacity import retry
 from tenacity.retry import retry_if_exception_type
@@ -172,8 +173,11 @@ class LocalStore(PackageStore):
         self.fs.rm(channel_path, recursive=True)
 
     async def add_package(self, package: File, channel: str, destination: str) -> None:
-        with self._atomic_open(channel, destination) as f:
-            shutil.copyfileobj(package, f)
+        full_path = path.join(self.channels_dir, channel, destination)
+        self.fs.makedirs(path.dirname(full_path), exist_ok=True)
+
+        async with aiofiles.open(full_path, 'wb') as f:
+            await f.write(package.read())
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
@@ -326,7 +330,7 @@ class S3Store(PackageStore):
         channel_path = self._bucket_map(name)
         self.fs.rm(channel_path, recursive=True, acl="private")
 
-    def add_package(self, package: File, channel: str, destination: str) -> None:
+    async def add_package(self, package: File, channel: str, destination: str) -> None:
         with self._get_fs() as fs:
             bucket = self._bucket_map(channel)
             with fs.open(path.join(bucket, destination), "wb", acl="private") as pkg:
@@ -465,7 +469,7 @@ class AzureBlobStore(PackageStore):
         with self._get_fs() as fs:
             fs.rm(channel_path, recursive=True)
 
-    def add_package(self, package: File, channel: str, destination: str) -> None:
+    async def add_package(self, package: File, channel: str, destination: str) -> None:
         with self._get_fs() as fs:
             container = self._container_map(channel)
             with fs.open(path.join(container, destination), "wb") as pkg:
@@ -614,7 +618,7 @@ class GoogleCloudStorageStore(PackageStore):
         with self._get_fs() as fs:
             fs.rm(channel_path, recursive=True)
 
-    def add_package(self, package: File, channel: str, destination: str) -> None:
+    async def add_package(self, package: File, channel: str, destination: str) -> None:
         with self._get_fs() as fs:
             container = self._bucket_map(channel)
             with fs.open(path.join(container, destination), "wb") as pkg:
