@@ -81,7 +81,7 @@ class PackageStore(abc.ABC):
         pass
 
     @abc.abstractmethod
-    async def add_package(self, package: File, channel: str, destination: str):
+    def add_package(self, package: File, channel: str, destination: str):
         pass
 
     @abc.abstractmethod
@@ -171,7 +171,7 @@ class LocalStore(PackageStore):
         channel_path = path.join(self.channels_dir, name)
         self.fs.rm(channel_path, recursive=True)
 
-    async def add_package(self, package: File, channel: str, destination: str) -> None:
+    def add_package(self, package: File, channel: str, destination: str) -> None:
         with self._atomic_open(channel, destination) as f:
             shutil.copyfileobj(package, f)
 
