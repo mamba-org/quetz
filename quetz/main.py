@@ -165,28 +165,24 @@ class CondaTokenMiddleware(BaseHTTPMiddleware):
 app.add_middleware(CondaTokenMiddleware)
 
 
-if config.profiling_enable_sampling:
-    try:
-        from pyinstrument.profiler import Profiler
-    except ModuleNotFoundError:
-        logger.warning("'pyinstrument' was not found, proceeding without profiling.")
-    else:
+if config.configured_section("profiling") and config.profiling_enable_sampling:
+    from pyinstrument.profiler import Profiler
 
-        @app.middleware("http")
-        async def profile_request(
-            request: Request,
-            call_next: Callable[[Request], Awaitable[Response]],
-        ):
-            if not request.query_params.get("profile", False):
-                return await call_next(request)
-            profiler = Profiler(
-                interval=config.profiling_interval_seconds,
-                async_mode="enabled",
-            )
-            profiler.start()
-            await call_next(request)
-            profiler.stop()
-            return HTMLResponse(profiler.output_html())
+    @app.middleware("http")
+    async def profile_request(
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ):
+        if not request.query_params.get("profile", False):
+            return await call_next(request)
+        profiler = Profiler(
+            interval=config.profiling_interval_seconds,
+            async_mode="enabled",
+        )
+        profiler.start()
+        await call_next(request)
+        profiler.stop()
+        return HTMLResponse(profiler.output_html())
 
 
 pkgstore = config.get_package_store()
