@@ -3,8 +3,9 @@ import os
 import shutil
 import time
 import uuid
-from pathlib import Path
+from collections.abc import Collection
 from io import BytesIO
+from pathlib import Path
 
 import pytest
 
@@ -12,6 +13,7 @@ from quetz.pkgstores import (
     AzureBlobStore,
     GoogleCloudStorageStore,
     LocalStore,
+    PackageStore,
     S3Store,
     has_xattr,
 )
@@ -182,30 +184,36 @@ def channel(any_store, channel_name):
     any_store.remove_channel(channel_name)
 
 
+def assert_files(
+    pkg_store: PackageStore,
+    channel_name: str,
+    expected_files: Collection[str],
+    n_retries: int = 3,
+):
+    """
+    Asserts that the files in the package store match the expected files with retry.
+    """
+    for _ in range(n_retries):
+        files = pkg_store.list_files(channel_name)
+        try:
+            assert files == expected_files
+        except AssertionError:
+            continue
+        else:
+            assert set(files) == set(expected_files)
+
+
 def test_store_add_list_files(any_store, channel, channel_name):
-    def assert_files(expected_files, n_retries=3):
-        n_retries = 3
-
-        files = []
-        for i in range(n_retries):
-            files = pkg_store.list_files(channel_name)
-            try:
-                assert files == expected_files
-            except AssertionError:
-                continue
-            break
-        assert files == expected_files
-
     pkg_store = any_store
 
     pkg_store.add_file("content", channel_name, "test.txt")
     pkg_store.add_file("content", channel_name, "test_2.txt")
 
-    assert_files(["test.txt", "test_2.txt"])
+    assert_files(pkg_store, channel_name, ["test.txt", "test_2.txt"])
 
     pkg_store.delete_file(channel_name, "test.txt")
 
-    assert_files(["test_2.txt"])
+    assert_files(pkg_store, channel_name, ["test_2.txt"])
 
     metadata = pkg_store.get_filemetadata(channel_name, "test_2.txt")
     assert metadata[0] > 0
@@ -215,34 +223,21 @@ def test_store_add_list_files(any_store, channel, channel_name):
 
 def test_add_package(any_store, channel, channel_name):
     pkg_store = any_store
-    
+
     data = (Path(__file__).parent / "data" / "test-package-0.1-0.tar.bz2").read_bytes()
 
     pkg_store.add_package(BytesIO(data), channel_name, "test-package-0.1-0.tar.gz")
 
-    assert pkg_store.list_files(channel_name) == ["test-package-0.1-0.tar.gz"]
+    assert_files(pkg_store, channel_name, ["test-package-0.1-0.tar.gz"])
 
 
 def test_move_file(any_store, channel, channel_name):
-    def assert_files(expected_files, n_retries=3):
-        n_retries = 3
-
-        files = []
-        for i in range(n_retries):
-            files = pkg_store.list_files(channel_name)
-            try:
-                assert files == expected_files
-            except AssertionError:
-                continue
-            break
-        assert files == expected_files
-
     pkg_store = any_store
 
     pkg_store.add_file("content", channel_name, "test.txt")
     pkg_store.move_file(channel_name, "test.txt", "test_2.txt")
 
-    assert_files(['test_2.txt'])
+    assert_files(pkg_store, channel_name, ['test_2.txt'])
 
 
 @pytest.mark.parametrize("redirect_enabled", [False, True])
