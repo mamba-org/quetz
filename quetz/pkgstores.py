@@ -82,7 +82,11 @@ class PackageStore(abc.ABC):
         pass
 
     @abc.abstractmethod
-    async def add_package(self, package: File, channel: str, destination: str):
+    async def add_package_async(self, package: File, channel: str, destination: str):
+        pass
+
+    @abc.abstractmethod
+    def add_package(self, package: File, channel: str, destination: str):
         pass
 
     @abc.abstractmethod
@@ -172,7 +176,13 @@ class LocalStore(PackageStore):
         channel_path = path.join(self.channels_dir, name)
         self.fs.rm(channel_path, recursive=True)
 
-    async def add_package(self, package: File, channel: str, destination: str) -> None:
+    def add_package(self, package: File, channel: str, destination: str) -> None:
+        with self._atomic_open(channel, destination) as f:
+            shutil.copyfileobj(package, f)
+
+    async def add_package_async(
+        self, package: File, channel: str, destination: str
+    ) -> None:
         full_path = path.join(self.channels_dir, channel, destination)
         self.fs.makedirs(path.dirname(full_path), exist_ok=True)
 
@@ -337,6 +347,11 @@ class S3Store(PackageStore):
                 # use a chunk size of 10 Megabytes
                 shutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
 
+    async def add_package_async(
+        self, package: File, channel: str, destination: str
+    ) -> None:
+        raise NotImplementedError
+
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
     ) -> None:
@@ -475,6 +490,11 @@ class AzureBlobStore(PackageStore):
             with fs.open(path.join(container, destination), "wb") as pkg:
                 # use a chunk size of 10 Megabytes
                 shutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
+
+    async def add_package_async(
+        self, package: File, channel: str, destination: str
+    ) -> None:
+        raise NotImplementedError
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
@@ -624,6 +644,11 @@ class GoogleCloudStorageStore(PackageStore):
             with fs.open(path.join(container, destination), "wb") as pkg:
                 # use a chunk size of 10 Megabytes
                 shutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
+
+    async def add_package_async(
+        self, package: File, channel: str, destination: str
+    ) -> None:
+        raise NotImplementedError
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
