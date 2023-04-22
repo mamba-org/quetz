@@ -20,5 +20,5 @@ file = "quetz.log"
 admins = ["dummy:alice"]
 
 [profiling]
-enable_sampling = true
+enable_sampling = false
 
