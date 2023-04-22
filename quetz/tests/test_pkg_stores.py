@@ -222,12 +222,24 @@ def test_store_add_list_files(any_store, channel, channel_name):
 
 
 @pytest.mark.asyncio
-async def test_add_package(any_store, channel, channel_name):
+async def test_add_package_async(any_store, channel, channel_name):
     pkg_store = any_store
 
     data = (Path(__file__).parent / "data" / "test-package-0.1-0.tar.bz2").read_bytes()
 
     await pkg_store.add_package_async(
+        BytesIO(data), channel_name, "test-package-0.1-0.tar.gz"
+    )
+
+    assert_files(pkg_store, channel_name, ["test-package-0.1-0.tar.gz"])
+
+
+def test_add_package_async(any_store, channel, channel_name):
+    pkg_store = any_store
+
+    data = (Path(__file__).parent / "data" / "test-package-0.1-0.tar.bz2").read_bytes()
+
+    pkg_store.add_package(
         BytesIO(data), channel_name, "test-package-0.1-0.tar.gz"
     )
 
