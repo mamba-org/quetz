@@ -82,7 +82,7 @@ class PackageStore(abc.ABC):
         pass
 
     @abc.abstractmethod
-    async def add_package_async(self, package: File, channel: str, destination: str):
+    def add_package_async(self, package: File, channel: str, destination: str):
         pass
 
     @abc.abstractmethod
@@ -340,7 +340,7 @@ class S3Store(PackageStore):
         channel_path = self._bucket_map(name)
         self.fs.rm(channel_path, recursive=True, acl="private")
 
-    async def add_package(self, package: File, channel: str, destination: str) -> None:
+    def add_package(self, package: File, channel: str, destination: str) -> None:
         with self._get_fs() as fs:
             bucket = self._bucket_map(channel)
             with fs.open(path.join(bucket, destination), "wb", acl="private") as pkg:
@@ -484,7 +484,7 @@ class AzureBlobStore(PackageStore):
         with self._get_fs() as fs:
             fs.rm(channel_path, recursive=True)
 
-    async def add_package(self, package: File, channel: str, destination: str) -> None:
+    def add_package(self, package: File, channel: str, destination: str) -> None:
         with self._get_fs() as fs:
             container = self._container_map(channel)
             with fs.open(path.join(container, destination), "wb") as pkg:
@@ -638,7 +638,7 @@ class GoogleCloudStorageStore(PackageStore):
         with self._get_fs() as fs:
             fs.rm(channel_path, recursive=True)
 
-    async def add_package(self, package: File, channel: str, destination: str) -> None:
+    def add_package(self, package: File, channel: str, destination: str) -> None:
         with self._get_fs() as fs:
             container = self._bucket_map(channel)
             with fs.open(path.join(container, destination), "wb") as pkg:
