@@ -182,7 +182,10 @@ enabled = {plugins}
 
 @pytest.fixture
 def config_extra():
-    return ""
+    return """
+[profiling]
+enable_sampling = true
+"""
 
 
 @pytest.fixture
