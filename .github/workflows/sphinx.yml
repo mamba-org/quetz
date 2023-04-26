@@ -16,7 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: "install dependencies"
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
       - name: "build docs"
         shell: bash -l {0}
         run: |
