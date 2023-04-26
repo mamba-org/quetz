@@ -1,8 +1,9 @@
+import hashlib
 import json
 import os
 import time
 from pathlib import Path
-from typing import BinaryIO
+from typing import BinaryIO, Callable, Union
 
 import pytest
 
@@ -326,6 +327,45 @@ def test_upload_package_version(
         assert package_filename in os.listdir(package_dir)
 
 
+def _upload_file_1(
+    auth_client,
+    public_channel,
+    public_package,
+    package_filename: str,
+    force: bool = False,
+):
+    """Upload a file using /channels/{channel_name}/packages/{package_name}/files/"""
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/packages/"
+            f"{public_package.name}/files/",
+            files=files,
+            data={"force": force},
+        )
+    return response
+
+
+def _upload_file_2(
+    auth_client,
+    public_channel,
+    public_package,
+    package_filename: str,
+    force: bool = False,
+):
+    """Upload a file using /channels/{channel_name}/upload/{file_name}"""
+
+    with open(package_filename, "rb") as fid:
+        body_bytes = fid.read()
+    response = auth_client.post(
+        f"/api/channels/{public_channel.name}/upload/{package_filename}",
+        content=body_bytes,
+        params={"force": force, "sha256": hashlib.sha256(body_bytes).hexdigest()},
+    )
+    return response
+
+
+@pytest.mark.parametrize("upload_function", [_upload_file_1, _upload_file_2])
 def test_upload_package_version_wrong_filename(
     auth_client,
     public_channel,
@@ -334,18 +374,16 @@ def test_upload_package_version_wrong_filename(
     db,
     config,
     remove_package_versions,
+    upload_function: Callable,
 ):
     pkgstore = config.get_package_store()
 
     package_filename = "my-package-0.1-0.tar.bz2"
     os.rename("test-package-0.1-0.tar.bz2", package_filename)
-    with open(package_filename, "rb") as fid:
-        files = {"files": (package_filename, fid)}
-        response = auth_client.post(
-            f"/api/channels/{public_channel.name}/packages/"
-            f"{public_package.name}/files/",
-            files=files,
-        )
+
+    response = upload_function(
+        auth_client, public_channel, public_package, package_filename
+    )
 
     package_dir = Path(pkgstore.channels_dir) / public_channel.name / 'linux-64'
 
@@ -357,6 +395,15 @@ def test_upload_package_version_wrong_filename(
     assert not os.path.exists(package_dir)
 
 
+def sha256(path: Union[Path, str]) -> str:
+    sha = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(2**16), b""):
+            sha.update(chunk)
+    return sha.hexdigest()
+
+
+@pytest.mark.parametrize("upload_function", [_upload_file_1, _upload_file_2])
 @pytest.mark.parametrize("package_name", ["test-package"])
 def test_upload_duplicate_package_version(
     auth_client,
@@ -366,33 +413,40 @@ def test_upload_duplicate_package_version(
     db,
     config,
     remove_package_versions,
+    upload_function: Callable,
 ):
     pkgstore = config.get_package_store()
 
     package_filename = "test-package-0.1-0.tar.bz2"
     package_filename_copy = "test-package-0.1-0_copy.tar.bz2"
 
-    with open(package_filename, "rb") as fid:
-        files = {"files": (package_filename, fid)}
-        response = auth_client.post(
-            f"/api/channels/{public_channel.name}/packages/"
-            f"{public_package.name}/files/",
-            files=files,
-        )
+    file_sha = sha256(package_filename)
+    file_copy_sha = sha256(package_filename_copy)
+    assert (
+        file_sha != file_copy_sha
+    ), "Sanity check: Test files must have different hashes for this test."
+    file_size = os.path.getsize(package_filename)
+    file_copy_size = os.path.getsize(package_filename_copy)
+    assert (
+        file_size != file_copy_size
+    ), "Sanity check: Test files must have different sizes for this test."
 
-    # Get repodata content
-    package_dir = Path(pkgstore.channels_dir) / public_channel.name / 'linux-64'
-    with open(package_dir / 'repodata.json', 'r') as fd:
-        repodata_init = json.load(fd)
+    upload_function(auth_client, public_channel, public_package, package_filename)
+
+    def get_repodata():
+        """Helper function to read repo data"""
+        package_dir = Path(pkgstore.channels_dir) / public_channel.name / 'linux-64'
+        return json.loads((package_dir / 'repodata.json').read_text())
+
+    repodata_init = get_repodata()
+    assert repodata_init["packages"][package_filename]["sha256"] == file_sha
 
     # Try submitting the same package without 'force' flag
-    with open(package_filename, "rb") as fid:
-        files = {"files": (package_filename, fid)}
-        response = auth_client.post(
-            f"/api/channels/{public_channel.name}/packages/"
-            f"{public_package.name}/files/",
-            files=files,
-        )
+    response = upload_function(
+        auth_client, public_channel, public_package, package_filename
+    )
+
+    # Expect 409 here
     assert response.status_code == 409
     detail = response.json()['detail']
     assert "Duplicate" in detail
@@ -401,32 +455,37 @@ def test_upload_duplicate_package_version(
     os.remove(package_filename)
     os.rename(package_filename_copy, package_filename)
 
-    # Ensure the 'time_modified' value change in repodata.json
+    # Ensure the 'time_modified' value changes in repodata.json
     time.sleep(1)
 
     # Submit the same package with 'force' flag
-    with open(package_filename, "rb") as fid:
-        files = {"files": (package_filename, fid)}
-        response = auth_client.post(
-            f"/api/channels/{public_channel.name}/packages/"
-            f"{public_package.name}/files/",
-            files=files,
-            data={"force": True},
-        )
-
+    response = upload_function(
+        auth_client, public_channel, public_package, package_filename, force=True
+    )
     assert response.status_code == 201
 
     # Check that repodata content has been updated
-    with open(package_dir / 'repodata.json', 'r') as fd:
-        repodata = json.load(fd)
+    repodata = get_repodata()
 
+    # Info should match
     assert repodata_init["info"] == repodata["info"]
+
+    # Package keys should match
     assert repodata_init["packages"].keys() == repodata["packages"].keys()
     repodata_init_pkg = repodata_init["packages"][package_filename]
     repodata_pkg = repodata["packages"][package_filename]
-    assert repodata_init_pkg["time_modified"] != repodata_pkg["time_modified"]
-    assert repodata_init_pkg["md5"] != repodata_pkg["md5"]
-    assert repodata_init_pkg["sha256"] != repodata_pkg["sha256"]
+
+    # Hashes should match pre-upload expectation
+    assert repodata_init_pkg["sha256"] == file_sha
+    assert repodata_pkg["sha256"] == file_copy_sha
+
+    # Sizes should match pre-upload expectation
+    assert repodata_init_pkg["size"] == file_size
+    assert repodata_pkg["size"] == file_copy_size
+
+    # Upload-related metadata should not match
+    for key in "time_modified", "md5", "sha256":
+        assert repodata_init_pkg[key] != repodata_pkg[key]
 
 
 @pytest.mark.parametrize("package_name", ["test-package"])
