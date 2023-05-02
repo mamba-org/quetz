@@ -90,9 +90,16 @@ def _run_migrations(
     alembic_config: Optional[AlembicConfig] = None,
     branch_name: str = "heads",
 ) -> None:
-    logger.info('Running DB migrations on %r', db_url)
-    if not alembic_config and db_url:
-        alembic_config = _alembic_config(db_url)
+    if db_url:
+        if db_url.startswith("postgre"):
+            db_engine = "PostgreSQL"
+        elif db_url.startswith("sqlite"):
+            db_engine = "SQLite"
+        else:
+            db_engine = db_url.split("/")[0]
+        logger.info('Running DB migrations on %s', db_engine)
+        if not alembic_config:
+            alembic_config = _alembic_config(db_url)
     command.upgrade(alembic_config, branch_name)
 
 
