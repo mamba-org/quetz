@@ -2,6 +2,90 @@
 requires = ["setuptools>=41", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "quetz-server"
+dynamic = ["version"]
+authors=[
+    {name="QuantStack & Quetz contributors", email="wolf.vollprecht@quantstack.net"},
+]
+keywords = [
+  "conda",
+  "mamba",
+  "server"
+]
+readme = "README.md"
+description = "The mamba-org server for conda packages"
+requires-python = ">=3.7"
+license = {file = "LICENSE"}
+dependencies = [
+  "alembic",
+  "aiofiles",
+  "appdirs",
+  "authlib<1.0.0",
+  "fastapi",
+  "fsspec",
+  "h2",
+  "httpx>=0.22.0",
+  "importlib-metadata",
+  "itsdangerous",
+  "jinja2",
+  "pluggy",
+  "prometheus_client",
+  "python-multipart",
+  "pyyaml",
+  "requests",
+  "sqlalchemy",
+  "sqlalchemy-utils",
+  "tenacity",
+  "toml",
+  "typer",
+  "typing_extensions",
+  "ujson",
+  "uvicorn",
+  "zstandard"
+]
+
+[project.optional-dependencies]
+azure = "adlfs"
+gcs = "gcsfs >=2022.02"
+pam = "pamela"
+postgre = "psycopg2"
+s3 = "s3fs"
+client = "quetz-client"
+dev = [
+  "black",
+  "flake8",
+  "isort",
+  "pre-commit",
+  "pytest",
+  "pytest-asyncio",
+  "pytest-mock",
+  "pytest-cov",
+  "pytest-timeout",
+  "tbump"
+]
+test = "quetz-server[dev]"
+all = [
+  "quetz-server[azure]",
+  "quetz-server[gcs]",
+  "quetz-server[pam]",
+  "quetz-server[postgre]",
+  "quetz-server[s3]"
+]
+
+[project.urls]
+Homepage = "https://github.com/mamba-org/quetz"
+Repository = "https://github.com/mamba-org/quetz"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.dynamic]
+version = {attr = "quetz._version.__version__"}
+
+[project.scripts]
+quetz = "quetz.cli:app"
+
 [tool.pytest.ini_options]
 asyncio_mode="strict"
 
