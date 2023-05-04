@@ -214,6 +214,14 @@ class Config:
             ],
             required=False,
         ),
+        ConfigSection(
+            "profiling",
+            [
+                ConfigEntry("enable_sampling", bool, required=False, default=False),
+                ConfigEntry("interval_seconds", float, required=False, default=0.001),
+            ],
+            required=False,
+        ),
     ]
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]
