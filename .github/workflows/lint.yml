@@ -11,7 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: mamba-org/provision-with-micromamba@v15
+      - uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
       - run: ln -s "${CONDA_PREFIX}" .venv # Necessary for pyright.
       - uses: pre-commit/action@v2.0.0
         with:

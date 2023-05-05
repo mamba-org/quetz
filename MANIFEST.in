@@ -3,11 +3,9 @@ include alembic.ini
 include dev_config.toml
 include environment.yml
 include init_db.py
-include .coveragerc
 include .flake8
 include .pre-commit-config.yaml
 include .readthedocs.yml
-include mypy.ini
 include download-test-package.sh
 
 recursive-include quetz/migrations *.*

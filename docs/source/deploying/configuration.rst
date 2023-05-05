@@ -225,6 +225,15 @@ You can configure the limits (quota) on the size of uploaded packages for each c
 
 :channel_quota: maximum total size (in bytes) of packages uploaded to the channel
 
+``profiling`` section
+^^^^^^^^^^^^^^^^^^^^^
+
+Quetz provides instrumentation for profiling its endpoints.
+
+:enable_sampling: enables sampling profiling by providing the query parameter `profile=true` (or any truth value) to the request. When active and provided the query parameter, the returned response will be highjacked to provide an HTML version of the profile output.
+
+:interval_seconds: sampling interval in seconds. If not set, it has a default value of `0.001`.
+
 Environment
 -----------
 
