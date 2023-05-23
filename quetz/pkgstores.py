@@ -19,6 +19,7 @@ from threading import Lock
 from typing import IO, List, Tuple, Union
 
 import aiofiles
+import aioshutil
 import fsspec
 from tenacity import retry
 from tenacity.retry import retry_if_exception_type
@@ -350,7 +351,11 @@ class S3Store(PackageStore):
     async def add_package_async(
         self, package: File, channel: str, destination: str
     ) -> None:
-        raise NotImplementedError
+        with self._get_fs() as fs:
+            bucket = self._bucket_map(channel)
+            with fs.open(path.join(bucket, destination), "wb", acl="private") as pkg:
+                # use a chunk size of 10 Megabytes
+                aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
@@ -494,7 +499,11 @@ class AzureBlobStore(PackageStore):
     async def add_package_async(
         self, package: File, channel: str, destination: str
     ) -> None:
-        raise NotImplementedError
+        with self._get_fs() as fs:
+            container = self._container_map(channel)
+            with fs.open(path.join(container, destination), "wb") as pkg:
+                # use a chunk size of 10 Megabytes
+                aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
@@ -595,6 +604,7 @@ class GoogleCloudStorageStore(PackageStore):
             token=self.token if self.token else None,
             cache_timeout=self.cache_timeout,
             default_location=self.region,
+            asynchronous=True,
         )
 
         self.bucket_prefix = config['bucket_prefix']
@@ -648,7 +658,11 @@ class GoogleCloudStorageStore(PackageStore):
     async def add_package_async(
         self, package: File, channel: str, destination: str
     ) -> None:
-        raise NotImplementedError
+        with self._get_fs() as fs:
+            container = self._bucket_map(channel)
+            with fs.open(path.join(container, destination), "wb") as pkg:
+                # use a chunk size of 10 Megabytes
+                aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
