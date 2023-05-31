@@ -94,9 +94,11 @@ def sanitize_db_url(db_url: str) -> str:
 
     If the URL is parseable with sqlalchemy's make_url,
     it is parsed and the password is replaced.
+    If not, we try to replace everything between ":" and "@",
+    if those characters are present.
 
-    If the URL is not parseable, we at least replace half
-    the URL chr
+    If neither method succeeds, we give up and return the
+    full initial URL.
     """
 
     # Attempt 1: Actual parsing, this is ideal but may fail
