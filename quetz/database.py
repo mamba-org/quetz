@@ -76,8 +76,8 @@ def get_db_manager():
     db = get_session(
         db_url=config.sqlalchemy_database_url,
         echo=config.sqlalchemy_echo_sql,
-        pool_size=config.sqlalchemy_pool_size,
-        max_overflow=config.sqlalchemy_max_overflow,
+        pool_size=config.sqlalchemy_postgres_pool_size,
+        max_overflow=config.sqlalchemy_postgres_max_overflow,
     )
 
     try:
