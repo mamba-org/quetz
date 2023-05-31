@@ -19,9 +19,32 @@ Quetz can be run with SQLlite or PostgreSQL as database backends (PostgreSQL is 
 .. code::
 
    [sqlalchemy]
+   # The URL to the database to use.
    database_url = "postgresql://postgres:mysecretpassword@localhost:5432/quetz"
 
+   # Undocumented setting, unknown use
+   database_plugin_path = ""
+
+   # Passed directly to the "echo" argument of sqlalchemy.create_engine
+   echo_sql = false
+
+   # The pool size for sqlalchemy engine connections to postgres DBs
+   # see https://docs.sqlalchemy.org/en/latest/core/pooling.html
+   postgres_pool_size = 100
+
+   # The maximal number of overflow connections beyond the pool size
+   # see https://docs.sqlalchemy.org/en/latest/core/pooling.html
+   postgres_max_overflow = 100
+
 :database_url: URL of the database (may contain user credentials) prefixed with either ``sqlite://`` or ``postgresql://``.
+
+:database_plugin_path: Undocumented setting, unknown use, default: `""`.
+
+:echo_sql: Passed directly to the "echo" argument of sqlalchemy.create_engine, default: `false`.
+
+:postgres_pool_size: The pool size for sqlalchemy engine connections to postgres DBs. See `sqlalchemy docs <https://docs.sqlalchemy.org/en/latest/core/pooling.html>`_. Default: `100`
+
+:postgres_max_overflow: The maximal number of overflow connections beyond the pool size. See `sqlalchemy docs <https://docs.sqlalchemy.org/en/latest/core/pooling.html>`_. Default: `100`
 
 ``github`` section
 ^^^^^^^^^^^^^^^^^^
