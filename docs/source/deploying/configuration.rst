@@ -19,7 +19,7 @@ Quetz can be run with SQLlite or PostgreSQL as database backends (PostgreSQL is 
 .. code::
 
    [sqlalchemy]
-   # The URL to the data base to use.
+   # The URL to the database to use.
    database_url = "postgresql://postgres:mysecretpassword@localhost:5432/quetz"
 
    # Undocumented setting, unknown use
