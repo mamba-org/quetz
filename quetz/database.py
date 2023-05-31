@@ -104,7 +104,8 @@ def sanitize_db_url(db_url: str) -> str:
     # Attempt 1: Actual parsing, this is ideal but may fail
     try:
         parsed_url = make_url(db_url)
-        return db_url.replace(parsed_url.password, "***")
+        if parsed_url.password:
+            return db_url.replace(parsed_url.password, "***")
     except ArgumentError:
         pass
 
