@@ -27,6 +27,8 @@ def set_metrics(*args):
 
 
 def get_engine(db_url, echo: bool = False, reuse_engine=True, **kwargs) -> Engine:
+    config = Config()
+
     if db_url.startswith('sqlite'):
         kwargs.setdefault('connect_args', {'check_same_thread': False})
 
@@ -38,10 +40,13 @@ def get_engine(db_url, echo: bool = False, reuse_engine=True, **kwargs) -> Engin
     global engine
 
     if not engine or not reuse_engine:
-        # TODO make configurable!
         if db_url.startswith('postgres'):
             engine = create_engine(
-                db_url, echo=echo, pool_size=200, max_overflow=100, **kwargs
+                db_url,
+                echo=echo,
+                pool_size=config.sqlalchemy_postgres_pool_size,
+                max_overflow=config.sqlalchemy.sqlalchemy_postgres_max_overflow,
+                **kwargs
             )
             for event_name in ['connect', 'close', 'checkin', 'checkout']:
                 event.listen(engine, event_name, set_metrics)
