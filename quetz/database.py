@@ -1,11 +1,14 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 import logging
+import re
 from contextlib import contextmanager
 from typing import Callable
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
+from sqlalchemy.engine.url import make_url
+from sqlalchemy.exc import ArgumentError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
 from sqlalchemy.pool import StaticPool
@@ -83,3 +86,29 @@ def get_db_manager():
         yield db
     finally:
         db.close()
+
+
+def sanitize_db_url(db_url: str) -> str:
+    """
+    Sanitizes the DB url so it is safe to print.
+
+    If the URL is parseable with sqlalchemy's make_url,
+    it is parsed and the password is replaced.
+
+    If the URL is not parseable, we at least replace half
+    the URL chr
+    """
+
+    # Attempt 1: Actual parsing, this is ideal but may fail
+    try:
+        parsed_url = make_url(db_url)
+        return db_url.replace(parsed_url.password, "***")
+    except ArgumentError:
+        pass
+
+    # Attempt 2: Poor man's parsing: Just replacing everything between ":" and "@"
+    if ":" in db_url and "@" in db_url:
+        return re.sub(":[^:@]*@", ":***@", db_url)
+
+    # Fallback: We don't understand the URL format, so we do nothing
+    return db_url
