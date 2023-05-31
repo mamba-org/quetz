@@ -26,9 +26,7 @@ def set_metrics(*args):
     DATABASE_CONNECTIONS_USED.set(checked_out)
 
 
-def get_engine(db_url, echo: bool = False, reuse_engine=True, **kwargs) -> Engine:
-    config = Config()
-
+def get_engine(db_url, reuse_engine=True, **kwargs) -> Engine:
     if db_url.startswith('sqlite'):
         kwargs.setdefault('connect_args', {'check_same_thread': False})
 
@@ -41,17 +39,11 @@ def get_engine(db_url, echo: bool = False, reuse_engine=True, **kwargs) -> Engin
 
     if not engine or not reuse_engine:
         if db_url.startswith('postgres'):
-            engine = create_engine(
-                db_url,
-                echo=echo,
-                pool_size=config.sqlalchemy_postgres_pool_size,
-                max_overflow=config.sqlalchemy.sqlalchemy_postgres_max_overflow,
-                **kwargs
-            )
+            engine = create_engine(db_url, **kwargs)
             for event_name in ['connect', 'close', 'checkin', 'checkout']:
                 event.listen(engine, event_name, set_metrics)
         else:
-            engine = create_engine(db_url, echo=echo, **kwargs)
+            engine = create_engine(db_url, **kwargs)
 
         def on_connect(dbapi_conn, conn_record):
             logger.debug("connection opened: %s", engine.pool.status())
@@ -69,20 +61,24 @@ def get_session_maker(engine) -> Callable[[], Session]:
     return sessionmaker(autocommit=False, autoflush=True, bind=engine)
 
 
-def get_session(db_url: str, echo: bool = False, **kwargs) -> Session:
+def get_session(db_url: str, **kwargs) -> Session:
     """Get a database session.
 
     Important note: this function is mocked during tests!
 
     """
-    return get_session_maker(get_engine(db_url, echo, **kwargs))()
+    return get_session_maker(get_engine(db_url, **kwargs))()
 
 
 @contextmanager
 def get_db_manager():
     config = Config()
-    database_url = config.sqlalchemy_database_url
-    db = get_session(database_url, echo=config.sqlalchemy_echo_sql)
+    db = get_session(
+        db_url=config.sqlalchemy_database_url,
+        echo=config.sqlalchemy_echo_sql,
+        pool_size=config.sqlalchemy_pool_size,
+        max_overflow=config.sqlalchemy_max_overflow,
+    )
 
     try:
         yield db
