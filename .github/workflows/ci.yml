@@ -1,10 +1,9 @@
 name: CI
 
 on:
-  push:
-  pull_request:
-    branches:
-      - main
+  pull_request_target:
+    types:
+      - opened
 
 env:
   GCS_PROJECT: qc-oss-mamba-org-quetz-dev
