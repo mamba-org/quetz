@@ -1,10 +1,13 @@
 name: CI
 
 on:
-  push:
-  pull_request:
-    branches:
-      - main
+  pull_request_target:
+    types: [assigned, opened, synchronize, reopened]
+
+env:
+  GCS_PROJECT: qc-oss-mamba-org-quetz-dev
+  GCS_TOKEN: /home/runner/gcs/token.json
+  GCS_TOKEN_CONTENT: ${{ secrets.gcs_token_content }}
 
 jobs:
   test_quetz:
@@ -41,7 +44,10 @@ jobs:
           - 6379:6379
     steps:
       - uses: actions/checkout@v2
-
+      - name: write gcs token file
+        run: |
+          mkdir $(dirname "${GCS_TOKEN}")
+          echo "${GCS_TOKEN_CONTENT}" > "${GCS_TOKEN}"
       - name: install mamba
         uses: mamba-org/setup-micromamba@v1
         with:
