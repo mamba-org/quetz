@@ -2,8 +2,7 @@ name: CI
 
 on:
   pull_request_target:
-    types:
-      - opened
+    types: [assigned, opened, synchronize, reopened]
 
 env:
   GCS_PROJECT: qc-oss-mamba-org-quetz-dev
