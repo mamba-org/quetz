@@ -48,6 +48,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: write gcs token file
         run: |
+          ls -lha /
           pwd
           mkdir $(dirname "${GCS_TOKEN}")
           echo "${GCS_TOKEN_CONTENT}" > "${GCS_TOKEN}"
