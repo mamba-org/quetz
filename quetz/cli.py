@@ -29,7 +29,7 @@ from quetz.config import (
     configure_logger,
     create_config,
 )
-from quetz.database import get_session
+from quetz.database import get_session, sanitize_db_url
 from quetz.db_models import (
     ApiKey,
     Channel,
@@ -315,7 +315,7 @@ def _is_deployment(base_dir: Path):
             if not database_exists(config.sqlalchemy_database_url):
                 logger.error(
                     "Cannot verify that specified database exists. "
-                    + config.sqlalchemy_database_url
+                    + sanitize_db_url(config.sqlalchemy_database_url)
                 )
                 return False
             else:
