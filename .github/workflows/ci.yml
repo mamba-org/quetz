@@ -48,7 +48,6 @@ jobs:
         run: |
           mkdir $(dirname "${GCS_TOKEN}")
           echo "${GCS_TOKEN_CONTENT}" > "${GCS_TOKEN}"
-          cat "${GCS_TOKEN}"
       - name: install mamba
         uses: mamba-org/setup-micromamba@v1
         with:
