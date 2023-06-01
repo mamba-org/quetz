@@ -40,7 +40,10 @@ def post_index_creation(raw_repodata: dict, channel_name, subdir):
 
             from libmambapy import bindings as libmamba_api
 
-            for name, metadata in raw_repodata["packages"].items():
+            packages = raw_repodata.get("packages", {}) | raw_repodata.get(
+                "packages.conda", {}
+            )
+            for name, metadata in packages.items():
                 sig = libmamba_api.sign(
                     json.dumps(metadata, indent=2, sort_keys=True), query[0].private_key
                 )

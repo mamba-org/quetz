@@ -327,7 +327,7 @@ def initial_sync_mirror(
 
     from quetz.main import handle_package_files
 
-    packages = repodata.get("packages", {})
+    packages = repodata.get("packages", {}) | repodata.get("packages.conda", {})
 
     version_methods = [
         _check_checksum(dao, channel_name, arch, "sha256"),
