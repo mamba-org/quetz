@@ -9,7 +9,7 @@ on:
 env:
   GCS_PROJECT: qc-oss-mamba-org-quetz-dev
   GCS_TOKEN: /home/runner/gcs/token.json
-  GCS_TOKEN_CONTENT: ${{ secrets.GCS_TOKEN }}
+  GCS_TOKEN_CONTENT: ${{ secrets.gcs_token }}
 
 jobs:
   test_quetz:
@@ -48,7 +48,6 @@ jobs:
       - uses: actions/checkout@v2
       - name: write gcs token file
         run: |
-          whoami
           mkdir $(dirname "${GCS_TOKEN}")
           echo "${GCS_TOKEN_CONTENT}" > "${GCS_TOKEN}"
       - name: install mamba
