@@ -301,7 +301,9 @@ class S3Store(PackageStore):
         # to the s3fs constructor
         key = config['key'] if config['key'] != '' else None
         secret = config['secret'] if config['secret'] != '' else None
-        self.fs = s3fs.S3FileSystem(key=key, secret=secret, client_kwargs=client_kwargs)
+        self.fs = s3fs.S3FileSystem(
+            key=key, secret=secret, asynchronous=True, client_kwargs=client_kwargs
+        )
 
         self.bucket_prefix = config['bucket_prefix']
         self.bucket_suffix = config['bucket_suffix']
@@ -450,6 +452,7 @@ class AzureBlobStore(PackageStore):
             account_name=self.storage_account_name,
             connection_string=self.conn_string,
             account_key=self.access_key,
+            asynchronous=True,
         )
 
         self.container_prefix = config['container_prefix']
