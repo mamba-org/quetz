@@ -355,7 +355,7 @@ class S3Store(PackageStore):
             bucket = self._bucket_map(channel)
             with fs.open(path.join(bucket, destination), "wb", acl="private") as pkg:
                 # use a chunk size of 10 Megabytes
-                aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
+                await aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
@@ -503,7 +503,7 @@ class AzureBlobStore(PackageStore):
             container = self._container_map(channel)
             with fs.open(path.join(container, destination), "wb") as pkg:
                 # use a chunk size of 10 Megabytes
-                aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
+                await aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
@@ -662,7 +662,7 @@ class GoogleCloudStorageStore(PackageStore):
             container = self._bucket_map(channel)
             with fs.open(path.join(container, destination), "wb") as pkg:
                 # use a chunk size of 10 Megabytes
-                aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
+                await aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
