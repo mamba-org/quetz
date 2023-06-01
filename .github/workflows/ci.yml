@@ -7,7 +7,7 @@ on:
 env:
   GCS_PROJECT: qc-oss-mamba-org-quetz-dev
   GCS_TOKEN: /home/runner/gcs/token.json
-  GCS_TOKEN_CONTENT: ${{ secrets.gcs_token }}
+  GCS_TOKEN_CONTENT: ${{ secrets.gcs_token_content }}
 
 jobs:
   test_quetz:
