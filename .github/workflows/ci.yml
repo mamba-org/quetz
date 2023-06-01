@@ -8,7 +8,7 @@ on:
 
 env:
   GCS_PROJECT: qc-oss-mamba-org-quetz-dev
-  GCS_TOKEN: ${{ secrets.GCS_TOKEN }}
+  GCS_TOKEN: ""
 
 jobs:
   test_quetz:
