@@ -53,6 +53,7 @@ jobs:
           environment-file: environment.yml
       - name: write gcs token file
         run: |
+          mkdir $(dirname "${GCS_TOKEN}")
           echo "${GCS_TOKEN_CONTENT}" > "${GCS_TOKEN}"
       - name: test quetz
         shell: bash -l -eo pipefail {0}
