@@ -85,8 +85,9 @@ To run the upload, you need to set environment variables for the quetz API key (
 ```bash
 export QUETZ_API_KEY=E_KaBFstCKI9hTdPM7DQq56GglRHf2HW7tQtq6si370
 export QUETZ_SERVER_URL=http://localhost:8000
-quetz-client post_file_to_channel channel0 xtensor/linux-64/xtensor-0.16.1-0.tar.bz2
-quetz-client post_file_to_channel channel0 xtensor/osx-64/xtensor-0.16.1-0.tar.bz2
+quetz-client post_file_to_channel channel0 xtensor/linux-64/xtensor-0.24.3-h924138e_1.tar.bz2
+quetz-client post_file_to_channel channel0 xtensor/osx-64/xtensor-0.24.3-h1b54a9f_1.tar.bz2
+quetz-client post_file_to_channel channel0 xtensor/osx-arm64/xtensor-0.24.3-hf86a087_1.tar.bz2
 ```
 
 Install the test package with conda:
