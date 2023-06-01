@@ -8,7 +8,8 @@ on:
 
 env:
   GCS_PROJECT: qc-oss-mamba-org-quetz-dev
-  GCS_TOKEN: ""
+  GCS_TOKEN: /etc/gcs/token.json
+  GCS_TOKEN_CONTENT: ${{ secrets.GCS_TOKEN }}
 
 jobs:
   test_quetz:
@@ -50,6 +51,9 @@ jobs:
         uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: environment.yml
+      - name: write gcs token file
+        run: |
+          echo "${GCS_TOKEN_CONTENT}" > "${GCS_TOKEN}"
       - name: test quetz
         shell: bash -l -eo pipefail {0}
         env:
