@@ -39,6 +39,47 @@ def check_package_membership(package_name, includelist, excludelist):
     return True
 
 
+def _include_pattern_match(name, version, build, pattern):
+    """
+    3 possible formats
+
+    name
+    name=version
+    name=version=build_string
+    Note that if a given regular expression is given, it must match the full name/version/build string.
+    """
+    import re
+
+    eq_count = pattern.count("=")
+    if eq_count == 0:
+        return re.match(pattern, name)
+
+    elif eq_count == 1:
+        name_pattern, version_pattern = pattern.split("=")
+        return re.match(name_pattern, name) and re.match(version_pattern, version)
+
+    elif eq_count == 2:
+        name_pattern, version_pattern, build_pattern = pattern.split("=")
+        return (
+            re.match(name_pattern, name)
+            and re.match(version_pattern, version)
+            and re.match(build_pattern, build)
+        )
+    else:
+        raise ValueError(f"Invalid pattern: {pattern}")
+
+
+def check_package_membership_pattern(
+    package_spec, include_pattern_list, exclude_pattern_list
+):
+    name, version, build = _parse_package_spec(package_spec)
+    for include_pattern in include_pattern_list:
+        if _include_pattern_match(name, version, build, include_pattern):
+            return True
+    else:
+        return False
+
+
 def add_static_file(contents, channel_name, subdir, fname, pkgstore, file_index=None):
     if type(contents) is not bytes:
         raw_file = contents.encode("utf-8")
@@ -279,3 +320,19 @@ def background_task_wrapper(func: Callable, logger: logging.Logger) -> Callable:
             )
 
     return wrapper
+
+
+def _parse_package_spec(package_spec: str) -> tuple:
+    """
+    Determine name, version and build number string from package spec.
+
+    Package specs are allowed in three formats:
+    1. `name`
+    2. `name=version`
+    3. `name=version=build`
+
+    This function disassembles the spec into its parts. If version
+    and / or build are missing (cases 1 and 2), the missing field
+    is filled with a regular expression matching all versions / builds.
+    """
+    raise NotImplementedError()

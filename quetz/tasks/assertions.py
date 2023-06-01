@@ -1,5 +1,5 @@
 def can_channel_synchronize(channel):
-    return channel.mirror_channel_url and (channel.mirror_mode == "mirror")
+    return channel.mirror_channel_url and (channel.mirror_mode in ["mirror", "proxy"])
 
 
 def can_channel_synchronize_metrics(channel):

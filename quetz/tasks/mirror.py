@@ -348,6 +348,7 @@ def initial_sync_mirror(
 
         update_batch = []
         update_size = 0
+        remove_batch = []
 
         def handle_batch(update_batch):
             # i_batch += 1
@@ -404,15 +405,15 @@ def initial_sync_mirror(
 
             return False
 
-        for package_name, metadata in packages.items():
-            if check_package_membership(package_name, includelist, excludelist):
-                path = os.path.join(arch, package_name)
+        for repo_package_name, metadata in packages.items():
+            if check_package_membership(repo_package_name, includelist, excludelist):
+                path = os.path.join(arch, repo_package_name)
 
                 # try to find out whether it's a new package version
 
                 is_uptodate = None
                 for _check in version_checks:
-                    is_uptodate = _check(package_name, metadata)
+                    is_uptodate = _check(repo_package_name, metadata)
                     if is_uptodate is not None:
                         break
 
@@ -420,10 +421,16 @@ def initial_sync_mirror(
                 if is_uptodate:
                     continue
                 else:
-                    logger.debug(f"updating package {package_name} from {arch}")
+                    logger.debug(f"updating package {repo_package_name} from {arch}")
 
-                update_batch.append((path, package_name, metadata))
+                update_batch.append((path, repo_package_name, metadata))
                 update_size += metadata.get('size', 100_000)
+
+            else:
+                logger.debug(
+                    f"package {repo_package_name} not member of channel anymore."
+                )
+                remove_batch.append((arch, repo_package_name))
 
             if len(update_batch) >= max_batch_length or update_size >= max_batch_size:
                 logger.debug(f"Executing batch with {update_size}")
@@ -434,8 +441,21 @@ def initial_sync_mirror(
         # handle final batch
         any_updated |= handle_batch(update_batch)
 
+        if remove_batch:
+            logger.debug(f"Removing {len(remove_batch)} packages: {remove_batch}")
+            package_specs_remove = set([p[1].split("-")[0] for p in remove_batch])
+            # TODO: reuse route [DELETE /api/channels/{channel_name}/packages] logic
+            for package_specs in package_specs_remove:
+                dao.remove_package(channel_name, package_name=package_specs)
+                dao.cleanup_channel_db(channel_name, package_name=package_specs)
+                pkgstore.delete_file(channel.name, destination=package_specs)
+
+            any_updated |= True
+
     if any_updated:
-        indexing.update_indexes(dao, pkgstore, channel_name, subdirs=[arch])
+        indexing.update_indexes(
+            dao, pkgstore, channel_name, subdirs=[arch]
+        )  # build repodata
 
 
 def create_packages_from_channeldata(
@@ -540,37 +560,39 @@ def synchronize_packages(
         logger.error(f"channel {channel_name} not found")
         return
 
-    host = new_channel.mirror_channel_url
+    mirror_channel_urls = new_channel.get_mirror_channel_urls()
+    for mirror_channel_url in mirror_channel_urls:
+        remote_repo = RemoteRepository(mirror_channel_url, session)
 
-    remote_repo = RemoteRepository(new_channel.mirror_channel_url, session)
+        user_id = auth.assert_user()
 
-    user_id = auth.assert_user()
+        try:
+            channel_data = remote_repo.open("channeldata.json").json()
+            if use_repodata:
+                create_packages_from_channeldata(
+                    channel_name, user_id, channel_data, dao
+                )
+            subdirs = channel_data.get("subdirs", [])
+        except (RemoteFileNotFound, json.JSONDecodeError):
+            subdirs = None
+        except RemoteServerError:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Remote channel {mirror_channel_url} unavailable",
+            )
+        # if no channel data use known architectures
+        if subdirs is None:
+            subdirs = KNOWN_SUBDIRS
 
-    try:
-        channel_data = remote_repo.open("channeldata.json").json()
-        if use_repodata:
-            create_packages_from_channeldata(channel_name, user_id, channel_data, dao)
-        subdirs = channel_data.get("subdirs", [])
-    except (RemoteFileNotFound, json.JSONDecodeError):
-        subdirs = None
-    except RemoteServerError:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Remote channel {host} unavailable",
-        )
-    # if no channel data use known architectures
-    if subdirs is None:
-        subdirs = KNOWN_SUBDIRS
-
-    for arch in subdirs:
-        initial_sync_mirror(
-            new_channel.name,
-            remote_repo,
-            arch,
-            dao,
-            pkgstore,
-            auth,
-            includelist,
-            excludelist,
-            use_repodata=use_repodata,
-        )
+        for arch in subdirs:
+            initial_sync_mirror(
+                new_channel.name,
+                remote_repo,
+                arch,
+                dao,
+                pkgstore,
+                auth,
+                includelist,
+                excludelist,
+                use_repodata=use_repodata,
+            )

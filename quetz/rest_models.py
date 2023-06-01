@@ -7,7 +7,7 @@ import json
 import uuid
 from datetime import date, datetime
 from enum import Enum
-from typing import Generic, List, Optional, TypeVar
+from typing import Dict, Generic, List, Optional, TypeVar, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -65,8 +65,10 @@ class ChannelBase(BaseModel):
     private: bool = Field(True, title="channel should be private")
     size_limit: Optional[int] = Field(None, title="size limit of the channel")
     ttl: int = Field(36000, title="ttl of the channel")
-    mirror_channel_url: Optional[str] = Field(None, pattern="^(http|https)://.+")
-    mirror_mode: Optional[MirrorMode] = Field(None)
+    mirror_channel_url: Optional[Union[str, List[str]]] = Field(
+        None, pattern="^(http|https)://.+", nullable=True
+    )
+    mirror_mode: Optional[MirrorMode] = Field(None, nullable=True)
 
     @field_validator("size_limit")
     @classmethod
@@ -120,6 +122,11 @@ class ChannelMetadata(BaseModel):
     includelist: Optional[List[str]] = Field(
         None,
         title="list of packages to include while creating a channel",
+    )
+    include_pattern_list: Optional[Dict[str, List]] = Field(
+        None,
+        title="{'remote0': ['numpy*', 'pandas*'], 'remote1': ['*.tar.bz2']}",
+        nullable=True,
     )
     excludelist: Optional[List[str]] = Field(
         None,

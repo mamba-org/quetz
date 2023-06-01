@@ -311,10 +311,17 @@ class Dao:
                 "only ASCII characters should be used in channel name"
             )
 
+        if isinstance(data.mirror_channel_url, str):
+            mirror_channel_urls = data.mirror_channel_url
+        elif isinstance(data.mirror_channel_url, list):
+            mirror_channel_urls = ";".join(data.mirror_channel_url)
+        else:
+            mirror_channel_urls = None  # type: ignore
+
         channel = Channel(
             name=data.name,
             description=data.description,
-            mirror_channel_url=data.mirror_channel_url,
+            mirror_channel_url=mirror_channel_urls,
             mirror_mode=data.mirror_mode,
             private=data.private,
             ttl=data.ttl,
@@ -331,6 +338,21 @@ class Dao:
         self.db.commit()
 
         return channel
+
+    def remove_package(self, channel_name: str, package_name: str):
+        self.db.query(Package).filter(Package.channel_name == channel_name).filter(
+            Package.name == package_name
+        ).delete()
+        self.db.query(PackageVersion).filter(
+            PackageVersion.channel_name == channel_name
+        ).filter(PackageVersion.package_name == package_name).delete()
+
+        # remove PackageMember entries as well
+        self.db.query(PackageMember).filter(
+            PackageMember.channel_name == channel_name
+        ).filter(PackageMember.package_name == package_name).delete()
+
+        self.db.commit()
 
     def cleanup_channel_db(
         self,

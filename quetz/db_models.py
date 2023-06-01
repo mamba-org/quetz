@@ -208,6 +208,12 @@ class Channel(Base):
     size_limit = Column(BigInteger, default=None)
     ttl = Column(Integer, server_default=f'{60 * 60 * 10}', nullable=False)  # 10 hours
 
+    def get_mirror_channel_urls(self) -> list[str]:
+        if self.mirror_channel_url:
+            return self.mirror_channel_url.split(";")
+        else:
+            return []
+
     packages = relationship(
         'Package', back_populates='channel', cascade="all,delete", uselist=True
     )

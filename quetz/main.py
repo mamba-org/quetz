@@ -749,22 +749,24 @@ def post_channel(
 
     # register mirror
     if is_mirror and register_mirror:
-        mirror_url = str(new_channel.mirror_channel_url)
-        mirror_url = mirror_url.replace("get", "api/channels")
-        headers = {"x-api-key": mirror_api_key} if mirror_api_key else {}
-        api_endpoint = str(request.url.replace(query=None)) + '/' + new_channel.name
-        request.url
-        response = session.post(
-            mirror_url + '/mirrors',
-            json={
-                "url": api_endpoint.replace("api/channels", "get"),
-                "api_endpoint": api_endpoint,
-                "metrics_endpoint": api_endpoint.replace("api", "metrics"),
-            },
-            headers=headers,
-        )
-        if response.status_code != 201:
-            logger.warning(f"could not register mirror due to error {response.text}")
+        for mirror_url in new_channel.get_mirror_channel_urls():
+            mirror_url = mirror_url.replace("get", "api/channels")
+            headers = {"x-api-key": mirror_api_key} if mirror_api_key else {}
+            api_endpoint = str(request.url.replace(query=None)) + '/' + new_channel.name
+            request.url
+            response = session.post(
+                mirror_url + '/mirrors',
+                json={
+                    "url": api_endpoint.replace("api/channels", "get"),
+                    "api_endpoint": api_endpoint,
+                    "metrics_endpoint": api_endpoint.replace("api", "metrics"),
+                },
+                headers=headers,
+            )
+            if response.status_code != 201:
+                logger.warning(
+                    f"could not register mirror due to error {response.text}"
+                )
 
     for action in actions:
         task.execute_channel_action(
@@ -1800,12 +1802,16 @@ def serve_path(
 
     if is_package_request and channel.mirror_channel_url:
         # if we exclude the package from syncing, redirect to original URL
+        # use the first mirror url entry for the redirect
         channel_proxylist = json.loads(channel.channel_metadata).get('proxylist', [])
         if channel_proxylist and package_name and package_name in channel_proxylist:
-            return RedirectResponse(f"{channel.mirror_channel_url}/{path}")
+            redirect_url = channel.get_mirror_channel_urls()[0]
+            return RedirectResponse(f"{redirect_url}/{path}")
 
+    # note: you can only proxy, when you have exactly one remote channel in your config
     if channel.mirror_channel_url and channel.mirror_mode == "proxy":
-        repository = RemoteRepository(channel.mirror_channel_url, session)
+        proxy_url = channel.get_mirror_channel_urls()[0]
+        repository = RemoteRepository(proxy_url, session)
         if not pkgstore.file_exists(channel.name, path):
             download_remote_file(repository, pkgstore, channel.name, path)
         elif path.endswith(".json"):
