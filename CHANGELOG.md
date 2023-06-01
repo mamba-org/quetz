@@ -2,6 +2,32 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## 0.8.0
+
+([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.7.0...b1ac607ed0900b6242519cd452e92539f83a6721))
+
+### Enhancements made
+
+- Sanitize DB urls before printing [#633](https://github.com/mamba-org/quetz/pull/633) ([@AndreasAlbertQC](https://github.com/AndreasAlbertQC))
+- Make sqlalchemy pool settings configurable [#632](https://github.com/mamba-org/quetz/pull/632) ([@AndreasAlbertQC](https://github.com/AndreasAlbertQC))
+- Avoid exposing the Postgres credentials [#628](https://github.com/mamba-org/quetz/pull/628) ([@sbivol](https://github.com/sbivol))
+- Add sampler profiling [#623](https://github.com/mamba-org/quetz/pull/623) ([@ivergara](https://github.com/ivergara))
+
+### Maintenance and upkeep improvements
+
+- Fix pre-commit / micromamba interplay [#634](https://github.com/mamba-org/quetz/pull/634) ([@AndreasAlbertQC](https://github.com/AndreasAlbertQC))
+- Add osx-arm64 version for testing on newer apple devices [#631](https://github.com/mamba-org/quetz/pull/631) ([@YYYasin19](https://github.com/YYYasin19))
+- Migrate to setup-micromamba [#627](https://github.com/mamba-org/quetz/pull/627) ([@pavelzw](https://github.com/pavelzw))
+- Move configurations to `pyproject.toml` [#624](https://github.com/mamba-org/quetz/pull/624) ([@SauravMaheshkar](https://github.com/SauravMaheshkar))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2023-04-11&to=2023-06-01&type=c))
+
+[@AndreasAlbertQC](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3AAndreasAlbertQC+updated%3A2023-04-11..2023-06-01&type=Issues) | [@codecov-commenter](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Acodecov-commenter+updated%3A2023-04-11..2023-06-01&type=Issues) | [@ivergara](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Aivergara+updated%3A2023-04-11..2023-06-01&type=Issues) | [@janjagusch](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ajanjagusch+updated%3A2023-04-11..2023-06-01&type=Issues) | [@martinRenou](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3AmartinRenou+updated%3A2023-04-11..2023-06-01&type=Issues) | [@pavelzw](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Apavelzw+updated%3A2023-04-11..2023-06-01&type=Issues) | [@SauravMaheshkar](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3ASauravMaheshkar+updated%3A2023-04-11..2023-06-01&type=Issues) | [@sbivol](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Asbivol+updated%3A2023-04-11..2023-06-01&type=Issues) | [@YYYasin19](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3AYYYasin19+updated%3A2023-04-11..2023-06-01&type=Issues)
+
+<!-- <END NEW CHANGELOG ENTRY> -->
+
 ## 0.7.0
 
 ([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.6.3...bc0ac65796d14083ae587eba103d6d60250759ff))
@@ -19,8 +45,6 @@
 ([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2023-04-05&to=2023-04-11&type=c))
 
 [@codecov-commenter](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Acodecov-commenter+updated%3A2023-04-05..2023-04-11&type=Issues) | [@janjagusch](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ajanjagusch+updated%3A2023-04-05..2023-04-11&type=Issues)
-
-<!-- <END NEW CHANGELOG ENTRY> -->
 
 ## 0.6.3
 
