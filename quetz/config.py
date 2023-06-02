@@ -106,7 +106,7 @@ class Config:
                 ConfigEntry("database_url", str),
                 ConfigEntry("database_plugin_path", str, default="", required=False),
                 ConfigEntry("echo_sql", bool, default=False, required=False),
-                ConfigEntry("postgres_pool_size", int, default=100, required=False),
+                ConfigEntry("postgres_pool_size", int, default=10, required=False),
                 ConfigEntry("postgres_max_overflow", int, default=100, required=False),
             ],
         ),
