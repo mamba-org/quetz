@@ -33,6 +33,7 @@ dependencies:
   - tenacity
   - xattr
   - aiofiles
+  - aioshutil
   - pyyaml
   - ujson
   - prometheus_client
