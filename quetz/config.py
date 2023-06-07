@@ -1,16 +1,19 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
+import json
 import logging
 import logging.config
 import os
 from distutils.util import strtobool
+from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Type, Union
 
 import appdirs
 import pluggy
 import toml
+from pydantic import BaseSettings
 
 from quetz import hooks, pkgstores
 from quetz.errors import ConfigError
@@ -24,207 +27,240 @@ _user_dir = appdirs.user_config_dir("quetz")
 PAGINATION_LIMIT = 20
 
 
-class ConfigEntry(NamedTuple):
-    name: str
-    cast: Type
-    default: Any = None
-    required: bool = True
+# class ConfigEntry(NamedTuple):
+#     name: str
+#     cast: Type
+#     default: Any = None
+#     required: bool = True
 
-    def full_name(self, section=""):
-        if section:
-            section += "_"
-        return f"{section}{self.name}"
+#     def full_name(self, section=""):
+#         if section:
+#             section += "_"
+#         return f"{section}{self.name}"
 
-    def env_var(self, section=""):
-        return f"{_env_prefix}{self.full_name(section).upper()}"
+#     def env_var(self, section=""):
+#         return f"{_env_prefix}{self.full_name(section).upper()}"
 
-    def casted(self, value):
-        if self.cast is bool:
-            try:
-                value = strtobool(str(value))
-            except ValueError as e:
-                raise ConfigError(f"{self.name}: {e}")
+#     def casted(self, value):
+#         if self.cast is bool:
+#             try:
+#                 value = strtobool(str(value))
+#             except ValueError as e:
+#                 raise ConfigError(f"{self.name}: {e}")
 
-        return self.cast(value)
+#         return self.cast(value)
 
 
-class ConfigSection(NamedTuple):
-    name: str
-    entries: List[ConfigEntry]
-    required: bool = True
+# class ConfigSection(NamedTuple):
+#     name: str
+#     entries: List[ConfigEntry]
+#     required: bool = True
+
+
+class SettingsGeneral(BaseSettings):
+    package_unpack_threads: int = 1
+    frontend_dir: str = ""
+    redirect_http_to_https: bool = False
+
+    class Config:
+        env_prefix = 'general'
+
+
+class SettingsCORS(BaseSettings):
+    allow_origins: list = []
+    allow_credentials: bool = True
+    allow_methods: list[str] = ["*"]
+    allow_headers: list[str] = ["*"]
+
+    class Config:
+        env_prefix = 'cors'
+
+
+class SettingsGitHub(BaseSettings):
+    client_id: str
+    client_secret: str
+
+    class Config:
+        env_prefix = 'github'
+
+
+class SettingsGitLab(BaseSettings):
+    url: str = "https://gitlab.com"
+    client_id: str
+    client_secret: str
+
+    class Config:
+        env_prefix = 'gitlab'
+
+
+class SettingsAzureAD(BaseSettings):
+    client_id: str
+    client_secret: str
+    tenant_id: str
+
+    class Config:
+        env_prefix = 'azuread'
+
+
+class SettingsSQLAlchemy(BaseSettings):
+    database_url: str
+    database_plugin_path: str = ""
+    echo_sql: bool = False
+    postgres_pool_size: int = 100
+    postgres_max_overflow: int = 100
+
+    class Config:
+        env_prefix = 'sqlalchemy'
+
+
+class SettingsSession(BaseSettings):
+    secret: str
+    https_only: bool = True
+
+    class Config:
+        env_prefix = 'session'
+
+
+class SettingsLocalStore(BaseSettings):
+    redirect_enabled: bool = False
+    redirect_endpoint: str = "/files"
+    redirect_secret: str = ""
+    redirect_expiration: int = 3600
+
+    class Config:
+        env_prefix = 'local_store'
+
+
+class SettingsS3(BaseSettings):
+    access_key: str = ""
+    secret_key: str = ""
+    url: str = ""
+    region: str = ""
+    bucket_prefix: str = ""
+    bucket_suffix: str = ""
+
+    class Config:
+        env_prefix = 's3'
+
+
+class SettingsAzureBlob(BaseSettings):
+    account_name: str = ""
+    account_access_key: str = ""
+    conn_str: str = ""
+    container_prefix: str = ""
+    container_suffix: str = ""
+
+    class Config:
+        env_prefix = 'azure_blob'
+
+
+class SettingsGCS(BaseSettings):
+    project: str = ""
+    token: str = ""
+    bucket_prefix: str = ""
+    bucket_suffix: str = ""
+    cache_timeout: int | None = None
+    region: str | None = None
+
+    class Config:
+        env_prefix = 'gcs'
+
+
+class SettingsGoogle(BaseSettings):
+    client_id: str
+    client_secret: str
+
+    class Config:
+        env_prefix = 'google'
+
+
+class SettingsLogging(BaseSettings):
+    level: str = "INFO"
+    file: str = ""
+
+    class Config:
+        env_prefix = 'logging'
+
+
+class SettingsUsers(BaseSettings):
+    admins: list[str] = []
+    maintainers: list[str] = []
+    members: list[str] = []
+    default_role: str | bool = False
+    collect_emails: bool = False
+    create_default_channel: bool = False
+
+    class Config:
+        env_prefix = 'users'
+
+
+class SettingsWorker:
+    type: str = "thread"
+    redis_ip: str = "127.0.0.1"
+    redis_port: int = 6379
+    redis_db: int = 0
+
+    class Config:
+        env_prefix = 'worker'
+
+
+class SettingsPlugins(BaseSettings):
+    enabled: list[str] = []
+
+    class Config:
+        env_prefix = 'plugins'
+
+
+class SettingsMirroring(BaseSettings):
+    batch_length: int = 10
+    batch_size: int = 1e8
+    num_parallel_downloads: int = 10
+
+    class Config:
+        env_prefix = 'mirroring'
+
+
+class SettingsQuotas(BaseSettings):
+    channel_quota: int
+
+    class Config:
+        env_prefix = 'quotas'
+
+
+class SettingsProfiling(BaseSettings):
+    enable_sampling: bool = False
+    interval_seconds: float = 0.001
+
+    class Config:
+        env_prefix = 'profiling'
+
+
+class Settings(BaseSettings):
+    general: SettingsGeneral = SettingsGeneral()
+    cors: Optional[SettingsCORS] = None
+    github: Optional[SettingsGitHub] = None
+    gitlab: Optional[SettingsGitLab] = None
+    azuread: Optional[SettingsAzureAD] = None
+    sqlalchemy: SettingsSQLAlchemy
+    session: SettingsSession
+    local_store: SettingsLocalStore = SettingsLocalStore()
+    s3: Optional[SettingsS3] = None
+    azure_blob: Optional[SettingsAzureBlob] = None
+    gcs: Optional[SettingsGCS] = None
+    google: Optional[SettingsGoogle] = None
+    logging: Optional[SettingsLogging] = None
+    users: Optional[SettingsUsers] = None
+    worker: Optional[SettingsWorker] = None
+    plugins: SettingsPlugins = SettingsPlugins()
+    mirroring: SettingsMirroring = SettingsMirroring()
+    quotas: Optional[SettingsQuotas] = None
+    profiling: Optional[SettingsProfiling] = None
+
+    class Config:
+        env_prefix = 'quetz'
 
 
 class Config:
-    _config_map = [
-        ConfigSection(
-            "general",
-            [
-                ConfigEntry("package_unpack_threads", int, 1),
-                ConfigEntry("frontend_dir", str, default=""),
-                ConfigEntry("redirect_http_to_https", bool, False),
-            ],
-        ),
-        ConfigSection(
-            "cors",
-            [
-                ConfigEntry("allow_origins", list, []),
-                ConfigEntry("allow_credentials", bool, True),
-                ConfigEntry("allow_methods", bool, ["*"]),
-                ConfigEntry("allow_headers", bool, ["*"]),
-            ],
-            required=False,
-        ),
-        ConfigSection(
-            "github",
-            [
-                ConfigEntry("client_id", str),
-                ConfigEntry("client_secret", str),
-            ],
-            required=False,
-        ),
-        ConfigSection(
-            "gitlab",
-            [
-                ConfigEntry("url", str, default="https://gitlab.com"),
-                ConfigEntry("client_id", str),
-                ConfigEntry("client_secret", str),
-            ],
-            required=False,
-        ),
-        ConfigSection(
-            "azuread",
-            [
-                ConfigEntry("client_id", str),
-                ConfigEntry("client_secret", str),
-                ConfigEntry("tenant_id", str),
-            ],
-            required=False,
-        ),
-        ConfigSection(
-            "sqlalchemy",
-            [
-                ConfigEntry("database_url", str),
-                ConfigEntry("database_plugin_path", str, default="", required=False),
-                ConfigEntry("echo_sql", bool, default=False, required=False),
-                ConfigEntry("postgres_pool_size", int, default=100, required=False),
-                ConfigEntry("postgres_max_overflow", int, default=100, required=False),
-            ],
-        ),
-        ConfigSection(
-            "session",
-            [ConfigEntry("secret", str), ConfigEntry("https_only", bool, default=True)],
-        ),
-        ConfigSection(
-            "local_store",
-            [
-                ConfigEntry("redirect_enabled", bool, default=False),
-                ConfigEntry("redirect_endpoint", str, default="/files"),
-                ConfigEntry("redirect_secret", str, default=""),
-                ConfigEntry("redirect_expiration", int, default="3600"),
-            ],
-        ),
-        ConfigSection(
-            "s3",
-            [
-                ConfigEntry("access_key", str, default=""),
-                ConfigEntry("secret_key", str, default=""),
-                ConfigEntry("url", str, default=""),
-                ConfigEntry("region", str, default=""),
-                ConfigEntry("bucket_prefix", str, default=""),
-                ConfigEntry("bucket_suffix", str, default=""),
-            ],
-            required=False,
-        ),
-        ConfigSection(
-            "azure_blob",
-            [
-                ConfigEntry("account_name", str, default=""),
-                ConfigEntry("account_access_key", str, default=""),
-                ConfigEntry("conn_str", str, default=""),
-                ConfigEntry("container_prefix", str, default=""),
-                ConfigEntry("container_suffix", str, default=""),
-            ],
-            required=False,
-        ),
-        ConfigSection(
-            "gcs",
-            [
-                ConfigEntry("project", str, default=""),
-                ConfigEntry("token", str, default=""),
-                ConfigEntry("bucket_prefix", str, default=""),
-                ConfigEntry("bucket_suffix", str, default=""),
-                ConfigEntry("cache_timeout", int, default=None),
-                ConfigEntry("region", str, default=None),
-            ],
-            required=False,
-        ),
-        ConfigSection(
-            "google",
-            [ConfigEntry("client_id", str), ConfigEntry("client_secret", str)],
-            required=False,
-        ),
-        ConfigSection(
-            "logging",
-            [
-                ConfigEntry("level", str, default="INFO"),
-                ConfigEntry("file", str, default=""),
-            ],
-            required=False,
-        ),
-        ConfigSection(
-            "users",
-            [
-                ConfigEntry("admins", list, default=list),
-                ConfigEntry("maintainers", list, default=list),
-                ConfigEntry("members", list, default=list),
-                ConfigEntry("default_role", str, required=False),
-                ConfigEntry("collect_emails", bool, default=False, required=False),
-                ConfigEntry(
-                    "create_default_channel", bool, default=False, required=False
-                ),
-            ],
-            required=False,
-        ),
-        ConfigSection(
-            "worker",
-            [
-                ConfigEntry("type", str, default="thread"),
-                ConfigEntry("redis_ip", str, default="127.0.0.1"),
-                ConfigEntry("redis_port", int, default=6379),
-                ConfigEntry("redis_db", int, default=0),
-            ],
-            required=False,
-        ),
-        ConfigSection(
-            "plugins",
-            [
-                ConfigEntry("enabled", list, default=list),
-            ],
-        ),
-        ConfigSection(
-            "mirroring",
-            [
-                ConfigEntry("batch_length", int, default=10),
-                ConfigEntry("batch_size", int, default=int(1e8)),
-                ConfigEntry("num_parallel_downloads", int, default=int(10)),
-            ],
-        ),
-        ConfigSection(
-            "quotas",
-            [
-                ConfigEntry("channel_quota", int, required=False),
-            ],
-            required=False,
-        ),
-        ConfigSection(
-            "profiling",
-            [
-                ConfigEntry("enable_sampling", bool, required=False, default=False),
-                ConfigEntry("interval_seconds", float, required=False, default=0.001),
-            ],
-            required=False,
-        ),
-    ]
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]
 
@@ -280,71 +316,73 @@ class Config:
             The configuration stored at deployment level
         """
 
-        self.config: Dict[str, Any] = {}
+        self.config = self._read_config(path) if path else Settings()
 
-        # only try to get config from config file if it exists.
-        if path:
-            self.config.update(self._read_config(path))
+        # self.config = Settings()
 
-        self.config.update(self._get_environ_config())
-        self._trigger_update_config()
+        # # only try to get config from config file if it exists.
+        # if path:
+        #     self.config.update(self._read_config(path))
 
-    def _trigger_update_config(self):
-        def set_entry_attr(entry, section=""):
-            value = self._get_value(entry, section)
+        # self.config.update(self._get_environ_config())
+        # self._trigger_update_config()
 
-            setattr(self, entry.full_name(section), value)
+    # def _trigger_update_config(self):
+    #     def set_entry_attr(entry, section=""):
+    #         value = self._get_value(entry, section)
 
-        for item in self._config_map:
-            if isinstance(item, ConfigSection) and (
-                item.required or item.name in self.config
-            ):
-                for entry in item.entries:
-                    set_entry_attr(entry, item.name)
-            elif isinstance(item, ConfigEntry):
-                set_entry_attr(item)
+    #         setattr(self, entry.full_name(section), value)
 
-    def _get_value(
-        self, entry: ConfigEntry, section: str = ""
-    ) -> Union[str, bool, None]:
-        """Get an entry value from a configuration mapping.
+    #     for item in self._config_map:
+    #         if isinstance(item, ConfigSection) and (
+    #             item.required or item.name in self.config
+    #         ):
+    #             for entry in item.entries:
+    #                 set_entry_attr(entry, item.name)
+    #         elif isinstance(item, ConfigEntry):
+    #             set_entry_attr(item)
 
-        Parameters
-        ----------
-        entry : ConfigEntry
-            The entry to search
-        section : str
-            The section the entry belongs to
+    # def _get_value(
+    #     self, entry: ConfigEntry, section: str = ""
+    # ) -> Union[str, bool, None]:
+    #     """Get an entry value from a configuration mapping.
 
-        Returns
-        -------
-        value : Union[str, bool]
-            The entry value
-        """
-        try:
-            if section:
-                value = self.config[section][entry.name]
-            else:
-                value = self.config[entry.name]
+    #     Parameters
+    #     ----------
+    #     entry : ConfigEntry
+    #         The entry to search
+    #     section : str
+    #         The section the entry belongs to
 
-            return entry.casted(value)
+    #     Returns
+    #     -------
+    #     value : Union[str, bool]
+    #         The entry value
+    #     """
+    #     try:
+    #         if section:
+    #             value = self.config[section][entry.name]
+    #         else:
+    #             value = self.config[entry.name]
 
-        except KeyError:
-            if entry.default is not None:
-                if callable(entry.default):
-                    return entry.default()
-                return entry.default
+    #         return entry.casted(value)
 
-        msg = f"'{entry.name}' unset but no default specified"
-        if section:
-            msg += f" for section '{section}'"
+    #     except KeyError:
+    #         if entry.default is not None:
+    #             if callable(entry.default):
+    #                 return entry.default()
+    #             return entry.default
 
-        if entry.required:
-            raise ConfigError(msg)
+    #     msg = f"'{entry.name}' unset but no default specified"
+    #     if section:
+    #         msg += f" for section '{section}'"
 
-        return None
+    #     if entry.required:
+    #         raise ConfigError(msg)
 
-    def _read_config(self, filename: str) -> Dict[str, Any]:
+    #     return None
+
+    def _read_config(self, filename: str) -> Settings:
         """Read a configuration file from its path.
 
         Parameters
@@ -354,86 +392,86 @@ class Config:
 
         Returns
         -------
-        configuration : Dict[str, str]
+        configuration : Settings
             The mapping of configuration variables found in the file
         """
         with open(filename) as f:
             try:
-                return dict(toml.load(f))
+                return Settings(**toml.load(f))
             except toml.TomlDecodeError as e:
                 raise ConfigError(f"failed to load config file '{filename}': {e}")
 
-    def _find_first_level_config(
-        self, section_name: str
-    ) -> Union[ConfigSection, ConfigEntry, None]:
-        """Find the section or entry at first level of config_map.
+    # def _find_first_level_config(
+    #     self, section_name: str
+    # ) -> Union[ConfigSection, ConfigEntry, None]:
+    #     """Find the section or entry at first level of config_map.
 
-        Parameters
-        ----------
-        section_name : str
-            The name of the section to find.
+    #     Parameters
+    #     ----------
+    #     section_name : str
+    #         The name of the section to find.
 
-        Returns
-        -------
-        section : Union[ConfigSection, ConfigEntry, None]
-            The section or entry found, else None.
-        """
-        for item in self._config_map:
-            if section_name == item.name:
-                return item
-        return None
+    #     Returns
+    #     -------
+    #     section : Union[ConfigSection, ConfigEntry, None]
+    #         The section or entry found, else None.
+    #     """
+    #     for item in self._config_map:
+    #         if section_name == item.name:
+    #             return item
+    #     return None
 
-    def _get_environ_config(self) -> Dict[str, Any]:
-        """Looks into environment variables if some matches with config_map.
+    # def _get_environ_config(self) -> Dict[str, Any]:
+    #     """Looks into environment variables if some matches with config_map.
 
-        Returns
-        -------
-        configuration : Dict[str, str]
-            The mapping of configuration variables found in environment variables.
-        """
-        config: Dict[str, Any] = {}
+    #     Returns
+    #     -------
+    #     configuration : Dict[str, str]
+    #         The mapping of configuration variables found in environment variables.
+    #     """
+    #     config: Dict[str, Any] = {}
 
-        # get QUETZ environment variables.
-        quetz_var = {
-            key: value
-            for key, value in os.environ.items()
-            if key.startswith(_env_prefix)
-        }
-        for var, value in quetz_var.items():
-            splitted_key = var.split('_')
-            config_key = splitted_key[1].lower()
-            idx = 2
+    #     # get QUETZ environment variables.
+    #     quetz_var = {
+    #         key: value
+    #         for key, value in os.environ.items()
+    #         if key.startswith(_env_prefix)
+    #     }
+    #     for var, value in quetz_var.items():
+    #         splitted_key = var.split('_')
+    #         config_key = splitted_key[1].lower()
+    #         idx = 2
 
-            # look for the first level of config_map.
-            # It must be done in loop as the key itself can contains '_'.
-            first_level = None
-            while idx < len(splitted_key):
-                first_level = self._find_first_level_config(config_key)
-                if first_level:
-                    break
-                config_key += f"_{ splitted_key[idx].lower()}"
-                idx += 1
+    #         # look for the first level of config_map.
+    #         # It must be done in loop as the key itself can contains '_'.
+    #         first_level = None
+    #         while idx < len(splitted_key):
+    #             first_level = self._find_first_level_config(config_key)
+    #             if first_level:
+    #                 break
+    #             config_key += f"_{ splitted_key[idx].lower()}"
+    #             idx += 1
 
-            # no first_level found, the variable is useless.
-            if not first_level:
-                continue
-            # the first level is an entry, add it to the config.
-            if isinstance(first_level, ConfigEntry):
-                config[first_level.name] = value
-            # the first level is a section.
-            elif isinstance(first_level, ConfigSection):
-                entry = "_".join(splitted_key[idx:]).lower()
-                # the entry does not exist in section, the variable is useless.
-                if entry not in [
-                    section_entry.name for section_entry in first_level.entries
-                ]:
-                    continue
-                # add the entry to the config.
-                if first_level.name not in config:
-                    config[first_level.name]: Dict[str, Any] = {}
-                config[first_level.name]["_".join(splitted_key[idx:]).lower()] = value
+    #         # no first_level found, the variable is useless.
+    #         if not first_level:
+    #             continue
+    #         # the first level is an entry, add it to the config.
+    #         if isinstance(first_level, ConfigEntry):
+    #             config[first_level.name] = value
+    #         # the first level is a section.
+    #         elif isinstance(first_level, ConfigSection):
+    #             entry = "_".join(splitted_key[idx:]).lower()
+    #             # the entry does not exist in section, the variable is useless.
+    #             if entry not in [
+    #                 section_entry.name for section_entry in first_level.entries
+    #             ]:
+    #                 continue
+    #             # add the entry to the config.
+    #             if first_level.name not in config:
+    #                 config[first_level.name]: Dict[str, Any] = {}
+    #             config[first_level.name]["_".join(splitted_key[idx:]).lower()] = value
 
-        return config
+    #     return config
 
     def get_package_store(self) -> pkgstores.PackageStore:
         """Return the appropriate package store as set in the config.
@@ -499,13 +537,12 @@ class Config:
         bool
             Wether or not the given section is configured
         """
+        return bool(getattr(self.config, section))
 
-        return bool(self.config.get(section))
-
-    def register(self, extra_config: Iterable[ConfigSection]):
-        """Register additional config variables"""
-        self._config_map += extra_config
-        self._trigger_update_config()
+    # def register(self, extra_config: Iterable[ConfigSection]):
+    #     """Register additional config variables"""
+    #     self._config_map += extra_config
+    #     self._trigger_update_config()
 
 
 def create_config(
