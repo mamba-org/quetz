@@ -1,3 +1,4 @@
+import hashlib
 import time
 
 import pytest
@@ -222,6 +223,9 @@ mD1rl6xev7GRoqUYdKYdt9NJyDGEULZ6NbIWyXo3kTp7HdQLRn0BJg==
 """
 
 
+@pytest.mark.skipif(
+    not hasattr(hashlib, "RS256"), reason="hashlib does not support RS256"
+)
 @pytest.fixture
 def google_response(login):
     google_client_id = 'aaa'
@@ -233,12 +237,14 @@ def google_response(login):
         "name": "monalisa",
     }
     access_token = "b"
+    half_hash = create_half_hash(access_token, "RS256")
+    assert half_hash is not None
     payload = {
         "iss": "https://accounts.google.com",
         "azp": google_client_id,
         "aud": "1234987819200.apps.googleusercontent.com",
         "sub": login + "_id",
-        "at_hash": create_half_hash(access_token, "RS256").decode("ascii"),
+        "at_hash": half_hash.decode("ascii"),
         "hd": "example.com",
         "email": login,
         "email_verified": "true",

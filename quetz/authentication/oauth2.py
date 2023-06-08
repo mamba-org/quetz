@@ -85,6 +85,7 @@ class OAuthAuthenticator(BaseAuthenticator):
 
     def __init__(self, config: Config, client_kwargs=None, provider=None, app=None):
         super().__init__(config, provider, app)
+        self.client: OAuthAuthenticator
         if self.is_enabled:
             self.register(client_kwargs=client_kwargs)
 
