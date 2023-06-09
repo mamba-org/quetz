@@ -39,6 +39,28 @@ class Rules:
         self.session = session
         self.db = db
 
+    def get_owner(self) -> Optional[bytes]:
+        owner_id = None
+
+        if self.API_key:
+            api_key = (
+                self.db.query(ApiKey)
+                .filter(ApiKey.key == self.API_key, ~ApiKey.deleted)
+                .filter(
+                    ApiKey.key == self.API_key,
+                    or_(ApiKey.expire_at >= date.today(), ApiKey.expire_at.is_(None)),
+                )
+                .one_or_none()
+            )
+            if api_key:
+                owner_id = api_key.owner_id
+        else:
+            user_id = self.session.get("user_id")
+            if user_id:
+                owner_id = uuid.UUID(user_id).bytes
+
+        return owner_id
+
     def get_user(self) -> Optional[bytes]:
         user_id = None
 
