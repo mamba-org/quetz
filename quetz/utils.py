@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import unquote
 
+from conda.models.match_spec import MatchSpec, _parse_spec_str
 from sqlalchemy import String, and_, cast, collate, not_, or_
 
 from .db_models import Channel, Package, PackageVersion, User
@@ -39,43 +40,28 @@ def check_package_membership(package_name, includelist, excludelist):
     return True
 
 
-def _include_pattern_match(name, version, build, pattern):
-    """
-    3 possible formats
+def _parse_package_spec(package_spec: str) -> tuple[str, str, str]:
+    name, version, build, _ = _parse_spec_str(package_spec).values()
+    # version, build = _parse_version_plus_build(version)
 
-    name
-    name=version
-    name=version=build_string
-    Note that if a given regular expression is given, it must match the full name/version/build string.
-    """
-    import re
-
-    eq_count = pattern.count("=")
-    if eq_count == 0:
-        return re.match(pattern, name)
-
-    elif eq_count == 1:
-        name_pattern, version_pattern = pattern.split("=")
-        return re.match(name_pattern, name) and re.match(version_pattern, version)
-
-    elif eq_count == 2:
-        name_pattern, version_pattern, build_pattern = pattern.split("=")
-        return (
-            re.match(name_pattern, name)
-            and re.match(version_pattern, version)
-            and re.match(build_pattern, build)
-        )
-    else:
-        raise ValueError(f"Invalid pattern: {pattern}")
+    return name, version, build
 
 
 def check_package_membership_pattern(
-    package_spec, include_pattern_list, exclude_pattern_list
+    package_spec, include_pattern_list=[], exclude_pattern_list=[]
 ):
+    # TODO: validate performance, can we save the MatchSpec instances between calls?
+    # might be okay for <100 packages to check against, but what about 1000s?
     name, version, build = _parse_package_spec(package_spec)
     for include_pattern in include_pattern_list:
-        if _include_pattern_match(name, version, build, include_pattern):
+        # TODO: how do we get the build number?
+        include = MatchSpec(include_pattern).match(
+            {"name": name, "version": version, "build": build, "build_number": 0}
+        )
+        exclude = False  # TODO
+        if include and not exclude:
             return True
+
     else:
         return False
 
@@ -320,19 +306,3 @@ def background_task_wrapper(func: Callable, logger: logging.Logger) -> Callable:
             )
 
     return wrapper
-
-
-def _parse_package_spec(package_spec: str) -> tuple:
-    """
-    Determine name, version and build number string from package spec.
-
-    Package specs are allowed in three formats:
-    1. `name`
-    2. `name=version`
-    3. `name=version=build`
-
-    This function disassembles the spec into its parts. If version
-    and / or build are missing (cases 1 and 2), the missing field
-    is filled with a regular expression matching all versions / builds.
-    """
-    raise NotImplementedError()
