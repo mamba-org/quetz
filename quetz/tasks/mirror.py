@@ -23,7 +23,12 @@ from quetz.db_models import PackageVersion
 from quetz.errors import DBError
 from quetz.pkgstores import PackageStore
 from quetz.tasks import indexing
-from quetz.utils import TicToc, add_static_file, check_package_membership
+from quetz.utils import (
+    TicToc,
+    add_static_file,
+    check_package_membership,
+    check_package_membership_pattern,
+)
 
 # copy common subdirs from conda:
 # https://github.com/conda/conda/blob/a78a2387f26a188991d771967fc33aa1fb5bb810/conda/base/constants.py#L63
@@ -406,7 +411,10 @@ def initial_sync_mirror(
             return False
 
         for repo_package_name, metadata in packages.items():
-            if check_package_membership(repo_package_name, includelist, excludelist):
+            # if check_package_membership(repo_package_name, includelist, excludelist):
+            if check_package_membership_pattern(
+                repo_package_name, includelist, excludelist
+            ):
                 path = os.path.join(arch, repo_package_name)
 
                 # try to find out whether it's a new package version
@@ -446,9 +454,12 @@ def initial_sync_mirror(
             package_specs_remove = set([p[1].split("-")[0] for p in remove_batch])
             # TODO: reuse route [DELETE /api/channels/{channel_name}/packages] logic
             for package_specs in package_specs_remove:
+                # TODO: only remove if it already exists of course
                 dao.remove_package(channel_name, package_name=package_specs)
+                # TODO: is this needed every time?
                 dao.cleanup_channel_db(channel_name, package_name=package_specs)
-                pkgstore.delete_file(channel.name, destination=package_specs)
+                if pkgstore.file_exists(channel.name, package_specs):
+                    pkgstore.delete_file(channel.name, destination=package_specs)
 
             any_updated |= True
 
