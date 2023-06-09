@@ -41,10 +41,12 @@ def check_package_membership(package_name, includelist, excludelist):
 
 
 def _parse_package_spec(package_spec: str) -> tuple[str, str, str]:
-    name, version, build, _ = _parse_spec_str(package_spec).values()
-    # version, build = _parse_version_plus_build(version)
-
-    return name, version, build
+    # spec = _parse_spec_str(package_spec)
+    # return spec.get("name", ""), spec.get("version", ""), spec.get("build", "")
+    # TODO: the package spec here looks like "numpy-1.23.4-py39hefdcf20_0.tar.bz2"
+    # and does not have "="
+    spec = package_spec.split("-")
+    return spec[0], spec[1] if len(spec) > 1 else "", spec[2] if len(spec) > 2 else ""
 
 
 def check_package_membership_pattern(
