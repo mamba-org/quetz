@@ -56,6 +56,38 @@ PAGINATION_LIMIT = 20
 #     entries: List[ConfigEntry]
 #     required: bool = True
 
+from pydantic.fields import ModelField
+
+# https://github.com/pydantic/pydantic/issues/1937#issuecomment-695313040
+class DyanamicallyExtendableSetting(BaseSettings):
+
+    @classmethod
+    def add_fields(cls, **field_definitions: Any):
+        new_fields: Dict[str, ModelField] = {}
+        new_annotations: Dict[str, Optional[type]] = {}
+
+        for f_name, f_def in field_definitions.items():
+            if isinstance(f_def, tuple):
+                try:
+                    f_annotation, f_value = f_def
+                except ValueError as e:
+                    raise Exception(
+                        'field definitions should either be a tuple of (<type>, <default>) or just a '
+                        'default value, unfortunately this means tuples as '
+                        'default values are not allowed'
+                    ) from e
+            else:
+                f_annotation, f_value = None, f_def
+
+            if f_annotation:
+                new_annotations[f_name] = f_annotation
+
+            new_fields[f_name] = ModelField.infer(name=f_name, value=f_value, annotation=f_annotation, class_validators=None, config=cls.__config__)
+
+        cls.__fields__.update(new_fields)
+        cls.__annotations__.update(new_annotations)
+
+
 
 class SettingsGeneral(BaseSettings):
     package_unpack_threads: int = 1
@@ -238,7 +270,7 @@ class SettingsProfiling(BaseSettings):
         env_prefix = 'profiling'
 
 
-class Settings(BaseSettings):
+class Settings(DyanamicallyExtendableSetting):
     general: SettingsGeneral = SettingsGeneral()
     cors: Optional[SettingsCORS] = None
     github: Optional[SettingsGitHub] = None
@@ -281,6 +313,7 @@ class Config:
 
         if path not in cls._instances:
             config = super().__new__(cls)
+            config._path = path
             config.init(path)
             cls._instances[path] = config
             # optimization - for default config path we also store the instance
@@ -542,10 +575,10 @@ class Config:
         """
         return bool(getattr(self.config, section))
 
-    # def register(self, extra_config: Iterable[ConfigSection]):
-    #     """Register additional config variables"""
-    #     self._config_map += extra_config
-    #     self._trigger_update_config()
+    def register(self, **kwargs):
+        """Register additional config variables"""
+        self.config.add_fields(**kwargs)
+        self.init(self._path)
 
 
 def create_config(

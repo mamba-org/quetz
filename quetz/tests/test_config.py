@@ -97,19 +97,13 @@ def test_config_with_path(config_dir, config_base):
 
 
 def test_config_extend_require(config):
-    with pytest.raises(ConfigError):
-        config.register(
-            [
-                ConfigSection(
-                    "other_plugin",
-                    [
-                        ConfigEntry("some_config_value", str),
-                    ],
-                )
-            ]
-        )
-    # remove last entry again
-    config._config_map.pop()
+    from pydantic import BaseSettings
+    from pydantic.error_wrappers import ValidationError
+    class OtherPluginSetting(BaseSettings):
+        some_config_value: str
+    with pytest.raises(ValidationError):
+        config.register(other_plugin=(OtherPluginSetting, ...))
+    # TODO: Do I have to remove the section again?
 
 
 @pytest.mark.parametrize(
