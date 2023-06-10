@@ -7,7 +7,6 @@ import pytest
 # from quetz.config import Config, ConfigEntry, ConfigSection, configure_logger
 from quetz.config import Config, Settings, configure_logger
 from quetz.dao import Dao
-from quetz.errors import ConfigError
 
 
 @pytest.fixture
@@ -102,7 +101,6 @@ def test_config_with_path(config_dir, config_base):
 @pytest.fixture
 def _setup_config_extend_require():
     from pydantic import BaseSettings
-    from pydantic.error_wrappers import ValidationError
 
     class OtherPluginSetting(BaseSettings):
         some_config_value: str
@@ -117,7 +115,7 @@ def test_config_extend_require(_setup_config_extend_require, config):
     from pydantic.error_wrappers import ValidationError
 
     with pytest.raises(ValidationError):
-        c = Config()
+        Config()
 
 
 @pytest.fixture

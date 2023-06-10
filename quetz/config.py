@@ -1,19 +1,17 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-import json
 import logging
 import logging.config
 import os
-from distutils.util import strtobool
-from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Type, Union
+from typing import Any, Dict, Optional
 
 import appdirs
 import pluggy
 import toml
 from pydantic import BaseSettings
+from pydantic.fields import ModelField
 
 from quetz import hooks, pkgstores
 from quetz.errors import ConfigError
@@ -56,8 +54,6 @@ PAGINATION_LIMIT = 20
 #     entries: List[ConfigEntry]
 #     required: bool = True
 
-from pydantic.fields import ModelField
-
 
 # https://github.com/pydantic/pydantic/issues/1937#issuecomment-695313040
 class DyanamicallyExtendableSetting(BaseSettings):
@@ -72,7 +68,8 @@ class DyanamicallyExtendableSetting(BaseSettings):
                     f_annotation, f_value = f_def
                 except ValueError as e:
                     raise Exception(
-                        'field definitions should either be a tuple of (<type>, <default>) or just a '
+                        'field definitions should either be a tuple '
+                        'of (<type>, <default>) or just a'
                         'default value, unfortunately this means tuples as '
                         'default values are not allowed'
                     ) from e
@@ -250,7 +247,7 @@ class SettingsPlugins(BaseSettings):
 
 class SettingsMirroring(BaseSettings):
     batch_length: int = 10
-    batch_size: int = 1e8
+    batch_size: int = 10**8
     num_parallel_downloads: int = 10
 
     class Config:
