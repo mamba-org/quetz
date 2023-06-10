@@ -287,7 +287,7 @@ class Config:
         return cls._instances[path]
 
     def __getattr__(self, name: str) -> Any:
-        super().__getattr__(self, name)
+        return getattr(self.config, name)
 
     @classmethod
     def find_file(cls, deployment_config: str = None):

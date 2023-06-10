@@ -36,11 +36,11 @@ def test_config_without_file_path_set(config_str):
 
 
 def test_config_users(config):
-    assert config.users_default_role == "member"
-    assert config.users_create_default_channel
-    assert config.users_admins == ["bartosz"]
-    assert not config.users_maintainers
-    assert not config.users_members
+    assert config.users.default_role == "member"
+    assert config.users.create_default_channel
+    assert config.users.admins == ["bartosz"]
+    assert not config.users.maintainers
+    assert not config.users.members
 
 
 @pytest.mark.parametrize(
