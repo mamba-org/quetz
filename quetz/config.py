@@ -214,9 +214,6 @@ class SettingsLogging(BaseSettings):
         env_prefix = 'logging'
 
 
-from enum import Enum
-
-
 class SettingsUsers(BaseSettings):
     admins: list[str] = []
     maintainers: list[str] = []
@@ -573,12 +570,12 @@ class Config:
         bool
             Wether or not the given section is configured
         """
-        return bool(getattr(self.config, section))
-
-    def register(self, **kwargs):
+        return bool(getattr(self.config, section))\
+    
+    @classmethod
+    def register(cls, **kwargs):
         """Register additional config variables"""
-        self.config.add_fields(**kwargs)
-        self.init(self._path)
+        Settings.add_fields(**kwargs)
 
 
 def create_config(
