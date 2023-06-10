@@ -48,11 +48,11 @@ def test_config_users(config):
 )
 def test_config_empty_users_section(dao: Dao, user, config):
     assert config.configured_section("users")
-    assert not config.users_admins
-    assert not config.users_maintainers
-    assert not config.users_members
-    assert not config.users_default_role
-    assert not config.users_create_default_channel
+    assert not config.users.admins
+    assert not config.users.maintainers
+    assert not config.users.members
+    assert not config.users.default_role
+    assert not config.users.create_default_channel
 
 
 def test_config_is_singleton(config):

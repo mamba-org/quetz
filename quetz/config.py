@@ -182,11 +182,14 @@ class SettingsLogging(BaseSettings):
         env_prefix = 'logging'
 
 
+from enum import Enum
+
+
 class SettingsUsers(BaseSettings):
     admins: list[str] = []
     maintainers: list[str] = []
     members: list[str] = []
-    default_role: str | bool = False
+    default_role: str = ""
     collect_emails: bool = False
     create_default_channel: bool = False
 
