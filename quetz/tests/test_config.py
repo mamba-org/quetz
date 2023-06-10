@@ -84,12 +84,12 @@ def test_config_with_path(config_dir, config_base):
     c_one = Config(one_path)
 
     assert c_one.configured_section("users")
-    assert c_one.users_admins == ["one"]
+    assert c_one.users.admins == ["one"]
 
     c_other = Config(other_path)
 
     assert c_other.configured_section("users")
-    assert c_other.users_admins == ["other"]
+    assert c_other.users.admins == ["other"]
 
     c_new = Config(one_path)
 
