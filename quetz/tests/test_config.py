@@ -5,7 +5,7 @@ import tempfile
 import pytest
 
 # from quetz.config import Config, ConfigEntry, ConfigSection, configure_logger
-from quetz.config import Config, configure_logger, Settings
+from quetz.config import Config, Settings, configure_logger
 from quetz.dao import Dao
 from quetz.errors import ConfigError
 
@@ -103,8 +103,10 @@ def test_config_with_path(config_dir, config_base):
 def _setup_config_extend_require():
     from pydantic import BaseSettings
     from pydantic.error_wrappers import ValidationError
+
     class OtherPluginSetting(BaseSettings):
         some_config_value: str
+
     Config.register(other_plugin=(OtherPluginSetting, ...))
     yield
     del Settings.__fields__["other_plugin"]
@@ -113,18 +115,20 @@ def _setup_config_extend_require():
 
 def test_config_extend_require(_setup_config_extend_require, config):
     from pydantic.error_wrappers import ValidationError
+
     with pytest.raises(ValidationError):
         c = Config()
-
 
 
 @pytest.fixture
 def setup_config_class():
     from pydantic import BaseSettings
+
     class ExtraPluginSettings(BaseSettings):
         some: str
         config: str
         has_default: str = "iamdefault"
+
     Config.register(extra_plugin=(ExtraPluginSettings, ...))
     yield
     del Settings.__fields__["extra_plugin"]

@@ -209,6 +209,7 @@ def config_dir(home):
 def test_data_dir():
     return os.path.join(os.path.dirname(quetz.__file__), "tests", "data")
 
+
 @pytest.fixture
 def config(config_str, config_dir, test_data_dir):
     config_path = os.path.join(config_dir, "config.toml")

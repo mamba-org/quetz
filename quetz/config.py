@@ -58,9 +58,9 @@ PAGINATION_LIMIT = 20
 
 from pydantic.fields import ModelField
 
+
 # https://github.com/pydantic/pydantic/issues/1937#issuecomment-695313040
 class DyanamicallyExtendableSetting(BaseSettings):
-
     @classmethod
     def add_fields(cls, **field_definitions: Any):
         new_fields: Dict[str, ModelField] = {}
@@ -82,11 +82,16 @@ class DyanamicallyExtendableSetting(BaseSettings):
             if f_annotation:
                 new_annotations[f_name] = f_annotation
 
-            new_fields[f_name] = ModelField.infer(name=f_name, value=f_value, annotation=f_annotation, class_validators=None, config=cls.__config__)
+            new_fields[f_name] = ModelField.infer(
+                name=f_name,
+                value=f_value,
+                annotation=f_annotation,
+                class_validators=None,
+                config=cls.__config__,
+            )
 
         cls.__fields__.update(new_fields)
         cls.__annotations__.update(new_annotations)
-
 
 
 class SettingsGeneral(BaseSettings):
@@ -570,8 +575,8 @@ class Config:
         bool
             Wether or not the given section is configured
         """
-        return bool(getattr(self.config, section))\
-    
+        return bool(getattr(self.config, section))
+
     @classmethod
     def register(cls, **kwargs):
         """Register additional config variables"""
