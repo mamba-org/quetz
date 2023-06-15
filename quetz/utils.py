@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import unquote
 
-from conda.models.match_spec import MatchSpec, _parse_spec_str
+from conda.models.match_spec import MatchSpec
 from sqlalchemy import String, and_, cast, collate, not_, or_
 
 from .db_models import Channel, Package, PackageVersion, User
@@ -54,6 +54,7 @@ def check_package_membership_pattern(
 ):
     # TODO: validate performance, can we save the MatchSpec instances between calls?
     # might be okay for <100 packages to check against, but what about 1000s?
+    # TODO: matchspec vs package spec and build string matching with *
     name, version, build = _parse_package_spec(package_spec)
     for include_pattern in include_pattern_list:
         # TODO: how do we get the build number?

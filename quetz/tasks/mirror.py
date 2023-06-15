@@ -23,12 +23,7 @@ from quetz.db_models import PackageVersion
 from quetz.errors import DBError
 from quetz.pkgstores import PackageStore
 from quetz.tasks import indexing
-from quetz.utils import (
-    TicToc,
-    add_static_file,
-    check_package_membership,
-    check_package_membership_pattern,
-)
+from quetz.utils import TicToc, add_static_file, check_package_membership_pattern
 
 # copy common subdirs from conda:
 # https://github.com/conda/conda/blob/a78a2387f26a188991d771967fc33aa1fb5bb810/conda/base/constants.py#L63
@@ -409,6 +404,9 @@ def initial_sync_mirror(
                     raise exc
 
             return False
+
+        # TODO: also remove all packages that are not in the remote repository anymore
+        # practically re-write the complete sync mechanism?
 
         for repo_package_name, metadata in packages.items():
             # if check_package_membership(repo_package_name, includelist, excludelist):
