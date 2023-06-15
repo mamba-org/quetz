@@ -1,6 +1,6 @@
 name: quetz
-channels:
-  - https://repo.mamba.pm/conda-forge
+ channels:
+   - https://repo.mamba.pm/conda-forge
 dependencies:
   - python>=3.7
   - pip
@@ -14,6 +14,8 @@ dependencies:
   - sqlite
   - python-multipart
   - uvicorn
+  - uvloop
+  - httptools
   - zstandard
   - conda-build
   - appdirs
