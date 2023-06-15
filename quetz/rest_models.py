@@ -119,7 +119,7 @@ class ChannelActionEnum(str, Enum):
 
 
 class ChannelMetadata(BaseModel):
-    includelist: Optional[List[str]] = Field(
+    includelist: Optional[Union[List[str], Dict[str, List]]] = Field(
         None,
         title="list of packages to include while creating a channel",
     )

@@ -6,7 +6,7 @@ import shutil
 from concurrent.futures import ThreadPoolExecutor
 from http.client import IncompleteRead
 from tempfile import SpooledTemporaryFile
-from typing import List
+from typing import List, Union
 
 import requests
 from fastapi import HTTPException, status
@@ -23,7 +23,7 @@ from quetz.db_models import PackageVersion
 from quetz.errors import DBError
 from quetz.pkgstores import PackageStore
 from quetz.tasks import indexing
-from quetz.utils import TicToc, add_static_file, check_package_membership_pattern
+from quetz.utils import TicToc, add_static_file, check_package_membership
 
 # copy common subdirs from conda:
 # https://github.com/conda/conda/blob/a78a2387f26a188991d771967fc33aa1fb5bb810/conda/base/constants.py#L63
@@ -278,6 +278,36 @@ def handle_repodata_package(
             file.file.close()
 
 
+def get_remote_repodata(
+    channel_name: str, arch: str, remote_repository: RemoteRepository
+) -> Union[dict, None]:
+    repodata = {}
+    for repodata_fn in ["repodata_from_packages.json", "repodata.json"]:
+        try:
+            repo_file = remote_repository.open(os.path.join(arch, repodata_fn))
+            repodata = json.load(repo_file.file)
+            return repodata
+        except RemoteServerError:
+            logger.error(
+                f"can not get {repodata_fn} for channel {arch}/{channel_name}."
+            )
+            if repodata_fn == "repodata.json":
+                logger.error(f"Giving up for {channel_name}/{arch}.")
+                return None
+            else:
+                logger.error("Trying next filename.")
+                continue
+        except json.JSONDecodeError:
+            logger.error(
+                f"repodata.json badly formatted for arch {arch}"
+                f"in channel {channel_name}"
+            )
+            if repodata_fn == "repodata.json":
+                return None
+
+    return {}
+
+
 def initial_sync_mirror(
     channel_name: str,
     remote_repository: RemoteRepository,
@@ -295,32 +325,13 @@ def initial_sync_mirror(
         f"Running channel mirroring {channel_name}/{arch} from {remote_repository.host}"
     )
 
-    repodata = {}
-    for repodata_fn in ["repodata_from_packages.json", "repodata.json"]:
-        try:
-            repo_file = remote_repository.open(os.path.join(arch, repodata_fn))
-            repodata = json.load(repo_file.file)
-            break
-        except RemoteServerError:
-            logger.error(
-                f"can not get {repodata_fn} for channel {arch}/{channel_name}."
-            )
-            if repodata_fn == "repodata.json":
-                logger.error(f"Giving up for {channel_name}/{arch}.")
-                return
-            else:
-                logger.error("Trying next filename.")
-                continue
-        except json.JSONDecodeError:
-            logger.error(
-                f"repodata.json badly formatted for arch {arch}"
-                f"in channel {channel_name}"
-            )
-            if repodata_fn == "repodata.json":
-                return
+    repodata = get_remote_repodata(channel_name, arch, remote_repository)
+    if not repodata:
+        return  # quit; error has already been logged.
+
+    packages = repodata.get("packages", {})
 
     channel = dao.get_channel(channel_name)
-
     if not channel:
         logger.error(f"channel {channel_name} not found")
         return
@@ -408,10 +419,13 @@ def initial_sync_mirror(
         # TODO: also remove all packages that are not in the remote repository anymore
         # practically re-write the complete sync mechanism?
 
+        # SYNC: Remote -> Local
+        # for each package in the remote repository:
+        #   validate if it should be downloaded to this channel
+        # also: remove packages if they are not supposed to in this channel anymore
         for repo_package_name, metadata in packages.items():
-            # if check_package_membership(repo_package_name, includelist, excludelist):
-            if check_package_membership_pattern(
-                repo_package_name, includelist, excludelist
+            if check_package_membership(
+                channel, repo_package_name, metadata, remote_host=remote_repository.host
             ):
                 path = os.path.join(arch, repo_package_name)
 
@@ -447,24 +461,28 @@ def initial_sync_mirror(
         # handle final batch
         any_updated |= handle_batch(update_batch)
 
+        # SYNC: Local checks Remote
+        # Validate if all packages in this channel are still
+        # also present in the remote channel
+        # if not: add them to the remove batch as well
+        # TODO
+
         if remove_batch:
             logger.debug(f"Removing {len(remove_batch)} packages: {remove_batch}")
             package_specs_remove = set([p[1].split("-")[0] for p in remove_batch])
-            # TODO: reuse route [DELETE /api/channels/{channel_name}/packages] logic
             for package_specs in package_specs_remove:
-                # TODO: only remove if it already exists of course
                 dao.remove_package(channel_name, package_name=package_specs)
                 # TODO: is this needed every time?
                 dao.cleanup_channel_db(channel_name, package_name=package_specs)
+                # only remove if exists
                 if pkgstore.file_exists(channel.name, package_specs):
                     pkgstore.delete_file(channel.name, destination=package_specs)
 
             any_updated |= True
 
     if any_updated:
-        indexing.update_indexes(
-            dao, pkgstore, channel_name, subdirs=[arch]
-        )  # build repodata
+        # build local repodata
+        indexing.update_indexes(dao, pkgstore, channel_name, subdirs=[arch])
 
 
 def create_packages_from_channeldata(

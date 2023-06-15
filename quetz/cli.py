@@ -72,7 +72,8 @@ def _alembic_config(db_url: str) -> AlembicConfig:
     script_location = "quetz:migrations"
 
     migration_modules = [
-        f"{ep.module}:versions" for ep in entry_points().select(group='quetz.migrations')
+        f"{ep.module}:versions"
+        for ep in entry_points().select(group='quetz.migrations')
     ]
     migration_modules.append("quetz:migrations/versions")
 
@@ -127,7 +128,9 @@ def _make_migrations(
             found = True
 
     if plugin_name != "quetz" and not found:
-        raise Exception(f"models entrypoint (quetz.models) for plugin {plugin_name} not registered")
+        raise Exception(
+            f"models entrypoint (quetz.models) for plugin {plugin_name} not registered"
+        )
 
     logger.info('Making DB migrations on %r for %r', db_url, plugin_name)
     if not alembic_config and db_url:
@@ -137,7 +140,9 @@ def _make_migrations(
     if plugin_name == "quetz":
         version_path = None  # Path(quetz.__file__).parent / 'migrations' / 'versions'
     else:
-        entry_point = tuple(entry_points().select(group='quetz.migrations', name=plugin_name))[0]
+        entry_point = tuple(
+            entry_points().select(group='quetz.migrations', name=plugin_name)
+        )[0]
         module = entry_point.load()
         version_path = str(Path(module.__file__).parent / "versions")
 
@@ -198,7 +203,9 @@ def _set_user_roles(db: Session, config: Config):
                         f"with identity from provider '{provider}'"
                     )
                 elif user.role is not None and user.role != default_role:
-                    logger.warning(f"user has already role {user.role} not assigning a new role")
+                    logger.warning(
+                        f"user has already role {user.role} not assigning a new role"
+                    )
                 else:
                     user.role = role
 
@@ -429,7 +436,8 @@ def create(
     if _is_deployment(deployment_folder):
         if exists_ok:
             logger.info(
-                f'Quetz deployment already exists at {deployment_folder}.\n' f'Skipping creation.'
+                f'Quetz deployment already exists at {deployment_folder}.\n'
+                f'Skipping creation.'
             )
             return
         if delete and (copy_conf or create_conf):
@@ -725,7 +733,9 @@ def plugin(
             # Try to install pip if it's missing
             if conda_exe_path is not None:
                 print("pip is missing, installing...")
-                subprocess.call([conda_exe_path, 'install', '--channel', 'conda-forge', 'pip'])
+                subprocess.call(
+                    [conda_exe_path, 'install', '--channel', 'conda-forge', 'pip']
+                )
                 pip_exe_path = find_executable('pip')
 
         if pip_exe_path is None:

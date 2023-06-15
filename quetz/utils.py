@@ -26,47 +26,85 @@ from sqlalchemy import String, and_, cast, collate, not_, or_
 from .db_models import Channel, Package, PackageVersion, User
 
 
-def check_package_membership(package_name, includelist, excludelist):
-    if includelist:
-        for each_package in includelist:
-            if package_name.startswith(each_package):
-                return True
-        return False
-    elif excludelist:
-        for each_package in excludelist:
-            if package_name.startswith(each_package):
-                return False
-        return True
-    return True
+def _parse_package_spec(package_name: str, package_metadata) -> tuple[str, str, str]:
+    """Given a package name and metadata, return the package spec.
 
+    Args:
+        package_name (str): The package name in file format,
+            e.g. "numpy-1.23.4-py39hefdcf20_0.tar.bz2"
+        package_metadata (_type_): Metadata of the package,
+            e.g. from repodata.json
 
-def _parse_package_spec(package_spec: str) -> tuple[str, str, str]:
+    Returns:
+        tuple[str, str, str]: (name, version, build-string)
+    """
+
     # spec = _parse_spec_str(package_spec)
     # return spec.get("name", ""), spec.get("version", ""), spec.get("build", "")
     # TODO: the package spec here looks like "numpy-1.23.4-py39hefdcf20_0.tar.bz2"
     # and does not have "="
-    spec = package_spec.split("-")
+    spec = package_name.split("-")
     return spec[0], spec[1] if len(spec) > 1 else "", spec[2] if len(spec) > 2 else ""
 
 
-def check_package_membership_pattern(
-    package_spec, include_pattern_list=[], exclude_pattern_list=[]
-):
-    # TODO: validate performance, can we save the MatchSpec instances between calls?
-    # might be okay for <100 packages to check against, but what about 1000s?
-    # TODO: matchspec vs package spec and build string matching with *
-    name, version, build = _parse_package_spec(package_spec)
-    for include_pattern in include_pattern_list:
-        # TODO: how do we get the build number?
-        include = MatchSpec(include_pattern).match(
+def _check_package_match(
+    package_spec: tuple[str, str, str],
+    include_or_exclude_list: list[str],
+) -> bool:
+    """
+    Check if the given package specification matches
+    with the given include or exclude list.
+    Returns true if a match is found.
+    """
+    name, version, build = package_spec
+    for pattern in include_or_exclude_list:
+        # TODO: validate if this matches with our current implementation
+        if MatchSpec(pattern).match(
             {"name": name, "version": version, "build": build, "build_number": 0}
-        )
-        exclude = False  # TODO
-        if include and not exclude:
+        ):
             return True
 
-    else:
-        return False
+    return False
+
+
+def check_package_membership(
+    channel: Channel,
+    package_name: str,
+    package_metadata: dict,
+    remote_host: str,
+):
+    """
+    Check if a package should be in a channel according
+    to the rules defined in the channel metadata.
+
+    Args:
+        channel (Channel): Channel object returned from the database
+        package_name (str): name of the package in file format,
+            e.g. "numpy-1.23.4-py39hefdcf20_0.tar.bz2"
+        package_metadata (dict): package metadata,
+            information that can be found in repodata.json for example
+        includelist (Union[list[str], dict, None], optional):
+        excludelist (Union[list[str], dict, None], optional):
+
+    Returns:
+        bool: if the package should be in this channel or not according to the rules.
+    """
+    package_spec = _parse_package_spec(package_name, package_metadata)
+    metadata = channel.load_channel_metadata()
+    if (includelist := metadata['includelist']) is not None:
+        # Example: { "main": ["numpy", "pandas"], "r": ["r-base"]}
+        if isinstance(includelist, dict):
+            if channel.name not in includelist:
+                include_package = False
+            channel_includelist = includelist[remote_host.split("/")[-1]]
+            include_package = _check_package_match(package_spec, channel_includelist)
+        # Example: ["numpy", "pandas", "r-base"]
+        elif isinstance(includelist, list):
+            include_package = _check_package_match(package_spec, includelist)
+
+    # TODO: implement excludelist
+
+    return include_package
 
 
 def add_static_file(contents, channel_name, subdir, fname, pkgstore, file_index=None):

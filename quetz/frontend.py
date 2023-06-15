@@ -96,4 +96,6 @@ def register(app):
         frontend_dir = f"{sys.prefix}/share/quetz/frontend/"
     else:
         logger.info("Using basic fallback frontend")
-        frontend_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "basic_frontend")
+        frontend_dir = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "basic_frontend"
+        )
