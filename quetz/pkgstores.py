@@ -21,6 +21,7 @@ from typing import IO, List, Tuple, Union
 import aiofiles
 import aioshutil
 import fsspec
+from fsspec.asyn import get_loop
 from tenacity import retry
 from tenacity.retry import retry_if_exception_type
 from tenacity.stop import stop_after_attempt
@@ -302,8 +303,12 @@ class S3Store(PackageStore):
         key = config['key'] if config['key'] != '' else None
         secret = config['secret'] if config['secret'] != '' else None
         self.fs = s3fs.S3FileSystem(
-            key=key, secret=secret, asynchronous=True, client_kwargs=client_kwargs
+            key=key,
+            secret=secret,
+            asynchronous=True,
+            client_kwargs=client_kwargs,
         )
+        self.fs._loop = get_loop()
 
         self.bucket_prefix = config['bucket_prefix']
         self.bucket_suffix = config['bucket_suffix']
@@ -454,6 +459,7 @@ class AzureBlobStore(PackageStore):
             account_key=self.access_key,
             asynchronous=True,
         )
+        self.fs._loop = get_loop()
 
         self.container_prefix = config['container_prefix']
         self.container_suffix = config['container_suffix']
@@ -609,6 +615,7 @@ class GoogleCloudStorageStore(PackageStore):
             default_location=self.region,
             asynchronous=True,
         )
+        self.fs._loop = get_loop()
 
         self.bucket_prefix = config['bucket_prefix']
         self.bucket_suffix = config['bucket_suffix']
