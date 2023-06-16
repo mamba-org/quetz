@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional
 
-from pydantic import BaseSettings
+from pydantic import BaseModel, BaseSettings
 from pydantic.fields import ModelField
 
 
@@ -40,81 +40,57 @@ class DyanamicallyExtendableSetting(BaseSettings):
         cls.__annotations__.update(new_annotations)
 
 
-class SettingsGeneral(BaseSettings):
+class SettingsGeneral(BaseModel):
     package_unpack_threads: int = 1
     frontend_dir: str = ""
     redirect_http_to_https: bool = False
 
-    class Config:
-        env_prefix = 'general'
 
-
-class SettingsCORS(BaseSettings):
+class SettingsCORS(BaseModel):
     allow_origins: list = []
     allow_credentials: bool = True
     allow_methods: list[str] = ["*"]
     allow_headers: list[str] = ["*"]
 
-    class Config:
-        env_prefix = 'cors'
 
-
-class SettingsGitHub(BaseSettings):
+class SettingsGitHub(BaseModel):
     client_id: str
     client_secret: str
 
-    class Config:
-        env_prefix = 'github'
 
-
-class SettingsGitLab(BaseSettings):
+class SettingsGitLab(BaseModel):
     url: str = "https://gitlab.com"
     client_id: str
     client_secret: str
 
-    class Config:
-        env_prefix = 'gitlab'
 
-
-class SettingsAzureAD(BaseSettings):
+class SettingsAzureAD(BaseModel):
     client_id: str
     client_secret: str
     tenant_id: str
 
-    class Config:
-        env_prefix = 'azuread'
 
-
-class SettingsSQLAlchemy(BaseSettings):
+class SettingsSQLAlchemy(BaseModel):
     database_url: str
     database_plugin_path: str = ""
     echo_sql: bool = False
     postgres_pool_size: int = 100
     postgres_max_overflow: int = 100
 
-    class Config:
-        env_prefix = 'sqlalchemy'
 
-
-class SettingsSession(BaseSettings):
+class SettingsSession(BaseModel):
     secret: str
     https_only: bool = True
 
-    class Config:
-        env_prefix = 'session'
 
-
-class SettingsLocalStore(BaseSettings):
+class SettingsLocalStore(BaseModel):
     redirect_enabled: bool = False
     redirect_endpoint: str = "/files"
     redirect_secret: str = ""
     redirect_expiration: int = 3600
 
-    class Config:
-        env_prefix = 'local_store'
 
-
-class SettingsS3(BaseSettings):
+class SettingsS3(BaseModel):
     access_key: str = ""
     secret_key: str = ""
     url: str = ""
@@ -122,22 +98,16 @@ class SettingsS3(BaseSettings):
     bucket_prefix: str = ""
     bucket_suffix: str = ""
 
-    class Config:
-        env_prefix = 's3'
 
-
-class SettingsAzureBlob(BaseSettings):
+class SettingsAzureBlob(BaseModel):
     account_name: str = ""
     account_access_key: str = ""
     conn_str: str = ""
     container_prefix: str = ""
     container_suffix: str = ""
 
-    class Config:
-        env_prefix = 'azure_blob'
 
-
-class SettingsGCS(BaseSettings):
+class SettingsGCS(BaseModel):
     project: str = ""
     token: str = ""
     bucket_prefix: str = ""
@@ -145,36 +115,24 @@ class SettingsGCS(BaseSettings):
     cache_timeout: int | None = None
     region: str | None = None
 
-    class Config:
-        env_prefix = 'gcs'
 
-
-class SettingsGoogle(BaseSettings):
+class SettingsGoogle(BaseModel):
     client_id: str
     client_secret: str
 
-    class Config:
-        env_prefix = 'google'
 
-
-class SettingsLogging(BaseSettings):
+class SettingsLogging(BaseModel):
     level: str = "INFO"
     file: str = ""
 
-    class Config:
-        env_prefix = 'logging'
 
-
-class SettingsUsers(BaseSettings):
+class SettingsUsers(BaseModel):
     admins: list[str] = []
     maintainers: list[str] = []
     members: list[str] = []
     default_role: str = ""
     collect_emails: bool = False
     create_default_channel: bool = False
-
-    class Config:
-        env_prefix = 'users'
 
 
 class SettingsWorker:
@@ -183,39 +141,24 @@ class SettingsWorker:
     redis_port: int = 6379
     redis_db: int = 0
 
-    class Config:
-        env_prefix = 'worker'
 
-
-class SettingsPlugins(BaseSettings):
+class SettingsPlugins(BaseModel):
     enabled: list[str] = []
 
-    class Config:
-        env_prefix = 'plugins'
 
-
-class SettingsMirroring(BaseSettings):
+class SettingsMirroring(BaseModel):
     batch_length: int = 10
     batch_size: int = 10**8
     num_parallel_downloads: int = 10
 
-    class Config:
-        env_prefix = 'mirroring'
 
-
-class SettingsQuotas(BaseSettings):
+class SettingsQuotas(BaseModel):
     channel_quota: int
 
-    class Config:
-        env_prefix = 'quotas'
 
-
-class SettingsProfiling(BaseSettings):
+class SettingsProfiling(BaseModel):
     enable_sampling: bool = False
     interval_seconds: float = 0.001
-
-    class Config:
-        env_prefix = 'profiling'
 
 
 class Settings(DyanamicallyExtendableSetting):
@@ -240,4 +183,5 @@ class Settings(DyanamicallyExtendableSetting):
     profiling: Optional[SettingsProfiling] = None
 
     class Config:
-        env_prefix = 'quetz'
+        env_prefix = "quetz__"
+        env_nested_delimiter = "__"
