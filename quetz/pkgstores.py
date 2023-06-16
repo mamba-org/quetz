@@ -307,8 +307,8 @@ class S3Store(PackageStore):
             secret=secret,
             asynchronous=True,
             client_kwargs=client_kwargs,
-            loop=get_loop(),
         )
+        self.fs._loop = get_loop()
 
         self.bucket_prefix = config['bucket_prefix']
         self.bucket_suffix = config['bucket_suffix']
@@ -458,8 +458,8 @@ class AzureBlobStore(PackageStore):
             connection_string=self.conn_string,
             account_key=self.access_key,
             asynchronous=True,
-            loop=get_loop(),
         )
+        self.fs._loop = get_loop()
 
         self.container_prefix = config['container_prefix']
         self.container_suffix = config['container_suffix']
@@ -614,8 +614,8 @@ class GoogleCloudStorageStore(PackageStore):
             cache_timeout=self.cache_timeout,
             default_location=self.region,
             asynchronous=True,
-            loop=get_loop(),
         )
+        self.fs._loop = get_loop()
 
         self.bucket_prefix = config['bucket_prefix']
         self.bucket_suffix = config['bucket_suffix']
