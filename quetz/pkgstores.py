@@ -616,7 +616,6 @@ class GoogleCloudStorageStore(PackageStore):
             asynchronous=True,
         )
         self.fs._loop = get_loop()
-        raise ValueError()
 
         self.bucket_prefix = config['bucket_prefix']
         self.bucket_suffix = config['bucket_suffix']
