@@ -47,6 +47,8 @@ jobs:
           - 6379:6379
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: write gcs token file
         run: |
           mkdir $(dirname "${GCS_TOKEN}")
