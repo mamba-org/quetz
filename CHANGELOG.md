@@ -2,6 +2,26 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## 0.9.1
+
+([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.9.0...13f588cc16560c78927e4b2406a77958a62d5ca6))
+
+### Bugs fixed
+
+- Fix event loop errors [#650](https://github.com/mamba-org/quetz/pull/650) ([@janjagusch](https://github.com/janjagusch))
+
+### Maintenance and upkeep improvements
+
+- Checkout source code from fork [#651](https://github.com/mamba-org/quetz/pull/651) ([@janjagusch](https://github.com/janjagusch))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2023-06-05&to=2023-06-20&type=c))
+
+[@janjagusch](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ajanjagusch+updated%3A2023-06-05..2023-06-20&type=Issues)
+
+<!-- <END NEW CHANGELOG ENTRY> -->
+
 ## 0.9.0
 
 ([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.8.0...935be5b02961e952396ca1fac20e073ec8907062))
@@ -20,8 +40,6 @@
 ([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2023-06-01&to=2023-06-05&type=c))
 
 [@codecov-commenter](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Acodecov-commenter+updated%3A2023-06-01..2023-06-05&type=Issues) | [@ivergara](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Aivergara+updated%3A2023-06-01..2023-06-05&type=Issues) | [@janjagusch](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ajanjagusch+updated%3A2023-06-01..2023-06-05&type=Issues)
-
-<!-- <END NEW CHANGELOG ENTRY> -->
 
 ## 0.8.0
 
