@@ -302,13 +302,14 @@ class S3Store(PackageStore):
         # to the s3fs constructor
         key = config['key'] if config['key'] != '' else None
         secret = config['secret'] if config['secret'] != '' else None
+        self._key = key
+        self._secret = secret
+        self._client_kwargs = client_kwargs
         self.fs = s3fs.S3FileSystem(
             key=key,
             secret=secret,
-            asynchronous=True,
             client_kwargs=client_kwargs,
         )
-        self.fs._loop = get_loop()
 
         self.bucket_prefix = config['bucket_prefix']
         self.bucket_suffix = config['bucket_suffix']
@@ -358,11 +359,17 @@ class S3Store(PackageStore):
     async def add_package_async(
         self, package: File, channel: str, destination: str
     ) -> None:
-        with self._get_fs() as fs:
-            bucket = self._bucket_map(channel)
-            with fs.open(path.join(bucket, destination), "wb", acl="private") as pkg:
-                # use a chunk size of 10 Megabytes
-                await aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
+        import s3fs
+
+        fs = s3fs.S3FileSystem(
+            key=self._key,
+            secret=self._secret,
+            client_kwargs=self._client_kwargs,
+        )
+        bucket = self._bucket_map(channel)
+        with fs.open(path.join(bucket, destination), "wb", acl="private") as pkg:
+            # use a chunk size of 10 Megabytes
+            await aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
