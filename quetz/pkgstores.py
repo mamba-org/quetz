@@ -301,8 +301,13 @@ class S3Store(PackageStore):
         # to the s3fs constructor
         key = config['key'] if config['key'] != '' else None
         secret = config['secret'] if config['secret'] != '' else None
+        self._key = key
+        self._secret = secret
+        self._client_kwargs = client_kwargs
         self.fs = s3fs.S3FileSystem(
-            key=key, secret=secret, asynchronous=True, client_kwargs=client_kwargs
+            key=key,
+            secret=secret,
+            client_kwargs=client_kwargs,
         )
 
         self.bucket_prefix = config['bucket_prefix']
@@ -353,11 +358,17 @@ class S3Store(PackageStore):
     async def add_package_async(
         self, package: File, channel: str, destination: str
     ) -> None:
-        with self._get_fs() as fs:
-            bucket = self._bucket_map(channel)
-            with fs.open(path.join(bucket, destination), "wb", acl="private") as pkg:
-                # use a chunk size of 10 Megabytes
-                await aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
+        import s3fs
+
+        fs = s3fs.S3FileSystem(
+            key=self._key,
+            secret=self._secret,
+            client_kwargs=self._client_kwargs,
+        )
+        bucket = self._bucket_map(channel)
+        with fs.open(path.join(bucket, destination), "wb", acl="private") as pkg:
+            # use a chunk size of 10 Megabytes
+            await aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
@@ -452,7 +463,6 @@ class AzureBlobStore(PackageStore):
             account_name=self.storage_account_name,
             connection_string=self.conn_string,
             account_key=self.access_key,
-            asynchronous=True,
         )
 
         self.container_prefix = config['container_prefix']
@@ -502,11 +512,17 @@ class AzureBlobStore(PackageStore):
     async def add_package_async(
         self, package: File, channel: str, destination: str
     ) -> None:
-        with self._get_fs() as fs:
-            container = self._container_map(channel)
-            with fs.open(path.join(container, destination), "wb") as pkg:
-                # use a chunk size of 10 Megabytes
-                await aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
+        import adlfs
+
+        fs = adlfs.AzureBlobFileSystem(
+            account_name=self.storage_account_name,
+            connection_string=self.conn_string,
+            account_key=self.access_key,
+        )
+        container = self._container_map(channel)
+        with fs.open(path.join(container, destination), "wb") as pkg:
+            # use a chunk size of 10 Megabytes
+            await aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
@@ -607,7 +623,6 @@ class GoogleCloudStorageStore(PackageStore):
             token=self.token if self.token else None,
             cache_timeout=self.cache_timeout,
             default_location=self.region,
-            asynchronous=True,
         )
 
         self.bucket_prefix = config['bucket_prefix']
@@ -661,11 +676,18 @@ class GoogleCloudStorageStore(PackageStore):
     async def add_package_async(
         self, package: File, channel: str, destination: str
     ) -> None:
-        with self._get_fs() as fs:
-            container = self._bucket_map(channel)
-            with fs.open(path.join(container, destination), "wb") as pkg:
-                # use a chunk size of 10 Megabytes
-                await aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
+        import gcsfs
+
+        fs = gcsfs.GCSFileSystem(
+            project=self.project,
+            token=self.token if self.token else None,
+            cache_timeout=self.cache_timeout,
+            default_location=self.region,
+        )
+        container = self._bucket_map(channel)
+        with fs.open(path.join(container, destination), "wb") as pkg:
+            # use a chunk size of 10 Megabytes
+            await aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
