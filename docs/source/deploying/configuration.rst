@@ -30,10 +30,12 @@ Quetz can be run with SQLlite or PostgreSQL as database backends (PostgreSQL is 
 
    # The pool size for sqlalchemy engine connections to postgres DBs
    # see https://docs.sqlalchemy.org/en/latest/core/pooling.html
-   postgres_pool_size = 100
+   # Ignored for sqlite data bases
+   postgres_pool_size = 10
 
    # The maximal number of overflow connections beyond the pool size
    # see https://docs.sqlalchemy.org/en/latest/core/pooling.html
+   # Ignored for sqlite data bases
    postgres_max_overflow = 100
 
 :database_url: URL of the database (may contain user credentials) prefixed with either ``sqlite://`` or ``postgresql://``.
@@ -42,9 +44,9 @@ Quetz can be run with SQLlite or PostgreSQL as database backends (PostgreSQL is 
 
 :echo_sql: Passed directly to the "echo" argument of sqlalchemy.create_engine, default: `false`.
 
-:postgres_pool_size: The pool size for sqlalchemy engine connections to postgres DBs. See `sqlalchemy docs <https://docs.sqlalchemy.org/en/latest/core/pooling.html>`_. Default: `100`
+:postgres_pool_size: The pool size for sqlalchemy engine connections to postgres DBs. See `sqlalchemy docs <https://docs.sqlalchemy.org/en/latest/core/pooling.html>`_. Ignored for sqlite data bases. Default: `10`
 
-:postgres_max_overflow: The maximal number of overflow connections beyond the pool size. See `sqlalchemy docs <https://docs.sqlalchemy.org/en/latest/core/pooling.html>`_. Default: `100`
+:postgres_max_overflow: The maximal number of overflow connections beyond the pool size. See `sqlalchemy docs <https://docs.sqlalchemy.org/en/latest/core/pooling.html>`_.  Ignored for sqlite data bases. Default: `100`
 
 ``github`` section
 ^^^^^^^^^^^^^^^^^^

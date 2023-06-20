@@ -29,7 +29,7 @@ def set_metrics(*args):
     DATABASE_CONNECTIONS_USED.set(checked_out)
 
 
-def get_engine(db_url, reuse_engine=True, **kwargs) -> Engine:
+def get_engine(db_url, reuse_engine=True, postgres_kwargs=None, **kwargs) -> Engine:
     if db_url.startswith('sqlite'):
         kwargs.setdefault('connect_args', {'check_same_thread': False})
 
@@ -42,7 +42,9 @@ def get_engine(db_url, reuse_engine=True, **kwargs) -> Engine:
 
     if not engine or not reuse_engine:
         if db_url.startswith('postgres'):
-            engine = create_engine(db_url, **kwargs)
+            engine = create_engine(
+                db_url, **(postgres_kwargs if postgres_kwargs else {}), **kwargs
+            )
             for event_name in ['connect', 'close', 'checkin', 'checkout']:
                 event.listen(engine, event_name, set_metrics)
         else:
@@ -79,8 +81,10 @@ def get_db_manager():
     db = get_session(
         db_url=config.sqlalchemy_database_url,
         echo=config.sqlalchemy_echo_sql,
-        pool_size=config.sqlalchemy_postgres_pool_size,
-        max_overflow=config.sqlalchemy_postgres_max_overflow,
+        postgres_kwargs=dict(
+            pool_size=config.sqlalchemy_postgres_pool_size,
+            max_overflow=config.sqlalchemy_postgres_max_overflow,
+        ),
     )
 
     try:
