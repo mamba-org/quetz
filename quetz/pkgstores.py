@@ -21,7 +21,6 @@ from typing import IO, List, Tuple, Union
 import aiofiles
 import aioshutil
 import fsspec
-from fsspec.asyn import get_loop
 from tenacity import retry
 from tenacity.retry import retry_if_exception_type
 from tenacity.stop import stop_after_attempt
@@ -624,9 +623,7 @@ class GoogleCloudStorageStore(PackageStore):
             token=self.token if self.token else None,
             cache_timeout=self.cache_timeout,
             default_location=self.region,
-            asynchronous=True,
         )
-        self.fs._loop = get_loop()
 
         self.bucket_prefix = config['bucket_prefix']
         self.bucket_suffix = config['bucket_suffix']
@@ -679,11 +676,18 @@ class GoogleCloudStorageStore(PackageStore):
     async def add_package_async(
         self, package: File, channel: str, destination: str
     ) -> None:
-        with self._get_fs() as fs:
-            container = self._bucket_map(channel)
-            with fs.open(path.join(container, destination), "wb") as pkg:
-                # use a chunk size of 10 Megabytes
-                await aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
+        import gcsfs
+
+        fs = gcsfs.GCSFileSystem(
+            project=self.project,
+            token=self.token if self.token else None,
+            cache_timeout=self.cache_timeout,
+            default_location=self.region,
+        )
+        container = self._bucket_map(channel)
+        with fs.open(path.join(container, destination), "wb") as pkg:
+            # use a chunk size of 10 Megabytes
+            await aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
