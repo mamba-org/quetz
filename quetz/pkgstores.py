@@ -464,9 +464,7 @@ class AzureBlobStore(PackageStore):
             account_name=self.storage_account_name,
             connection_string=self.conn_string,
             account_key=self.access_key,
-            asynchronous=True,
         )
-        self.fs._loop = get_loop()
 
         self.container_prefix = config['container_prefix']
         self.container_suffix = config['container_suffix']
@@ -515,11 +513,17 @@ class AzureBlobStore(PackageStore):
     async def add_package_async(
         self, package: File, channel: str, destination: str
     ) -> None:
-        with self._get_fs() as fs:
-            container = self._container_map(channel)
-            with fs.open(path.join(container, destination), "wb") as pkg:
-                # use a chunk size of 10 Megabytes
-                await aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
+        import adlfs
+
+        fs = adlfs.AzureBlobFileSystem(
+            account_name=self.storage_account_name,
+            connection_string=self.conn_string,
+            account_key=self.access_key,
+        )
+        container = self._container_map(channel)
+        with fs.open(path.join(container, destination), "wb") as pkg:
+            # use a chunk size of 10 Megabytes
+            await aioshutil.copyfileobj(package, pkg, 10 * 1024 * 1024)
 
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
