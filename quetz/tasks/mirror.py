@@ -488,7 +488,7 @@ def create_version_from_metadata(
         )
         dao.create_package(channel_name, package_info, user_id, "owner")
 
-    pkg_format = "tarbz2" if package_file_name.endswith(".tar.bz2") else ".conda"
+    pkg_format = "tarbz2" if package_file_name.endswith(".tar.bz2") else "conda"
     version = dao.create_version(
         channel_name,
         package_name,
