@@ -2,6 +2,28 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## 0.9.2
+
+([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.9.1...efd519fd840304fb73fe6fd31ee4ae7f010ab1a2))
+
+### Bugs fixed
+
+- Remove DB dependency for health endpoint [#652](https://github.com/mamba-org/quetz/pull/652) ([@AndreasAlbertQC](https://github.com/AndreasAlbertQC))
+- Do not pass pooling arguments to sqlite [#641](https://github.com/mamba-org/quetz/pull/641) ([@AndreasAlbertQC](https://github.com/AndreasAlbertQC))
+
+### Maintenance and upkeep improvements
+
+- Use PEP-593 Annotated for options and arguments in CLI commands [#644](https://github.com/mamba-org/quetz/pull/644) ([@rominf](https://github.com/rominf))
+- Bump pyright-python version [#643](https://github.com/mamba-org/quetz/pull/643) ([@rominf](https://github.com/rominf))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2023-06-20&to=2023-06-21&type=c))
+
+[@AndreasAlbertQC](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3AAndreasAlbertQC+updated%3A2023-06-20..2023-06-21&type=Issues) | [@codecov-commenter](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Acodecov-commenter+updated%3A2023-06-20..2023-06-21&type=Issues) | [@rominf](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Arominf+updated%3A2023-06-20..2023-06-21&type=Issues)
+
+<!-- <END NEW CHANGELOG ENTRY> -->
+
 ## 0.9.1
 
 ([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.9.0...13f588cc16560c78927e4b2406a77958a62d5ca6))
@@ -19,8 +41,6 @@
 ([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2023-06-05&to=2023-06-20&type=c))
 
 [@janjagusch](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ajanjagusch+updated%3A2023-06-05..2023-06-20&type=Issues)
-
-<!-- <END NEW CHANGELOG ENTRY> -->
 
 ## 0.9.0
 
