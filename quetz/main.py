@@ -912,8 +912,10 @@ def post_package(
     auth: authorization.Rules = Depends(get_rules),
     dao: Dao = Depends(get_dao),
 ):
-    user_id = auth.assert_user()
-    owner_id = auth.get_owner()
+    # here we use the owner_id as user_id. In case the authentication
+    # was done using an API Key, we want to attribute the uploaded package
+    # to the owner of that API Key and not the anonymous API Key itself.
+    user_id = auth.assert_owner()
 
     auth.assert_create_package(channel.name)
     pm.hook.validate_new_package(
@@ -929,7 +931,7 @@ def post_package(
             detail=f"Package {channel.name}/{new_package.name} exists",
         )
 
-    dao.create_package(channel.name, new_package, owner_id, authorization.OWNER)
+    dao.create_package(channel.name, new_package, user_id, authorization.OWNER)
 
 
 @api_router.get(
@@ -1384,7 +1386,10 @@ async def post_upload(
             status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="Wrong SHA256 checksum"
         )
 
-    _ = auth.assert_user()
+    # here we use the owner_id as user_id. In case the authentication
+    # was done using an API Key, we want to attribute the uploaded package
+    # to the owner of that API Key and not the anonymous API Key itself.
+    user_id = auth.assert_owner()
 
     auth.assert_create_package(channel_name)
     condainfo = CondaInfo((body), filename)
@@ -1392,9 +1397,6 @@ async def post_upload(
 
     body.seek(0)
     await pkgstore.add_package_async(body, channel_name, dest)
-
-    # get the id of the owner, in case auth was done through an API key
-    owner_id = auth.get_owner()
 
     package_name = str(condainfo.info.get("name"))
     package_data = rest_models.Package(
@@ -1406,7 +1408,7 @@ async def post_upload(
         dao.create_package(
             channel_name,
             package_data,
-            owner_id,
+            user_id,
             authorization.OWNER,
         )
 
@@ -1425,7 +1427,7 @@ async def post_upload(
             size=condainfo.info["size"],
             filename=filename,
             info=json.dumps(condainfo.info),
-            uploader_id=owner_id,
+            uploader_id=user_id,
             upsert=force,
         )
     except IntegrityError:
@@ -1510,8 +1512,10 @@ def handle_package_files(
     package=None,
     is_mirror_op=False,
 ):
-    _ = auth.assert_user()
-    owner_id = auth.get_owner()
+    # here we use the owner_id as user_id. In case the authentication
+    # was done using an API Key, we want to attribute the uploaded package
+    # to the owner of that API Key and not the anonymous API Key itself.
+    user_id = auth.assert_owner()
 
     # quick fail if not allowed to upload
     # note: we're checking later that `parts[0] == conda_info.package_name`
@@ -1655,7 +1659,7 @@ def handle_package_files(
             dao.create_package(
                 channel.name,
                 package_data,
-                owner_id,
+                user_id,
                 authorization.OWNER,
             )
 
@@ -1676,7 +1680,7 @@ def handle_package_files(
                 size=condainfo.info["size"],
                 filename=file.filename,
                 info=json.dumps(condainfo.info),
-                uploader_id=owner_id,
+                uploader_id=user_id,
                 upsert=force,
             )
         except IntegrityError:

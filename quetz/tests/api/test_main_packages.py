@@ -7,11 +7,13 @@ from typing import BinaryIO
 import pytest
 
 from quetz import hookimpl
-from quetz.authorization import MAINTAINER, MEMBER, OWNER
+from quetz.authorization import MAINTAINER, MEMBER, OWNER, SERVER_OWNER
 from quetz.condainfo import CondaInfo
 from quetz.config import Config
+from quetz.dao import Dao
 from quetz.db_models import ChannelMember, Package, PackageMember, PackageVersion
 from quetz.errors import ValidationError
+from quetz.rest_models import BaseApiKey, Channel
 from quetz.tasks.indexing import update_indexes
 
 
@@ -732,3 +734,140 @@ def test_package_channel_data_attributes(
     content = response.json()
     assert content['platforms'] == ['linux-64']
     assert content['url'].startswith("https://")
+
+
+@pytest.fixture
+def owner(db, dao: Dao):
+    # create an owner with OWNER role
+    owner = dao.create_user_with_role("owner", role=SERVER_OWNER)
+
+    yield owner
+
+    db.delete(owner)
+    db.commit()
+
+
+@pytest.fixture
+def private_channel(db, dao: Dao, owner):
+    # create a channel
+    channel_data = Channel(name='private-channel', private=True)
+    channel = dao.create_channel(channel_data, owner.id, "owner")
+
+    yield channel
+
+    db.delete(channel)
+    db.commit()
+
+
+@pytest.fixture
+def private_package(db, owner, private_channel, dao):
+    package_data = Package(name='test-package')
+
+    package = dao.create_package(private_channel.name, package_data, owner.id, "owner")
+
+    yield package
+
+    db.delete(package)
+    db.commit()
+
+
+@pytest.fixture
+def api_key(db, dao: Dao, owner, private_channel):
+    # create an api key with restriction
+    key = dao.create_api_key(
+        owner.id,
+        BaseApiKey.parse_obj(
+            dict(
+                description="test api key",
+                expire_at="2099-12-31",
+                roles=[
+                    {
+                        'role': 'maintainer',
+                        'package': None,
+                        'channel': private_channel.name,
+                    }
+                ],
+            )
+        ),
+        "API key with role restruction",
+    )
+
+    yield key
+
+    # delete API Key
+    key.deleted = True
+    db.commit()
+
+
+def test_upload_package_with_api_key(client, dao: Dao, owner, private_channel, api_key):
+    # set api key of the anonymous user 'owner_key' to headers
+    client.headers['X-API-Key'] = api_key.key
+
+    # post new package
+    response = client.post(
+        f"/api/channels/{private_channel.name}/packages",
+        json={"name": "test-package", "summary": "none", "description": "none"},
+    )
+    assert response.status_code == 201
+
+    # we used the anonymous user of the API key for upload,
+    # but expect the owner to be the package owner
+    member = dao.get_package_member(
+        private_channel.name, 'test-package', username=owner.username
+    )
+    assert member
+
+
+def test_upload_file_to_package_with_api_key(
+    dao: Dao, client, owner, private_channel, private_package, api_key
+):
+    # set api key of the anonymous user 'owner_key' to headers
+    client.headers['X-API-Key'] = api_key.key
+
+    package_filename = "test-package-0.1-0.tar.bz2"
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = client.post(
+            f"/api/channels/{private_channel.name}/packages/"
+            f"{private_package.name}/files/",
+            files=files,
+        )
+        assert response.status_code == 201
+
+    # we used the anonymous user of the API key for upload,
+    # but expect the owner to be the package owner
+    version = dao.get_package_version_by_filename(
+        channel_name=private_channel.name,
+        package_name=private_package.name,
+        filename=package_filename,
+        platform='linux-64',
+    )
+    assert version
+    assert version.uploader == owner
+
+
+def test_upload_file_to_channel_with_api_key(
+    dao: Dao, client, owner, private_channel, api_key
+):
+    # set api key of the anonymous user 'owner_key' to headers
+    client.headers['X-API-Key'] = api_key.key
+
+    package_filename = "test-package-0.1-0.tar.bz2"
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = client.post(
+            f"/api/channels/{private_channel.name}/files/",
+            files=files,
+        )
+        assert response.status_code == 201
+
+    # we used the anonymous user of the API key for upload,
+    # but expect the owner to be the package owner
+    version = dao.get_package_version_by_filename(
+        channel_name=private_channel.name,
+        package_name='test-package',
+        filename=package_filename,
+        platform='linux-64',
+    )
+    assert version
+    assert version.uploader == owner
