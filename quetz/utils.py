@@ -91,6 +91,8 @@ def check_package_membership(
     """
     package_spec = _parse_package_spec(package_name, package_metadata)
     metadata = channel.load_channel_metadata()
+    include_package = True
+    exclude_package = False
     if (includelist := metadata['includelist']) is not None:
         # Example: { "main": ["numpy", "pandas"], "r": ["r-base"]}
         if isinstance(includelist, dict):
@@ -102,9 +104,21 @@ def check_package_membership(
         elif isinstance(includelist, list):
             include_package = _check_package_match(package_spec, includelist)
 
-    # TODO: implement excludelist
+    if (excludelist := metadata['excludelist']) is not None:
+        # Example: { "main": ["numpy", "pandas"], "r": ["r-base"]}
+        if isinstance(excludelist, dict):
+            if channel.name in excludelist:
+                channel_excludelist = excludelist[remote_host.split("/")[-1]]
+                exclude_package = _check_package_match(
+                    package_spec, channel_excludelist
+                )
+            else:
+                exclude_package = False
+        # Example: ["numpy", "pandas", "r-base"]
+        elif isinstance(excludelist, list):
+            exclude_package = _check_package_match(package_spec, excludelist)
 
-    return include_package
+    return include_package and not exclude_package
 
 
 def add_static_file(contents, channel_name, subdir, fname, pkgstore, file_index=None):
