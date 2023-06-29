@@ -1006,11 +1006,20 @@ BTEL_REPODATA = b"""
     ],
 )
 @pytest.mark.parametrize(
-    "package_list_type,expected_package",
-    [("includelist", "nrnpython"), ("excludelist", "test-package")],
+    "package_list_type,list_values, expected_packages",
+    [
+        ("includelist", ["nrnpython"], ["nrnpython"]),
+        (
+            "includelist",
+            {"https://conda.anaconda.org/btel": ["nrnpython"]},
+            ["nrnpython"],
+        ),
+        ("excludelist", ["nrnpython"], ["test-package"]),
+        (None, None, ["nrnpython", "test-package"]),
+    ],
 )
 def test_packagelist_mirror_channel(
-    owner, client, package_list_type, expected_package, db, job_supervisor
+    owner, client, package_list_type, list_values, expected_packages, db, job_supervisor
 ):
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -1022,7 +1031,7 @@ def test_packagelist_mirror_channel(
             "private": False,
             "mirror_channel_url": "https://conda.anaconda.org/btel",
             "mirror_mode": "mirror",
-            "metadata": {package_list_type: ["nrnpython"]},
+            "metadata": {package_list_type: list_values},
         },
     )
     assert response.status_code == 201
@@ -1030,8 +1039,8 @@ def test_packagelist_mirror_channel(
 
     response = client.get("/api/channels/mirror-channel-btel/packages")
     assert response.status_code == 200
-    assert len(response.json()) == 1
-    assert response.json()[0]['name'] == expected_package
+    assert len(response.json()) == len(expected_packages)
+    assert [p['name'] for p in response.json()] == expected_packages
 
 
 def test_includelist_and_excludelist_mirror_channel(owner, client):

@@ -65,8 +65,8 @@ class ChannelBase(BaseModel):
     private: bool = Field(True, title="channel should be private")
     size_limit: Optional[int] = Field(None, title="size limit of the channel")
     ttl: int = Field(36000, title="ttl of the channel")
-    mirror_channel_url: Optional[Union[str, List[str]]] = Field(
-        None, pattern="^(http|https)://.+", nullable=True
+    mirror_channel_url: Optional[Union[str, List[str], List[dict]]] = Field(
+        None, pattern="^(http|https)://.+|None|^(\\[.*\\])+$", nullable=True
     )
     mirror_mode: Optional[MirrorMode] = Field(None, nullable=True)
 
@@ -119,16 +119,19 @@ class ChannelActionEnum(str, Enum):
 
 
 class ChannelMetadata(BaseModel):
-    includelist: Optional[Union[List[str], Dict[str, List]]] = Field(
+
+    """
+    examples:
+    - includelist: "numpy"
+    - includelist: ["numpy", "pandas"]
+    - includelist: {"channel1: ["numpy", "pandas"]}, {"channel2": ["scipy"]}
+    """
+
+    includelist: List[str] | str | Dict[str, List[str]] = Field(
         None,
         title="list of packages to include while creating a channel",
     )
-    include_pattern_list: Optional[Dict[str, List]] = Field(
-        None,
-        title="{'remote0': ['numpy*', 'pandas*'], 'remote1': ['*.tar.bz2']}",
-        nullable=True,
-    )
-    excludelist: Optional[List[str]] = Field(
+    excludelist: List[str] | str | List[Dict[str, List[str] | str]] = Field(
         None,
         title="list of packages to exclude while creating a channel",
     )

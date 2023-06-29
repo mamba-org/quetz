@@ -94,17 +94,19 @@ def check_package_membership(
     include_package = True
     exclude_package = False
     if (includelist := metadata['includelist']) is not None:
+        include_package = False  # default to False if includelist is defined
         # Example: { "main": ["numpy", "pandas"], "r": ["r-base"]}
         if isinstance(includelist, dict):
-            if channel.name not in includelist:
-                include_package = False
-            channel_includelist = includelist[remote_host.split("/")[-1]]
+            channel_includelist = includelist.get(
+                remote_host.split("/")[-1], []
+            ) or includelist.get(remote_host, [])
             include_package = _check_package_match(package_spec, channel_includelist)
         # Example: ["numpy", "pandas", "r-base"]
         elif isinstance(includelist, list):
             include_package = _check_package_match(package_spec, includelist)
 
     if (excludelist := metadata['excludelist']) is not None:
+        exclude_package = False  # default to False if excludelist is defined
         # Example: { "main": ["numpy", "pandas"], "r": ["r-base"]}
         if isinstance(excludelist, dict):
             if channel.name in excludelist:
