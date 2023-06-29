@@ -3,7 +3,7 @@ def can_channel_synchronize(channel):
 
 
 def can_channel_synchronize_metrics(channel):
-    return not channel.mirror_channel_url
+    return not channel.mirror_channel_urls
 
 
 def can_channel_generate_indexes(channel):
