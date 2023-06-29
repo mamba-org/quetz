@@ -311,17 +311,12 @@ class Dao:
                 "only ASCII characters should be used in channel name"
             )
 
-        if isinstance(data.mirror_channel_url, str):
-            mirror_channel_urls = data.mirror_channel_url
-        elif isinstance(data.mirror_channel_url, list):
-            mirror_channel_urls = ";".join(data.mirror_channel_url)
-        else:
-            mirror_channel_urls = None  # type: ignore
-
+        # note: due to backwards compatibility, the rest model still calls it
+        # 'mirror_channel_url' but the db model calls it 'mirror_channel_urls'
         channel = Channel(
             name=data.name,
             description=data.description,
-            mirror_channel_url=mirror_channel_urls,
+            mirror_channel_urls=data.mirror_channel_url,
             mirror_mode=data.mirror_mode,
             private=data.private,
             ttl=data.ttl,

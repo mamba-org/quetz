@@ -125,7 +125,7 @@ class ChannelChecker:
 
         auth.assert_channel_read(channel)
 
-        mirror_url = channel.mirror_channel_url
+        mirror_url = channel.mirror_channel_urls
 
         is_proxy = mirror_url and channel.mirror_mode == "proxy"
         is_mirror = mirror_url and channel.mirror_mode == "mirror"

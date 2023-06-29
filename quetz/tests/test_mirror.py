@@ -508,14 +508,14 @@ def test_synchronisation_sha(
 )
 def test_synchronisation_no_checksums_in_db(
     repo_content,
+    arch,
+    n_new_packages,
     mirror_channel,
     dao,
     config,
     dummy_response,
     db,
     user,
-    n_new_packages,
-    arch,
     package_version,
     mocker,
 ):

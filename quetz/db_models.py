@@ -200,7 +200,7 @@ class Channel(Base):
     )
     description = Column(String)
     private = Column(Boolean, default=False)
-    mirror_channel_url = Column(String)
+    _mirror_channel_url = Column(String)
     mirror_mode = Column(String)
     channel_metadata = Column(String, server_default='{}', nullable=False)
     timestamp_mirror_sync = Column(Integer, default=0)
@@ -208,11 +208,21 @@ class Channel(Base):
     size_limit = Column(BigInteger, default=None)
     ttl = Column(Integer, server_default=f'{60 * 60 * 10}', nullable=False)  # 10 hours
 
-    def get_mirror_channel_urls(self) -> list[str]:
-        if self.mirror_channel_url:
-            return self.mirror_channel_url.split(";")
+    @property
+    def mirror_channel_urls(self):
+        if ";" in self._mirror_channel_url:
+            return self._mirror_channel_url.split(";")
         else:
-            return []
+            return [self._mirror_channel_url]
+
+    @mirror_channel_urls.setter
+    def mirror_channel_urls(self, value):
+        if isinstance(value, str):
+            self._mirror_channel_url = value
+        elif isinstance(value, list):
+            self._mirror_channel_url = ";".join(value)
+        else:
+            self._mirror_channel_url = None  # type: ignore
 
     packages = relationship(
         'Package', back_populates='channel', cascade="all,delete", uselist=True

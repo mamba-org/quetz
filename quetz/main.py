@@ -742,6 +742,7 @@ def post_channel(
         else:
             size_limit = None
 
+    # create database model (channel) from rest model (new_channel)
     channel = dao.create_channel(new_channel, user_id, authorization.OWNER, size_limit)
     pkgstore.create_channel(new_channel.name)
     if not is_proxy:
@@ -749,7 +750,7 @@ def post_channel(
 
     # register mirror
     if is_mirror and register_mirror:
-        for mirror_url in new_channel.get_mirror_channel_urls():
+        for mirror_url in channel.mirror_channel_urls:
             mirror_url = mirror_url.replace("get", "api/channels")
             headers = {"x-api-key": mirror_api_key} if mirror_api_key else {}
             api_endpoint = str(request.url.replace(query=None)) + '/' + new_channel.name
@@ -1800,17 +1801,22 @@ def serve_path(
         except ValueError:
             pass
 
-    if is_package_request and channel.mirror_channel_url:
+    if is_package_request and channel.mirror_channel_urls:
         # if we exclude the package from syncing, redirect to original URL
         # use the first mirror url entry for the redirect
         channel_proxylist = json.loads(channel.channel_metadata).get('proxylist', [])
         if channel_proxylist and package_name and package_name in channel_proxylist:
-            redirect_url = channel.get_mirror_channel_urls()[0]
+            redirect_url = channel.mirror_channel_urls[0]
             return RedirectResponse(f"{redirect_url}/{path}")
 
     # note: you can only proxy, when you have exactly one remote channel in your config
-    if channel.mirror_channel_url and channel.mirror_mode == "proxy":
-        proxy_url = channel.get_mirror_channel_urls()[0]
+    if channel.mirror_channel_urls and channel.mirror_mode == "proxy":
+        proxy_url = channel.mirror_channel_urls[0]
+        if len(channel.mirror_channel_urls) > 1:
+            logger.warning(
+                "More than one mirror channel url configured "
+                f"for channel {channel.name}. Proxying only to the first one."
+            )
         repository = RemoteRepository(proxy_url, session)
         if not pkgstore.file_exists(channel.name, path):
             download_remote_file(repository, pkgstore, channel.name, path)

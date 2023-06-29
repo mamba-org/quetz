@@ -587,8 +587,7 @@ def synchronize_packages(
         logger.error(f"channel {channel_name} not found")
         return
 
-    mirror_channel_urls = new_channel.get_mirror_channel_urls()
-    for mirror_channel_url in mirror_channel_urls:
+    for mirror_channel_url in new_channel.mirror_channel_urls:
         remote_repo = RemoteRepository(mirror_channel_url, session)
 
         user_id = auth.assert_user()
