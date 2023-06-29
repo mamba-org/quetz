@@ -210,7 +210,9 @@ class Channel(Base):
 
     @property
     def mirror_channel_urls(self):
-        if ";" in self._mirror_channel_url:
+        if self._mirror_channel_url is None:
+            return []
+        elif ";" in self._mirror_channel_url:
             return self._mirror_channel_url.split(";")
         else:
             return [self._mirror_channel_url]
