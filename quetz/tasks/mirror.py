@@ -19,15 +19,15 @@ from quetz import authorization, rest_models
 from quetz.condainfo import CondaInfo, get_subdir_compat
 from quetz.config import Config
 from quetz.dao import Dao
-from quetz.db_models import PackageVersion
+from quetz.db_models import Channel, PackageVersion
 from quetz.errors import DBError
 from quetz.pkgstores import PackageStore
 from quetz.tasks import indexing
 from quetz.utils import (
+    MembershipAction,
     TicToc,
     add_static_file,
     check_package_membership,
-    MembershipAction,
 )
 
 # copy common subdirs from conda:
@@ -421,23 +421,13 @@ def initial_sync_mirror(
 
             return False
 
-        # TODO: also remove all packages that are not in the remote repository anymore
-        # practically re-write the complete sync mechanism?
-
-        # SYNC: Remote -> Local
-        # for each package in the remote repository:
-        #   validate if it should be downloaded to this channel
-        # also: remove packages if they are not supposed to in this channel anymore
+        # go through all packages from remote channel
         for repo_package_name, metadata in packages.items():
-            # find action to do with package
             action = check_package_membership(
                 channel, repo_package_name, metadata, remote_host=remote_repository.host
             )
             if action == MembershipAction.INCLUDE:
-                path = os.path.join(arch, repo_package_name)
-
                 # try to find out whether it's a new package version
-
                 is_uptodate = None
                 for _check in version_checks:
                     is_uptodate = _check(repo_package_name, metadata)
@@ -447,20 +437,23 @@ def initial_sync_mirror(
                 # if package is up-to-date skip uploading file
                 if is_uptodate:
                     continue
-                else:
-                    logger.debug(f"updating package {repo_package_name} from {arch}")
 
+                logger.debug(f"updating package {repo_package_name} from {arch}")
+
+                path = os.path.join(arch, repo_package_name)
                 update_batch.append((path, repo_package_name, metadata))
                 update_size += metadata.get('size', 100_000)
             elif action == MembershipAction.NOTHING:
                 logger.debug(
-                    f"package {repo_package_name} not needed by {remote_repository.host} but other channels."
+                    f"package {repo_package_name} not needed by "
+                    f"{remote_repository.host} but other channels"
                 )
             else:
                 logger.debug(
-                    f"package {repo_package_name} not needed by {remote_repository.host} and no other channels."
+                    f"package {repo_package_name} not needed by "
+                    f"{remote_repository.host} and no other channels."
                 )
-                # TODO: only add to remove if exists.
+                # TODO: only add to remove if exists in this (mirror) channel.
                 remove_batch.append((arch, repo_package_name))
 
             # perform either downloads or removals
@@ -473,28 +466,72 @@ def initial_sync_mirror(
         # handle final batch
         any_updated |= handle_batch(update_batch)
 
-        # SYNC: Local checks Remote
-        # Validate if all packages in this channel are still
-        # also present in the remote channel
-        # if not: add them to the remove batch as well
-        # TODO
-
+        # remove packages marked for removal
         if remove_batch:
-            logger.debug(f"Removing {len(remove_batch)} packages: {remove_batch}")
-            package_specs_remove = set([p[1].split("-")[0] for p in remove_batch])
-            for package_specs in package_specs_remove:
-                dao.remove_package(channel_name, package_name=package_specs)
-                # TODO: is this needed every time?
-                dao.cleanup_channel_db(channel_name, package_name=package_specs)
-                # only remove if exists
-                if pkgstore.file_exists(channel.name, package_specs):
-                    pkgstore.delete_file(channel.name, destination=package_specs)
-
-            any_updated |= True
+            any_updated |= remove_packages(remove_batch, channel, dao, pkgstore)
 
     if any_updated:
         # build local repodata
         indexing.update_indexes(dao, pkgstore, channel_name, subdirs=[arch])
+
+
+def remove_packages(remove_batch, channel: Channel, dao, pkgstore) -> bool:
+    logger.debug(f"Removing {len(remove_batch)} packages: {remove_batch}")
+    removal_performed = False
+    package_specs_remove = set([p[1].split("-")[0] for p in remove_batch])
+    for package_specs in package_specs_remove:
+        dao.remove_package(channel.name, package_name=package_specs)
+        # TODO: is this needed every time?
+        dao.cleanup_channel_db(channel.name, package_name=package_specs)
+        if pkgstore.file_exists(channel.name, package_specs):
+            pkgstore.delete_file(channel.name, destination=package_specs)
+        removal_performed |= True
+
+    return removal_performed
+
+
+def remove_local_packages(
+    channel_name: str,
+    dao: Dao,
+    pkgstore: PackageStore,
+    auth: authorization.Rules,
+    includelist: List[str | dict] = None,
+    excludelist: List[str | dict] = None,
+):
+    """
+    For each package in the channel, check if it is in the includelist and
+    not in the excludelist. If not, remove it from the channel and the package store.
+
+    We assume that the includelist and excludelist are well-formed,
+    e.g. they don't overlap.
+    """
+    from utils import _all_matching_hosts
+
+    channel = dao.get_channel(channel_name)
+    if not channel:
+        logger.error(f"channel {channel_name} not found")
+        return
+
+    if not includelist:
+        includelist = []
+    if not excludelist:
+        excludelist = []
+
+    packages_to_remove = []
+
+    for package in channel.packages:
+        info = package.current_package_version
+        name, version, build_string = info.package_name, info.version, info.build_string
+        # check: does this package match _any_ of the includelist patterns?
+        if not _all_matching_hosts(name, version, build_string, includelist):
+            packages_to_remove.append((None, name))
+
+        # check: does this package match _any_ of the excludelist patterns?
+        if _all_matching_hosts(name, version, build_string, excludelist):
+            packages_to_remove.append((None, name))
+
+    if packages_to_remove:
+        remove_packages(packages_to_remove, channel, dao, pkgstore)
 
 
 def create_packages_from_channeldata(

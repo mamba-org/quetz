@@ -14,8 +14,8 @@ import sys
 import time
 import traceback
 import uuid
-from enum import Enum
 from datetime import datetime, timezone
+from enum import Enum
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable
@@ -78,8 +78,10 @@ def _all_matching_hosts(
     include_or_exclude_list: dict, package_spec: tuple[str, str, str]
 ) -> list[str]:
     """
-    Return the names of all matching hosts from the includelist that whould allow _this_ package spec.
-    include_or_exclude_list: e.g. { "remote1": ["numpy", "pandas"], "remote2": ["r-base"]}
+    Return the names of all matching hosts from the includelist
+    that whould allow _this_ package spec.
+    include_or_exclude_list:
+        e.g. { "remote1": ["numpy", "pandas"], "remote2": ["r-base"]}
     """
     name, version, build = package_spec
     matching_hosts = []
@@ -116,7 +118,6 @@ def check_package_membership(
     incl_act = MembershipAction.NOTHING
     exclude_now = False
     if (includelist := metadata['includelist']) is not None:
-        incl_act = False  # default to False if includelist is defined
         # Example: { "main": ["numpy", "pandas"], "r": ["r-base"]}
         if isinstance(includelist, dict):
             matches = _all_matching_hosts(includelist, package_spec)
