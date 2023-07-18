@@ -23,7 +23,12 @@ from quetz.db_models import PackageVersion
 from quetz.errors import DBError
 from quetz.pkgstores import PackageStore
 from quetz.tasks import indexing
-from quetz.utils import TicToc, add_static_file, check_package_membership
+from quetz.utils import (
+    TicToc,
+    add_static_file,
+    check_package_membership,
+    MembershipAction,
+)
 
 # copy common subdirs from conda:
 # https://github.com/conda/conda/blob/a78a2387f26a188991d771967fc33aa1fb5bb810/conda/base/constants.py#L63
@@ -424,9 +429,11 @@ def initial_sync_mirror(
         #   validate if it should be downloaded to this channel
         # also: remove packages if they are not supposed to in this channel anymore
         for repo_package_name, metadata in packages.items():
-            if check_package_membership(
+            # find action to do with package
+            action = check_package_membership(
                 channel, repo_package_name, metadata, remote_host=remote_repository.host
-            ):
+            )
+            if action == MembershipAction.INCLUDE:
                 path = os.path.join(arch, repo_package_name)
 
                 # try to find out whether it's a new package version
@@ -445,13 +452,18 @@ def initial_sync_mirror(
 
                 update_batch.append((path, repo_package_name, metadata))
                 update_size += metadata.get('size', 100_000)
-
+            elif action == MembershipAction.NOTHING:
+                logger.debug(
+                    f"package {repo_package_name} not needed by {remote_repository.host} but other channels."
+                )
             else:
                 logger.debug(
-                    f"package {repo_package_name} not member of channel anymore."
+                    f"package {repo_package_name} not needed by {remote_repository.host} and no other channels."
                 )
+                # TODO: only add to remove if exists.
                 remove_batch.append((arch, repo_package_name))
 
+            # perform either downloads or removals
             if len(update_batch) >= max_batch_length or update_size >= max_batch_size:
                 logger.debug(f"Executing batch with {update_size}")
                 any_updated |= handle_batch(update_batch)

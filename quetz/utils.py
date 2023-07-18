@@ -14,6 +14,7 @@ import sys
 import time
 import traceback
 import uuid
+from enum import Enum
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
@@ -67,18 +68,39 @@ def _check_package_match(
     return False
 
 
+class MembershipAction(Enum):
+    INCLUDE = "include"  # package should be added to the channel
+    NOTHING = "nothing"  # package is not member of this channel but of another
+    REMOVE = "remove"  # package is not member of any channel
+
+
+def _all_matching_hosts(
+    include_or_exclude_list: dict, package_spec: tuple[str, str, str]
+) -> list[str]:
+    """
+    Return the names of all matching hosts from the includelist that whould allow _this_ package spec.
+    include_or_exclude_list: e.g. { "remote1": ["numpy", "pandas"], "remote2": ["r-base"]}
+    """
+    name, version, build = package_spec
+    matching_hosts = []
+    for host, patterns in include_or_exclude_list.items():
+        if _check_package_match(package_spec, patterns):
+            matching_hosts.append(host)
+    return matching_hosts
+
+
 def check_package_membership(
     channel: Channel,
     package_name: str,
     package_metadata: dict,
     remote_host: str,
-):
+) -> MembershipAction:
     """
     Check if a package should be in a channel according
     to the rules defined in the channel metadata.
 
     Args:
-        channel (Channel): Channel object returned from the database
+        channel (Channel): mirror Channel object returned from the database
         package_name (str): name of the package in file format,
             e.g. "numpy-1.23.4-py39hefdcf20_0.tar.bz2"
         package_metadata (dict): package metadata,
@@ -91,36 +113,44 @@ def check_package_membership(
     """
     package_spec = _parse_package_spec(package_name, package_metadata)
     metadata = channel.load_channel_metadata()
-    include_package = True
-    exclude_package = False
+    incl_act = MembershipAction.NOTHING
+    exclude_now = False
     if (includelist := metadata['includelist']) is not None:
-        include_package = False  # default to False if includelist is defined
+        incl_act = False  # default to False if includelist is defined
         # Example: { "main": ["numpy", "pandas"], "r": ["r-base"]}
         if isinstance(includelist, dict):
-            channel_includelist = includelist.get(
-                remote_host.split("/")[-1], []
-            ) or includelist.get(remote_host, [])
-            include_package = _check_package_match(package_spec, channel_includelist)
+            matches = _all_matching_hosts(includelist, package_spec)
+            if remote_host in matches or remote_host.split("/")[-1] in matches:
+                incl_act = MembershipAction.INCLUDE
+            elif len(matches) > 0:  # we have a match but not for this host
+                incl_act = MembershipAction.NOTHING
+            else:
+                incl_act = MembershipAction.REMOVE
+
         # Example: ["numpy", "pandas", "r-base"]
         elif isinstance(includelist, list):
-            include_package = _check_package_match(package_spec, includelist)
+            if _check_package_match(package_spec, includelist):
+                incl_act = MembershipAction.INCLUDE
+            else:
+                incl_act = MembershipAction.REMOVE
 
+    # for exclude list, we only check the current host
     if (excludelist := metadata['excludelist']) is not None:
-        exclude_package = False  # default to False if excludelist is defined
-        # Example: { "main": ["numpy", "pandas"], "r": ["r-base"]}
+        exclude_now = False
         if isinstance(excludelist, dict):
             if channel.name in excludelist:
                 channel_excludelist = excludelist[remote_host.split("/")[-1]]
-                exclude_package = _check_package_match(
-                    package_spec, channel_excludelist
-                )
+                exclude_now = _check_package_match(package_spec, channel_excludelist)
             else:
-                exclude_package = False
-        # Example: ["numpy", "pandas", "r-base"]
+                exclude_now = False
         elif isinstance(excludelist, list):
-            exclude_package = _check_package_match(package_spec, excludelist)
+            exclude_now = _check_package_match(package_spec, excludelist)
 
-    return include_package and not exclude_package
+    # as long as it does not need to be removed here, we can include it
+    if not exclude_now:
+        return incl_act
+    else:
+        return MembershipAction.REMOVE
 
 
 def add_static_file(contents, channel_name, subdir, fname, pkgstore, file_index=None):
