@@ -912,7 +912,11 @@ def post_package(
     auth: authorization.Rules = Depends(get_rules),
     dao: Dao = Depends(get_dao),
 ):
-    user_id = auth.assert_user()
+    # here we use the owner_id as user_id. In case the authentication
+    # was done using an API Key, we want to attribute the uploaded package
+    # to the owner of that API Key and not the anonymous API Key itself.
+    user_id = auth.assert_owner()
+
     auth.assert_create_package(channel.name)
     pm.hook.validate_new_package(
         channel_name=channel.name,
@@ -1382,7 +1386,11 @@ async def post_upload(
             status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="Wrong SHA256 checksum"
         )
 
-    user_id = auth.assert_user()
+    # here we use the owner_id as user_id. In case the authentication
+    # was done using an API Key, we want to attribute the uploaded package
+    # to the owner of that API Key and not the anonymous API Key itself.
+    user_id = auth.assert_owner()
+
     auth.assert_create_package(channel_name)
     condainfo = CondaInfo((body), filename)
     dest = os.path.join(condainfo.info["subdir"], filename)
@@ -1504,7 +1512,10 @@ def handle_package_files(
     package=None,
     is_mirror_op=False,
 ):
-    user_id = auth.assert_user()
+    # here we use the owner_id as user_id. In case the authentication
+    # was done using an API Key, we want to attribute the uploaded package
+    # to the owner of that API Key and not the anonymous API Key itself.
+    user_id = auth.assert_owner()
 
     # quick fail if not allowed to upload
     # note: we're checking later that `parts[0] == conda_info.package_name`
