@@ -21,10 +21,12 @@ def upgrade():
     # Get all user_id/owner_id from channel scoped API keys
     # (user is anonymous - username is null)
     res = conn.execute(
-        """SELECT api_keys.user_id, api_keys.owner_id FROM api_keys
+        sa.text(
+            """SELECT api_keys.user_id, api_keys.owner_id FROM api_keys
             INNER JOIN users ON users.id = api_keys.user_id
             WHERE users.username is NULL;
             """
+        )
     )
     results = res.fetchall()
     # Replace the uploader with the key owner (real user instead of the anonymous one)
@@ -42,10 +44,12 @@ def downgrade():
     # Get all user_id/owner_id from channel scoped API keys
     # (user is anonymous - username is null)
     res = conn.execute(
-        """SELECT api_keys.user_id, api_keys.owner_id FROM api_keys
+        sa.text(
+            """SELECT api_keys.user_id, api_keys.owner_id FROM api_keys
             INNER JOIN users ON users.id = api_keys.user_id
             WHERE users.username is NULL;
             """
+        )
     )
     results = res.fetchall()
     # Replace the uploader with the key anonymous user
