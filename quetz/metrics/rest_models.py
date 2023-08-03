@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Dict, List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from quetz.metrics.db_models import IntervalType
 
@@ -9,9 +9,7 @@ from quetz.metrics.db_models import IntervalType
 class PackageVersionMetricItem(BaseModel):
     timestamp: datetime
     count: int
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PackageVersionMetricSeries(BaseModel):

@@ -9,8 +9,7 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Generic, List, Optional, TypeVar
 
-from pydantic import BaseModel, Field, root_validator, validator
-from pydantic.generics import GenericModel
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 T = TypeVar('T')
 
@@ -18,9 +17,7 @@ T = TypeVar('T')
 class BaseProfile(BaseModel):
     name: Optional[str] = Field(None, nullable=True)
     avatar_url: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Profile(BaseProfile):
@@ -30,9 +27,7 @@ class Profile(BaseProfile):
 class BaseUser(BaseModel):
     id: uuid.UUID
     username: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class User(BaseUser):
@@ -42,15 +37,13 @@ class User(BaseUser):
 Profile.update_forward_refs()
 
 
-Role = Field(None, regex='owner|maintainer|member')
+Role = Field(None, pattern='owner|maintainer|member')
 
 
 class Member(BaseModel):
     role: str = Role
     user: User
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Pagination(BaseModel):
@@ -75,18 +68,18 @@ class ChannelBase(BaseModel):
     )
     ttl: int = Field(36000, title="ttl of the channel")
     mirror_channel_url: Optional[str] = Field(
-        None, regex="^(http|https)://.+", nullable=True
+        None, pattern="^(http|https)://.+", nullable=True
     )
     mirror_mode: Optional[MirrorMode] = Field(None, nullable=True)
 
-    @validator("size_limit")
+    @field_validator("size_limit")
+    @classmethod
     def check_positive(cls, v):
         if v is not None and v < 0:
             return ValueError("must be positive value")
         return v
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChannelExtra(ChannelBase):
@@ -97,9 +90,7 @@ class ChannelExtra(ChannelBase):
 class ChannelRole(BaseModel):
     name: str = Field(title="channel name")
     role: str = Field(title="user role")
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChannelActionEnum(str, Enum):
@@ -160,10 +151,10 @@ class Channel(ChannelBase):
         nullable=True,
     )
 
-    @root_validator
-    def check_mirror_params(cls, values):
-        mirror_url = values.get("mirror_channel_url")
-        mirror_mode = values.get("mirror_mode")
+    @model_validator(mode='after')
+    def check_mirror_params(self) -> "Channel":
+        mirror_url = self.mirror_channel_url
+        mirror_mode = self.mirror_mode
 
         if mirror_url and not mirror_mode:
             raise ValueError(
@@ -174,18 +165,18 @@ class Channel(ChannelBase):
                 "'mirror_mode' provided but 'mirror_channel_url' is undefined"
             )
 
-        return values
+        return self
 
 
 class ChannelMirrorBase(BaseModel):
-    url: str = Field(None, regex="^(http|https)://.+")
-    api_endpoint: Optional[str] = Field(None, regex="^(http|https)://.+", nullable=True)
-    metrics_endpoint: Optional[str] = Field(
-        None, regex="^(http|https)://.+", nullable=True
+    url: str = Field(None, pattern="^(http|https)://.+")
+    api_endpoint: Optional[str] = Field(
+        None, pattern="^(http|https)://.+", nullable=True
     )
-
-    class Config:
-        orm_mode = True
+    metrics_endpoint: Optional[str] = Field(
+        None, pattern="^(http|https)://.+", nullable=True
+    )
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChannelMirror(ChannelMirrorBase):
@@ -194,7 +185,7 @@ class ChannelMirror(ChannelMirrorBase):
 
 class Package(BaseModel):
     name: str = Field(
-        None, title='The name of package', max_length=1500, regex=r'^[a-z0-9-_\.]*$'
+        None, title='The name of package', max_length=1500, pattern=r'^[a-z0-9-_\.]*$'
     )
     summary: Optional[str] = Field(
         None, title='The summary of the package', nullable=True
@@ -211,24 +202,22 @@ class Package(BaseModel):
         None, title="date of latest change", nullable=True
     )
 
-    @validator("platforms", pre=True)
+    @field_validator("platforms", mode="before")
+    @classmethod
     def parse_list_of_platforms(cls, v):
         if isinstance(v, str):
             return v.split(":")
         else:
             return v
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PackageRole(BaseModel):
     name: str = Field(title='The name of package')
     channel_name: str = Field(title='The channel this package belongs to')
     role: str = Field(title="user role for this package")
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PackageSearch(Package):
@@ -239,12 +228,10 @@ class ChannelSearch(BaseModel):
     name: str = Field(None, title='The name of the channel', max_length=1500)
     description: str = Field(None, title='The description of the channel')
     private: bool = Field(None, title='The visibility of the channel')
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
-class PaginatedResponse(GenericModel, Generic[T]):
+class PaginatedResponse(BaseModel, Generic[T]):
     pagination: Pagination = Field(None, title="Pagination object")
     result: List[T] = Field([], title="Result objects")
 
@@ -289,18 +276,18 @@ class PackageVersion(BaseModel):
     uploader: BaseProfile
     time_created: datetime
     download_count: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        orm_mode = True
-
-    @validator("uploader", pre=True)
+    @field_validator("uploader", mode="before")
+    @classmethod
     def convert_uploader(cls, v):
         if hasattr(v, "profile"):
             return v.profile
         else:
             return v
 
-    @validator("info", pre=True)
+    @field_validator("info", mode="before")
+    @classmethod
     def load_json(cls, v):
         if isinstance(v, str):
             return json.loads(v)
