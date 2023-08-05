@@ -134,7 +134,7 @@ class ChannelMetadata(BaseModel):
 
 class Channel(ChannelBase):
     metadata: ChannelMetadata = Field(
-        default_factory=ChannelMetadata, title="channel metadata", example={}
+        default_factory=ChannelMetadata, title="channel metadata", examples={}
     )
 
     actions: Optional[List[ChannelActionEnum]] = Field(
