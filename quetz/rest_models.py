@@ -194,7 +194,9 @@ class Package(BaseModel):
         None, title='The description of the package', nullable=True
     )
     url: Optional[str] = Field(None, title="project url", nullable=True)
-    platforms: List[str] = Field(None, title="supported platforms", nullable=True)
+    platforms: Optional[List[str]] = Field(
+        None, title="supported platforms", nullable=True
+    )
     current_version: Optional[str] = Field(
         None, title="latest version of any platform", nullable=True
     )
@@ -226,7 +228,9 @@ class PackageSearch(Package):
 
 class ChannelSearch(BaseModel):
     name: str = Field(None, title='The name of the channel', max_length=1500)
-    description: str = Field(None, title='The description of the channel')
+    description: Optional[str] = Field(
+        None, title='The description of the channel', nullable=True
+    )
     private: bool = Field(None, title='The visibility of the channel')
     model_config = ConfigDict(from_attributes=True)
 
