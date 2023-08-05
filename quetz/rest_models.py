@@ -34,7 +34,7 @@ class User(BaseUser):
     profile: BaseProfile
 
 
-Profile.update_forward_refs()
+Profile.model_rebuild()
 
 
 Role = Field(None, pattern='owner|maintainer|member')
