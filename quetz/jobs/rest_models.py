@@ -83,7 +83,6 @@ def parse_job_name(v):
 class JobBase(BaseModel):
     """New job spec"""
 
-    items_spec: str = Field(..., title='Item selector spec')
     manifest: str = Field(None, title='Name of the function')
 
     start_at: Optional[datetime] = Field(
@@ -108,6 +107,12 @@ class JobBase(BaseModel):
         return function_name.encode('ascii')
 
 
+class JobCreate(JobBase):
+    """Create job spec"""
+
+    items_spec: str = Field(..., title='Item selector spec')
+
+
 class JobUpdateModel(BaseModel):
     """Modify job spec items (status and items_spec)"""
 
@@ -124,7 +129,7 @@ class Job(JobBase):
 
     status: JobStatus = Field(None, title='Status of the job (running, paused, ...)')
 
-    items_spec: str = Field(None, title='Item selector spec')
+    items_spec: Optional[str] = Field(None, title='Item selector spec')
     model_config = ConfigDict(from_attributes=True)
 
 
