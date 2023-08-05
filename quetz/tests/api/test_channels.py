@@ -689,7 +689,7 @@ def test_url_with_slash(auth_client, public_channel, db, remote_session):
     response = auth_client.post(
         f"/api/channels/{public_channel.name}/mirrors/",
         json={"url": mirror_url},
-        allow_redirects=False,
+        follow_redirects=False,
     )
 
     assert response.status_code == 307

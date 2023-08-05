@@ -1065,7 +1065,7 @@ def test_proxylist_mirror_channel(owner, client, mirror_mode):
 
     response = client.get(
         "/get/mirror-channel-btel/linux-64/nrnpython-0.1-0.tar.bz2",
-        allow_redirects=False,
+        follow_redirects=False,
     )
     assert response.status_code == 307
     assert (
