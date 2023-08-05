@@ -17,7 +17,6 @@ from tempfile import SpooledTemporaryFile, TemporaryFile
 from typing import Awaitable, Callable, List, Optional, Tuple, Type
 
 import pydantic
-import pydantic.error_wrappers
 import requests
 from fastapi import (
     APIRouter,
@@ -1643,7 +1642,7 @@ def handle_package_files(
                     summary=str(condainfo.about.get("summary", "n/a")),
                     description=str(condainfo.about.get("description", "n/a")),
                 )
-            except pydantic.error_wrappers.ValidationError as err:
+            except pydantic.ValidationError as err:
                 _delete_file(condainfo, file.filename)
                 raise errors.ValidationError(
                     "Validation Error for package: "
