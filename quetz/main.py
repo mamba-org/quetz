@@ -1064,7 +1064,7 @@ def get_package_versions(
     version_list = []
 
     for version, profile, api_key_profile in version_profile_list:
-        version_data = rest_models.PackageVersion.from_orm(version)
+        version_data = rest_models.PackageVersion.model_validate(version)
         version_list.append(version_data)
 
     return version_list
@@ -1089,7 +1089,7 @@ def get_paginated_package_versions(
     version_list = []
 
     for version, profile, api_key_profile in version_profile_list['result']:
-        version_data = rest_models.PackageVersion.from_orm(version)
+        version_data = rest_models.PackageVersion.model_validate(version)
         version_list.append(version_data)
 
     return {
