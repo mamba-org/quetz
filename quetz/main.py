@@ -732,7 +732,7 @@ def post_channel(
             detail="Cannot use both `includelist` and `excludelist` together.",
         )
 
-    user_attrs = new_channel.dict(exclude_unset=True)
+    user_attrs = new_channel.model_dump(exclude_unset=True)
 
     if "size_limit" in user_attrs:
         auth.assert_set_channel_size_limit()
@@ -789,7 +789,7 @@ def patch_channel(
 ):
     auth.assert_update_channel_info(channel.name)
 
-    user_attrs = channel_data.dict(exclude_unset=True)
+    user_attrs = channel_data.model_dump(exclude_unset=True)
 
     if "size_limit" in user_attrs:
         auth.assert_set_channel_size_limit()
