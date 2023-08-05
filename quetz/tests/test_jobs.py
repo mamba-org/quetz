@@ -598,10 +598,14 @@ def test_post_new_job_manifest_validation(
 
 
 @pytest.mark.parametrize("user_role", ["owner"])
-def test_post_new_job_invalid_items_spec(auth_client, user, db, dummy_job_plugin):
+def test_post_new_job_invalid_items_spec(
+    auth_client, user, db, dummy_job_plugin, mocker
+):
     # items_spec=None is not allowed for jobs
     # (but it works with actions)
     manifest = "quetz-dummyplugin:dummy_func"
+    dummy_func = mocker.Mock()
+    mocker.patch("quetz_dummyplugin.jobs.dummy_func", dummy_func, create=True)
     response = auth_client.post(
         "/api/jobs", json={"items_spec": None, "manifest": manifest}
     )
