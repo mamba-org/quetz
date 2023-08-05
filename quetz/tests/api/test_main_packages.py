@@ -550,7 +550,7 @@ def test_validate_package_names(auth_client, public_channel, remove_package_vers
 @pytest.mark.parametrize(
     "package_name,msg",
     [
-        ("TestPackage", "string does not match"),
+        ("TestPackage", "String should match"),
         ("test-package", None),
     ],
 )
