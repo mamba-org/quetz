@@ -776,7 +776,7 @@ def api_key(db, dao: Dao, owner, private_channel):
     # create an api key with restriction
     key = dao.create_api_key(
         owner.id,
-        BaseApiKey.parse_obj(
+        BaseApiKey.model_validate(
             dict(
                 description="test api key",
                 expire_at="2099-12-31",
