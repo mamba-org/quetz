@@ -15,7 +15,7 @@ T = TypeVar('T')
 
 
 class BaseProfile(BaseModel):
-    name: Optional[str] = Field(None, nullable=True)
+    name: Optional[str] = Field(None)
     avatar_url: str
     model_config = ConfigDict(from_attributes=True)
 
@@ -60,17 +60,13 @@ class MirrorMode(str, Enum):
 class ChannelBase(BaseModel):
     name: str = Field(None, title='The name of the channel', max_length=50)
     description: Optional[str] = Field(
-        None, title='The description of the channel', max_length=300, nullable=True
+        None, title='The description of the channel', max_length=300
     )
     private: bool = Field(True, title="channel should be private")
-    size_limit: Optional[int] = Field(
-        None, title="size limit of the channel", nullable=True
-    )
+    size_limit: Optional[int] = Field(None, title="size limit of the channel")
     ttl: int = Field(36000, title="ttl of the channel")
-    mirror_channel_url: Optional[str] = Field(
-        None, pattern="^(http|https)://.+", nullable=True
-    )
-    mirror_mode: Optional[MirrorMode] = Field(None, nullable=True)
+    mirror_channel_url: Optional[str] = Field(None, pattern="^(http|https)://.+")
+    mirror_mode: Optional[MirrorMode] = Field(None)
 
     @field_validator("size_limit")
     @classmethod
@@ -124,18 +120,15 @@ class ChannelMetadata(BaseModel):
     includelist: Optional[List[str]] = Field(
         None,
         title="list of packages to include while creating a channel",
-        nullable=True,
     )
     excludelist: Optional[List[str]] = Field(
         None,
         title="list of packages to exclude while creating a channel",
-        nullable=True,
     )
     proxylist: Optional[List[str]] = Field(
         None,
         title="list of packages that should only be proxied (not copied, "
         "stored and redistributed)",
-        nullable=True,
     )
 
 
@@ -148,7 +141,6 @@ class Channel(ChannelBase):
         None,
         title="list of actions to run after channel creation "
         "(see /channels/{}/actions for description)",
-        nullable=True,
     )
 
     @model_validator(mode='after')
@@ -170,12 +162,8 @@ class Channel(ChannelBase):
 
 class ChannelMirrorBase(BaseModel):
     url: str = Field(None, pattern="^(http|https)://.+")
-    api_endpoint: Optional[str] = Field(
-        None, pattern="^(http|https)://.+", nullable=True
-    )
-    metrics_endpoint: Optional[str] = Field(
-        None, pattern="^(http|https)://.+", nullable=True
-    )
+    api_endpoint: Optional[str] = Field(None, pattern="^(http|https)://.+")
+    metrics_endpoint: Optional[str] = Field(None, pattern="^(http|https)://.+")
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -187,22 +175,12 @@ class Package(BaseModel):
     name: str = Field(
         None, title='The name of package', max_length=1500, pattern=r'^[a-z0-9-_\.]*$'
     )
-    summary: Optional[str] = Field(
-        None, title='The summary of the package', nullable=True
-    )
-    description: Optional[str] = Field(
-        None, title='The description of the package', nullable=True
-    )
-    url: Optional[str] = Field(None, title="project url", nullable=True)
-    platforms: Optional[List[str]] = Field(
-        None, title="supported platforms", nullable=True
-    )
-    current_version: Optional[str] = Field(
-        None, title="latest version of any platform", nullable=True
-    )
-    latest_change: Optional[datetime] = Field(
-        None, title="date of latest change", nullable=True
-    )
+    summary: Optional[str] = Field(None, title='The summary of the package')
+    description: Optional[str] = Field(None, title='The description of the package')
+    url: Optional[str] = Field(None, title="project url")
+    platforms: Optional[List[str]] = Field(None, title="supported platforms")
+    current_version: Optional[str] = Field(None, title="latest version of any platform")
+    latest_change: Optional[datetime] = Field(None, title="date of latest change")
 
     @field_validator("platforms", mode="before")
     @classmethod
@@ -228,9 +206,7 @@ class PackageSearch(Package):
 
 class ChannelSearch(BaseModel):
     name: str = Field(None, title='The name of the channel', max_length=1500)
-    description: Optional[str] = Field(
-        None, title='The description of the channel', nullable=True
-    )
+    description: Optional[str] = Field(None, title='The description of the channel')
     private: bool = Field(None, title='The visibility of the channel')
     model_config = ConfigDict(from_attributes=True)
 
@@ -255,15 +231,15 @@ class UserRole(BaseModel):
 
 class CPRole(BaseModel):
     channel: str
-    package: Optional[str] = Field(None, nullable=True)
+    package: Optional[str] = Field(None)
     role: str = Role
 
 
 class BaseApiKey(BaseModel):
     description: str
-    time_created: Optional[date] = Field(None, nullable=True)
-    expire_at: Optional[date] = Field(None, nullable=True)
-    roles: Optional[List[CPRole]] = Field(None, nullable=True)
+    time_created: Optional[date] = Field(None)
+    expire_at: Optional[date] = Field(None)
+    roles: Optional[List[CPRole]] = Field(None)
 
 
 class ApiKey(BaseApiKey):
@@ -305,5 +281,5 @@ class PackageVersion(BaseModel):
 
 class ChannelAction(BaseModel):
     action: ChannelActionEnum
-    start_at: Optional[datetime] = Field(None, nullable=True)
-    repeat_every_seconds: Optional[int] = Field(None, nullable=True)
+    start_at: Optional[datetime] = Field(None)
+    repeat_every_seconds: Optional[int] = Field(None)
