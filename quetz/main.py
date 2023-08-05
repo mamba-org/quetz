@@ -477,7 +477,7 @@ def delete_user(
 
 @api_router.get(
     "/users/{username}/role",
-    response_model=rest_models.UserRole,
+    response_model=rest_models.UserOptionalRole,
     tags=["users"],
 )
 def get_user_role(

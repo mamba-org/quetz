@@ -245,6 +245,10 @@ class PostMember(BaseModel):
     role: str = Role
 
 
+class UserOptionalRole(BaseModel):
+    role: Optional[str] = Role
+
+
 class UserRole(BaseModel):
     role: str = Role
 
