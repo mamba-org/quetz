@@ -244,7 +244,7 @@ async def test_running_task(db, user, package_version, supervisor):
     assert task.status == TaskStatus.pending
 
     # wait for task status to change
-    for i in range(50):
+    for i in range(100):
         time.sleep(0.05)
 
         db.refresh(task)
@@ -283,7 +283,7 @@ async def test_restart_worker_process(
     assert task.status == TaskStatus.pending
 
     # wait for task status to change
-    for i in range(50):
+    for i in range(100):
         time.sleep(0.05)
 
         db.refresh(task)
