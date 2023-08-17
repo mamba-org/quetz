@@ -202,6 +202,26 @@ def download_file(remote_repository, path_metadata):
     return f, package_name, metadata
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    after=after_log(logger, logging.WARNING),
+)
+def _upload_package(file, channel_name, subdir, pkgstore):
+    dest = os.path.join(subdir, file.filename)
+
+    try:
+        file.file.seek(0)
+        logger.debug(
+            f"uploading file {dest} from channel {channel_name} to package store"
+        )
+        pkgstore.add_package(file.file, channel_name, dest)
+
+    except AttributeError as e:
+        logger.error(f"Could not upload {file}, {file.filename}. {str(e)}")
+        raise TryAgain
+
+
 def handle_repodata_package(
     channel,
     files_metadata,
@@ -217,6 +237,7 @@ def handle_repodata_package(
     proxylist = channel.load_channel_metadata().get('proxylist', [])
     user_id = auth.assert_user()
 
+    # check package format and permissions, calculate total size
     total_size = 0
     for file, package_name, metadata in files_metadata:
         parts = file.filename.rsplit("-", 2)
@@ -240,38 +261,24 @@ def handle_repodata_package(
         total_size += size
         file.file.seek(0)
 
+    # create package in database
+    # channel_data = _load_remote_channel_data(remote_repository)
+    # create_packages_from_channeldata(channel_name, user_id, channel_data, dao)
+
+    # validate quota
     dao.assert_size_limits(channel_name, total_size)
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-        after=after_log(logger, logging.WARNING),
-    )
-    def _upload_package(file, channel_name, subdir):
-        dest = os.path.join(subdir, file.filename)
-
-        try:
-            file.file.seek(0)
-            logger.debug(
-                f"uploading file {dest} from channel {channel_name} to package store"
-            )
-            pkgstore.add_package(file.file, channel_name, dest)
-
-        except AttributeError as e:
-            logger.error(f"Could not upload {file}, {file.filename}. {str(e)}")
-            raise TryAgain
-
     pkgstore.create_channel(channel_name)
-    nthreads = config.general_package_unpack_threads
 
     with TicToc("upload file without extracting"):
+        nthreads = config.general_package_unpack_threads
         with ThreadPoolExecutor(max_workers=nthreads) as executor:
             for file, package_name, metadata in files_metadata:
                 if proxylist and package_name in proxylist:
                     # skip packages that should only ever be proxied
                     continue
                 subdir = get_subdir_compat(metadata)
-                executor.submit(_upload_package, file, channel_name, subdir)
+                executor.submit(_upload_package, file, channel_name, subdir, pkgstore)
 
     with TicToc("add versions to the db"):
         for file, package_name, metadata in files_metadata:
@@ -618,6 +625,24 @@ def create_versions_from_repodata(
         create_version_from_metadata(channel_name, user_id, filename, metadata, dao)
 
 
+def _load_remote_channel_data(remote_repository: RemoteRepository) -> dict:
+    """
+    given the remote repository, load the channeldata.json file
+    raises: HTTPException if the remote server is unavailable
+    """
+    try:
+        channel_data = remote_repository.open("channeldata.json").json()
+    except (RemoteFileNotFound, json.JSONDecodeError):
+        channel_data = {}
+    except RemoteServerError as e:
+        logger.error(f"Remote server error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Remote channel {remote_repository.host} unavailable",
+        )
+    return channel_data
+
+
 def synchronize_packages(
     channel_name: str,
     dao: Dao,
@@ -628,6 +653,14 @@ def synchronize_packages(
     excludelist: List[str] = None,
     use_repodata: bool = False,
 ):
+    """synchronize package from a remote channel.
+
+    Args:
+        channel_name (str): the channel to be updated, e.g. the mirror channel
+        dao (Dao): database access object
+        pkgstore (PackageStore): the target channels package store
+        use_repodata (bool, optional): wether to create packages from repodata.json
+    """
     logger.info(f"executing synchronize_packages task in a process {os.getpid()}")
 
     new_channel = dao.get_channel(channel_name)
@@ -639,22 +672,14 @@ def synchronize_packages(
     for mirror_channel_url in new_channel.mirror_channel_urls:
         remote_repo = RemoteRepository(mirror_channel_url, session)
 
-        user_id = auth.assert_user()
+        auth.assert_user()
 
-        try:
-            channel_data = remote_repo.open("channeldata.json").json()
-            if use_repodata:
-                create_packages_from_channeldata(
-                    channel_name, user_id, channel_data, dao
-                )
+        channel_data = _load_remote_channel_data(remote_repo)
+        subdirs = None
+        if use_repodata:
+            # create_packages_from_channeldata(channel_name, user_id, channel_data, dao)
             subdirs = channel_data.get("subdirs", [])
-        except (RemoteFileNotFound, json.JSONDecodeError):
-            subdirs = None
-        except RemoteServerError:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"Remote channel {mirror_channel_url} unavailable",
-            )
+
         # if no channel data use known architectures
         if subdirs is None:
             subdirs = KNOWN_SUBDIRS

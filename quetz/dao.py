@@ -361,7 +361,7 @@ class Dao:
             Package.channel_name == channel_name
         )
         if package_name:
-            all_packages = all_packages.filter(
+            all_packages = all_packages.join(PackageVersion).filter(
                 PackageVersion.package_name == package_name
             )
         for each_package in all_packages:
@@ -396,7 +396,7 @@ class Dao:
             Package.channel_name == channel_name
         )
         if package_name:
-            all_packages = all_packages.filter(
+            all_packages = all_packages.join(PackageVersion).filter(
                 PackageVersion.package_name == package_name
             )
         for each_package in all_packages:
@@ -429,7 +429,7 @@ class Dao:
             Package.channel_name == channel_name
         )
         if package_name:
-            all_packages = all_packages.filter(
+            all_packages = all_packages.join(PackageVersion).filter(
                 PackageVersion.package_name == package_name
             )
         for x, each_package in enumerate(all_packages):
@@ -595,6 +595,7 @@ class Dao:
         return self.db.query(Channel).filter(Channel.name == channel_name).one_or_none()
 
     def get_package(self, channel_name: str, package_name: str) -> Optional[Package]:
+        print(f"get_package: {channel_name}{package_name}")
         return (
             self.db.query(Package)
             .join(Channel)
@@ -1026,6 +1027,11 @@ class Dao:
         )
 
     def assert_size_limits(self, channel_name: str, size: int):
+        """
+        validate that adding a package of size `size` to channel `channel_name`
+        does not exceed the channel size limit.
+        raises: QuotaError
+        """
         channel_size, channel_size_limit = (
             self.db.query(Channel.size, Channel.size_limit)
             .filter(Channel.name == channel_name)
