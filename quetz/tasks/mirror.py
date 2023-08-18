@@ -494,7 +494,8 @@ def create_version_from_metadata(
         pkg_format = "tarbz2"
     else:
         raise ValueError(
-            f"Unknown package format for package {package_file_name} in channel {channel_name}"
+            f"Unknown package format for package {package_file_name}"
+            f"in channel {channel_name}"
         )
     version = dao.create_version(
         channel_name,
