@@ -44,7 +44,14 @@ def get_config():
 
 def get_db(config: Config = Depends(get_config)):
     database_url = config.sqlalchemy_database_url
-    db = get_db_session(database_url, echo=config.sqlalchemy_echo_sql)
+    db = get_db_session(
+        database_url,
+        echo=config.sqlalchemy_echo_sql,
+        postgres_kwargs=dict(
+            pool_size=config.sqlalchemy_postgres_pool_size,
+            max_overflow=config.sqlalchemy_postgres_max_overflow,
+        ),
+    )
     try:
         yield db
     finally:
