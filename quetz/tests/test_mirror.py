@@ -304,6 +304,7 @@ DUMMY_PACKAGE = Path("./test-package-0.1-0.tar.bz2")
 DUMMY_PACKAGE_V2 = Path("./test-package-0.2-0.tar.bz2")
 OTHER_DUMMY_PACKAGE = Path("./other-package-0.1-0.tar.bz2")
 OTHER_DUMMY_PACKAGE_V2 = Path("./other-package-0.2-0.tar.bz2")
+OTHER_DUMMY_PACKAGE_V2_CONDA = Path("./other-package-0.2-0.conda")
 
 
 @pytest.mark.parametrize(
@@ -712,6 +713,10 @@ def test_api_methods_for_mirror_channels(client, mirror_channel):
     ],
 )
 def test_mirror_initial_sync(client, dummy_repo, owner, expected_paths, job_supervisor):
+    """
+    Validate that, after the sync of the mirrored channel, the correct files
+    (e.g. repodata.json) are present here.
+    """
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 
@@ -726,7 +731,7 @@ def test_mirror_initial_sync(client, dummy_repo, owner, expected_paths, job_supe
         },
     )
     assert response.status_code == 201
-    job_supervisor.run_once()
+    job_supervisor.run_once()  # the sync job is added implicitly to new mirror channels
 
     assert dummy_repo == [os.path.join(host, p) for p in expected_paths]
 
@@ -1175,6 +1180,35 @@ repodata_json = """
 }
 """
 
+repodata_json_conda = """
+{
+  "info": {
+    "subdir": "linux-64"
+  },
+  "packages": {},
+  "packages.conda": {
+    "other-package-0.2-0.conda": {
+      "arch": "x86_64",
+      "build": "0",
+      "build_number": 0,
+      "depends": [],
+      "license": "BSD",
+      "license_family": "BSD",
+      "md5": "f5764fa8299aa117fce80be10d76724c",
+      "name": "other-package",
+      "platform": "linux",
+      "sha256": "3ca41044557c3179cb898152ec9414608a55a713cf6dcc1a1b71aed63f4d611c",
+      "size": 3148,
+      "subdir": "linux-64",
+      "timestamp": 1599839787253,
+      "version": "0.2",
+      "time_modified": 1608636247
+    }
+  },
+  "repodata_version": 1
+}
+"""
+
 
 def test_create_packages_from_channeldata(dao, user, local_channel, db):
     channeldata = json.loads(channeldata_json)
@@ -1249,8 +1283,12 @@ def test_create_versions_from_repodata(dao, user, local_channel, db):
 
 
 @pytest.fixture
-def dummy_package_file(config):
-    filepath = OTHER_DUMMY_PACKAGE_V2
+def dummy_package_file(config, request):
+    format = request.param if hasattr(request, "param") else ".tar.bz2"
+    if format == '.conda':
+        filepath = OTHER_DUMMY_PACKAGE_V2_CONDA
+    else:  # default case: .tar.bz2
+        filepath = OTHER_DUMMY_PACKAGE_V2
     fid = open(filepath, 'rb')
 
     class DummyRemoteFile:
@@ -1271,14 +1309,19 @@ def rules(user, db):
 
 
 @pytest.mark.parametrize("user_role", ["owner"])
+@pytest.mark.parametrize("dummy_package_file", [".tar.bz2", ".conda"], indirect=True)
 def test_handle_repodata_package(
     dao, user, local_channel, dummy_package_file, rules, config, db
 ):
     pkg = Package(name="other-package", channel=local_channel)
     db.add(pkg)
 
-    repodata = json.loads(repodata_json)
-    package_name, package_data = list(repodata["packages"].items())[0]
+    if dummy_package_file.filename.endswith(".tar.bz2"):
+        repodata = json.loads(repodata_json)
+        package_name, package_data = list(repodata["packages"].items())[0]
+    else:
+        repodata = json.loads(repodata_json_conda)
+        package_name, package_data = list(repodata["packages.conda"].items())[0]
     pkgstore = config.get_package_store()
 
     files_metadata = [(dummy_package_file, package_name, package_data)]

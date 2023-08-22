@@ -327,7 +327,7 @@ def initial_sync_mirror(
 
     from quetz.main import handle_package_files
 
-    packages = repodata.get("packages", {})
+    packages = repodata.get("packages", {}) | repodata.get("packages.conda", {})
 
     version_methods = [
         _check_checksum(dao, channel_name, arch, "sha256"),
@@ -488,7 +488,15 @@ def create_version_from_metadata(
         )
         dao.create_package(channel_name, package_info, user_id, "owner")
 
-    pkg_format = "tarbz2" if package_file_name.endswith(".tar.bz2") else ".conda"
+    if package_file_name.endswith(".conda"):
+        pkg_format = "conda"
+    elif package_file_name.endswith(".tar.bz2"):
+        pkg_format = "tarbz2"
+    else:
+        raise ValueError(
+            f"Unknown package format for package {package_file_name}"
+            f"in channel {channel_name}"
+        )
     version = dao.create_version(
         channel_name,
         package_name,
