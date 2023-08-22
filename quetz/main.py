@@ -1375,7 +1375,6 @@ async def post_upload(
     )
 
     upload_hash = hashlib.sha256()
-
     body = TemporaryFile()
     async for chunk in request.stream():
         body.write(chunk)
@@ -1393,6 +1392,8 @@ async def post_upload(
 
     auth.assert_create_package(channel_name)
     condainfo = CondaInfo((body), filename)
+    _assert_filename_package_name_consistent(filename, condainfo.info["name"])
+
     dest = os.path.join(condainfo.info["subdir"], filename)
 
     body.seek(0)
@@ -1461,6 +1462,17 @@ def post_file_to_channel(
     background_tasks.add_task(wrapped_bg_task, dao, pkgstore, channel.name)
 
 
+def _assert_filename_package_name_consistent(file_name: str, package_name: str):
+    """Helper function that verifies consistency between file name and package name"""
+    parts = file_name.rsplit("-", 2)
+
+    if parts[0] != package_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"package file name and info files do not match {file_name}",
+        )
+
+
 @retry(
     stop=stop_after_attempt(3),
     retry=(retry_if_result(lambda x: x is None)),
@@ -1477,13 +1489,8 @@ def _extract_and_upload_package(file, channel_name, channel_proxylist):
         raise e
 
     dest = os.path.join(conda_info.info["subdir"], file.filename)
-    parts = file.filename.rsplit("-", 2)
 
-    if parts[0] != conda_info.info["name"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"package file name and info files do not match {file.filename}",
-        )
+    _assert_filename_package_name_consistent(file.filename, conda_info.info["name"])
 
     if channel_proxylist and conda_info.info["name"] in channel_proxylist:
         # do not upload files that are proxied
