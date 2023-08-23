@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Optional
 
 from importlib_metadata import entry_points as get_entry_points
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from . import handlers
 from .models import JobStatus, TaskStatus
@@ -83,7 +83,6 @@ def parse_job_name(v):
 class JobBase(BaseModel):
     """New job spec"""
 
-    items_spec: str = Field(..., title='Item selector spec')
     manifest: str = Field(None, title='Name of the function')
 
     start_at: Optional[datetime] = Field(
@@ -97,7 +96,8 @@ class JobBase(BaseModel):
         ),
     )
 
-    @validator("manifest", pre=True)
+    @field_validator("manifest", mode="before")
+    @classmethod
     def validate_job_name(cls, function_name):
         if isinstance(function_name, bytes):
             return parse_job_name(function_name)
@@ -105,6 +105,12 @@ class JobBase(BaseModel):
         parse_job_manifest(function_name)
 
         return function_name.encode('ascii')
+
+
+class JobCreate(JobBase):
+    """Create job spec"""
+
+    items_spec: str = Field(..., title='Item selector spec')
 
 
 class JobUpdateModel(BaseModel):
@@ -123,10 +129,8 @@ class Job(JobBase):
 
     status: JobStatus = Field(None, title='Status of the job (running, paused, ...)')
 
-    items_spec: str = Field(None, title='Item selector spec')
-
-    class Config:
-        orm_mode = True
+    items_spec: Optional[str] = Field(None, title='Item selector spec')
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Task(BaseModel):
@@ -136,12 +140,12 @@ class Task(BaseModel):
     created: datetime = Field(None, title='Created at')
     status: TaskStatus = Field(None, title='Status of the task (running, paused, ...)')
 
-    @validator("package_version", pre=True)
+    @field_validator("package_version", mode="before")
+    @classmethod
     def convert_package_version(cls, v):
         if v:
             return {'filename': v.filename, 'id': uuid.UUID(bytes=v.id).hex}
         else:
             return {}
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

@@ -11,7 +11,7 @@ def api_keys(other_user, user, db, dao: Dao):
     def key_factory(key_user, descr, expire_at, roles):
         return dao.create_api_key(
             key_user.id,
-            BaseApiKey.parse_obj(
+            BaseApiKey.model_validate(
                 dict(description=descr, expire_at=expire_at, roles=roles)
             ),
             descr,
@@ -111,7 +111,7 @@ def test_list_keys_with_package_roles(
 def test_list_keys_subrole(auth_client, dao, user, private_channel):
     dao.create_api_key(
         user.id,
-        BaseApiKey.parse_obj(
+        BaseApiKey.model_validate(
             dict(
                 description="user-key",
                 roles=[
@@ -134,7 +134,7 @@ def test_list_keys_subrole(auth_client, dao, user, private_channel):
 def test_list_keys_without_roles(auth_client, dao, user):
     dao.create_api_key(
         user.id,
-        BaseApiKey.parse_obj(dict(description="user-key", roles=[])),
+        BaseApiKey.model_validate(dict(description="user-key", roles=[])),
         "user-key",
     )
 

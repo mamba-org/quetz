@@ -609,7 +609,7 @@ def test_validate_package_names(auth_client, public_channel, remove_package_vers
 @pytest.mark.parametrize(
     "package_name,msg",
     [
-        ("TestPackage", "string does not match"),
+        ("TestPackage", "String should match"),
         ("test-package", None),
     ],
 )
@@ -835,7 +835,7 @@ def api_key(db, dao: Dao, owner, private_channel):
     # create an api key with restriction
     key = dao.create_api_key(
         owner.id,
-        BaseApiKey.parse_obj(
+        BaseApiKey.model_validate(
             dict(
                 description="test api key",
                 expire_at="2099-12-31",

@@ -17,7 +17,6 @@ from tempfile import SpooledTemporaryFile, TemporaryFile
 from typing import Awaitable, Callable, List, Optional, Tuple, Type
 
 import pydantic
-import pydantic.error_wrappers
 import requests
 from fastapi import (
     APIRouter,
@@ -477,7 +476,7 @@ def delete_user(
 
 @api_router.get(
     "/users/{username}/role",
-    response_model=rest_models.UserRole,
+    response_model=rest_models.UserOptionalRole,
     tags=["users"],
 )
 def get_user_role(
@@ -732,7 +731,7 @@ def post_channel(
             detail="Cannot use both `includelist` and `excludelist` together.",
         )
 
-    user_attrs = new_channel.dict(exclude_unset=True)
+    user_attrs = new_channel.model_dump(exclude_unset=True)
 
     if "size_limit" in user_attrs:
         auth.assert_set_channel_size_limit()
@@ -789,7 +788,7 @@ def patch_channel(
 ):
     auth.assert_update_channel_info(channel.name)
 
-    user_attrs = channel_data.dict(exclude_unset=True)
+    user_attrs = channel_data.model_dump(exclude_unset=True)
 
     if "size_limit" in user_attrs:
         auth.assert_set_channel_size_limit()
@@ -1064,7 +1063,7 @@ def get_package_versions(
     version_list = []
 
     for version, profile, api_key_profile in version_profile_list:
-        version_data = rest_models.PackageVersion.from_orm(version)
+        version_data = rest_models.PackageVersion.model_validate(version)
         version_list.append(version_data)
 
     return version_list
@@ -1089,7 +1088,7 @@ def get_paginated_package_versions(
     version_list = []
 
     for version, profile, api_key_profile in version_profile_list['result']:
-        version_data = rest_models.PackageVersion.from_orm(version)
+        version_data = rest_models.PackageVersion.model_validate(version)
         version_list.append(version_data)
 
     return {
@@ -1650,7 +1649,7 @@ def handle_package_files(
                     summary=str(condainfo.about.get("summary", "n/a")),
                     description=str(condainfo.about.get("description", "n/a")),
                 )
-            except pydantic.error_wrappers.ValidationError as err:
+            except pydantic.ValidationError as err:
                 _delete_file(condainfo, file.filename)
                 raise errors.ValidationError(
                     "Validation Error for package: "
