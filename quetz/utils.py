@@ -86,6 +86,7 @@ def get_matching_hosts(
 
 def check_package_membership(
     channel: Channel,
+    channel_metadata: dict,
     package_name: str,
     package_metadata: dict,
     remote_host: str,
@@ -114,10 +115,10 @@ def check_package_membership(
             ignored or removed from the channel
     """
     package_spec = parse_package_filename(package_name)
-    metadata = channel.load_channel_metadata()
-    incl_act = MembershipAction.IGNORE
+
+    incl_act = MembershipAction.INCLUDE
     exclude_now = False
-    if (includelist := metadata['includelist']) is not None:
+    if (includelist := channel_metadata['includelist']) is not None:
         # Example: { "main": ["numpy", "pandas"], "r": ["r-base"]}
         if isinstance(includelist, dict):
             matches = get_matching_hosts(includelist, package_spec)
@@ -136,7 +137,7 @@ def check_package_membership(
                 incl_act = MembershipAction.REMOVE
 
     # for exclude list, we only check the current host
-    if (excludelist := metadata['excludelist']) is not None:
+    if (excludelist := channel_metadata['excludelist']) is not None:
         exclude_now = False
         if isinstance(excludelist, dict):
             if channel.name in excludelist:

@@ -332,6 +332,22 @@ def initial_sync_mirror(
     skip_errors: bool = True,
     use_repodata: bool = False,
 ):
+    """
+    Synchronize a mirror channel with a remote repository.
+
+    Args:
+        channel_name: name of the channel to synchronize
+        remote_repository: RemoteRepository object
+        arch: architecture to synchronize
+        dao: Dao object
+        pkgstore
+        auth
+        includelist: list of package names to include
+        excludelist: list of package names to exclude
+        skip_errors: if True, continue processing packages even if an error occurs
+        use_repodata: if True, use repodata.json to process packages
+
+    """
     force = True  # needed for updating packages
     logger.info(
         f"Running channel mirroring {channel_name}/{arch} from {remote_repository.host}"
@@ -429,9 +445,14 @@ def initial_sync_mirror(
             return False
 
         # go through all packages from remote channel
+        channel_metadata = channel.load_channel_metadata()
         for repo_package_name, metadata in packages.items():
             action = check_package_membership(
-                channel, repo_package_name, metadata, remote_host=remote_repository.host
+                channel,
+                channel_metadata,
+                repo_package_name,
+                metadata,
+                remote_host=remote_repository.host,
             )
             if action == MembershipAction.INCLUDE:
                 # try to find out whether it's a new package version

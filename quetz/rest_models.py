@@ -66,9 +66,8 @@ class ChannelBase(BaseModel):
     private: bool = Field(True, title="channel should be private")
     size_limit: Optional[int] = Field(None, title="size limit of the channel")
     ttl: int = Field(36000, title="ttl of the channel")
-    mirror_channel_url: Optional[Union[URLType, List[URLType], List[dict]]] = Field(
+    mirror_channel_url: Optional[Union[URLType, List[URLType]]] = Field(
         None,
-        nullable=True,
     )
     mirror_mode: Optional[MirrorMode] = Field(None, nullable=True)
 
@@ -124,16 +123,19 @@ class ChannelMetadata(BaseModel):
 
     """
     examples:
-    - includelist: "numpy"
     - includelist: ["numpy", "pandas"]
     - includelist: {"channel1: ["numpy", "pandas"]}, {"channel2": ["scipy"]}
     """
 
-    includelist: List[str] | str | Dict[str, List[str]] = Field(
+    includelist: Optional[
+        Union[List[str], Dict[Union[URLType, str], List[str]]]
+    ] = Field(
         None,
         title="list of packages to include while creating a channel",
     )
-    excludelist: List[str] | str | List[Dict[str, List[str] | str]] = Field(
+    excludelist: Optional[
+        Union[List[str], Dict[Union[URLType, str], List[str]]]
+    ] = Field(
         None,
         title="list of packages to exclude while creating a channel",
     )
