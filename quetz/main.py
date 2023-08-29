@@ -1806,6 +1806,7 @@ def serve_path(
         # use the first mirror url entry for the redirect
         channel_proxylist = json.loads(channel.channel_metadata).get('proxylist', [])
         if channel_proxylist and package_name and package_name in channel_proxylist:
+            # proxying packages only works for the first url in the list
             redirect_url = channel.mirror_channel_urls[0]
             return RedirectResponse(f"{redirect_url}/{path}")
 

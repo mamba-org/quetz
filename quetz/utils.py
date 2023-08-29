@@ -27,28 +27,22 @@ from sqlalchemy import String, and_, cast, collate, not_, or_
 from .db_models import Channel, Package, PackageVersion, User
 
 
-def _parse_package_spec(package_name: str, package_metadata) -> tuple[str, str, str]:
+def parse_package_filename(package_name: str) -> tuple[str, str, str]:
     """Given a package name and metadata, return the package spec.
 
     Args:
         package_name (str): The package name in file format,
             e.g. "numpy-1.23.4-py39hefdcf20_0.tar.bz2"
-        package_metadata (_type_): Metadata of the package,
-            e.g. from repodata.json
 
     Returns:
         tuple[str, str, str]: (name, version, build-string)
     """
 
-    # spec = _parse_spec_str(package_spec)
-    # return spec.get("name", ""), spec.get("version", ""), spec.get("build", "")
-    # TODO: the package spec here looks like "numpy-1.23.4-py39hefdcf20_0.tar.bz2"
-    # and does not have "="
     spec = package_name.split("-")
     return spec[0], spec[1] if len(spec) > 1 else "", spec[2] if len(spec) > 2 else ""
 
 
-def _check_package_match(
+def check_package_match(
     package_spec: tuple[str, str, str],
     include_or_exclude_list: list[str],
 ) -> bool:
@@ -59,7 +53,6 @@ def _check_package_match(
     """
     name, version, build = package_spec
     for pattern in include_or_exclude_list:
-        # TODO: validate if this matches with our current implementation
         if MatchSpec(pattern).match(
             {"name": name, "version": version, "build": build, "build_number": 0}
         ):
@@ -70,11 +63,11 @@ def _check_package_match(
 
 class MembershipAction(Enum):
     INCLUDE = "include"  # package should be added to the channel
-    NOTHING = "nothing"  # package is not member of this channel but of another
+    IGNORE = "ignore"  # package is not member of this channel but of another
     REMOVE = "remove"  # package is not member of any channel
 
 
-def _all_matching_hosts(
+def get_matching_hosts(
     include_or_exclude_list: dict, package_spec: tuple[str, str, str]
 ) -> list[str]:
     """
@@ -86,7 +79,7 @@ def _all_matching_hosts(
     name, version, build = package_spec
     matching_hosts = []
     for host, patterns in include_or_exclude_list.items():
-        if _check_package_match(package_spec, patterns):
+        if check_package_match(package_spec, patterns):
             matching_hosts.append(host)
     return matching_hosts
 
@@ -101,6 +94,10 @@ def check_package_membership(
     Check if a package should be in a channel according
     to the rules defined in the channel metadata.
 
+    Since for a given package and includelist, a package can be not in the includelist
+    of one remote channel but in the includelist of another remote channel, the result
+    of this check can also be to ignore the current package.
+
     Args:
         channel (Channel): mirror Channel object returned from the database
         package_name (str): name of the package in file format,
@@ -108,29 +105,32 @@ def check_package_membership(
         package_metadata (dict): package metadata,
             information that can be found in repodata.json for example
         includelist (Union[list[str], dict, None], optional):
+            list of packages or dict of {channel: [packages]} that should be included
         excludelist (Union[list[str], dict, None], optional):
+            list of packages or dict of {channel: [packages]} that should be excluded
 
     Returns:
-        bool: if the package should be in this channel or not according to the rules.
+        MembershipAction: this determines if the package should be included,
+            ignored or removed from the channel
     """
-    package_spec = _parse_package_spec(package_name, package_metadata)
+    package_spec = parse_package_filename(package_name)
     metadata = channel.load_channel_metadata()
-    incl_act = MembershipAction.NOTHING
+    incl_act = MembershipAction.IGNORE
     exclude_now = False
     if (includelist := metadata['includelist']) is not None:
         # Example: { "main": ["numpy", "pandas"], "r": ["r-base"]}
         if isinstance(includelist, dict):
-            matches = _all_matching_hosts(includelist, package_spec)
+            matches = get_matching_hosts(includelist, package_spec)
             if remote_host in matches or remote_host.split("/")[-1] in matches:
                 incl_act = MembershipAction.INCLUDE
             elif len(matches) > 0:  # we have a match but not for this host
-                incl_act = MembershipAction.NOTHING
+                incl_act = MembershipAction.IGNORE
             else:
                 incl_act = MembershipAction.REMOVE
 
         # Example: ["numpy", "pandas", "r-base"]
         elif isinstance(includelist, list):
-            if _check_package_match(package_spec, includelist):
+            if check_package_match(package_spec, includelist):
                 incl_act = MembershipAction.INCLUDE
             else:
                 incl_act = MembershipAction.REMOVE
@@ -141,13 +141,13 @@ def check_package_membership(
         if isinstance(excludelist, dict):
             if channel.name in excludelist:
                 channel_excludelist = excludelist[remote_host.split("/")[-1]]
-                exclude_now = _check_package_match(package_spec, channel_excludelist)
+                exclude_now = check_package_match(package_spec, channel_excludelist)
             else:
                 exclude_now = False
         elif isinstance(excludelist, list):
-            exclude_now = _check_package_match(package_spec, excludelist)
+            exclude_now = check_package_match(package_spec, excludelist)
 
-    # as long as it does not need to be removed here, we can include it
+    # package not explicitly excluded? -> listen to include action
     if not exclude_now:
         return incl_act
     else:

@@ -61,6 +61,18 @@ Creating a mirror channel is similar to creating proxy channels except that you 
      "mirror_mode": "mirror"
    }
 
+To mirror packages from multiple source channels, provide a list of URLs in the ``mirror_channel_url`` attribute:
+
+.. code:: json
+
+   {
+     "name": "mirror-channel",
+     "private": false,
+     "mirror_channel_url": ["https://conda.anaconda.org/btel", "https://conda.anaconda.org/conda-forge"],
+     "mirror_mode": "mirror"
+   }
+
+Note that setting multiple mirror channel urls will work for mirror channels only. Proxy channels can only mirror a single channel and will therefore use only the first url in the list.
 
 
 .. code:: bash
@@ -80,7 +92,7 @@ Mirror channels are read only (you can not add or change packages in these chann
 
    curl ${QUETZ_HOST}/api/channels/mirror-channel/packages
 
-You can also postpone the synchronising the channel by adding ``{"actions": []}`` to the request:
+You can also postpone the synchronisation of the channel by adding ``{"actions": []}`` to the request:
 
 .. code:: bash
 
@@ -93,6 +105,8 @@ You can also postpone the synchronising the channel by adding ``{"actions": []}`
             "mirror_channel_url":"https://conda.anaconda.org/btel",
             "mirror_mode":"mirror",
             "actions": []}'
+
+Otherwise, this will be done automatically after the channel is created.
 
 
 Synchronising mirror channel
@@ -118,8 +132,8 @@ If you don't want to mirror all packages for a channel or can't mirror packages 
 :excludelist: Don't download packages in list.
 :proxylist: Parse package metadata, but redirect downloads to upstream server for packages in list.
 
-
-It's possible to change metadata after creating a channel using the PATCH ``/api​/channels​/{channel_name}`` endpoint:
+After creating a mirror channel you can only modify some attributes, e.g. ``private``, ``size_limit``, ``metadata`` and ``ttl``.
+It's possible to change metadata, and therefore modify the ``includelist``, ``excludelist`` or ``proxylist`` attributes, after creating a channel using the PATCH ``/api​/channels​/{channel_name}`` endpoint:
 
 .. code:: json
 

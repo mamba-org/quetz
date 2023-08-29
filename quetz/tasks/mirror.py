@@ -450,7 +450,7 @@ def initial_sync_mirror(
                 path = os.path.join(arch, repo_package_name)
                 update_batch.append((path, repo_package_name, metadata))
                 update_size += metadata.get('size', 100_000)
-            elif action == MembershipAction.NOTHING:
+            elif action == MembershipAction.IGNORE:
                 logger.debug(
                     f"package {repo_package_name} not needed by "
                     f"{remote_repository.host} but other channels"
@@ -460,7 +460,6 @@ def initial_sync_mirror(
                     f"package {repo_package_name} not needed by "
                     f"{remote_repository.host} and no other channels."
                 )
-                # TODO: only add to remove if exists in this (mirror) channel.
                 remove_batch.append((arch, repo_package_name))
 
             # perform either downloads or removals
@@ -483,6 +482,16 @@ def initial_sync_mirror(
 
 
 def remove_packages(remove_batch, channel: Channel, dao, pkgstore) -> bool:
+    """
+    Remove packages from the channel and the package store.
+    Args:
+        remove_batch: list of (arch, repo_package_name) tuples
+            e.g. [('linux-64', 'foo-1.0-0.tar.bz2'), ...]
+        channel: the channel to remove packages from
+        dao
+        pkgstore
+    Returns True if any removals were performed.
+    """
     logger.debug(f"Removing {len(remove_batch)} packages: {remove_batch}")
     removal_performed = False
     package_specs_remove = set([p[1].split("-")[0] for p in remove_batch])
@@ -512,7 +521,7 @@ def remove_local_packages(
     We assume that the includelist and excludelist are well-formed,
     e.g. they don't overlap.
     """
-    from utils import _all_matching_hosts
+    from utils import get_matching_hosts
 
     channel = dao.get_channel(channel_name)
     if not channel:
@@ -530,11 +539,11 @@ def remove_local_packages(
         info = package.current_package_version
         name, version, build_string = info.package_name, info.version, info.build_string
         # check: does this package match _any_ of the includelist patterns?
-        if not _all_matching_hosts(name, version, build_string, includelist):
+        if not get_matching_hosts(name, version, build_string, includelist):
             packages_to_remove.append((None, name))
 
         # check: does this package match _any_ of the excludelist patterns?
-        if _all_matching_hosts(name, version, build_string, excludelist):
+        if get_matching_hosts(name, version, build_string, excludelist):
             packages_to_remove.append((None, name))
 
     if packages_to_remove:
