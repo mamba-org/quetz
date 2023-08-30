@@ -4,11 +4,13 @@ import sys
 import tempfile
 from multiprocessing import Process
 from pathlib import Path
+from typing import Callable
 from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
 import sqlalchemy as sa
+from alembic.config import Config as AlembicConfig
 from alembic.script import ScriptDirectory
 from pytest_mock.plugin import MockerFixture
 from typer.testing import CliRunner
@@ -148,13 +150,13 @@ def refresh_db(engine, database_url):
 
 
 def test_run_migrations(
-    config, sql_connection, engine, database_url, alembic_config, refresh_db
+    config, sql_connection, engine, refresh_db, run_migrations: Callable[[], None]
 ):
     db = sql_connection
     with pytest.raises(sa.exc.DatabaseError):
         db.execute(sa.text("SELECT * FROM users"))
 
-    cli._run_migrations(alembic_config=alembic_config)
+    run_migrations()
 
     db.execute(sa.text("SELECT * FROM users"))
 
@@ -240,10 +242,15 @@ def test_make_migrations_plugin(mocker, config, config_dir, dummy_migration_plug
 
 
 def test_make_migrations_plugin_with_alembic(
-    config, config_dir, dummy_migration_plugin: Path, alembic_config, engine
+    config,
+    config_dir,
+    dummy_migration_plugin: Path,
+    engine,
+    run_migrations: Callable[[], None],
+    alembic_config: AlembicConfig,
 ):
     # make sure db is up-to-date
-    cli._run_migrations(alembic_config=alembic_config)
+    run_migrations()
 
     alembic_config.set_main_option(
         "version_locations",
@@ -265,7 +272,7 @@ def test_make_migrations_plugin_with_alembic(
     assert migration_scripts
 
     # apply migrations
-    cli._run_migrations(alembic_config=alembic_config)
+    run_migrations()
 
     # add a new revision
 
@@ -342,7 +349,13 @@ def downgrade(): pass
 
 
 def test_multi_head(
-    config, config_dir, dummy_migration_plugin: Path, alembic_config, engine, refresh_db
+    config,
+    config_dir,
+    dummy_migration_plugin: Path,
+    alembic_config,
+    engine,
+    refresh_db,
+    run_migrations: Callable[[], None],
 ):
     quetz_migrations_path = Path(config_dir) / "migrations"
     quetz_versions_path = quetz_migrations_path / "versions"
@@ -365,7 +378,7 @@ def test_multi_head(
         " ".join(map(str, [plugin_versions_path, quetz_versions_path])),
     )
     alembic_config.set_main_option("script_location", str(quetz_migrations_path))
-    cli._run_migrations(alembic_config=alembic_config)
+    run_migrations()
 
     # initialize a plugin
     cli._make_migrations(
@@ -375,7 +388,7 @@ def test_multi_head(
         initialize=True,
         alembic_config=alembic_config,
     )
-    cli._run_migrations(alembic_config=alembic_config)
+    run_migrations()
 
     rev_file = next((plugin_versions_path).glob("*test_revision.py"))
     with open(rev_file) as fid:
@@ -394,7 +407,7 @@ def test_multi_head(
         message="test revision",
         alembic_config=alembic_config,
     )
-    cli._run_migrations(alembic_config=alembic_config)
+    run_migrations()
 
     rev_file = next((quetz_versions_path).glob("*test_revision.py"))
     with open(rev_file) as fid:
@@ -414,7 +427,7 @@ def test_multi_head(
         content = fid.read()
     assert f"down_revision = '{plugin_rev_1}'" in content
 
-    cli._run_migrations(alembic_config=alembic_config)
+    run_migrations()
 
     # check heads
 

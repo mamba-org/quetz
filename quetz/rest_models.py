@@ -37,7 +37,7 @@ class User(BaseUser):
 Profile.model_rebuild()
 
 
-Role = Field(None, pattern='owner|maintainer|member')
+Role = Field(pattern='owner|maintainer|member')
 
 
 class Member(BaseModel):
@@ -58,7 +58,7 @@ class MirrorMode(str, Enum):
 
 
 class ChannelBase(BaseModel):
-    name: str = Field(None, title='The name of the channel', max_length=50)
+    name: str = Field(title='The name of the channel', max_length=50)
     description: Optional[str] = Field(
         None, title='The description of the channel', max_length=300
     )
@@ -134,7 +134,7 @@ class ChannelMetadata(BaseModel):
 
 class Channel(ChannelBase):
     metadata: ChannelMetadata = Field(
-        default_factory=ChannelMetadata, title="channel metadata", examples={}
+        default_factory=ChannelMetadata, title="channel metadata", examples=[]
     )
 
     actions: Optional[List[ChannelActionEnum]] = Field(
@@ -160,8 +160,14 @@ class Channel(ChannelBase):
         return self
 
 
+class ChannelWithOptionalName(Channel):
+    name: Optional[str] = Field(  # type: ignore[assignment]
+        None, title='The name of the channel', max_length=50
+    )
+
+
 class ChannelMirrorBase(BaseModel):
-    url: str = Field(None, pattern="^(http|https)://.+")
+    url: str = Field(pattern="^(http|https)://.+")
     api_endpoint: Optional[str] = Field(None, pattern="^(http|https)://.+")
     metrics_endpoint: Optional[str] = Field(None, pattern="^(http|https)://.+")
     model_config = ConfigDict(from_attributes=True)
@@ -173,7 +179,7 @@ class ChannelMirror(ChannelMirrorBase):
 
 class Package(BaseModel):
     name: str = Field(
-        None, title='The name of package', max_length=1500, pattern=r'^[a-z0-9-_\.]*$'
+        title='The name of package', max_length=1500, pattern=r'^[a-z0-9-_\.]*$'
     )
     summary: Optional[str] = Field(None, title='The summary of the package')
     description: Optional[str] = Field(None, title='The description of the package')
@@ -201,18 +207,18 @@ class PackageRole(BaseModel):
 
 
 class PackageSearch(Package):
-    channel_name: str = Field(None, title='The channel this package belongs to')
+    channel_name: str = Field(title='The channel this package belongs to')
 
 
 class ChannelSearch(BaseModel):
-    name: str = Field(None, title='The name of the channel', max_length=1500)
+    name: str = Field(title='The name of the channel', max_length=1500)
     description: Optional[str] = Field(None, title='The description of the channel')
-    private: bool = Field(None, title='The visibility of the channel')
+    private: bool = Field(title='The visibility of the channel')
     model_config = ConfigDict(from_attributes=True)
 
 
 class PaginatedResponse(BaseModel, Generic[T]):
-    pagination: Pagination = Field(None, title="Pagination object")
+    pagination: Pagination = Field(title="Pagination object")
     result: List[T] = Field([], title="Result objects")
 
 

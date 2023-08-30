@@ -326,7 +326,7 @@ def get_users_handler(dao, q, auth, skip, limit):
 @api_router.get("/users", response_model=List[rest_models.User], tags=["users"])
 def get_users(
     dao: Dao = Depends(get_dao),
-    q: str = None,
+    q: Optional[str] = None,
     auth: authorization.Rules = Depends(get_rules),
 ):
     return get_users_handler(dao, q, auth, 0, -1)
@@ -341,7 +341,7 @@ def get_paginated_users(
     dao: Dao = Depends(get_dao),
     skip: int = 0,
     limit: int = PAGINATION_LIMIT,
-    q: str = None,
+    q: Optional[str] = None,
     auth: authorization.Rules = Depends(get_rules),
 ):
     return get_users_handler(dao, q, auth, skip, limit)
@@ -521,7 +521,7 @@ def set_user_role(
 def get_channels(
     public: bool = True,
     dao: Dao = Depends(get_dao),
-    q: str = None,
+    q: Optional[str] = None,
     auth: authorization.Rules = Depends(get_rules),
 ):
     """List all channels"""
@@ -540,7 +540,7 @@ def get_paginated_channels(
     skip: int = 0,
     limit: int = PAGINATION_LIMIT,
     public: bool = True,
-    q: str = None,
+    q: Optional[str] = None,
     auth: authorization.Rules = Depends(get_rules),
 ):
     """List all channels, as a paginated response"""
@@ -780,7 +780,7 @@ def post_channel(
     response_model=rest_models.ChannelBase,
 )
 def patch_channel(
-    channel_data: rest_models.Channel,
+    channel_data: rest_models.ChannelWithOptionalName,
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
     channel: db_models.Channel = Depends(get_channel_or_fail),
@@ -1054,8 +1054,8 @@ def post_package_member(
 def get_package_versions(
     package: db_models.Package = Depends(get_package_or_fail),
     dao: Dao = Depends(get_dao),
-    time_created__ge: datetime.datetime = None,
-    version_match_str: str = None,
+    time_created__ge: Optional[datetime.datetime] = None,
+    version_match_str: Optional[str] = None,
 ):
     version_profile_list = dao.get_package_versions(
         package, time_created__ge, version_match_str
@@ -1079,8 +1079,8 @@ def get_paginated_package_versions(
     dao: Dao = Depends(get_dao),
     skip: int = 0,
     limit: int = PAGINATION_LIMIT,
-    time_created__ge: datetime.datetime = None,
-    version_match_str: str = None,
+    time_created__ge: Optional[datetime.datetime] = None,
+    version_match_str: Optional[str] = None,
 ):
     version_profile_list = dao.get_package_versions(
         package, time_created__ge, version_match_str, skip, limit

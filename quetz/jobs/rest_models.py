@@ -83,7 +83,7 @@ def parse_job_name(v):
 class JobBase(BaseModel):
     """New job spec"""
 
-    manifest: str = Field(None, title='Name of the function')
+    manifest: str = Field(title='Name of the function')
 
     start_at: Optional[datetime] = Field(
         None, title="date and time the job should start, if None it starts immediately"
@@ -110,35 +110,35 @@ class JobBase(BaseModel):
 class JobCreate(JobBase):
     """Create job spec"""
 
-    items_spec: str = Field(..., title='Item selector spec')
+    items_spec: str = Field(title='Item selector spec')
 
 
 class JobUpdateModel(BaseModel):
     """Modify job spec items (status and items_spec)"""
 
-    items_spec: str = Field(None, title='Item selector spec')
-    status: JobStatus = Field(None, title='Change status')
+    items_spec: Optional[str] = Field(None, title='Item selector spec')
+    status: JobStatus = Field(title='Change status')
     force: bool = Field(False, title="force re-running job on all matching packages")
 
 
 class Job(JobBase):
-    id: int = Field(None, title='Unique id for job')
-    owner_id: uuid.UUID = Field(None, title='User id of the owner')
+    id: int = Field(title='Unique id for job')
+    owner_id: uuid.UUID = Field(title='User id of the owner')
 
-    created: datetime = Field(None, title='Created at')
+    created: datetime = Field(title='Created at')
 
-    status: JobStatus = Field(None, title='Status of the job (running, paused, ...)')
+    status: JobStatus = Field(title='Status of the job (running, paused, ...)')
 
     items_spec: Optional[str] = Field(None, title='Item selector spec')
     model_config = ConfigDict(from_attributes=True)
 
 
 class Task(BaseModel):
-    id: int = Field(None, title='Unique id for task')
-    job_id: int = Field(None, title='ID of the parent job')
-    package_version: dict = Field(None, title='Package version')
-    created: datetime = Field(None, title='Created at')
-    status: TaskStatus = Field(None, title='Status of the task (running, paused, ...)')
+    id: int = Field(title='Unique id for task')
+    job_id: int = Field(title='ID of the parent job')
+    package_version: dict = Field(title='Package version')
+    created: datetime = Field(title='Created at')
+    status: TaskStatus = Field(title='Status of the task (running, paused, ...)')
 
     @field_validator("package_version", mode="before")
     @classmethod

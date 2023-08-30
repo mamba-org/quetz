@@ -230,7 +230,7 @@ class Config:
 
     _instances: Dict[Optional[str], "Config"] = {}
 
-    def __new__(cls, deployment_config: str = None):
+    def __new__(cls, deployment_config: Optional[str] = None):
         if not deployment_config and None in cls._instances:
             return cls._instances[None]
 
@@ -254,7 +254,7 @@ class Config:
         super().__getattr__(self, name)
 
     @classmethod
-    def find_file(cls, deployment_config: str = None):
+    def find_file(cls, deployment_config: Optional[str] = None):
         config_file_env = os.getenv(f"{_env_prefix}{_env_config_file}")
         deployment_config_files = []
         for f in (deployment_config, config_file_env):

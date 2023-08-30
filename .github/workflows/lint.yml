@@ -17,6 +17,9 @@ jobs:
       - name: Add micromamba to GITHUB_PATH
         run: echo "${HOME}/micromamba-bin" >> "$GITHUB_PATH"
       - run: ln -s "${CONDA_PREFIX}" .venv # Necessary for pyright.
+      - run: pip install -e .[mypy]
+      - name: Add mypy to GITHUB_PATH
+        run: echo "${GITHUB_WORKSPACE}/.venv/bin" >> "$GITHUB_PATH"
       - uses: pre-commit/action@v3.0.0
         with:
           extra_args: --all-files --show-diff-on-failure

@@ -1,5 +1,6 @@
 import os
 
+from fastapi import FastAPI
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
     REGISTRY,
@@ -9,7 +10,6 @@ from prometheus_client import (
 from prometheus_client.multiprocess import MultiProcessCollector
 from starlette.requests import Request
 from starlette.responses import Response
-from starlette.types import ASGIApp
 
 from .middleware import PrometheusMiddleware
 
@@ -24,6 +24,6 @@ def metrics(request: Request) -> Response:
     return Response(generate_latest(registry), media_type=CONTENT_TYPE_LATEST)
 
 
-def init(app: ASGIApp):
+def init(app: FastAPI):
     app.add_middleware(PrometheusMiddleware)
     app.add_route("/metricsp", metrics)

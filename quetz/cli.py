@@ -87,20 +87,17 @@ def _alembic_config(db_url: str) -> AlembicConfig:
 
 
 def _run_migrations(
-    db_url: Optional[str] = None,
-    alembic_config: Optional[AlembicConfig] = None,
+    db_url: str,
     branch_name: str = "heads",
 ) -> None:
-    if db_url:
-        if db_url.startswith("postgre"):
-            db_engine = "PostgreSQL"
-        elif db_url.startswith("sqlite"):
-            db_engine = "SQLite"
-        else:
-            db_engine = db_url.split("/")[0]
-        logger.info('Running DB migrations on %s', db_engine)
-        if not alembic_config:
-            alembic_config = _alembic_config(db_url)
+    if db_url.startswith("postgre"):
+        db_engine = "PostgreSQL"
+    elif db_url.startswith("sqlite"):
+        db_engine = "SQLite"
+    else:
+        db_engine = db_url.split("/")[0]
+    logger.info('Running DB migrations on %s', db_engine)
+    alembic_config = _alembic_config(db_url)
     command.upgrade(alembic_config, branch_name)
 
 
@@ -135,6 +132,7 @@ def _make_migrations(
     logger.info('Making DB migrations on %r for %r', db_url, plugin_name)
     if not alembic_config and db_url:
         alembic_config = _alembic_config(db_url)
+    assert alembic_config is not None
 
     # find path
     if plugin_name == "quetz":
@@ -594,7 +592,7 @@ def start(
         uvicorn.run(
             "quetz.main:app",
             reload=reload,
-            reload_dirs=(quetz_src,),
+            reload_dirs=[quetz_src],
             port=port,
             proxy_headers=proxy_headers,
             host=host,

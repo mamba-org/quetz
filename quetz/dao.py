@@ -926,8 +926,8 @@ class Dao:
     def get_package_versions(
         self,
         package,
-        time_created_ge: datetime = None,
-        version_match_str: str = None,
+        time_created_ge: Optional[datetime] = None,
+        version_match_str: Optional[str] = None,
         skip: int = 0,
         limit: int = -1,
     ):

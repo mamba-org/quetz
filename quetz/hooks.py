@@ -11,7 +11,7 @@ hookspec = pluggy.HookspecMarker("quetz")
 
 
 @hookspec
-def register_router() -> 'fastapi.APIRouter':
+def register_router() -> 'fastapi.APIRouter':  # type: ignore[empty-body]
     """add extra endpoints to the url tree.
 
     It should return an :py:class:`fastapi.APIRouter` with new endpoints definitions.

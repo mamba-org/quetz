@@ -58,13 +58,32 @@ venv = ".venv"
 venvPath= "."
 
 [tool.mypy]
-ignore_missing_imports = true
+packages = [
+  "quetz"
+]
 plugins = [
+  "pydantic.mypy",
   "sqlmypy"
 ]
 disable_error_code = [
+  "annotation-unchecked",
   "misc"
 ]
+
+[[tool.mypy.overrides]]
+module = [
+  "adlfs",
+  "authlib",
+  "authlib.*",
+  "fsspec",
+  "gcsfs",
+  "pamela",
+  "sqlalchemy_utils",
+  "sqlalchemy_utils.*",
+  "s3fs",
+  "xattr"
+]
+ignore_missing_imports = true
 
 [tool.coverage.run]
 omit = [

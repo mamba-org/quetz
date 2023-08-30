@@ -44,7 +44,6 @@ dependencies:
   - pre-commit
   - pytest
   - pytest-mock
-  - rq
   - libcflib
   - mamba
   - conda-content-trust

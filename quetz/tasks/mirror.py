@@ -6,7 +6,7 @@ import shutil
 from concurrent.futures import ThreadPoolExecutor
 from http.client import IncompleteRead
 from tempfile import SpooledTemporaryFile
-from typing import List
+from typing import List, Optional
 
 import requests
 from fastapi import HTTPException, status
@@ -285,8 +285,8 @@ def initial_sync_mirror(
     dao: Dao,
     pkgstore: PackageStore,
     auth: authorization.Rules,
-    includelist: List[str] = None,
-    excludelist: List[str] = None,
+    includelist: Optional[List[str]] = None,
+    excludelist: Optional[List[str]] = None,
     skip_errors: bool = True,
     use_repodata: bool = False,
 ):
@@ -528,8 +528,8 @@ def synchronize_packages(
     pkgstore: PackageStore,
     auth: authorization.Rules,
     session: requests.Session,
-    includelist: List[str] = None,
-    excludelist: List[str] = None,
+    includelist: Optional[List[str]] = None,
+    excludelist: Optional[List[str]] = None,
     use_repodata: bool = False,
 ):
     logger.info(f"executing synchronize_packages task in a process {os.getpid()}")
