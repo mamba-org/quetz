@@ -1,10 +1,10 @@
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
+import json
 import logging
 import logging.config
 import os
-import json
 from distutils.util import strtobool
 from secrets import token_bytes
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Type, Union
@@ -386,7 +386,7 @@ class Config:
 
     def _correct_environ_config_list_value(self, value: str) -> Union[str, List[str]]:
         """Correct a value from environ that should be a list.
-        
+
         Parameters
         ----------
         value : str
@@ -398,13 +398,13 @@ class Config:
             Original value if no correction needed, else the corrected list of
             strings value.
         """
-        corrected_value = value
+        corrected_value: Union[str, List[str]] = value
         if isinstance(value, str):
             if "[" in value:
                 corrected_value = json.loads(value)
             elif "," in value and "[" not in value:
                 corrected_value = value.split(",")
-        
+
         return corrected_value
 
     def _get_environ_config(self) -> Dict[str, Any]:
@@ -424,7 +424,7 @@ class Config:
             if key.startswith(_env_prefix)
         }
         for var, value in quetz_var.items():
-            value = self._correct_environ_config_list_value(value)
+            parsed_value = self._correct_environ_config_list_value(value)
             splitted_key = var.split('_')
             config_key = splitted_key[1].lower()
             idx = 2
@@ -444,7 +444,7 @@ class Config:
                 continue
             # the first level is an entry, add it to the config.
             if isinstance(first_level, ConfigEntry):
-                config[first_level.name] = value
+                config[first_level.name] = parsed_value
             # the first level is a section.
             elif isinstance(first_level, ConfigSection):
                 entry = "_".join(splitted_key[idx:]).lower()
@@ -456,7 +456,9 @@ class Config:
                 # add the entry to the config.
                 if first_level.name not in config:
                     config[first_level.name]: Dict[str, Any] = {}
-                config[first_level.name]["_".join(splitted_key[idx:]).lower()] = value
+                config[first_level.name][
+                    "_".join(splitted_key[idx:]).lower()
+                ] = parsed_value
 
         return config
 
