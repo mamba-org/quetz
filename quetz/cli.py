@@ -461,6 +461,23 @@ def create(
         )
         raise typer.Abort()
 
+    if copy_conf:
+        if not os.path.exists(copy_conf):
+            typer.echo(f'Config file to copy does not exist {copy_conf}.', err=True)
+            raise typer.Abort()
+        typer.echo(f"Copying config file from {copy_conf} to {config_file}")
+        shutil.copyfile(copy_conf, config_file)
+
+    if not config_file.exists() and create_conf:
+        https = 'false' if dev else 'true'
+        conf = create_config(https=https)
+        with open(config_file, 'w') as f:
+            f.write(conf)
+
+    os.environ[_env_prefix + _env_config_file] = str(config_file.resolve())
+    config = Config(str(config_file))
+
+    # Overwrites the config variable
     if not config_file.exists() and not create_conf and not copy_conf:
         try:
             # If no config file is provided or created, try to get config
@@ -478,24 +495,6 @@ def create(
                 err=True,
             )
             raise typer.Abort()
-
-    if copy_conf:
-        if not os.path.exists(copy_conf):
-            typer.echo(f'Config file to copy does not exist {copy_conf}.', err=True)
-            raise typer.Abort()
-
-        typer.echo(f"Copying config file from {copy_conf} to {config_file}")
-        shutil.copyfile(copy_conf, config_file)
-
-    if not config_file.exists() and create_conf:
-        https = 'false' if dev else 'true'
-        conf = create_config(https=https)
-        with open(config_file, 'w') as f:
-            f.write(conf)
-
-    os.environ[_env_prefix + _env_config_file] = str(config_file.resolve())
-    if config_file.exists() or copy_conf or create_conf:
-        config = Config(str(config_file))
 
     deployment_folder.joinpath('channels').mkdir(exist_ok=True)
 

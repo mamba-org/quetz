@@ -111,6 +111,34 @@ def test_config_extend_require(config):
     config._config_map.pop()
 
 
+@pytest.fixture()
+def quetz_environ_config(database_url) -> None:
+    environ_values = {
+        "QUETZ_SESSION_HTTPS_ONLY": "False",
+        "QUETZ_LOGGING_LEVEL": "DEBUG",
+        "QUETZ_USERS_MEMBERS": '["dummy:happyuser"]',
+        "QUETZ_USERS_ADMINS": '["dummy:happyadmin"]',
+        "QUETZ_SESSION_SECRET": "test",
+        "QUETZ_SQLALCHEMY_DATABASE_URL": database_url,
+    }
+    for key, value in environ_values.items():
+        os.environ[key] = value
+    yield
+    for key in environ_values.keys():
+        if key in os.environ:
+            del os.environ[key]
+
+
+def test_config_without_input(
+    quetz_environ_config,
+):
+    c = Config()
+    assert c.session_https_only is False
+    assert c.logging_level == "DEBUG"
+    assert c.users_members == ["dummy:happyuser"]
+    assert c.users_admins == ["dummy:happyadmin"]
+
+
 @pytest.mark.parametrize(
     "config_extra", ["[extra_plugin]\nsome=\"testvalue\"\nconfig=\"othervalue\"\n"]
 )
