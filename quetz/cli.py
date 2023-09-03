@@ -177,7 +177,6 @@ def _set_user_roles(db: Session, config: Config):
         ]
 
         default_role = config.users_default_role
-
         for users, role in role_map:
             for username in users:
                 try:
@@ -186,8 +185,8 @@ def _set_user_roles(db: Session, config: Config):
                     # use github as default provider
                     raise ValueError(
                         "could not parse the users setting, please provide users in"
-                        "the format 'PROVIDER:USERNAME' where PROVIDER is one of"
-                        "'google', 'github', 'dummy', etc."
+                        " the format 'PROVIDER:USERNAME' where PROVIDER is one of"
+                        " 'google', 'github', 'dummy', etc."
                     )
                 logger.info(f"create user {username} with role {role}")
                 user = (
@@ -495,7 +494,8 @@ def create(
             f.write(conf)
 
     os.environ[_env_prefix + _env_config_file] = str(config_file.resolve())
-    config = Config(str(config_file))
+    if config_file.exists() or copy_conf or create_conf:
+        config = Config(str(config_file))
 
     deployment_folder.joinpath('channels').mkdir(exist_ok=True)
 

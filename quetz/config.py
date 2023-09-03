@@ -4,6 +4,7 @@
 import logging
 import logging.config
 import os
+import json
 from distutils.util import strtobool
 from secrets import token_bytes
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Type, Union
@@ -383,6 +384,29 @@ class Config:
                 return item
         return None
 
+    def _correct_environ_config_list_value(self, value: str) -> Union[str, List[str]]:
+        """Correct a value from environ that should be a list.
+        
+        Parameters
+        ----------
+        value : str
+            The env variable value to correct.
+
+        Returns
+        -------
+        corrected_value : Union[str, List[str]]
+            Original value if no correction needed, else the corrected list of
+            strings value.
+        """
+        corrected_value = value
+        if isinstance(value, str):
+            if "[" in value:
+                corrected_value = json.loads(value)
+            elif "," in value and "[" not in value:
+                corrected_value = value.split(",")
+        
+        return corrected_value
+
     def _get_environ_config(self) -> Dict[str, Any]:
         """Looks into environment variables if some matches with config_map.
 
@@ -400,6 +424,7 @@ class Config:
             if key.startswith(_env_prefix)
         }
         for var, value in quetz_var.items():
+            value = self._correct_environ_config_list_value(value)
             splitted_key = var.split('_')
             config_key = splitted_key[1].lower()
             idx = 2
