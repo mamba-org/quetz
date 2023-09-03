@@ -17,7 +17,6 @@ from tempfile import SpooledTemporaryFile, TemporaryFile
 from typing import Awaitable, Callable, List, Optional, Tuple, Type
 
 import pydantic
-import pydantic.error_wrappers
 import requests
 from fastapi import (
     APIRouter,
@@ -477,7 +476,7 @@ def delete_user(
 
 @api_router.get(
     "/users/{username}/role",
-    response_model=rest_models.UserRole,
+    response_model=rest_models.UserOptionalRole,
     tags=["users"],
 )
 def get_user_role(
@@ -732,7 +731,7 @@ def post_channel(
             detail="Cannot use both `includelist` and `excludelist` together.",
         )
 
-    user_attrs = new_channel.dict(exclude_unset=True)
+    user_attrs = new_channel.model_dump(exclude_unset=True)
 
     if "size_limit" in user_attrs:
         auth.assert_set_channel_size_limit()
@@ -789,7 +788,7 @@ def patch_channel(
 ):
     auth.assert_update_channel_info(channel.name)
 
-    user_attrs = channel_data.dict(exclude_unset=True)
+    user_attrs = channel_data.model_dump(exclude_unset=True)
 
     if "size_limit" in user_attrs:
         auth.assert_set_channel_size_limit()
@@ -912,7 +911,11 @@ def post_package(
     auth: authorization.Rules = Depends(get_rules),
     dao: Dao = Depends(get_dao),
 ):
-    user_id = auth.assert_user()
+    # here we use the owner_id as user_id. In case the authentication
+    # was done using an API Key, we want to attribute the uploaded package
+    # to the owner of that API Key and not the anonymous API Key itself.
+    user_id = auth.assert_owner()
+
     auth.assert_create_package(channel.name)
     pm.hook.validate_new_package(
         channel_name=channel.name,
@@ -1060,7 +1063,7 @@ def get_package_versions(
     version_list = []
 
     for version, profile, api_key_profile in version_profile_list:
-        version_data = rest_models.PackageVersion.from_orm(version)
+        version_data = rest_models.PackageVersion.model_validate(version)
         version_list.append(version_data)
 
     return version_list
@@ -1085,7 +1088,7 @@ def get_paginated_package_versions(
     version_list = []
 
     for version, profile, api_key_profile in version_profile_list['result']:
-        version_data = rest_models.PackageVersion.from_orm(version)
+        version_data = rest_models.PackageVersion.model_validate(version)
         version_list.append(version_data)
 
     return {
@@ -1371,7 +1374,6 @@ async def post_upload(
     )
 
     upload_hash = hashlib.sha256()
-
     body = TemporaryFile()
     async for chunk in request.stream():
         body.write(chunk)
@@ -1382,9 +1384,15 @@ async def post_upload(
             status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="Wrong SHA256 checksum"
         )
 
-    user_id = auth.assert_user()
+    # here we use the owner_id as user_id. In case the authentication
+    # was done using an API Key, we want to attribute the uploaded package
+    # to the owner of that API Key and not the anonymous API Key itself.
+    user_id = auth.assert_owner()
+
     auth.assert_create_package(channel_name)
     condainfo = CondaInfo((body), filename)
+    _assert_filename_package_name_consistent(filename, condainfo.info["name"])
+
     dest = os.path.join(condainfo.info["subdir"], filename)
 
     body.seek(0)
@@ -1453,6 +1461,17 @@ def post_file_to_channel(
     background_tasks.add_task(wrapped_bg_task, dao, pkgstore, channel.name)
 
 
+def _assert_filename_package_name_consistent(file_name: str, package_name: str):
+    """Helper function that verifies consistency between file name and package name"""
+    parts = file_name.rsplit("-", 2)
+
+    if parts[0] != package_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"package file name and info files do not match {file_name}",
+        )
+
+
 @retry(
     stop=stop_after_attempt(3),
     retry=(retry_if_result(lambda x: x is None)),
@@ -1469,13 +1488,8 @@ def _extract_and_upload_package(file, channel_name, channel_proxylist):
         raise e
 
     dest = os.path.join(conda_info.info["subdir"], file.filename)
-    parts = file.filename.rsplit("-", 2)
 
-    if parts[0] != conda_info.info["name"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"package file name and info files do not match {file.filename}",
-        )
+    _assert_filename_package_name_consistent(file.filename, conda_info.info["name"])
 
     if channel_proxylist and conda_info.info["name"] in channel_proxylist:
         # do not upload files that are proxied
@@ -1504,7 +1518,10 @@ def handle_package_files(
     package=None,
     is_mirror_op=False,
 ):
-    user_id = auth.assert_user()
+    # here we use the owner_id as user_id. In case the authentication
+    # was done using an API Key, we want to attribute the uploaded package
+    # to the owner of that API Key and not the anonymous API Key itself.
+    user_id = auth.assert_owner()
 
     # quick fail if not allowed to upload
     # note: we're checking later that `parts[0] == conda_info.package_name`
@@ -1632,7 +1649,7 @@ def handle_package_files(
                     summary=str(condainfo.about.get("summary", "n/a")),
                     description=str(condainfo.about.get("description", "n/a")),
                 )
-            except pydantic.error_wrappers.ValidationError as err:
+            except pydantic.ValidationError as err:
                 _delete_file(condainfo, file.filename)
                 raise errors.ValidationError(
                     "Validation Error for package: "

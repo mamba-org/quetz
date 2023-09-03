@@ -55,7 +55,7 @@ class User(Base):
         'Profile', uselist=False, back_populates='user', cascade="all,delete-orphan"
     )
 
-    role = Column(String)
+    role = Column(String, nullable=True)
 
     @classmethod
     def find(cls, db, name):

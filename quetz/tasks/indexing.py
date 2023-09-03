@@ -222,7 +222,7 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
             logger.exception("Exception post_index_creation:")
 
         files[sdir] = []
-        packages[sdir] = raw_repodata["packages"]
+        packages[sdir] = raw_repodata["packages"] | raw_repodata["packages.conda"]
 
         repodata = json.dumps(raw_repodata, indent=2, sort_keys=False)
 

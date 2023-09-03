@@ -39,19 +39,59 @@ class Rules:
         self.session = session
         self.db = db
 
+    def get_valid_api_key(self) -> Optional[ApiKey]:
+        if not self.API_key:
+            return None
+        return (
+            self.db.query(ApiKey)
+            .filter(ApiKey.key == self.API_key, ~ApiKey.deleted)
+            .filter(
+                ApiKey.key == self.API_key,
+                or_(ApiKey.expire_at >= date.today(), ApiKey.expire_at.is_(None)),
+            )
+            .one_or_none()
+        )
+
+    def get_owner(self) -> Optional[bytes]:
+        """
+        gets the id of the owner of the authenticated session, if any. Either:
+          a) the owner of the API key that is used for authentication
+          b) the user_id of the encrypted session cookie
+        """
+        owner_id = None
+
+        if self.API_key:
+            api_key = self.get_valid_api_key()
+            if api_key:
+                owner_id = api_key.owner_id
+        else:
+            user_id = self.session.get("user_id")
+            if user_id:
+                owner_id = uuid.UUID(user_id).bytes
+
+        return owner_id
+
+    def assert_owner(self) -> bytes:
+        owner_id = self.get_owner()
+
+        if not owner_id or not self.db.query(User).filter(User.id == owner_id).count():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not logged in",
+            )
+
+        return owner_id
+
     def get_user(self) -> Optional[bytes]:
+        """
+        gets the id of the user of the authenticated session, if any. Either:
+          a) the user_id of the API key (not its owner!) that is used for authentication
+          b) the user_id of the encrypted session cookie
+        """
         user_id = None
 
         if self.API_key:
-            api_key = (
-                self.db.query(ApiKey)
-                .filter(ApiKey.key == self.API_key, ~ApiKey.deleted)
-                .filter(
-                    ApiKey.key == self.API_key,
-                    or_(ApiKey.expire_at >= date.today(), ApiKey.expire_at.is_(None)),
-                )
-                .one_or_none()
-            )
+            api_key = self.get_valid_api_key()
             if api_key:
                 user_id = api_key.user_id
         else:

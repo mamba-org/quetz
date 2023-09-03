@@ -1,17 +1,20 @@
+import hashlib
 import json
 import os
 import time
 from pathlib import Path
-from typing import BinaryIO
+from typing import BinaryIO, Callable, Union
 
 import pytest
 
 from quetz import hookimpl
-from quetz.authorization import MAINTAINER, MEMBER, OWNER
+from quetz.authorization import MAINTAINER, MEMBER, OWNER, SERVER_OWNER
 from quetz.condainfo import CondaInfo
 from quetz.config import Config
+from quetz.dao import Dao
 from quetz.db_models import ChannelMember, Package, PackageMember, PackageVersion
 from quetz.errors import ValidationError
+from quetz.rest_models import BaseApiKey, Channel
 from quetz.tasks.indexing import update_indexes
 
 
@@ -326,6 +329,45 @@ def test_upload_package_version(
         assert package_filename in os.listdir(package_dir)
 
 
+def _upload_file_1(
+    auth_client,
+    public_channel,
+    public_package,
+    package_filename: str,
+    force: bool = False,
+):
+    """Upload a file using /channels/{channel_name}/packages/{package_name}/files/"""
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = auth_client.post(
+            f"/api/channels/{public_channel.name}/packages/"
+            f"{public_package.name}/files/",
+            files=files,
+            data={"force": force},
+        )
+    return response
+
+
+def _upload_file_2(
+    auth_client,
+    public_channel,
+    public_package,
+    package_filename: str,
+    force: bool = False,
+):
+    """Upload a file using /channels/{channel_name}/upload/{file_name}"""
+
+    with open(package_filename, "rb") as fid:
+        body_bytes = fid.read()
+    response = auth_client.post(
+        f"/api/channels/{public_channel.name}/upload/{package_filename}",
+        content=body_bytes,
+        params={"force": force, "sha256": hashlib.sha256(body_bytes).hexdigest()},
+    )
+    return response
+
+
+@pytest.mark.parametrize("upload_function", [_upload_file_1, _upload_file_2])
 def test_upload_package_version_wrong_filename(
     auth_client,
     public_channel,
@@ -334,18 +376,16 @@ def test_upload_package_version_wrong_filename(
     db,
     config,
     remove_package_versions,
+    upload_function: Callable,
 ):
     pkgstore = config.get_package_store()
 
     package_filename = "my-package-0.1-0.tar.bz2"
     os.rename("test-package-0.1-0.tar.bz2", package_filename)
-    with open(package_filename, "rb") as fid:
-        files = {"files": (package_filename, fid)}
-        response = auth_client.post(
-            f"/api/channels/{public_channel.name}/packages/"
-            f"{public_package.name}/files/",
-            files=files,
-        )
+
+    response = upload_function(
+        auth_client, public_channel, public_package, package_filename
+    )
 
     package_dir = Path(pkgstore.channels_dir) / public_channel.name / 'linux-64'
 
@@ -357,6 +397,15 @@ def test_upload_package_version_wrong_filename(
     assert not os.path.exists(package_dir)
 
 
+def sha256(path: Union[Path, str]) -> str:
+    sha = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(2**16), b""):
+            sha.update(chunk)
+    return sha.hexdigest()
+
+
+@pytest.mark.parametrize("upload_function", [_upload_file_1, _upload_file_2])
 @pytest.mark.parametrize("package_name", ["test-package"])
 def test_upload_duplicate_package_version(
     auth_client,
@@ -366,33 +415,40 @@ def test_upload_duplicate_package_version(
     db,
     config,
     remove_package_versions,
+    upload_function: Callable,
 ):
     pkgstore = config.get_package_store()
 
     package_filename = "test-package-0.1-0.tar.bz2"
     package_filename_copy = "test-package-0.1-0_copy.tar.bz2"
 
-    with open(package_filename, "rb") as fid:
-        files = {"files": (package_filename, fid)}
-        response = auth_client.post(
-            f"/api/channels/{public_channel.name}/packages/"
-            f"{public_package.name}/files/",
-            files=files,
-        )
+    file_sha = sha256(package_filename)
+    file_copy_sha = sha256(package_filename_copy)
+    assert (
+        file_sha != file_copy_sha
+    ), "Sanity check: Test files must have different hashes for this test."
+    file_size = os.path.getsize(package_filename)
+    file_copy_size = os.path.getsize(package_filename_copy)
+    assert (
+        file_size != file_copy_size
+    ), "Sanity check: Test files must have different sizes for this test."
 
-    # Get repodata content
-    package_dir = Path(pkgstore.channels_dir) / public_channel.name / 'linux-64'
-    with open(package_dir / 'repodata.json', 'r') as fd:
-        repodata_init = json.load(fd)
+    upload_function(auth_client, public_channel, public_package, package_filename)
+
+    def get_repodata():
+        """Helper function to read repo data"""
+        package_dir = Path(pkgstore.channels_dir) / public_channel.name / 'linux-64'
+        return json.loads((package_dir / 'repodata.json').read_text())
+
+    repodata_init = get_repodata()
+    assert repodata_init["packages"][package_filename]["sha256"] == file_sha
 
     # Try submitting the same package without 'force' flag
-    with open(package_filename, "rb") as fid:
-        files = {"files": (package_filename, fid)}
-        response = auth_client.post(
-            f"/api/channels/{public_channel.name}/packages/"
-            f"{public_package.name}/files/",
-            files=files,
-        )
+    response = upload_function(
+        auth_client, public_channel, public_package, package_filename
+    )
+
+    # Expect 409 here
     assert response.status_code == 409
     detail = response.json()['detail']
     assert "Duplicate" in detail
@@ -401,32 +457,37 @@ def test_upload_duplicate_package_version(
     os.remove(package_filename)
     os.rename(package_filename_copy, package_filename)
 
-    # Ensure the 'time_modified' value change in repodata.json
+    # Ensure the 'time_modified' value changes in repodata.json
     time.sleep(1)
 
     # Submit the same package with 'force' flag
-    with open(package_filename, "rb") as fid:
-        files = {"files": (package_filename, fid)}
-        response = auth_client.post(
-            f"/api/channels/{public_channel.name}/packages/"
-            f"{public_package.name}/files/",
-            files=files,
-            data={"force": True},
-        )
-
+    response = upload_function(
+        auth_client, public_channel, public_package, package_filename, force=True
+    )
     assert response.status_code == 201
 
     # Check that repodata content has been updated
-    with open(package_dir / 'repodata.json', 'r') as fd:
-        repodata = json.load(fd)
+    repodata = get_repodata()
 
+    # Info should match
     assert repodata_init["info"] == repodata["info"]
+
+    # Package keys should match
     assert repodata_init["packages"].keys() == repodata["packages"].keys()
     repodata_init_pkg = repodata_init["packages"][package_filename]
     repodata_pkg = repodata["packages"][package_filename]
-    assert repodata_init_pkg["time_modified"] != repodata_pkg["time_modified"]
-    assert repodata_init_pkg["md5"] != repodata_pkg["md5"]
-    assert repodata_init_pkg["sha256"] != repodata_pkg["sha256"]
+
+    # Hashes should match pre-upload expectation
+    assert repodata_init_pkg["sha256"] == file_sha
+    assert repodata_pkg["sha256"] == file_copy_sha
+
+    # Sizes should match pre-upload expectation
+    assert repodata_init_pkg["size"] == file_size
+    assert repodata_pkg["size"] == file_copy_size
+
+    # Upload-related metadata should not match
+    for key in "time_modified", "md5", "sha256":
+        assert repodata_init_pkg[key] != repodata_pkg[key]
 
 
 @pytest.mark.parametrize("package_name", ["test-package"])
@@ -548,7 +609,7 @@ def test_validate_package_names(auth_client, public_channel, remove_package_vers
 @pytest.mark.parametrize(
     "package_name,msg",
     [
-        ("TestPackage", "string does not match"),
+        ("TestPackage", "String should match"),
         ("test-package", None),
     ],
 )
@@ -732,3 +793,140 @@ def test_package_channel_data_attributes(
     content = response.json()
     assert content['platforms'] == ['linux-64']
     assert content['url'].startswith("https://")
+
+
+@pytest.fixture
+def owner(db, dao: Dao):
+    # create an owner with OWNER role
+    owner = dao.create_user_with_role("owner", role=SERVER_OWNER)
+
+    yield owner
+
+    db.delete(owner)
+    db.commit()
+
+
+@pytest.fixture
+def private_channel(db, dao: Dao, owner):
+    # create a channel
+    channel_data = Channel(name='private-channel', private=True)
+    channel = dao.create_channel(channel_data, owner.id, "owner")
+
+    yield channel
+
+    db.delete(channel)
+    db.commit()
+
+
+@pytest.fixture
+def private_package(db, owner, private_channel, dao):
+    package_data = Package(name='test-package')
+
+    package = dao.create_package(private_channel.name, package_data, owner.id, "owner")
+
+    yield package
+
+    db.delete(package)
+    db.commit()
+
+
+@pytest.fixture
+def api_key(db, dao: Dao, owner, private_channel):
+    # create an api key with restriction
+    key = dao.create_api_key(
+        owner.id,
+        BaseApiKey.model_validate(
+            dict(
+                description="test api key",
+                expire_at="2099-12-31",
+                roles=[
+                    {
+                        'role': 'maintainer',
+                        'package': None,
+                        'channel': private_channel.name,
+                    }
+                ],
+            )
+        ),
+        "API key with role restruction",
+    )
+
+    yield key
+
+    # delete API Key
+    key.deleted = True
+    db.commit()
+
+
+def test_upload_package_with_api_key(client, dao: Dao, owner, private_channel, api_key):
+    # set api key of the anonymous user 'owner_key' to headers
+    client.headers['X-API-Key'] = api_key.key
+
+    # post new package
+    response = client.post(
+        f"/api/channels/{private_channel.name}/packages",
+        json={"name": "test-package", "summary": "none", "description": "none"},
+    )
+    assert response.status_code == 201
+
+    # we used the anonymous user of the API key for upload,
+    # but expect the owner to be the package owner
+    member = dao.get_package_member(
+        private_channel.name, 'test-package', username=owner.username
+    )
+    assert member
+
+
+def test_upload_file_to_package_with_api_key(
+    dao: Dao, client, owner, private_channel, private_package, api_key
+):
+    # set api key of the anonymous user 'owner_key' to headers
+    client.headers['X-API-Key'] = api_key.key
+
+    package_filename = "test-package-0.1-0.tar.bz2"
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = client.post(
+            f"/api/channels/{private_channel.name}/packages/"
+            f"{private_package.name}/files/",
+            files=files,
+        )
+        assert response.status_code == 201
+
+    # we used the anonymous user of the API key for upload,
+    # but expect the owner to be the package owner
+    version = dao.get_package_version_by_filename(
+        channel_name=private_channel.name,
+        package_name=private_package.name,
+        filename=package_filename,
+        platform='linux-64',
+    )
+    assert version
+    assert version.uploader == owner
+
+
+def test_upload_file_to_channel_with_api_key(
+    dao: Dao, client, owner, private_channel, api_key
+):
+    # set api key of the anonymous user 'owner_key' to headers
+    client.headers['X-API-Key'] = api_key.key
+
+    package_filename = "test-package-0.1-0.tar.bz2"
+    with open(package_filename, "rb") as fid:
+        files = {"files": (package_filename, fid)}
+        response = client.post(
+            f"/api/channels/{private_channel.name}/files/",
+            files=files,
+        )
+        assert response.status_code == 201
+
+    # we used the anonymous user of the API key for upload,
+    # but expect the owner to be the package owner
+    version = dao.get_package_version_by_filename(
+        channel_name=private_channel.name,
+        package_name='test-package',
+        filename=package_filename,
+        platform='linux-64',
+    )
+    assert version
+    assert version.uploader == owner
