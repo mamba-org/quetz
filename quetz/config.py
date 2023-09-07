@@ -164,6 +164,19 @@ class Config:
             required=False,
         ),
         ConfigSection(
+            "pamauthenticator",
+            [
+                ConfigEntry("provider", str, default="pam", required=False),
+                ConfigEntry("service", str, default="login", required=False),
+                ConfigEntry("encoding", str, default="utf8", required=False),
+                ConfigEntry("check_account", bool, default=True, required=False),
+                ConfigEntry("admin_groups", list, default=list, required=False),
+                ConfigEntry("maintainer_groups", list, default=list, required=False),
+                ConfigEntry("member_groups", list, default=list, required=False),
+            ],
+            required=False,
+        ),
+        ConfigSection(
             "logging",
             [
                 ConfigEntry("level", str, default="INFO"),

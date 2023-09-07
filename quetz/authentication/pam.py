@@ -8,7 +8,7 @@ from fastapi import Request
 
 from quetz.authentication.base import BaseAuthenticator, FormHandlers, UserProfile
 from quetz.authorization import ServerRole
-from quetz.config import Config, ConfigEntry, ConfigSection
+from quetz.config import Config
 
 logger = logging.getLogger("quetz")
 
@@ -57,23 +57,6 @@ try:
         maintainer_groups: List[str] = []
         member_groups: List[str] = []
 
-        def _make_config(self):
-            section = ConfigSection(
-                "pamauthenticator",
-                [
-                    ConfigEntry("provider", str, default="pam", required=False),
-                    ConfigEntry("service", str, default="login", required=False),
-                    ConfigEntry("encoding", str, default="utf8", required=False),
-                    ConfigEntry("check_account", bool, default=True, required=False),
-                    ConfigEntry("admin_groups", list, default=list, required=False),
-                    ConfigEntry(
-                        "maintainer_groups", list, default=list, required=False
-                    ),
-                    ConfigEntry("member_groups", list, default=list, required=False),
-                ],
-            )
-            return [section]
-
         def _get_group_id_by_name(self, groupname):
             return grp.getgrnam(groupname).gr_gid
 
@@ -94,9 +77,6 @@ try:
             return os.getgrouplist(username, user_gid)
 
         def configure(self, config: Config):
-            config_options = self._make_config()
-            config.register(config_options)
-
             if config.configured_section("pamauthenticator"):
                 self.provider = config.pamauthenticator_provider
                 self.service = config.pamauthenticator_service
