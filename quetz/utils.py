@@ -95,9 +95,16 @@ def check_package_membership(
     Check if a package should be in a channel according
     to the rules defined in the channel metadata.
 
-    Since for a given package and includelist, a package can be not in the includelist
-    of one remote channel but in the includelist of another remote channel, the result
-    of this check can also be to ignore the current package.
+    The function returns a representation of the treatment the package
+    should receive (include / exclude / ignore).
+
+    A package should be:
+    * included if is in the includelist (for this channel)
+    * excluded if is in the excludelist (for this channel)
+        this means that existing versions of the package will be removed
+    * ignored if it does not match the includelist for this channel
+        this does not remove the package since it might
+        match the includelist of another channel
 
     Args:
         channel (Channel): mirror Channel object returned from the database
