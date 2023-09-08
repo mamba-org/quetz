@@ -704,9 +704,15 @@ def post_channel(
     if not new_channel.mirror_channel_url:
         auth.assert_create_channel()
 
-    is_mirror = new_channel.mirror_channel_url and new_channel.mirror_mode == "mirror"
+    is_mirror = (
+        new_channel.mirror_channel_url
+        and new_channel.mirror_mode == rest_models.MirrorMode.mirror
+    )
 
-    is_proxy = new_channel.mirror_channel_url and new_channel.mirror_mode == "proxy"
+    is_proxy = (
+        new_channel.mirror_channel_url
+        and new_channel.mirror_mode == rest_models.MirrorMode.proxy
+    )
 
     if is_mirror:
         auth.assert_create_mirror_channel()
@@ -1811,7 +1817,10 @@ def serve_path(
             return RedirectResponse(f"{redirect_url}/{path}")
 
     # note: proxy mode only works with one mirror url (checked on channel creation)
-    if channel.mirror_channel_urls and channel.mirror_mode == "proxy":
+    if (
+        channel.mirror_channel_urls
+        and channel.mirror_mode == rest_models.MirrorMode.proxy
+    ):
         proxy_url = channel.mirror_channel_urls[0]
         repository = RemoteRepository(proxy_url, session)
         if not pkgstore.file_exists(channel.name, path):
