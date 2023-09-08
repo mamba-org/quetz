@@ -1488,6 +1488,25 @@ def _assert_filename_package_name_consistent(file_name: str, package_name: str):
     after=after_log(logger, logging.WARNING),
 )
 def _extract_and_upload_package(file, channel_name, channel_proxylist):
+    """
+    Extracts information from a conda package and uploads it to a package store.
+
+    This is automatically reried on error (indicating an unsuccessful upload)
+    The wait time between retries is exponentially increasing.
+
+    Parameters:
+        file (object): The conda package file object to be uploaded.
+        channel_name (str): The name of the channel where the package will be uploaded.
+        channel_proxylist (list): A list of package names that are proxied.
+        If the package is in this list, it will not be uploaded.
+
+    Returns:
+        conda_info: contains extracted information from the conda package.
+
+    Raises:
+        Exception: If there is an error in extracting conda info from the package
+        or in uploading the package to the store.
+    """
     try:
         conda_info = CondaInfo(file.file, file.filename)
     except Exception as e:
