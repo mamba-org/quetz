@@ -335,7 +335,7 @@ class Dao:
         return channel
 
     def remove_package(self, channel_name: str, package_name: str):
-    """Deletes a package and all package versions and members associated to it."""
+        """Deletes a package and all package versions and members associated to it."""
         self.db.query(Package).filter(Package.channel_name == channel_name).filter(
             Package.name == package_name
         ).delete()
@@ -596,7 +596,6 @@ class Dao:
         return self.db.query(Channel).filter(Channel.name == channel_name).one_or_none()
 
     def get_package(self, channel_name: str, package_name: str) -> Optional[Package]:
-        print(f"get_package: {channel_name}{package_name}")
         return (
             self.db.query(Package)
             .join(Channel)
