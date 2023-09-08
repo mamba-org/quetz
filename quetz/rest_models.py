@@ -7,12 +7,19 @@ import json
 import uuid
 from datetime import date, datetime
 from enum import Enum
-from typing import Annotated, Dict, Generic, List, Optional, TypeVar, Union
+from typing import Dict, Generic, List, NewType, Optional, TypeVar, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    constr,
+    field_validator,
+    model_validator,
+)
 
 T = TypeVar('T')
-URLType = Annotated[str, Field(pattern="^(http|https)://.+")]
+URLType = NewType('URLType', constr(pattern="^(http|https)://.+|None|^(\\[.*\\])+$"))
 
 
 class BaseProfile(BaseModel):
@@ -66,9 +73,7 @@ class ChannelBase(BaseModel):
     private: bool = Field(True, title="channel should be private")
     size_limit: Optional[int] = Field(None, title="size limit of the channel")
     ttl: int = Field(36000, title="ttl of the channel")
-    mirror_channel_url: Optional[Union[URLType, List[URLType]]] = Field(
-        None,
-    )
+    mirror_channel_url: Optional[Union[URLType, List[URLType]]] = Field(None)
     mirror_mode: Optional[MirrorMode] = Field(None, nullable=True)
 
     @field_validator("size_limit")
