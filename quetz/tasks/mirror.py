@@ -684,12 +684,12 @@ def synchronize_packages(
     for mirror_channel_url in new_channel.mirror_channel_urls:
         remote_repo = RemoteRepository(mirror_channel_url, session)
 
-        auth.assert_user()
+        user_id = auth.assert_user()
 
         channel_data = _load_remote_channel_data(remote_repo)
         subdirs = None
-        if use_repodata:
-            # create_packages_from_channeldata(channel_name, user_id, channel_data, dao)
+        if use_repodata and includelist is None and excludelist is None:
+            create_packages_from_channeldata(channel_name, user_id, channel_data, dao)
             subdirs = channel_data.get("subdirs", [])
 
         # if no channel data use known architectures
