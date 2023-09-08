@@ -1395,9 +1395,6 @@ async def post_upload(
 
     dest = os.path.join(condainfo.info["subdir"], filename)
 
-    body.seek(0)
-    await pkgstore.add_package_async(body, channel_name, dest)
-
     package_name = str(condainfo.info.get("name"))
     package_data = rest_models.Package(
         name=package_name,
@@ -1433,6 +1430,9 @@ async def post_upload(
     except IntegrityError:
         logger.debug(f"duplicate package '{package_name}' in channel '{channel_name}'")
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Duplicate")
+
+    body.seek(0)
+    await pkgstore.add_package_async(body, channel_name, dest)
 
     pm.hook.post_add_package_version(version=version, condainfo=condainfo)
 
@@ -1478,7 +1478,7 @@ def _assert_filename_package_name_consistent(file_name: str, package_name: str):
     wait=wait_exponential(multiplier=1, min=4, max=10),
     after=after_log(logger, logging.WARNING),
 )
-def _extract_and_upload_package(file, channel_name, channel_proxylist):
+def _extract_and_upload_package(file, channel_name, channel_proxylist, force: bool):
     try:
         conda_info = CondaInfo(file.file, file.filename)
     except Exception as e:
@@ -1495,6 +1495,10 @@ def _extract_and_upload_package(file, channel_name, channel_proxylist):
         # do not upload files that are proxied
         logger.info(f"Skip upload of proxied file {file.filename}")
         return conda_info
+
+    # Make sure that we do not upload over existing files
+    if pkgstore.file_exists(channel_name, dest) and not force:
+        raise FileExistsError(f"{file.filename}")
 
     try:
         file.file.seek(0)
@@ -1573,8 +1577,14 @@ def handle_package_files(
                     files,
                     (channel.name,) * len(files),
                     (channel_proxylist,) * len(files),
+                    (force,) * len(files),
                 )
             ]
+        except FileExistsError as e:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Duplicate {str(e)}",
+            )
         except exceptions.PackageError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=e.detail
