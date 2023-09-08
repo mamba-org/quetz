@@ -68,8 +68,8 @@ class PackageStore(abc.ABC):
     @abc.abstractmethod
     def create_channel(self, name):
         """
-        create channel with given name, depending on backend,
-        e.g. create a directory or bucket
+        create backend resources for a channel with a given name,
+        e.g. create a directory or bucket.
         """
         pass
 
