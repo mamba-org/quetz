@@ -28,8 +28,8 @@ from quetz.utils import (
     TicToc,
     add_static_file,
     check_package_membership,
+    parse_package_filename,
 )
-from utils import parse_package_filename
 
 # copy common subdirs from conda:
 # https://github.com/conda/conda/blob/a78a2387f26a188991d771967fc33aa1fb5bb810/conda/base/constants.py#L63
