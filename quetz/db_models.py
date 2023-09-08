@@ -173,6 +173,7 @@ class Package(Base):
         ),
         viewonly=True,
         lazy="select",
+        cascade="all,delete-orphan",
     )
 
     @property

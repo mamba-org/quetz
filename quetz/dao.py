@@ -334,20 +334,17 @@ class Dao:
 
         return channel
 
-    def remove_package(self, channel_name: str, package_name: str):
-        """Deletes a package and all package versions and members associated to it."""
-        self.db.query(Package).filter(Package.channel_name == channel_name).filter(
-            Package.name == package_name
-        ).delete()
-        self.db.query(PackageVersion).filter(
-            PackageVersion.channel_name == channel_name
-        ).filter(PackageVersion.package_name == package_name).delete()
+    def remove_package(self, package_name: str, channel_name: Optional[str] = None):
+        """
+        Remove package from database but only from the given channel if specified.
+        Due to cascading behaviour, this will also remove all package versions and
+        package members.
+        """
+        query = self.db.query(Package).filter(Package.name == package_name)
+        if channel_name:
+            query = query.filter(Package.channel_name == channel_name)
 
-        # remove PackageMember entries as well
-        self.db.query(PackageMember).filter(
-            PackageMember.channel_name == channel_name
-        ).filter(PackageMember.package_name == package_name).delete()
-
+        query.delete()
         self.db.commit()
 
     def cleanup_channel_db(

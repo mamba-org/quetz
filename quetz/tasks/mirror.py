@@ -543,7 +543,7 @@ def remove_packages(
 
     for package_spec in set(p[1] for p in remove_batch):
         package_name, version, build_string = parse_package_filename(package_spec)
-        dao.remove_package(channel.name, package_name=package_name)
+        dao.remove_package(package_name=package_name, channel_name=channel.name)
         if pkgstore.file_exists(channel.name, package_spec):
             pkgstore.delete_file(channel.name, destination=package_spec)
         removal_performed = True
