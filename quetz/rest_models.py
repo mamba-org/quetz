@@ -184,6 +184,10 @@ class Channel(ChannelBase):
                 "'mirror_mode' provided but 'mirror_channel_url' is undefined"
             )
 
+        if mirror_mode == MirrorMode.proxy:
+            if isinstance(mirror_url, list) and len(mirror_url) > 1:
+                raise ValueError("'proxy' mode requires a single 'mirror_channel_url'")
+
         return self
 
 

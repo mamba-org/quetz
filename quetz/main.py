@@ -1810,14 +1810,9 @@ def serve_path(
             redirect_url = channel.mirror_channel_urls[0]
             return RedirectResponse(f"{redirect_url}/{path}")
 
-    # note: you can only proxy, when you have exactly one remote channel in your config
+    # note: proxy mode only works with one mirror url (checked on channel creation)
     if channel.mirror_channel_urls and channel.mirror_mode == "proxy":
         proxy_url = channel.mirror_channel_urls[0]
-        if len(channel.mirror_channel_urls) > 1:
-            logger.warning(
-                "More than one mirror channel url configured "
-                f"for channel {channel.name}. Proxying only to the first one."
-            )
         repository = RemoteRepository(proxy_url, session)
         if not pkgstore.file_exists(channel.name, path):
             download_remote_file(repository, pkgstore, channel.name, path)
