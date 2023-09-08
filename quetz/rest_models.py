@@ -7,11 +7,19 @@ import json
 import uuid
 from datetime import date, datetime
 from enum import Enum
-from typing import Generic, List, Optional, TypeVar
+from typing import Dict, Generic, List, NewType, Optional, TypeVar, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    constr,
+    field_validator,
+    model_validator,
+)
 
 T = TypeVar('T')
+URLType = NewType('URLType', constr(pattern="^(http|https)://.+|None|^(\\[.*\\])+$"))
 
 
 class BaseProfile(BaseModel):
@@ -65,8 +73,8 @@ class ChannelBase(BaseModel):
     private: bool = Field(True, title="channel should be private")
     size_limit: Optional[int] = Field(None, title="size limit of the channel")
     ttl: int = Field(36000, title="ttl of the channel")
-    mirror_channel_url: Optional[str] = Field(None, pattern="^(http|https)://.+")
-    mirror_mode: Optional[MirrorMode] = Field(None)
+    mirror_channel_url: Optional[Union[URLType, List[URLType]]] = Field(None)
+    mirror_mode: Optional[MirrorMode] = Field(None, nullable=True)
 
     @field_validator("size_limit")
     @classmethod
@@ -117,11 +125,27 @@ class ChannelActionEnum(str, Enum):
 
 
 class ChannelMetadata(BaseModel):
-    includelist: Optional[List[str]] = Field(
+
+    """
+    examples:
+    - includelist: ["numpy", "pandas"]
+        this allows to mirror only numpy and pandas
+        irrespective of the channel they come from
+    - includelist: {"channel1: ["numpy", "pandas"]}, {"channel2": ["scipy"]}
+        this allows to mirror numpy and pandas from channel1 and scipy from channel2
+    - proxylist: ["numpy", "pandas"]
+        this will redirect all download for these packages to the original channel
+    """
+
+    includelist: Optional[
+        Union[List[str], Dict[Union[URLType, str], List[str]]]
+    ] = Field(
         None,
         title="list of packages to include while creating a channel",
     )
-    excludelist: Optional[List[str]] = Field(
+    excludelist: Optional[
+        Union[List[str], Dict[Union[URLType, str], List[str]]]
+    ] = Field(
         None,
         title="list of packages to exclude while creating a channel",
     )
@@ -134,7 +158,20 @@ class ChannelMetadata(BaseModel):
 
 class Channel(ChannelBase):
     metadata: ChannelMetadata = Field(
-        default_factory=ChannelMetadata, title="channel metadata", examples={}
+        default_factory=ChannelMetadata,
+        title="channel metadata",
+        examples=[
+            {},
+            {
+                "includelist": ["numpy", "pandas"],
+            },
+            {
+                "includelist": {
+                    "channel1": ["numpy", "pandas"],
+                    "channel2": ["scipy"],
+                },
+            },
+        ],
     )
 
     actions: Optional[List[ChannelActionEnum]] = Field(
@@ -156,6 +193,10 @@ class Channel(ChannelBase):
             raise ValueError(
                 "'mirror_mode' provided but 'mirror_channel_url' is undefined"
             )
+
+        if mirror_mode == MirrorMode.proxy:
+            if isinstance(mirror_url, list) and len(mirror_url) > 1:
+                raise ValueError("'proxy' mode requires a single 'mirror_channel_url'")
 
         return self
 

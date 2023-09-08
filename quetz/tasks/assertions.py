@@ -1,9 +1,14 @@
+from quetz.rest_models import MirrorMode
+
+
 def can_channel_synchronize(channel):
-    return channel.mirror_channel_url and (channel.mirror_mode == "mirror")
+    return channel.mirror_channel_urls and (
+        channel.mirror_mode in [MirrorMode.proxy, MirrorMode.mirror]
+    )
 
 
 def can_channel_synchronize_metrics(channel):
-    return not channel.mirror_channel_url
+    return not channel.mirror_channel_urls
 
 
 def can_channel_generate_indexes(channel):

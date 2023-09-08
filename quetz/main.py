@@ -704,9 +704,15 @@ def post_channel(
     if not new_channel.mirror_channel_url:
         auth.assert_create_channel()
 
-    is_mirror = new_channel.mirror_channel_url and new_channel.mirror_mode == "mirror"
+    is_mirror = (
+        new_channel.mirror_channel_url
+        and new_channel.mirror_mode == rest_models.MirrorMode.mirror
+    )
 
-    is_proxy = new_channel.mirror_channel_url and new_channel.mirror_mode == "proxy"
+    is_proxy = (
+        new_channel.mirror_channel_url
+        and new_channel.mirror_mode == rest_models.MirrorMode.proxy
+    )
 
     if is_mirror:
         auth.assert_create_mirror_channel()
@@ -742,6 +748,7 @@ def post_channel(
         else:
             size_limit = None
 
+    # create database model (channel) from rest model (new_channel)
     channel = dao.create_channel(new_channel, user_id, authorization.OWNER, size_limit)
     pkgstore.create_channel(new_channel.name)
     if not is_proxy:
@@ -749,22 +756,24 @@ def post_channel(
 
     # register mirror
     if is_mirror and register_mirror:
-        mirror_url = str(new_channel.mirror_channel_url)
-        mirror_url = mirror_url.replace("get", "api/channels")
-        headers = {"x-api-key": mirror_api_key} if mirror_api_key else {}
-        api_endpoint = str(request.url.replace(query=None)) + '/' + new_channel.name
-        request.url
-        response = session.post(
-            mirror_url + '/mirrors',
-            json={
-                "url": api_endpoint.replace("api/channels", "get"),
-                "api_endpoint": api_endpoint,
-                "metrics_endpoint": api_endpoint.replace("api", "metrics"),
-            },
-            headers=headers,
-        )
-        if response.status_code != 201:
-            logger.warning(f"could not register mirror due to error {response.text}")
+        for mirror_url in channel.mirror_channel_urls:
+            mirror_url = mirror_url.replace("get", "api/channels")
+            headers = {"x-api-key": mirror_api_key} if mirror_api_key else {}
+            api_endpoint = str(request.url.replace(query=None)) + '/' + new_channel.name
+            request.url
+            response = session.post(
+                mirror_url + '/mirrors',
+                json={
+                    "url": api_endpoint.replace("api/channels", "get"),
+                    "api_endpoint": api_endpoint,
+                    "metrics_endpoint": api_endpoint.replace("api", "metrics"),
+                },
+                headers=headers,
+            )
+            if response.status_code != 201:
+                logger.warning(
+                    f"could not register mirror due to error {response.text}"
+                )
 
     for action in actions:
         task.execute_channel_action(
@@ -1808,14 +1817,22 @@ def serve_path(
         except ValueError:
             pass
 
-    if is_package_request and channel.mirror_channel_url:
+    if is_package_request and channel.mirror_channel_urls:
         # if we exclude the package from syncing, redirect to original URL
+        # use the first mirror url entry for the redirect
         channel_proxylist = json.loads(channel.channel_metadata).get('proxylist', [])
         if channel_proxylist and package_name and package_name in channel_proxylist:
-            return RedirectResponse(f"{channel.mirror_channel_url}/{path}")
+            # proxying packages only works for the first url in the list
+            redirect_url = channel.mirror_channel_urls[0]
+            return RedirectResponse(f"{redirect_url}/{path}")
 
-    if channel.mirror_channel_url and channel.mirror_mode == "proxy":
-        repository = RemoteRepository(channel.mirror_channel_url, session)
+    # note: proxy mode only works with one mirror url (checked on channel creation)
+    if (
+        channel.mirror_channel_urls
+        and channel.mirror_mode == rest_models.MirrorMode.proxy
+    ):
+        proxy_url = channel.mirror_channel_urls[0]
+        repository = RemoteRepository(proxy_url, session)
         if not pkgstore.file_exists(channel.name, path):
             download_remote_file(repository, pkgstore, channel.name, path)
         elif path.endswith(".json"):

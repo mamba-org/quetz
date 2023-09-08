@@ -22,7 +22,7 @@ from quetz.tasks.mirror import (
     create_packages_from_channeldata,
     create_versions_from_repodata,
     handle_repodata_package,
-    initial_sync_mirror,
+    sync_mirror,
 )
 from quetz.testing.mockups import MockWorker
 
@@ -194,7 +194,17 @@ def mirror_package(mirror_channel, db):
     db.commit()
 
 
-def test_set_mirror_url(db, client, owner):
+@pytest.mark.parametrize(
+    "mirror_url_req, mirror_url_resp",
+    [
+        ("http://host", "http://host"),
+        (
+            ["http://my_remote_host", "http://my_remote_host2"],
+            "http://my_remote_host;http://my_remote_host2",
+        ),
+    ],
+)
+def test_set_mirror_url(db, client, owner, mirror_url_req, mirror_url_resp):
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 
@@ -203,7 +213,7 @@ def test_set_mirror_url(db, client, owner):
         json={
             "name": "test-create-channel",
             "private": False,
-            "mirror_channel_url": "http://my_remote_host",
+            "mirror_channel_url": mirror_url_req,
             "mirror_mode": "proxy",
         },
     )
@@ -212,7 +222,7 @@ def test_set_mirror_url(db, client, owner):
     response = client.get("/api/channels/test-create-channel")
 
     assert response.status_code == 200
-    assert response.json()["mirror_channel_url"] == "http://my_remote_host"
+    assert response.json()["mirror_channel_url"] == mirror_url_resp
 
 
 @pytest.mark.parametrize("mirror_mode", ["proxy", "mirror"])
@@ -472,7 +482,7 @@ def test_synchronisation_sha(
 
     dummy_repo = RemoteRepository("", DummySession())
 
-    initial_sync_mirror(
+    sync_mirror(
         mirror_channel.name,
         dummy_repo,
         arch,
@@ -508,14 +518,14 @@ def test_synchronisation_sha(
 )
 def test_synchronisation_no_checksums_in_db(
     repo_content,
+    arch,
+    n_new_packages,
     mirror_channel,
     dao,
     config,
     dummy_response,
     db,
     user,
-    n_new_packages,
-    arch,
     package_version,
     mocker,
 ):
@@ -538,7 +548,7 @@ def test_synchronisation_no_checksums_in_db(
 
     dummy_repo = RemoteRepository("", DummySession())
 
-    initial_sync_mirror(
+    sync_mirror(
         mirror_channel.name,
         dummy_repo,
         arch,
@@ -1006,11 +1016,20 @@ BTEL_REPODATA = b"""
     ],
 )
 @pytest.mark.parametrize(
-    "package_list_type,expected_package",
-    [("includelist", "nrnpython"), ("excludelist", "test-package")],
+    "package_list_type,list_values, expected_packages",
+    [
+        ("includelist", ["nrnpython"], ["nrnpython"]),
+        (
+            "includelist",
+            {"https://conda.anaconda.org/btel": ["nrnpython"]},
+            ["nrnpython"],
+        ),
+        ("excludelist", ["nrnpython"], ["test-package"]),
+        (None, None, ["nrnpython", "test-package"]),
+    ],
 )
 def test_packagelist_mirror_channel(
-    owner, client, package_list_type, expected_package, db, job_supervisor
+    owner, client, package_list_type, list_values, expected_packages, db, job_supervisor
 ):
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
@@ -1022,7 +1041,7 @@ def test_packagelist_mirror_channel(
             "private": False,
             "mirror_channel_url": "https://conda.anaconda.org/btel",
             "mirror_mode": "mirror",
-            "metadata": {package_list_type: ["nrnpython"]},
+            "metadata": {package_list_type: list_values},
         },
     )
     assert response.status_code == 201
@@ -1030,11 +1049,11 @@ def test_packagelist_mirror_channel(
 
     response = client.get("/api/channels/mirror-channel-btel/packages")
     assert response.status_code == 200
-    assert len(response.json()) == 1
-    assert response.json()[0]['name'] == expected_package
+    assert len(response.json()) == len(expected_packages)
+    assert [p['name'] for p in response.json()] == expected_packages
 
 
-def test_includelist_and_excludelist_mirror_channel(owner, client):
+def test_cannot_use_includelist_and_excludelist_mirror_channel(owner, client):
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 

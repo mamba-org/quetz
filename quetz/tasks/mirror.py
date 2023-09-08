@@ -6,7 +6,7 @@ import shutil
 from concurrent.futures import ThreadPoolExecutor
 from http.client import IncompleteRead
 from tempfile import SpooledTemporaryFile
-from typing import List
+from typing import List, Tuple, Union
 
 import requests
 from fastapi import HTTPException, status
@@ -19,11 +19,17 @@ from quetz import authorization, rest_models
 from quetz.condainfo import CondaInfo, get_subdir_compat
 from quetz.config import Config
 from quetz.dao import Dao
-from quetz.db_models import PackageVersion
+from quetz.db_models import Channel, PackageVersion
 from quetz.errors import DBError
 from quetz.pkgstores import PackageStore
 from quetz.tasks import indexing
-from quetz.utils import TicToc, add_static_file, check_package_membership
+from quetz.utils import (
+    MembershipAction,
+    TicToc,
+    add_static_file,
+    check_package_membership,
+)
+from utils import parse_package_filename
 
 # copy common subdirs from conda:
 # https://github.com/conda/conda/blob/a78a2387f26a188991d771967fc33aa1fb5bb810/conda/base/constants.py#L63
@@ -197,6 +203,26 @@ def download_file(remote_repository, path_metadata):
     return f, package_name, metadata
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    after=after_log(logger, logging.WARNING),
+)
+def _upload_package(file, channel_name, subdir, pkgstore):
+    dest = os.path.join(subdir, file.filename)
+
+    try:
+        file.file.seek(0)
+        logger.debug(
+            f"uploading file {dest} from channel {channel_name} to package store"
+        )
+        pkgstore.add_package(file.file, channel_name, dest)
+
+    except AttributeError as e:
+        logger.error(f"Could not upload {file}, {file.filename}. {str(e)}")
+        raise TryAgain
+
+
 def handle_repodata_package(
     channel,
     files_metadata,
@@ -212,6 +238,7 @@ def handle_repodata_package(
     proxylist = channel.load_channel_metadata().get('proxylist', [])
     user_id = auth.assert_user()
 
+    # check package format and permissions, calculate total size
     total_size = 0
     for file, package_name, metadata in files_metadata:
         parts = file.filename.rsplit("-", 2)
@@ -235,38 +262,24 @@ def handle_repodata_package(
         total_size += size
         file.file.seek(0)
 
+    # create package in database
+    # channel_data = _load_remote_channel_data(remote_repository)
+    # create_packages_from_channeldata(channel_name, user_id, channel_data, dao)
+
+    # validate quota
     dao.assert_size_limits(channel_name, total_size)
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-        after=after_log(logger, logging.WARNING),
-    )
-    def _upload_package(file, channel_name, subdir):
-        dest = os.path.join(subdir, file.filename)
-
-        try:
-            file.file.seek(0)
-            logger.debug(
-                f"uploading file {dest} from channel {channel_name} to package store"
-            )
-            pkgstore.add_package(file.file, channel_name, dest)
-
-        except AttributeError as e:
-            logger.error(f"Could not upload {file}, {file.filename}. {str(e)}")
-            raise TryAgain
-
     pkgstore.create_channel(channel_name)
-    nthreads = config.general_package_unpack_threads
 
     with TicToc("upload file without extracting"):
+        nthreads = config.general_package_unpack_threads
         with ThreadPoolExecutor(max_workers=nthreads) as executor:
             for file, package_name, metadata in files_metadata:
                 if proxylist and package_name in proxylist:
                     # skip packages that should only ever be proxied
                     continue
                 subdir = get_subdir_compat(metadata)
-                executor.submit(_upload_package, file, channel_name, subdir)
+                executor.submit(_upload_package, file, channel_name, subdir, pkgstore)
 
     with TicToc("add versions to the db"):
         for file, package_name, metadata in files_metadata:
@@ -278,7 +291,55 @@ def handle_repodata_package(
             file.file.close()
 
 
-def initial_sync_mirror(
+def get_remote_repodata(
+    channel_name: str, arch: str, remote_repository: RemoteRepository
+) -> Union[dict, None]:
+    """
+    Fetches the repodata.json file from a remote repository
+    for a given channel and architecture.
+
+    The function tries to fetch two types of repodata files:
+    "repodata_from_packages.json" and "repodata.json".
+    If both files are not found or are not properly formatted,
+    the function returns None.
+
+    Args:
+        channel_name (str)
+        arch (str)
+        remote_repository (RemoteRepository): remote repo to fetch from
+
+    Returns:
+        dict or None: A dictionary containing the repodata
+            if the file is found and properly formatted, None otherwise.
+    """
+    repodata = {}
+    for repodata_fn in ["repodata_from_packages.json", "repodata.json"]:
+        try:
+            repo_file = remote_repository.open(os.path.join(arch, repodata_fn))
+            repodata = json.load(repo_file.file)
+            return repodata
+        except RemoteServerError:
+            logger.error(
+                f"can not get {repodata_fn} for channel {arch}/{channel_name}."
+            )
+            if repodata_fn == "repodata.json":
+                logger.error(f"Giving up for {channel_name}/{arch}.")
+                return None
+            else:
+                logger.error("Trying next filename.")
+                continue
+        except json.JSONDecodeError:
+            logger.error(
+                f"repodata.json badly formatted for arch {arch}"
+                f"in channel {channel_name}"
+            )
+            if repodata_fn == "repodata.json":
+                return None
+
+    return {}
+
+
+def sync_mirror(
     channel_name: str,
     remote_repository: RemoteRepository,
     arch: str,
@@ -290,37 +351,34 @@ def initial_sync_mirror(
     skip_errors: bool = True,
     use_repodata: bool = False,
 ):
+    """
+    Synchronize a mirror channel with a remote repository.
+
+    Args:
+        channel_name: name of the channel to synchronize
+        remote_repository: RemoteRepository object
+        arch: architecture to synchronize
+        dao: Dao object
+        pkgstore
+        auth
+        includelist: list of package names to include
+        excludelist: list of package names to exclude
+        skip_errors: if True, continue processing packages even if an error occurs
+        use_repodata: if True, use repodata.json to process packages
+
+    """
     force = True  # needed for updating packages
     logger.info(
         f"Running channel mirroring {channel_name}/{arch} from {remote_repository.host}"
     )
 
-    repodata = {}
-    for repodata_fn in ["repodata_from_packages.json", "repodata.json"]:
-        try:
-            repo_file = remote_repository.open(os.path.join(arch, repodata_fn))
-            repodata = json.load(repo_file.file)
-            break
-        except RemoteServerError:
-            logger.error(
-                f"can not get {repodata_fn} for channel {arch}/{channel_name}."
-            )
-            if repodata_fn == "repodata.json":
-                logger.error(f"Giving up for {channel_name}/{arch}.")
-                return
-            else:
-                logger.error("Trying next filename.")
-                continue
-        except json.JSONDecodeError:
-            logger.error(
-                f"repodata.json badly formatted for arch {arch}"
-                f"in channel {channel_name}"
-            )
-            if repodata_fn == "repodata.json":
-                return
+    repodata = get_remote_repodata(channel_name, arch, remote_repository)
+    if not repodata:
+        return  # quit; error has already been logged.
+
+    packages = repodata.get("packages", {})
 
     channel = dao.get_channel(channel_name)
-
     if not channel:
         logger.error(f"channel {channel_name} not found")
         return
@@ -348,6 +406,7 @@ def initial_sync_mirror(
 
         update_batch = []
         update_size = 0
+        remove_batch = []
 
         def handle_batch(update_batch):
             # i_batch += 1
@@ -404,27 +463,46 @@ def initial_sync_mirror(
 
             return False
 
-        for package_name, metadata in packages.items():
-            if check_package_membership(package_name, includelist, excludelist):
-                path = os.path.join(arch, package_name)
-
+        # go through all packages from remote channel
+        channel_metadata = channel.load_channel_metadata()
+        for repo_package_name, metadata in packages.items():
+            action = check_package_membership(
+                channel,
+                channel_metadata,
+                repo_package_name,
+                metadata,
+                remote_host=remote_repository.host,
+            )
+            if action == MembershipAction.INCLUDE:
                 # try to find out whether it's a new package version
-
                 is_uptodate = None
                 for _check in version_checks:
-                    is_uptodate = _check(package_name, metadata)
+                    is_uptodate = _check(repo_package_name, metadata)
                     if is_uptodate is not None:
                         break
 
                 # if package is up-to-date skip uploading file
                 if is_uptodate:
                     continue
-                else:
-                    logger.debug(f"updating package {package_name} from {arch}")
 
-                update_batch.append((path, package_name, metadata))
+                logger.debug(f"updating package {repo_package_name} from {arch}")
+
+                path = os.path.join(arch, repo_package_name)
+                update_batch.append((path, repo_package_name, metadata))
                 update_size += metadata.get('size', 100_000)
+            elif action == MembershipAction.IGNORE:
+                logger.debug(
+                    f"package {repo_package_name} not needed by "
+                    f"{remote_repository.host} but other channels"
+                )
+            else:
+                logger.debug(
+                    f"package {repo_package_name} not needed by "
+                    f"{remote_repository.host} and no other channels."
+                )
+                remove_batch.append((arch, repo_package_name))
 
+            # perform either downloads or removals
             if len(update_batch) >= max_batch_length or update_size >= max_batch_size:
                 logger.debug(f"Executing batch with {update_size}")
                 any_updated |= handle_batch(update_batch)
@@ -434,8 +512,45 @@ def initial_sync_mirror(
         # handle final batch
         any_updated |= handle_batch(update_batch)
 
+        # remove packages marked for removal
+        if remove_batch:
+            any_updated |= remove_packages(remove_batch, channel, dao, pkgstore)
+
     if any_updated:
+        # build local repodata
         indexing.update_indexes(dao, pkgstore, channel_name, subdirs=[arch])
+
+
+def remove_packages(
+    remove_batch: List[Tuple[str, str]],
+    channel: Channel,
+    dao: Dao,
+    pkgstore: PackageStore,
+) -> bool:
+    """
+    Remove packages from the channel and the package store.
+    Args:
+        remove_batch: list of (arch, repo_package_name) tuples
+            e.g. [('linux-64', 'foo-1.0-0.tar.bz2'), ...]
+        channel: the channel to remove packages from
+        dao
+        pkgstore
+    Returns True if any removals were performed.
+    """
+
+    logger.debug(f"Removing {len(remove_batch)} packages: {remove_batch}")
+    removal_performed = False
+
+    for package_spec in set(p[1] for p in remove_batch):
+        package_name, version, build_string = parse_package_filename(package_spec)
+        dao.remove_package(package_name=package_name, channel_name=channel.name)
+        if pkgstore.file_exists(channel.name, package_spec):
+            pkgstore.delete_file(channel.name, destination=package_spec)
+        removal_performed = True
+
+    dao.cleanup_channel_db(channel.name)
+
+    return removal_performed
 
 
 def create_packages_from_channeldata(
@@ -522,6 +637,24 @@ def create_versions_from_repodata(
         create_version_from_metadata(channel_name, user_id, filename, metadata, dao)
 
 
+def _load_remote_channel_data(remote_repository: RemoteRepository) -> dict:
+    """
+    given the remote repository, load the channeldata.json file
+    raises: HTTPException if the remote server is unavailable
+    """
+    try:
+        channel_data = remote_repository.open("channeldata.json").json()
+    except (RemoteFileNotFound, json.JSONDecodeError):
+        channel_data = {}
+    except RemoteServerError as e:
+        logger.error(f"Remote server error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Remote channel {remote_repository.host} unavailable",
+        )
+    return channel_data
+
+
 def synchronize_packages(
     channel_name: str,
     dao: Dao,
@@ -532,6 +665,14 @@ def synchronize_packages(
     excludelist: List[str] = None,
     use_repodata: bool = False,
 ):
+    """synchronize package from a remote channel.
+
+    Args:
+        channel_name (str): the channel to be updated, e.g. the mirror channel
+        dao (Dao): database access object
+        pkgstore (PackageStore): the target channels package store
+        use_repodata (bool, optional): wether to create packages from repodata.json
+    """
     logger.info(f"executing synchronize_packages task in a process {os.getpid()}")
 
     new_channel = dao.get_channel(channel_name)
@@ -540,37 +681,30 @@ def synchronize_packages(
         logger.error(f"channel {channel_name} not found")
         return
 
-    host = new_channel.mirror_channel_url
+    for mirror_channel_url in new_channel.mirror_channel_urls:
+        remote_repo = RemoteRepository(mirror_channel_url, session)
 
-    remote_repo = RemoteRepository(new_channel.mirror_channel_url, session)
+        user_id = auth.assert_user()
 
-    user_id = auth.assert_user()
-
-    try:
-        channel_data = remote_repo.open("channeldata.json").json()
-        if use_repodata:
-            create_packages_from_channeldata(channel_name, user_id, channel_data, dao)
-        subdirs = channel_data.get("subdirs", [])
-    except (RemoteFileNotFound, json.JSONDecodeError):
+        channel_data = _load_remote_channel_data(remote_repo)
         subdirs = None
-    except RemoteServerError:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Remote channel {host} unavailable",
-        )
-    # if no channel data use known architectures
-    if subdirs is None:
-        subdirs = KNOWN_SUBDIRS
+        if use_repodata and includelist is None and excludelist is None:
+            create_packages_from_channeldata(channel_name, user_id, channel_data, dao)
+            subdirs = channel_data.get("subdirs", [])
 
-    for arch in subdirs:
-        initial_sync_mirror(
-            new_channel.name,
-            remote_repo,
-            arch,
-            dao,
-            pkgstore,
-            auth,
-            includelist,
-            excludelist,
-            use_repodata=use_repodata,
-        )
+        # if no channel data use known architectures
+        if subdirs is None:
+            subdirs = KNOWN_SUBDIRS
+
+        for arch in subdirs:
+            sync_mirror(
+                new_channel.name,
+                remote_repo,
+                arch,
+                dao,
+                pkgstore,
+                auth,
+                includelist,
+                excludelist,
+                use_repodata=use_repodata,
+            )

@@ -15,28 +15,152 @@ import time
 import traceback
 import uuid
 from datetime import datetime, timezone
+from enum import Enum
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import unquote
 
+from conda.models.dist import Dist
+from conda.models.match_spec import MatchSpec
 from sqlalchemy import String, and_, cast, collate, not_, or_
 
 from .db_models import Channel, Package, PackageVersion, User
 
 
-def check_package_membership(package_name, includelist, excludelist):
-    if includelist:
-        for each_package in includelist:
-            if package_name.startswith(each_package):
-                return True
-        return False
-    elif excludelist:
-        for each_package in excludelist:
-            if package_name.startswith(each_package):
-                return False
-        return True
-    return True
+def parse_package_filename(package_name: str) -> tuple[str, str, str]:
+    """Given a package name and metadata, return the package spec.
+
+    Args:
+        package_name (str): The package name in file format,
+            e.g. "numpy-1.23.4-py39hefdcf20_0.tar.bz2"
+
+    Returns:
+        tuple[str, str, str]: (name, version, build-string)
+    """
+    dist_obj = Dist.from_string(package_name)
+
+    return dist_obj.name, dist_obj.version, dist_obj.build_string
+
+
+def check_package_match(
+    package_spec: tuple[str, str, str],
+    include_or_exclude_list: list[str],
+) -> bool:
+    """
+    Check if the given package specification matches
+    with the given include or exclude list.
+    Returns true if a match is found.
+    """
+    name, version, build = package_spec
+    for pattern in include_or_exclude_list:
+        if MatchSpec(pattern).match(
+            {"name": name, "version": version, "build": build, "build_number": 0}
+        ):
+            return True
+
+    return False
+
+
+class MembershipAction(Enum):
+    INCLUDE = "include"  # package should be added to the channel
+    IGNORE = "ignore"  # package is not member of this channel but of another
+    REMOVE = "remove"  # package is not member of any channel
+
+
+def get_matching_hosts(
+    include_or_exclude_list: dict, package_spec: tuple[str, str, str]
+) -> list[str]:
+    """
+    Return the names of all matching hosts from the includelist
+    that whould allow _this_ package spec.
+    include_or_exclude_list:
+        e.g. { "remote1": ["numpy", "pandas"], "remote2": ["r-base"]}
+    """
+    name, version, build = package_spec
+    matching_hosts = []
+    for host, patterns in include_or_exclude_list.items():
+        if check_package_match(package_spec, patterns):
+            matching_hosts.append(host)
+    return matching_hosts
+
+
+def check_package_membership(
+    channel: Channel,
+    channel_metadata: dict,
+    package_name: str,
+    package_metadata: dict,
+    remote_host: str,
+) -> MembershipAction:
+    """
+    Check if a package should be in a channel according
+    to the rules defined in the channel metadata.
+
+    The function returns a representation of the treatment the package
+    should receive (include / exclude / ignore).
+
+    A package should be:
+    * included if is in the includelist (for this channel)
+    * excluded if is in the excludelist (for this channel)
+        this means that existing versions of the package will be removed
+    * ignored if it does not match the includelist for this channel
+        this does not remove the package since it might
+        match the includelist of another channel
+
+    Args:
+        channel (Channel): mirror Channel object returned from the database
+        package_name (str): name of the package in file format,
+            e.g. "numpy-1.23.4-py39hefdcf20_0.tar.bz2"
+        package_metadata (dict): package metadata,
+            information that can be found in repodata.json for example
+        includelist (Union[list[str], dict, None], optional):
+            list of packages or dict of {channel: [packages]} that should be included
+        excludelist (Union[list[str], dict, None], optional):
+            list of packages or dict of {channel: [packages]} that should be excluded
+
+    Returns:
+        MembershipAction: this determines if the package should be included,
+            ignored or removed from the channel
+    """
+    package_spec = parse_package_filename(package_name)
+
+    incl_act = MembershipAction.INCLUDE
+    exclude_now = False
+    if (includelist := channel_metadata['includelist']) is not None:
+        # Example: { "main": ["numpy", "pandas"], "r": ["r-base"]}
+        if isinstance(includelist, dict):
+            matches = get_matching_hosts(includelist, package_spec)
+            if remote_host in matches or remote_host.split("/")[-1] in matches:
+                incl_act = MembershipAction.INCLUDE
+            elif len(matches) > 0:  # we have a match but not for this host
+                incl_act = MembershipAction.IGNORE
+            else:
+                incl_act = MembershipAction.REMOVE
+
+        # Example: ["numpy", "pandas", "r-base"]
+        elif isinstance(includelist, list):
+            if check_package_match(package_spec, includelist):
+                incl_act = MembershipAction.INCLUDE
+            else:
+                incl_act = MembershipAction.REMOVE
+
+    # for exclude list, we only check the current host
+    if (excludelist := channel_metadata['excludelist']) is not None:
+        exclude_now = False
+        if isinstance(excludelist, dict):
+            if channel.name in excludelist:
+                channel_excludelist = excludelist[remote_host.split("/")[-1]]
+                exclude_now = check_package_match(package_spec, channel_excludelist)
+            else:
+                exclude_now = False
+        elif isinstance(excludelist, list):
+            exclude_now = check_package_match(package_spec, excludelist)
+
+    # package not explicitly excluded? -> listen to include action
+    if not exclude_now:
+        return incl_act
+    else:
+        return MembershipAction.REMOVE
 
 
 def add_static_file(contents, channel_name, subdir, fname, pkgstore, file_index=None):

@@ -173,6 +173,7 @@ class Package(Base):
         ),
         viewonly=True,
         lazy="select",
+        cascade="all,delete-orphan",
     )
 
     @property
@@ -200,13 +201,31 @@ class Channel(Base):
     )
     description = Column(String)
     private = Column(Boolean, default=False)
-    mirror_channel_url = Column(String)
+    mirror_channel_url = Column("mirror_channel_url", String)
     mirror_mode = Column(String)
     channel_metadata = Column(String, server_default='{}', nullable=False)
     timestamp_mirror_sync = Column(Integer, default=0)
     size = Column(BigInteger, default=0)
     size_limit = Column(BigInteger, default=None)
     ttl = Column(Integer, server_default=f'{60 * 60 * 10}', nullable=False)  # 10 hours
+
+    @property
+    def mirror_channel_urls(self):
+        if self.mirror_channel_url is None:
+            return []
+        elif ";" in self.mirror_channel_url:
+            return self.mirror_channel_url.split(";")
+        else:
+            return [self.mirror_channel_url]
+
+    @mirror_channel_urls.setter
+    def mirror_channel_urls(self, value):
+        if isinstance(value, str):
+            self.mirror_channel_url = value
+        elif isinstance(value, list):
+            self.mirror_channel_url = ";".join(value)
+        else:
+            self.mirror_channel_url = None  # type: ignore
 
     packages = relationship(
         'Package', back_populates='channel', cascade="all,delete", uselist=True

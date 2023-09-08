@@ -311,10 +311,12 @@ class Dao:
                 "only ASCII characters should be used in channel name"
             )
 
+        # note: due to backwards compatibility, the rest model still calls it
+        # 'mirror_channel_url' but the db model calls it 'mirror_channel_urls'
         channel = Channel(
             name=data.name,
             description=data.description,
-            mirror_channel_url=data.mirror_channel_url,
+            mirror_channel_urls=data.mirror_channel_url,
             mirror_mode=data.mirror_mode,
             private=data.private,
             ttl=data.ttl,
@@ -332,6 +334,19 @@ class Dao:
 
         return channel
 
+    def remove_package(self, package_name: str, channel_name: Optional[str] = None):
+        """
+        Remove package from database but only from the given channel if specified.
+        Due to cascading behaviour, this will also remove all package versions and
+        package members.
+        """
+        query = self.db.query(Package).filter(Package.name == package_name)
+        if channel_name:
+            query = query.filter(Package.channel_name == channel_name)
+
+        query.delete()
+        self.db.commit()
+
     def cleanup_channel_db(
         self,
         channel_name: str,
@@ -344,7 +359,7 @@ class Dao:
             Package.channel_name == channel_name
         )
         if package_name:
-            all_packages = all_packages.filter(
+            all_packages = all_packages.join(PackageVersion).filter(
                 PackageVersion.package_name == package_name
             )
         for each_package in all_packages:
@@ -379,7 +394,7 @@ class Dao:
             Package.channel_name == channel_name
         )
         if package_name:
-            all_packages = all_packages.filter(
+            all_packages = all_packages.join(PackageVersion).filter(
                 PackageVersion.package_name == package_name
             )
         for each_package in all_packages:
@@ -412,7 +427,7 @@ class Dao:
             Package.channel_name == channel_name
         )
         if package_name:
-            all_packages = all_packages.filter(
+            all_packages = all_packages.join(PackageVersion).filter(
                 PackageVersion.package_name == package_name
             )
         for x, each_package in enumerate(all_packages):
@@ -1009,6 +1024,11 @@ class Dao:
         )
 
     def assert_size_limits(self, channel_name: str, size: int):
+        """
+        validate that adding a package of size `size` to channel `channel_name`
+        does not exceed the channel size limit.
+        raises: QuotaError
+        """
         channel_size, channel_size_limit = (
             self.db.query(Channel.size, Channel.size_limit)
             .filter(Channel.name == channel_name)
