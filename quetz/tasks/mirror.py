@@ -6,7 +6,7 @@ import shutil
 from concurrent.futures import ThreadPoolExecutor
 from http.client import IncompleteRead
 from tempfile import SpooledTemporaryFile
-from typing import List, Union
+from typing import List, Tuple, Union
 
 import requests
 from fastapi import HTTPException, status
@@ -520,7 +520,12 @@ def sync_mirror(
         indexing.update_indexes(dao, pkgstore, channel_name, subdirs=[arch])
 
 
-def remove_packages(remove_batch, channel: Channel, dao, pkgstore) -> bool:
+def remove_packages(
+    remove_batch: List[Tuple[str, str]],
+    channel: Channel,
+    dao: Dao,
+    pkgstore: PackageStore,
+) -> bool:
     """
     Remove packages from the channel and the package store.
     Args:
@@ -536,57 +541,13 @@ def remove_packages(remove_batch, channel: Channel, dao, pkgstore) -> bool:
     package_specs_remove = set([p[1].split("-")[0] for p in remove_batch])
     for package_specs in package_specs_remove:
         dao.remove_package(channel.name, package_name=package_specs)
-        # TODO: is this needed every time?
-        dao.cleanup_channel_db(channel.name, package_name=package_specs)
         if pkgstore.file_exists(channel.name, package_specs):
             pkgstore.delete_file(channel.name, destination=package_specs)
-        removal_performed |= True
+        removal_performed = True
+
+    dao.cleanup_channel_db(channel.name, package_name=package_specs)
 
     return removal_performed
-
-
-def remove_local_packages(
-    channel_name: str,
-    dao: Dao,
-    pkgstore: PackageStore,
-    auth: authorization.Rules,
-    includelist: List[str | dict] = None,
-    excludelist: List[str | dict] = None,
-):
-    """
-    For each package in the channel, check if it is in the includelist and
-    not in the excludelist. If not, remove it from the channel and the package store.
-
-    We assume that the includelist and excludelist are well-formed,
-    e.g. they don't overlap.
-    """
-    from utils import get_matching_hosts
-
-    channel = dao.get_channel(channel_name)
-    if not channel:
-        logger.error(f"channel {channel_name} not found")
-        return
-
-    if not includelist:
-        includelist = []
-    if not excludelist:
-        excludelist = []
-
-    packages_to_remove = []
-
-    for package in channel.packages:
-        info = package.current_package_version
-        name, version, build_string = info.package_name, info.version, info.build_string
-        # check: does this package match _any_ of the includelist patterns?
-        if not get_matching_hosts(name, version, build_string, includelist):
-            packages_to_remove.append((None, name))
-
-        # check: does this package match _any_ of the excludelist patterns?
-        if get_matching_hosts(name, version, build_string, excludelist):
-            packages_to_remove.append((None, name))
-
-    if packages_to_remove:
-        remove_packages(packages_to_remove, channel, dao, pkgstore)
 
 
 def create_packages_from_channeldata(
