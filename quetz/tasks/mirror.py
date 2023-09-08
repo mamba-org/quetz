@@ -293,6 +293,24 @@ def handle_repodata_package(
 def get_remote_repodata(
     channel_name: str, arch: str, remote_repository: RemoteRepository
 ) -> Union[dict, None]:
+    """
+    Fetches the repodata.json file from a remote repository
+    for a given channel and architecture.
+
+    The function tries to fetch two types of repodata files:
+    "repodata_from_packages.json" and "repodata.json".
+    If both files are not found or are not properly formatted,
+    the function returns None.
+
+    Args:
+        channel_name (str)
+        arch (str)
+        remote_repository (RemoteRepository): remote repo to fetch from
+
+    Returns:
+        dict or None: A dictionary containing the repodata
+            if the file is found and properly formatted, None otherwise.
+    """
     repodata = {}
     for repodata_fn in ["repodata_from_packages.json", "repodata.json"]:
         try:
