@@ -29,6 +29,7 @@ from quetz.utils import (
     add_static_file,
     check_package_membership,
 )
+from utils import parse_package_filename
 
 # copy common subdirs from conda:
 # https://github.com/conda/conda/blob/a78a2387f26a188991d771967fc33aa1fb5bb810/conda/base/constants.py#L63
@@ -536,16 +537,18 @@ def remove_packages(
         pkgstore
     Returns True if any removals were performed.
     """
+
     logger.debug(f"Removing {len(remove_batch)} packages: {remove_batch}")
     removal_performed = False
-    package_specs_remove = set([p[1].split("-")[0] for p in remove_batch])
-    for package_specs in package_specs_remove:
-        dao.remove_package(channel.name, package_name=package_specs)
-        if pkgstore.file_exists(channel.name, package_specs):
-            pkgstore.delete_file(channel.name, destination=package_specs)
+
+    for package_spec in set(p[1] for p in remove_batch):
+        package_name, version, build_string = parse_package_filename(package_spec)
+        dao.remove_package(channel.name, package_name=package_name)
+        if pkgstore.file_exists(channel.name, package_spec):
+            pkgstore.delete_file(channel.name, destination=package_spec)
         removal_performed = True
 
-    dao.cleanup_channel_db(channel.name, package_name=package_specs)
+    dao.cleanup_channel_db(channel.name)
 
     return removal_performed
 

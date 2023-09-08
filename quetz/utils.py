@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import unquote
 
+from conda.models.dist import Dist
 from conda.models.match_spec import MatchSpec
 from sqlalchemy import String, and_, cast, collate, not_, or_
 
@@ -37,9 +38,9 @@ def parse_package_filename(package_name: str) -> tuple[str, str, str]:
     Returns:
         tuple[str, str, str]: (name, version, build-string)
     """
+    dist_obj = Dist.from_string(package_name)
 
-    spec = package_name.split("-")
-    return spec[0], spec[1] if len(spec) > 1 else "", spec[2] if len(spec) > 2 else ""
+    return dist_obj.name, dist_obj.version, dist_obj.build_string
 
 
 def check_package_match(
