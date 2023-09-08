@@ -124,7 +124,12 @@ class ChannelMetadata(BaseModel):
     """
     examples:
     - includelist: ["numpy", "pandas"]
+        this allows to mirror only numpy and pandas
+        irrespective of the channel they come from
     - includelist: {"channel1: ["numpy", "pandas"]}, {"channel2": ["scipy"]}
+        this allows to mirror numpy and pandas from channel1 and scipy from channel2
+    - proxylist: ["numpy", "pandas"]
+        this will redirect all download for these packages to the original channel
     """
 
     includelist: Optional[
