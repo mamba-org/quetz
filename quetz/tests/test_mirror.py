@@ -22,7 +22,7 @@ from quetz.tasks.mirror import (
     create_packages_from_channeldata,
     create_versions_from_repodata,
     handle_repodata_package,
-    initial_sync_mirror,
+    sync_mirror,
 )
 from quetz.testing.mockups import MockWorker
 
@@ -482,7 +482,7 @@ def test_synchronisation_sha(
 
     dummy_repo = RemoteRepository("", DummySession())
 
-    initial_sync_mirror(
+    sync_mirror(
         mirror_channel.name,
         dummy_repo,
         arch,
@@ -548,7 +548,7 @@ def test_synchronisation_no_checksums_in_db(
 
     dummy_repo = RemoteRepository("", DummySession())
 
-    initial_sync_mirror(
+    sync_mirror(
         mirror_channel.name,
         dummy_repo,
         arch,

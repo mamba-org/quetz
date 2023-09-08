@@ -338,7 +338,7 @@ def get_remote_repodata(
     return {}
 
 
-def initial_sync_mirror(
+def sync_mirror(
     channel_name: str,
     remote_repository: RemoteRepository,
     arch: str,
@@ -733,7 +733,7 @@ def synchronize_packages(
             subdirs = KNOWN_SUBDIRS
 
         for arch in subdirs:
-            initial_sync_mirror(
+            sync_mirror(
                 new_channel.name,
                 remote_repo,
                 arch,
