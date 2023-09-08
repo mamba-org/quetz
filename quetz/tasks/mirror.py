@@ -209,6 +209,16 @@ def download_file(remote_repository, path_metadata):
     after=after_log(logger, logging.WARNING),
 )
 def _upload_package(file, channel_name, subdir, pkgstore):
+    """
+    Uploads package to package store incl. retries with exponential time increase
+    on failure.
+
+    Parameters:
+        file (object): The conda package file object to be uploaded.
+        channel_name (str): The name of the channel where the package will be uploaded.
+        subdir: architecture/subdir to use for the package.
+        pkgstore: target package store to use
+    """
     dest = os.path.join(subdir, file.filename)
 
     try:
