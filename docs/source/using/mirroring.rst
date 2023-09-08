@@ -133,7 +133,7 @@ If you don't want to mirror all packages for a channel or can't mirror packages 
 :proxylist: Parse package metadata, but redirect downloads to upstream server for packages in list.
 
 After creating a mirror channel you can only modify some attributes, e.g. ``private``, ``size_limit``, ``metadata`` and ``ttl``.
-It's possible to change metadata, and therefore modify the ``includelist``, ``excludelist`` or ``proxylist`` attributes, after creating a channel using the PATCH ``/api​/channels​/{channel_name}`` endpoint:
+The ``metadata`` attribute` holds the ``includelist``, ``excludelist`` or ``proxylist`` attributes, which can therefore be changed after creating a channel using the PATCH ``/api​/channels​/{channel_name}`` endpoint:
 
 .. code:: json
 
