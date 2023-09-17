@@ -7,10 +7,10 @@ def test_docs_endpoint(client):
 def test_openapi_endpoint(client):
     response = client.get("/openapi.json")
     assert response.status_code == 200
-    assert "text/json" in response.headers['Content-Type']
+    assert "application/json" in response.headers['Content-Type']
 
 
 def test_redoc_endpoint(client):
     response = client.get("/redoc")
     assert response.status_code == 200
-    assert "text/json" in response.headers['Content-Type']
+    assert "text/html" in response.headers['Content-Type']
