@@ -2,6 +2,23 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## 0.10.1
+
+([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.10.0...ef6836a7c887dc97a89d8b5cce4472a03740b692))
+
+### Bugs fixed
+
+- Fix oauth2 revoke functionality [#665](https://github.com/mamba-org/quetz/pull/665) ([@wolfv](https://github.com/wolfv))
+- Fix docs rest model [#661](https://github.com/mamba-org/quetz/pull/661) ([@mbestipa](https://github.com/mbestipa))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2023-09-11&to=2023-09-28&type=c))
+
+[@codecov-commenter](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Acodecov-commenter+updated%3A2023-09-11..2023-09-28&type=Issues) | [@mbestipa](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ambestipa+updated%3A2023-09-11..2023-09-28&type=Issues) | [@wolfv](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Awolfv+updated%3A2023-09-11..2023-09-28&type=Issues)
+
+<!-- <END NEW CHANGELOG ENTRY> -->
+
 ## 0.10.0
 
 ([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.9.2...0854d442d1b20b7eb90e023eef27527b722fbcc6))
@@ -28,8 +45,6 @@
 ([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2023-06-21&to=2023-09-11&type=c))
 
 [@AndreasAlbertQC](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3AAndreasAlbertQC+updated%3A2023-06-21..2023-09-11&type=Issues) | [@beenje](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Abeenje+updated%3A2023-06-21..2023-09-11&type=Issues) | [@codecov-commenter](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Acodecov-commenter+updated%3A2023-06-21..2023-09-11&type=Issues) | [@gabm](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Agabm+updated%3A2023-06-21..2023-09-11&type=Issues) | [@janjagusch](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ajanjagusch+updated%3A2023-06-21..2023-09-11&type=Issues) | [@wolfv](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Awolfv+updated%3A2023-06-21..2023-09-11&type=Issues) | [@YYYasin19](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3AYYYasin19+updated%3A2023-06-21..2023-09-11&type=Issues)
-
-<!-- <END NEW CHANGELOG ENTRY> -->
 
 ## 0.9.2
 
