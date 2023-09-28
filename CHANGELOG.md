@@ -2,6 +2,22 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## 0.10.2
+
+([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.10.1...3cbd27a2356c9ff07fc80fef5888acb71fc2d7f7))
+
+### Bugs fixed
+
+- Fix set user roles when role is None [#669](https://github.com/mamba-org/quetz/pull/669) ([@janjagusch](https://github.com/janjagusch))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2023-09-28&to=2023-09-28&type=c))
+
+[@janjagusch](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ajanjagusch+updated%3A2023-09-28..2023-09-28&type=Issues)
+
+<!-- <END NEW CHANGELOG ENTRY> -->
+
 ## 0.10.1
 
 ([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.10.0...ef6836a7c887dc97a89d8b5cce4472a03740b692))
@@ -16,8 +32,6 @@
 ([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2023-09-11&to=2023-09-28&type=c))
 
 [@codecov-commenter](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Acodecov-commenter+updated%3A2023-09-11..2023-09-28&type=Issues) | [@mbestipa](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ambestipa+updated%3A2023-09-11..2023-09-28&type=Issues) | [@wolfv](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Awolfv+updated%3A2023-09-11..2023-09-28&type=Issues)
-
-<!-- <END NEW CHANGELOG ENTRY> -->
 
 ## 0.10.0
 
