@@ -29,9 +29,11 @@ class OAuthHandlers(BaseAuthenticationHandlers):
             request, str(redirect_uri)
         )
 
-    async def revoke(self, request):
-        client_id = self.client.client_id
-        return RedirectResponse(self.revoke_url.format(client_id=client_id))
+    async def revoke(self):
+        client_id = self.authenticator.client_id
+        return RedirectResponse(
+            self.authenticator.revoke_url.format(client_id=client_id)
+        )
 
 
 class OAuthAuthenticator(BaseAuthenticator):
