@@ -50,6 +50,7 @@ dependencies:
   - conda-content-trust
   - pyinstrument
   - pytest-asyncio
-  - pydantic <2
+  - pytest-timeout
+  - pydantic >=2
   - pip:
       - git+https://github.com/jupyter-server/jupyter_releaser.git@v2

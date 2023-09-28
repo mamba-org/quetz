@@ -9,18 +9,15 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Generic, List, Optional, TypeVar
 
-from pydantic import BaseModel, Field, root_validator, validator
-from pydantic.generics import GenericModel
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 T = TypeVar('T')
 
 
 class BaseProfile(BaseModel):
-    name: Optional[str] = Field(None, nullable=True)
+    name: Optional[str] = Field(None)
     avatar_url: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Profile(BaseProfile):
@@ -30,27 +27,23 @@ class Profile(BaseProfile):
 class BaseUser(BaseModel):
     id: uuid.UUID
     username: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class User(BaseUser):
     profile: BaseProfile
 
 
-Profile.update_forward_refs()
+Profile.model_rebuild()
 
 
-Role = Field(None, regex='owner|maintainer|member')
+Role = Field(None, pattern='owner|maintainer|member')
 
 
 class Member(BaseModel):
     role: str = Role
     user: User
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Pagination(BaseModel):
@@ -67,26 +60,22 @@ class MirrorMode(str, Enum):
 class ChannelBase(BaseModel):
     name: str = Field(None, title='The name of the channel', max_length=50)
     description: Optional[str] = Field(
-        None, title='The description of the channel', max_length=300, nullable=True
+        None, title='The description of the channel', max_length=300
     )
     private: bool = Field(True, title="channel should be private")
-    size_limit: Optional[int] = Field(
-        None, title="size limit of the channel", nullable=True
-    )
+    size_limit: Optional[int] = Field(None, title="size limit of the channel")
     ttl: int = Field(36000, title="ttl of the channel")
-    mirror_channel_url: Optional[str] = Field(
-        None, regex="^(http|https)://.+", nullable=True
-    )
-    mirror_mode: Optional[MirrorMode] = Field(None, nullable=True)
+    mirror_channel_url: Optional[str] = Field(None, pattern="^(http|https)://.+")
+    mirror_mode: Optional[MirrorMode] = Field(None)
 
-    @validator("size_limit")
+    @field_validator("size_limit")
+    @classmethod
     def check_positive(cls, v):
         if v is not None and v < 0:
             return ValueError("must be positive value")
         return v
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChannelExtra(ChannelBase):
@@ -97,9 +86,7 @@ class ChannelExtra(ChannelBase):
 class ChannelRole(BaseModel):
     name: str = Field(title="channel name")
     role: str = Field(title="user role")
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChannelActionEnum(str, Enum):
@@ -133,37 +120,33 @@ class ChannelMetadata(BaseModel):
     includelist: Optional[List[str]] = Field(
         None,
         title="list of packages to include while creating a channel",
-        nullable=True,
     )
     excludelist: Optional[List[str]] = Field(
         None,
         title="list of packages to exclude while creating a channel",
-        nullable=True,
     )
     proxylist: Optional[List[str]] = Field(
         None,
         title="list of packages that should only be proxied (not copied, "
         "stored and redistributed)",
-        nullable=True,
     )
 
 
 class Channel(ChannelBase):
     metadata: ChannelMetadata = Field(
-        default_factory=ChannelMetadata, title="channel metadata", example={}
+        default_factory=ChannelMetadata, title="channel metadata", examples=[]
     )
 
     actions: Optional[List[ChannelActionEnum]] = Field(
         None,
         title="list of actions to run after channel creation "
         "(see /channels/{}/actions for description)",
-        nullable=True,
     )
 
-    @root_validator
-    def check_mirror_params(cls, values):
-        mirror_url = values.get("mirror_channel_url")
-        mirror_mode = values.get("mirror_mode")
+    @model_validator(mode='after')
+    def check_mirror_params(self) -> "Channel":
+        mirror_url = self.mirror_channel_url
+        mirror_mode = self.mirror_mode
 
         if mirror_url and not mirror_mode:
             raise ValueError(
@@ -174,18 +157,14 @@ class Channel(ChannelBase):
                 "'mirror_mode' provided but 'mirror_channel_url' is undefined"
             )
 
-        return values
+        return self
 
 
 class ChannelMirrorBase(BaseModel):
-    url: str = Field(None, regex="^(http|https)://.+")
-    api_endpoint: Optional[str] = Field(None, regex="^(http|https)://.+", nullable=True)
-    metrics_endpoint: Optional[str] = Field(
-        None, regex="^(http|https)://.+", nullable=True
-    )
-
-    class Config:
-        orm_mode = True
+    url: str = Field(None, pattern="^(http|https)://.+")
+    api_endpoint: Optional[str] = Field(None, pattern="^(http|https)://.+")
+    metrics_endpoint: Optional[str] = Field(None, pattern="^(http|https)://.+")
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChannelMirror(ChannelMirrorBase):
@@ -194,41 +173,31 @@ class ChannelMirror(ChannelMirrorBase):
 
 class Package(BaseModel):
     name: str = Field(
-        None, title='The name of package', max_length=1500, regex=r'^[a-z0-9-_\.]*$'
+        None, title='The name of package', max_length=1500, pattern=r'^[a-z0-9-_\.]*$'
     )
-    summary: Optional[str] = Field(
-        None, title='The summary of the package', nullable=True
-    )
-    description: Optional[str] = Field(
-        None, title='The description of the package', nullable=True
-    )
-    url: Optional[str] = Field(None, title="project url", nullable=True)
-    platforms: List[str] = Field(None, title="supported platforms", nullable=True)
-    current_version: Optional[str] = Field(
-        None, title="latest version of any platform", nullable=True
-    )
-    latest_change: Optional[datetime] = Field(
-        None, title="date of latest change", nullable=True
-    )
+    summary: Optional[str] = Field(None, title='The summary of the package')
+    description: Optional[str] = Field(None, title='The description of the package')
+    url: Optional[str] = Field(None, title="project url")
+    platforms: Optional[List[str]] = Field(None, title="supported platforms")
+    current_version: Optional[str] = Field(None, title="latest version of any platform")
+    latest_change: Optional[datetime] = Field(None, title="date of latest change")
 
-    @validator("platforms", pre=True)
+    @field_validator("platforms", mode="before")
+    @classmethod
     def parse_list_of_platforms(cls, v):
         if isinstance(v, str):
             return v.split(":")
         else:
             return v
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PackageRole(BaseModel):
     name: str = Field(title='The name of package')
     channel_name: str = Field(title='The channel this package belongs to')
     role: str = Field(title="user role for this package")
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PackageSearch(Package):
@@ -237,14 +206,12 @@ class PackageSearch(Package):
 
 class ChannelSearch(BaseModel):
     name: str = Field(None, title='The name of the channel', max_length=1500)
-    description: str = Field(None, title='The description of the channel')
+    description: Optional[str] = Field(None, title='The description of the channel')
     private: bool = Field(None, title='The visibility of the channel')
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
-class PaginatedResponse(GenericModel, Generic[T]):
+class PaginatedResponse(BaseModel, Generic[T]):
     pagination: Pagination = Field(None, title="Pagination object")
     result: List[T] = Field([], title="Result objects")
 
@@ -254,21 +221,25 @@ class PostMember(BaseModel):
     role: str = Role
 
 
+class UserOptionalRole(BaseModel):
+    role: Optional[str] = Role
+
+
 class UserRole(BaseModel):
     role: str = Role
 
 
 class CPRole(BaseModel):
     channel: str
-    package: Optional[str] = Field(None, nullable=True)
+    package: Optional[str] = Field(None)
     role: str = Role
 
 
 class BaseApiKey(BaseModel):
     description: str
-    time_created: Optional[date] = Field(None, nullable=True)
-    expire_at: Optional[date] = Field(None, nullable=True)
-    roles: Optional[List[CPRole]] = Field(None, nullable=True)
+    time_created: Optional[date] = Field(None)
+    expire_at: Optional[date] = Field(None)
+    roles: Optional[List[CPRole]] = Field(None)
 
 
 class ApiKey(BaseApiKey):
@@ -289,18 +260,18 @@ class PackageVersion(BaseModel):
     uploader: BaseProfile
     time_created: datetime
     download_count: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        orm_mode = True
-
-    @validator("uploader", pre=True)
+    @field_validator("uploader", mode="before")
+    @classmethod
     def convert_uploader(cls, v):
         if hasattr(v, "profile"):
             return v.profile
         else:
             return v
 
-    @validator("info", pre=True)
+    @field_validator("info", mode="before")
+    @classmethod
     def load_json(cls, v):
         if isinstance(v, str):
             return json.loads(v)
@@ -310,5 +281,5 @@ class PackageVersion(BaseModel):
 
 class ChannelAction(BaseModel):
     action: ChannelActionEnum
-    start_at: Optional[datetime] = Field(None, nullable=True)
-    repeat_every_seconds: Optional[int] = Field(None, nullable=True)
+    start_at: Optional[datetime] = Field(None)
+    repeat_every_seconds: Optional[int] = Field(None)

@@ -17,7 +17,7 @@ from quetz.jobs import models as job_db_models
 from quetz.rest_models import PaginatedResponse
 
 from .models import JobStatus, TaskStatus
-from .rest_models import Job, JobBase, JobUpdateModel, Task
+from .rest_models import Job, JobCreate, JobUpdateModel, Task
 
 api_router = APIRouter()
 
@@ -44,7 +44,7 @@ def get_jobs(
 
 @api_router.post("/api/jobs", tags=["Jobs"], status_code=201, response_model=Job)
 def create_job(
-    job: JobBase,
+    job: JobCreate,
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):

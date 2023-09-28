@@ -860,11 +860,11 @@ def test_wrong_package_format(client, dummy_repo, owner, job_supervisor):
     [
         ("proxy", None, "'mirror_channel_url' is undefined"),
         (None, "http://my-host", "'mirror_mode' is undefined"),
-        ("undefined", "http://my-host", "not a valid enumeration member"),
-        ("proxy", "my-host", "does not match"),
-        ("proxy", "http://", "does not match"),
-        ("proxy", "http:my-host", "does not match"),
-        ("proxy", "hosthttp://my-host", "does not match"),
+        ("undefined", "http://my-host", "Input should be 'proxy' or 'mirror'"),
+        ("proxy", "my-host", "String should match pattern"),
+        ("proxy", "http://", "String should match pattern"),
+        ("proxy", "http:my-host", "String should match pattern"),
+        ("proxy", "hosthttp://my-host", "String should match pattern"),
         (None, None, None),  # non-mirror channel
         ("proxy", "http://my-host", None),
         ("proxy", "https://my-host", None),
@@ -1070,7 +1070,7 @@ def test_proxylist_mirror_channel(owner, client, mirror_mode):
 
     response = client.get(
         "/get/mirror-channel-btel/linux-64/nrnpython-0.1-0.tar.bz2",
-        allow_redirects=False,
+        follow_redirects=False,
     )
     assert response.status_code == 307
     assert (
