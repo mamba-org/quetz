@@ -27,6 +27,7 @@ def test_validate_user_role_names(user, client, other_user, db):
         ("other", "owner", "member", 200),
         ("other", "owner", "maintainer", 200),
         ("other", "owner", "owner", 200),
+        ("other", "owner", None, 200),
         ("missing_user", "owner", "member", 404),
     ],
 )
