@@ -128,7 +128,7 @@ class Rules:
 
         return user_id
 
-    def assert_assign_user_role(self, role: str):
+    def assert_assign_user_role(self, role: Optional[str]):
         if role == SERVER_MAINTAINER or role == SERVER_OWNER:
             return self.assert_server_roles([SERVER_OWNER])
         if role == SERVER_MEMBER:

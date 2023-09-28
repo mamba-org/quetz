@@ -240,7 +240,7 @@ class Dao:
         ).delete()
         self.db.commit()
 
-    def set_user_role(self, username: str, role: str):
+    def set_user_role(self, username: str, role: Optional[str]):
         user = self.db.query(User).filter(User.username == username).one_or_none()
 
         if user:
