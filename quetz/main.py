@@ -499,7 +499,7 @@ def get_user_role(
 @api_router.put("/users/{username}/role", tags=["users"])
 def set_user_role(
     username: str,
-    role: rest_models.UserRole,
+    role: rest_models.UserOptionalRole,
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
