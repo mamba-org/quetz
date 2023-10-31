@@ -104,12 +104,6 @@ configure_logger(config)
 
 logger = logging.getLogger("quetz")
 
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=config.session_secret,
-    https_only=config.session_https_only,
-)
-
 if config.general_redirect_http_to_https:
     logger.info("Configuring http to https redirect ")
     app.add_middleware(HTTPSRedirectMiddleware)
@@ -163,6 +157,18 @@ class CondaTokenMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(CondaTokenMiddleware)
 
+plugin_middlewares: List[Type[BaseHTTPMiddleware]] = [
+    ep.load() for ep in entry_points().select(group='quetz.middlewares')
+]
+
+for middleware in plugin_middlewares:
+    app.add_middleware(middleware.middleware(), config=config)
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=config.session_secret,
+    https_only=config.session_https_only,
+)
 
 if config.configured_section("profiling") and config.profiling_enable_sampling:
     from pyinstrument.profiler import Profiler
@@ -187,8 +193,6 @@ if config.configured_section("profiling") and config.profiling_enable_sampling:
 pkgstore = config.get_package_store()
 
 # authenticators
-
-
 builtin_authenticators: List[Type[BaseAuthenticator]] = [
     authenticator
     for authenticator in [
