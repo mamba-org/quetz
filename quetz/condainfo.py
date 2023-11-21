@@ -162,7 +162,7 @@ class CondaInfo:
         try:
             with tar.extractfile("info/files") as fp:
                 self.files = fp.readlines()
-        except:
+        except KeyError:
             self.files = [p["_path"] for p in self.paths.get("paths", [])]
 
         try:
