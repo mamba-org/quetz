@@ -23,3 +23,6 @@ test_quetz
 .env
 .envrc
 .venv
+
+# OS
+.DS_Store
