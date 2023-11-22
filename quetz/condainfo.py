@@ -158,8 +158,12 @@ class CondaInfo:
             self.paths = json.load(tar.extractfile("info/paths.json"))
         except KeyError:
             self.paths = {}
-        with tar.extractfile("info/files") as fp:
-            self.files = fp.readlines()
+
+        try:
+            with tar.extractfile("info/files") as fp:
+                self.files = fp.readlines()
+        except KeyError:
+            self.files = [p["_path"] for p in self.paths.get("paths", [])]
 
         try:
             exports_file = tar.extractfile("info/run_exports.json")
