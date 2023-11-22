@@ -167,7 +167,7 @@ Quetz can store package in object cloud storage compatible with S3 interface. To
 :secret key: credentials to S3 account, if you use IAM roles, don't set them or set them to ``""``
 :url: set to the S3 endpoint (excluding bucket name) of your provider (for AWS, you can skip it)
 :region: region of the S3 instance
-:bucket_name: bucket name to use to store the data in
+:bucket_name: name of the bucket to store the data in
 :bucket_prefix:
 :bucket_suffix: channel directories on S3 are created with the following semantics: ``{bucket_prefix}{channel_name}{bucket_suffix}``
 
