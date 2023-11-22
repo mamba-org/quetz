@@ -8,7 +8,6 @@ from io import BytesIO
 from pathlib import Path
 
 import pytest
-
 from quetz.pkgstores import (
     AzureBlobStore,
     GoogleCloudStorageStore,
@@ -23,6 +22,7 @@ s3_config = {
     'secret': os.environ.get("S3_SECRET_KEY"),
     'url': os.environ.get("S3_ENDPOINT"),
     'region': os.environ.get("S3_REGION"),
+    'bucket_name': os.environ.get("S3_BUCKET_NAME"),
     'bucket_prefix': "test",
     'bucket_suffix': "",
 }

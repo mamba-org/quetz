@@ -278,5 +278,6 @@ Variable                 description                             values         
 ``S3_SECRET_KEY``        secret key to s3 (used in tests)        string                                         
 ``S3_ENDPOINT``          s3 endpoint url                         string                                         
 ``S3_REGION``            s3 region                               string                                         
+``S3_BUCKET_NAME``       s3 bucket name                          string                                         
 =======================  ======================================  ===========================  ===================
 
