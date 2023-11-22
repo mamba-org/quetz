@@ -327,7 +327,7 @@ def _is_deployment(base_dir: Path):
 
 @app.command()
 def init_db(
-    path: Annotated[str, typer.Argument(None, help="The path of the deployment")],
+    path: Annotated[str, typer.Argument(help="The path of the deployment")],
 ):
     """init database and fill users from config file [users] sections"""
 
@@ -341,7 +341,7 @@ def init_db(
 
 @app.command()
 def add_user_roles(
-    path: Annotated[str, typer.Argument(None, help="The path of the deployment")],
+    path: Annotated[str, typer.Argument(help="The path of the deployment")],
 ):
     """Set user roles according to the values from config file [users] sections.
 
@@ -365,14 +365,10 @@ def add_user_roles(
 
 @app.command()
 def make_migrations(
-    path: Annotated[str, typer.Argument(None, help="The path of the deployment")],
-    message: Annotated[str, typer.Option(None, help="revision message")],
-    plugin: Annotated[
-        str, typer.Option("quetz", help="head or heads or plugin name")
-    ] = "quetz",
-    initialize: Annotated[
-        bool, typer.Option(False, help="initialize migrations")
-    ] = False,
+    path: Annotated[str, typer.Argument(help="The path of the deployment")],
+    message: Annotated[str, typer.Option(help="revision message")],
+    plugin: Annotated[str, typer.Option(help="head or heads or plugin name")] = "quetz",
+    initialize: Annotated[bool, typer.Option(help="initialize migrations")] = False,
 ):
     """make database migrations for quetz or a plugin"""
 
@@ -389,7 +385,6 @@ def create(
     path: Annotated[
         str,
         typer.Argument(
-            None,
             help=(
                 "The directory in which the deployment will be created "
                 "(will be created if does not exist)"
@@ -398,33 +393,28 @@ def create(
     ],
     copy_conf: Annotated[
         Optional[str],
-        typer.Option(
-            None, help="The configuration to copy from (e.g. dev_config.toml)"
-        ),
+        typer.Option(help="The configuration to copy from (e.g. dev_config.toml)"),
     ] = None,
     create_conf: Annotated[
         bool,
         typer.Option(
-            False,
             help="Enable/disable creation of a default configuration file",
         ),
     ] = False,
     delete: Annotated[
         bool,
         typer.Option(
-            False,
             help="Delete the the deployment if it exists. "
             "Must be specified with --copy-conf or --create-conf",
         ),
     ] = False,
     exists_ok: Annotated[
         bool,
-        typer.Option(False, help="Skip the creation if deployment already exists."),
+        typer.Option(help="Skip the creation if deployment already exists."),
     ] = False,
     dev: Annotated[
         bool,
         typer.Option(
-            False,
             help=(
                 "Enable/disable dev mode "
                 "(fills the database with test data and allows http access)"
@@ -530,26 +520,24 @@ def _get_config(path: Union[Path, str]) -> Config:
 @app.command()
 def start(
     path: Annotated[
-        Optional[str], typer.Argument(None, help="The path of the deployment")
+        Optional[str], typer.Argument(help="The path of the deployment")
     ] = None,
-    port: Annotated[int, typer.Option(8000, help="The port to bind")] = 8000,
+    port: Annotated[int, typer.Option(help="The port to bind")] = 8000,
     host: Annotated[
-        str, typer.Option("127.0.0.1", help="The network interface to bind")
+        str, typer.Option(help="The network interface to bind")
     ] = "127.0.0.1",
     proxy_headers: Annotated[
-        bool, typer.Option(True, help="Enable/disable X-Forwarded headers")
+        bool, typer.Option(help="Enable/disable X-Forwarded headers")
     ] = True,
     log_level: Annotated[
         LogLevel,
         typer.Option(
-            LogLevel.info,
             help="Set the logging level",
         ),
     ] = LogLevel.info,
     reload: Annotated[
         bool,
         typer.Option(
-            False,
             help=(
                 "Enable/disable automatic reloading of the server when sources are "
                 "modified"
@@ -559,7 +547,6 @@ def start(
     supervisor: Annotated[
         bool,
         typer.Option(
-            True,
             help="Start job supervisor with quetz",
         ),
     ] = True,
@@ -621,60 +608,53 @@ def start(
 
 @app.command()
 def run(
-    path: Annotated[str, typer.Argument(None, help="The path of the deployment")],
+    path: Annotated[str, typer.Argument(help="The path of the deployment")],
     copy_conf: Annotated[
         Optional[str],
-        typer.Option(
-            None, help="The configuration to copy from (e.g. dev_config.toml)"
-        ),
+        typer.Option(help="The configuration to copy from (e.g. dev_config.toml)"),
     ] = None,
     create_conf: Annotated[
         bool,
         typer.Option(
-            False,
             help="Enable/disable creation of a default configuration file",
         ),
     ] = False,
     delete: Annotated[
         bool,
         typer.Option(
-            False,
             help="Delete the the deployment if it exists. "
             "Must be specified with --copy-conf or --create-conf",
         ),
     ] = False,
     skip_if_exists: Annotated[
         bool,
-        typer.Option(False, help="Skip the creation if deployment already exists."),
+        typer.Option(help="Skip the creation if deployment already exists."),
     ] = False,
     dev: Annotated[
         bool,
         typer.Option(
-            False,
             help=(
                 "Enable/disable dev mode "
                 "(fills the database with test data and allows http access)"
             ),
         ),
     ] = False,
-    port: Annotated[int, typer.Option(8000, help="The port to bind")] = 8000,
+    port: Annotated[int, typer.Option(help="The port to bind")] = 8000,
     host: Annotated[
-        str, typer.Option("127.0.0.1", help="The network interface to bind")
+        str, typer.Option(help="The network interface to bind")
     ] = "127.0.0.1",
     proxy_headers: Annotated[
-        bool, typer.Option(True, help="Enable/disable X-Forwarded headers")
+        bool, typer.Option(help="Enable/disable X-Forwarded headers")
     ] = True,
     log_level: Annotated[
         LogLevel,
         typer.Option(
-            LogLevel.info,
             help="Set the logging level",
         ),
     ] = LogLevel.info,
     reload: Annotated[
         bool,
         typer.Option(
-            False,
             help="Enable/disable automatic reloading of the server when sources are "
             "modified",
         ),
@@ -691,10 +671,10 @@ def run(
 
 @app.command()
 def delete(
-    path: Annotated[str, typer.Argument(None, help="The path of the deployment")],
+    path: Annotated[str, typer.Argument(help="The path of the deployment")],
     force: Annotated[
         bool,
-        typer.Option(False, help="Enable/disable removal without confirmation prompt"),
+        typer.Option(help="Enable/disable removal without confirmation prompt"),
     ] = False,
 ) -> None:
     """Delete a Quetz deployment."""
@@ -713,7 +693,7 @@ def delete(
 @app.command()
 def plugin(
     cmd: str,
-    path: Annotated[str, typer.Argument(None, help="Path to the plugin folder")],
+    path: Annotated[str, typer.Argument(help="Path to the plugin folder")],
 ) -> None:
     if cmd == 'install':
         abs_path = Path(path).absolute()
@@ -790,13 +770,11 @@ def start_supervisor_daemon(path: Path, num_procs=None):
 
 @app.command()
 def watch_job_queue(
-    path: Annotated[str, typer.Argument(None, help="Path to the plugin folder")],
+    path: Annotated[str, typer.Argument(help="Path to the plugin folder")],
     num_procs: Annotated[
         Optional[int],
-        typer.Option(
-            None, help="Number of processes to use. Default: number of CPU cores"
-        ),
-     ] = None,
+        typer.Option(help="Number of processes to use. Default: number of CPU cores"),
+    ] = None,
 ) -> None:
     start_supervisor_daemon(Path(path), num_procs)
 
