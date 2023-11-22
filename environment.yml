@@ -5,7 +5,7 @@ dependencies:
   - python>=3.7
   - pip
   - fastapi
-  - typer
+  - typer >=0.9,<1.0
   - authlib=0.15.5
   - psycopg2
   - httpx>=0.22.0
