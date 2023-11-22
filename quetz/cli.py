@@ -796,7 +796,7 @@ def watch_job_queue(
         typer.Option(
             None, help="Number of processes to use. Default: number of CPU cores"
         ),
-    ] = None,
+     ] = None,
 ) -> None:
     start_supervisor_daemon(Path(path), num_procs)
 
