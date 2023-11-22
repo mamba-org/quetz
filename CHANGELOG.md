@@ -2,6 +2,22 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## 0.10.3
+
+([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.10.2...cbc3914575bf05050c97c241f003d1712f85043e))
+
+### Bugs fixed
+
+- Ignore missing `info/files` file [#671](https://github.com/mamba-org/quetz/pull/671) ([@wolfv](https://github.com/wolfv))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2023-09-28&to=2023-11-22&type=c))
+
+[@wolfv](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Awolfv+updated%3A2023-09-28..2023-11-22&type=Issues)
+
+<!-- <END NEW CHANGELOG ENTRY> -->
+
 ## 0.10.2
 
 ([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.10.1...3cbd27a2356c9ff07fc80fef5888acb71fc2d7f7))
@@ -15,8 +31,6 @@
 ([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2023-09-28&to=2023-09-28&type=c))
 
 [@janjagusch](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Ajanjagusch+updated%3A2023-09-28..2023-09-28&type=Issues)
-
-<!-- <END NEW CHANGELOG ENTRY> -->
 
 ## 0.10.1
 
