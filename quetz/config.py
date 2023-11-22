@@ -128,9 +128,7 @@ class Config:
             [
                 ConfigEntry("access_key", str, default=""),
                 ConfigEntry("secret_key", str, default=""),
-                ConfigEntry(
-                    "url", str, default="https://s3.amazonaws.com"
-                ),  # must not contain bucket_name: e.g. https://s3.(<region>.)?amazonaws.com/
+                ConfigEntry("url", str, default="https://s3.amazonaws.com"),
                 ConfigEntry("region", str, default=""),
                 ConfigEntry("bucket_name", str, default=""),
                 ConfigEntry("bucket_prefix", str, default=""),
