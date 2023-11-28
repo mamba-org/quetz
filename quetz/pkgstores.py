@@ -109,6 +109,12 @@ class PackageStore(abc.ABC):
         """move file from source to destination in package store"""
 
     @abc.abstractmethod
+    def copy_file(
+        self, source_channel: str, source: str, target_channel: str, destination: str
+    ):
+        """move file from source to destination in package store"""
+
+    @abc.abstractmethod
     def file_exists(self, channel: str, destination: str):
         """Return True if the file exists"""
 
@@ -205,6 +211,15 @@ class LocalStore(PackageStore):
             path.join(self.channels_dir, channel, source),
             path.join(self.channels_dir, channel, destination),
         )
+
+    def copy_file(
+        self, source_channel: str, source: str, target_channel: str, destination: str
+    ):
+        with self._atomic_open(target_channel, destination) as f:
+            package = self.fs.open(
+                path.join(self.channels_dir, source_channel, source), "rb"
+            )
+            shutil.copyfileobj(package, f)
 
     def file_exists(self, channel: str, destination: str):
         return self.fs.exists(path.join(self.channels_dir, channel, destination))
@@ -405,6 +420,17 @@ class S3Store(PackageStore):
                 path.join(channel_bucket, destination),
             )
 
+    def copy_file(
+        self, source_channel: str, source: str, target_channel: str, destination: str
+    ):
+        source_channel_bucket = self._bucket_map(source_channel)
+        target_channel_bucket = self._bucket_map(target_channel)
+        with self._get_fs() as fs:
+            fs.copy(
+                path.join(source_channel_bucket, source),
+                path.join(target_channel_bucket, destination),
+            )
+
     def file_exists(self, channel: str, destination: str):
         channel_bucket = self._bucket_map(channel)
         with self._get_fs() as fs:
@@ -557,6 +583,17 @@ class AzureBlobStore(PackageStore):
             fs.move(
                 path.join(channel_container, source),
                 path.join(channel_container, destination),
+            )
+
+    def copy_file(
+        self, source_channel: str, source: str, target_channel: str, destination: str
+    ):
+        source_channel_container = self._container_map(source_channel)
+        target_channel_container = self._container_map(target_channel)
+        with self._get_fs() as fs:
+            fs.copy(
+                path.join(source_channel_container, source),
+                path.join(target_channel_container, destination),
             )
 
     def file_exists(self, channel: str, destination: str):
@@ -726,6 +763,18 @@ class GoogleCloudStorageStore(PackageStore):
             fs.move(
                 path.join(channel_container, source),
                 path.join(channel_container, destination),
+            )
+
+    def copy_file(
+        self, source_channel: str, source: str, target_channel: str, destination: str
+    ):
+        source_channel_container = self._bucket_map(source_channel)
+        target_channel_container = self._bucket_map(target_channel)
+
+        with self._get_fs() as fs:
+            fs.copy(
+                path.join(source_channel_container, source),
+                path.join(target_channel_container, destination),
             )
 
     def file_exists(self, channel: str, destination: str):
