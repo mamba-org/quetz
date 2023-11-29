@@ -156,6 +156,9 @@ def test_remove_dirs(any_store, channel_name):
 
 @pytest.fixture
 def s3_store():
+    print(">>> s3_config", s3_config)
+    print(">>> s3_config.bucket_name", s3_config.get("bucket_name"))
+    print(">>> s3_config | os.environ", os.environ)
     pkg_store = S3Store(s3_config)
     return pkg_store
 

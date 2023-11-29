@@ -99,6 +99,10 @@ jobs:
           fi
 
           export QUETZ_IS_TEST=1
+
+          echo "S3_BUCKET_NAME: $S3_BUCKET_NAME"
+          echo "QUETZ_S3_BUCKET_NAME: $QUETZ_S3_BUCKET_NAME"
+
           pytest -v ./quetz/tests/ --cov-config=pyproject.toml --cov=. --cov-report=xml
 
       - name: Test the plugins
