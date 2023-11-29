@@ -7,12 +7,12 @@ from pathlib import Path
 from unittest import mock
 from unittest.mock import MagicMock
 
-import pytest
 import sqlalchemy as sa
 from alembic.script import ScriptDirectory
 from pytest_mock.plugin import MockerFixture
 from typer.testing import CliRunner
 
+import pytest
 from quetz import cli
 from quetz.config import Config
 from quetz.db_models import Base, Identity, User
@@ -554,9 +554,12 @@ def database_url_environment_variable(database_url) -> None:
 @pytest.fixture()
 def s3_environment_variable() -> None:
     os.environ["QUETZ_S3_ACCESS_KEY"] = "fake_key"
+    os.environ["QUETZ_S3_BUCKET_NAME"] = "fake_bucket"
     yield
     if "QUETZ_S3_ACCESS_KEY" in os.environ:
         del os.environ["QUETZ_S3_ACCESS_KEY"]
+    if "QUETZ_S3_BUCKET_NAME" in os.environ:
+        del os.environ["QUETZ_S3_BUCKET_NAME"]
 
 
 @pytest.fixture()
