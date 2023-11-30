@@ -28,7 +28,7 @@ def test_update_indexes_empty_channel(config, public_channel, dao, empty_channel
 
     expected_files = base_files.copy()
 
-    for suffix in [".bz2", ".gz"]:
+    for suffix in [".bz2", ".gz", ".zst"]:
         expected_files.extend(s + suffix for s in base_files)
 
     assert sorted(files) == sorted(expected_files)
@@ -56,7 +56,7 @@ def test_update_indexes_empty_package(
 
     expected_files = base_files.copy()
 
-    for suffix in [".bz2", ".gz"]:
+    for suffix in [".bz2", ".gz", ".zst"]:
         expected_files.extend(s + suffix for s in base_files)
 
     assert sorted(files) == sorted(expected_files)
@@ -91,7 +91,7 @@ def test_update_indexes_with_package_version(
 
     expected_files = base_files.copy()
 
-    for suffix in [".bz2", ".gz"]:
+    for suffix in [".bz2", ".gz", ".zst"]:
         expected_files.extend(s + suffix for s in base_files)
 
     expected_files.append(f"linux-64/{package_version.filename}")

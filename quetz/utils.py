@@ -20,9 +20,15 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import unquote
 
+import zstandard
 from sqlalchemy import String, and_, cast, collate, not_, or_
 
 from .db_models import Channel, Package, PackageVersion, User
+
+# Same values as conda-index
+# https://github.com/conda/conda-index/blob/58cfdba8cf37b0aa9f5876665025c5949f046a4b/conda_index/index/__init__.py#L46
+ZSTD_COMPRESS_LEVEL = 16
+ZSTD_COMPRESS_THREADS = -1  # automatic
 
 
 def check_package_membership(package_name, includelist, excludelist):
@@ -46,16 +52,21 @@ def add_static_file(contents, channel_name, subdir, fname, pkgstore, file_index=
         raw_file = contents
     bz2_file = bz2.compress(raw_file)
     gzp_file = gzip.compress(raw_file)
+    zst_file = zstandard.ZstdCompressor(
+        level=ZSTD_COMPRESS_LEVEL, threads=ZSTD_COMPRESS_THREADS
+    ).compress(raw_file)
 
     path = f"{subdir}/{fname}" if subdir else fname
     pkgstore.add_file(bz2_file, channel_name, f"{path}.bz2")
     pkgstore.add_file(gzp_file, channel_name, f"{path}.gz")
+    pkgstore.add_file(zst_file, channel_name, f"{path}.zst")
     pkgstore.add_file(raw_file, channel_name, f"{path}")
 
     if file_index:
         add_entry_for_index(file_index, subdir, fname, raw_file)
         add_entry_for_index(file_index, subdir, f"{fname}.bz2", bz2_file)
         add_entry_for_index(file_index, subdir, f"{fname}.gz", gzp_file)
+        add_entry_for_index(file_index, subdir, f"{fname}.zst", zst_file)
 
 
 def add_temp_static_file(
@@ -83,6 +94,9 @@ def add_temp_static_file(
 
     bz2_file = bz2.compress(raw_file)
     gzp_file = gzip.compress(raw_file)
+    zst_file = zstandard.ZstdCompressor(
+        level=ZSTD_COMPRESS_LEVEL, threads=ZSTD_COMPRESS_THREADS
+    ).compress(raw_file)
 
     with open(f"{file_path}.bz2", "wb") as fo:
         fo.write(bz2_file)
@@ -90,10 +104,14 @@ def add_temp_static_file(
     with open(f"{file_path}.gz", "wb") as fo:
         fo.write(gzp_file)
 
+    with open(f"{file_path}.zst", "wb") as fo:
+        fo.write(zst_file)
+
     if file_index:
         add_entry_for_index(file_index, subdir, fname, raw_file)
         add_entry_for_index(file_index, subdir, f"{fname}.bz2", bz2_file)
         add_entry_for_index(file_index, subdir, f"{fname}.gz", gzp_file)
+        add_entry_for_index(file_index, subdir, f"{fname}.zst", zst_file)
 
 
 def add_entry_for_index(files, subdir, fname, data_bytes):
