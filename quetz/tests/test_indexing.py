@@ -1,7 +1,10 @@
+import bz2
+import gzip
 import json
 from pathlib import Path
 
 import pytest
+import zstandard
 
 from quetz import channel_data
 from quetz.tasks.indexing import update_indexes
@@ -103,3 +106,20 @@ def test_update_indexes_with_package_version(
         channeldata = json.load(fd)
 
     assert public_package.name in channeldata["packages"].keys()
+
+    # Check compressed repodata identical to repodata.json
+    for subdir in ('noarch', 'linux-64'):
+        repodata_json_path = channel_dir / subdir / 'repodata.json'
+        with open(repodata_json_path, 'r') as fd:
+            ref_repodata = json.load(fd)
+        for extension in ("bz2", "gz", "zst"):
+            with open(f'{repodata_json_path}.{extension}', 'rb') as fd:
+                compressed_data = fd.read()
+            if extension == "bz2":
+                data = bz2.decompress(compressed_data)
+            elif extension == "gz":
+                data = gzip.decompress(compressed_data)
+            else:
+                data = zstandard.ZstdDecompressor().decompress(compressed_data)
+            repodata = json.loads(data)
+            assert repodata == ref_repodata
