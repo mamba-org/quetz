@@ -13,6 +13,7 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from email.utils import formatdate
+from pathlib import PurePath
 from tempfile import SpooledTemporaryFile, TemporaryFile
 from typing import Awaitable, Callable, List, Optional, Tuple, Type
 
@@ -1915,12 +1916,20 @@ def serve_path(
         repository = RemoteRepository(channel.mirror_channel_url, session)
         if not pkgstore.file_exists(channel.name, path):
             download_remote_file(repository, pkgstore, channel.name, path)
-        elif path.endswith(".json"):
+        elif path.endswith((".json", ".json.bz2", ".json.gz", ".json.zst")):
             # repodata.json and current_repodata.json are cached locally
             # for channel.ttl seconds
-            _, fmtime, _ = pkgstore.get_filemetadata(channel.name, path)
+            # if one of the compressed file is requested, we check and download
+            # the non compressed version if needed
+            # (compressed files are created locally and should all have the same fmtime)
+            suffix = PurePath(path).suffix
+            if suffix == ".json":
+                json_path = path
+            else:
+                json_path = path[: -len(suffix)]
+            _, fmtime, _ = pkgstore.get_filemetadata(channel.name, json_path)
             if time.time() - fmtime >= channel.ttl:
-                download_remote_file(repository, pkgstore, channel.name, path)
+                download_remote_file(repository, pkgstore, channel.name, json_path)
 
     if (
         is_package_request or pkgstore.kind == "LocalStore"
