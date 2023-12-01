@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import json
 import logging
@@ -5,11 +6,13 @@ import os
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 from http.client import IncompleteRead
+from pathlib import Path, PurePath
 from tempfile import SpooledTemporaryFile
 from typing import List
 
 import requests
 from fastapi import HTTPException, status
+from rattler import Channel, ChannelConfig, Platform, fetch_repo_data
 from tenacity import TryAgain, retry
 from tenacity.after import after_log
 from tenacity.stop import stop_after_attempt
@@ -59,6 +62,11 @@ class RemoteRepository:
     def open(self, path):
         return RemoteFile(self.host, path, self.session)
 
+    @property
+    def rattler_channel(self):
+        host_path = PurePath(self.host)
+        return Channel(host_path.name, ChannelConfig(str(host_path.parent)))
+
 
 class RemoteServerError(Exception):
     pass
@@ -106,6 +114,32 @@ class RemoteFile:
         return json.load(self.file)
 
 
+def download_repodata(repository: RemoteRepository, channel: str, platform: str):
+    cache_path = Path(Config().general_rattler_cache_dir) / channel / platform
+    logger.debug(f"Fetching {platform} repodata from {repository.rattler_channel}")
+    try:
+        asyncio.run(
+            fetch_repo_data(
+                channels=[repository.rattler_channel],
+                platforms=[Platform(platform)],
+                cache_path=cache_path,
+                callback=None,
+            )
+        )
+    except Exception as e:
+        logger.error(f"Failed to fetch repodata: {e}")
+        raise
+    try:
+        json_file = list(cache_path.glob("*.json"))[0]
+    except IndexError:
+        logger.error(f"No json file found in rattler cache: {cache_path}")
+        raise RemoteFileNotFound
+    else:
+        with open(json_file, mode="rb") as f:
+            contents = f.read()
+        return contents
+
+
 def download_remote_file(
     repository: RemoteRepository, pkgstore: PackageStore, channel: str, path: str
 ):
@@ -122,13 +156,18 @@ def download_remote_file(
     # Acquire a lock to prevent multiple concurrent downloads of the same file
     with pkgstore.create_download_lock(channel, path):
         logger.debug(f"Downloading {path} from {channel} to pkgstore")
-        remote_file = repository.open(path)
-        data_stream = remote_file.file
-
-        if path.endswith(".json"):
-            add_static_file(data_stream.read(), channel, None, path, pkgstore)
+        if path.endswith("/repodata.json"):
+            platform = str(PurePath(path).parent)
+            repodata = download_repodata(repository, channel, platform)
+            add_static_file(repodata, channel, None, path, pkgstore)
         else:
-            pkgstore.add_package(data_stream, channel, path)
+            remote_file = repository.open(path)
+            data_stream = remote_file.file
+
+            if path.endswith(".json"):
+                add_static_file(data_stream.read(), channel, None, path, pkgstore)
+            else:
+                pkgstore.add_package(data_stream, channel, path)
 
     pkgstore.delete_download_lock(channel, path)
 
