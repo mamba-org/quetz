@@ -67,7 +67,7 @@ class RemoteRepository:
     @property
     def rattler_channel(self):
         host_path = PurePath(self.host)
-        return Channel(host_path.name, ChannelConfig(str(host_path.parent)))
+        return Channel(host_path.name, ChannelConfig(f"{host_path.parent}/"))
 
 
 class RemoteServerError(Exception):

@@ -194,6 +194,26 @@ def mirror_package(mirror_channel, db):
     db.commit()
 
 
+@pytest.mark.parametrize(
+    "host, name",
+    [
+        ("https://conda.anaconda.org/conda-forge", "conda-forge"),
+        ("https://conda.anaconda.org/conda-forge/", "conda-forge"),
+        ("https://repod.prefix.dev/conda-forge", "conda-forge"),
+        ("http://localhost:8000/mychannel", "mychannel"),
+        ("http://localhost:8000/path/mychannel", "mychannel"),
+    ],
+)
+def test_remote_repository_rattler_channel(host, name):
+    repository = RemoteRepository(host, session=None)
+    rattler_channel = repository.rattler_channel
+    assert rattler_channel.name == name
+    if host.endswith("/"):
+        assert rattler_channel.base_url == repository.host
+    else:
+        assert rattler_channel.base_url == f"{repository.host}/"
+
+
 def test_set_mirror_url(db, client, owner):
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
