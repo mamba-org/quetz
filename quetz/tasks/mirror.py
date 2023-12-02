@@ -10,6 +10,8 @@ from pathlib import Path, PurePath
 from tempfile import SpooledTemporaryFile
 from typing import List
 
+import aiofiles
+import aiofiles.os
 import requests
 from fastapi import HTTPException, status
 from rattler import Channel, ChannelConfig, Platform, fetch_repo_data
@@ -114,29 +116,33 @@ class RemoteFile:
         return json.load(self.file)
 
 
-def download_repodata(repository: RemoteRepository, channel: str, platform: str):
+async def download_repodata(repository: RemoteRepository, channel: str, platform: str):
     cache_path = Path(Config().general_rattler_cache_dir) / channel / platform
     logger.debug(f"Fetching {platform} repodata from {repository.rattler_channel}")
     try:
-        asyncio.run(
-            fetch_repo_data(
-                channels=[repository.rattler_channel],
-                platforms=[Platform(platform)],
-                cache_path=cache_path,
-                callback=None,
-            )
+        await fetch_repo_data(
+            channels=[repository.rattler_channel],
+            platforms=[Platform(platform)],
+            cache_path=cache_path,
+            callback=None,
         )
     except Exception as e:
         logger.error(f"Failed to fetch repodata: {e}")
         raise
+    files = await aiofiles.os.listdir(cache_path)
     try:
-        json_file = list(cache_path.glob("*.json"))[0]
+        json_file = [
+            filename
+            for filename in files
+            if filename.endswith(".json") and not filename.endswith(".info.json")
+        ][0]
     except IndexError:
         logger.error(f"No json file found in rattler cache: {cache_path}")
         raise RemoteFileNotFound
     else:
-        with open(json_file, mode="rb") as f:
-            contents = f.read()
+        async with aiofiles.open(cache_path / json_file, "rb") as f:
+            contents = await f.read()
+        logger.debug(f"Retrieved repodata from rattler cache: {cache_path / json_file}")
         return contents
 
 
@@ -158,7 +164,7 @@ def download_remote_file(
         logger.debug(f"Downloading {path} from {channel} to pkgstore")
         if path.endswith("/repodata.json"):
             platform = str(PurePath(path).parent)
-            repodata = download_repodata(repository, channel, platform)
+            repodata = asyncio.run(download_repodata(repository, channel, platform))
             add_static_file(repodata, channel, None, path, pkgstore)
         else:
             remote_file = repository.open(path)
