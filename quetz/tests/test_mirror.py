@@ -174,7 +174,7 @@ def dummy_remote_session_object(app, dummy_response, repo_content, status_code):
 
     app.dependency_overrides[get_remote_session] = DummySession
 
-    return DummySession()
+    yield DummySession()
 
     app.dependency_overrides.pop(get_remote_session)
 
