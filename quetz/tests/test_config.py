@@ -3,6 +3,7 @@ import os
 import tempfile
 
 import pytest
+
 from quetz.config import Config, ConfigEntry, ConfigSection, configure_logger
 from quetz.dao import Dao
 from quetz.errors import ConfigError

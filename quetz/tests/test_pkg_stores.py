@@ -8,6 +8,7 @@ from io import BytesIO
 from pathlib import Path
 
 import pytest
+
 from quetz.pkgstores import (
     AzureBlobStore,
     GoogleCloudStorageStore,

@@ -7,12 +7,12 @@ from pathlib import Path
 from unittest import mock
 from unittest.mock import MagicMock
 
+import pytest
 import sqlalchemy as sa
 from alembic.script import ScriptDirectory
 from pytest_mock.plugin import MockerFixture
 from typer.testing import CliRunner
 
-import pytest
 from quetz import cli
 from quetz.config import Config
 from quetz.db_models import Base, Identity, User
