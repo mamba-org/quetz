@@ -2,6 +2,27 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## 0.10.4
+
+([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.10.3...1a42ed273aa5fd6746df674c9542e539ff32f9a3))
+
+### Bugs fixed
+
+- Address issues of missing `bucket_name` in `s3fs` paths [#673](https://github.com/mamba-org/quetz/pull/673) ([@RobinHolzingerQC](https://github.com/RobinHolzingerQC))
+- Pin `typer` to address issues in argument defaults [#672](https://github.com/mamba-org/quetz/pull/672) ([@RobinHolzingerQC](https://github.com/RobinHolzingerQC))
+
+### Maintenance and upkeep improvements
+
+- Fix linting [#678](https://github.com/mamba-org/quetz/pull/678) ([@RobinHolzingerQC](https://github.com/RobinHolzingerQC))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2023-11-22&to=2023-12-04&type=c))
+
+[@codecov-commenter](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Acodecov-commenter+updated%3A2023-11-22..2023-12-04&type=Issues) | [@RobinHolzingerQC](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3ARobinHolzingerQC+updated%3A2023-11-22..2023-12-04&type=Issues)
+
+<!-- <END NEW CHANGELOG ENTRY> -->
+
 ## 0.10.3
 
 ([Full Changelog](https://github.com/mamba-org/quetz/compare/v0.10.2...cbc3914575bf05050c97c241f003d1712f85043e))
@@ -15,8 +36,6 @@
 ([GitHub contributors page for this release](https://github.com/mamba-org/quetz/graphs/contributors?from=2023-09-28&to=2023-11-22&type=c))
 
 [@wolfv](https://github.com/search?q=repo%3Amamba-org%2Fquetz+involves%3Awolfv+updated%3A2023-09-28..2023-11-22&type=Issues)
-
-<!-- <END NEW CHANGELOG ENTRY> -->
 
 ## 0.10.2
 
