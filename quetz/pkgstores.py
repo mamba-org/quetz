@@ -292,8 +292,11 @@ class S3Store(PackageStore):
         client_kwargs = {}
         url = config.get('url')
         region = config.get("region")
+        self.bucket_name = config.get("bucket_name")
         if url:
             client_kwargs['endpoint_url'] = url
+        if not self.bucket_name:
+            raise ValueError("bucket_name is required in s3 configuration")
         if region:
             client_kwargs["region_name"] = region
 
@@ -326,7 +329,7 @@ class S3Store(PackageStore):
             raise ConfigError(f"{e} - check configured S3 credentials")
 
     def _bucket_map(self, name):
-        return f"{self.bucket_prefix}{name}{self.bucket_suffix}"
+        return f"{self.bucket_name}/{self.bucket_prefix}{name}{self.bucket_suffix}"
 
     def create_channel(self, name):
         """Create the bucket if one doesn't already exist

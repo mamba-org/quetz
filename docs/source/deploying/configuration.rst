@@ -156,16 +156,18 @@ Quetz can store package in object cloud storage compatible with S3 interface. To
     [s3]
     access_key = "AKIAIOSFODNN7EXAMPLE"
     secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-    url = "https://..."
+    url = "https://s3.amazonaws.com"
     region = ""
+    bucket_name = ""
     bucket_prefix="..."
     bucket_suffix="..."
 
 
 :access key:
 :secret key: credentials to S3 account, if you use IAM roles, don't set them or set them to ``""``
-:url: set to the S3 endpoint of your provider (for AWS, you can skip it)
+:url: set to the S3 endpoint (excluding bucket name) of your provider (for AWS, you can skip it)
 :region: region of the S3 instance
+:bucket_name: name of the bucket to store the data in
 :bucket_prefix:
 :bucket_suffix: channel directories on S3 are created with the following semantics: ``{bucket_prefix}{channel_name}{bucket_suffix}``
 
@@ -276,5 +278,6 @@ Variable                 description                             values         
 ``S3_SECRET_KEY``        secret key to s3 (used in tests)        string                                         
 ``S3_ENDPOINT``          s3 endpoint url                         string                                         
 ``S3_REGION``            s3 region                               string                                         
+``S3_BUCKET_NAME``       s3 bucket name                          string                                         
 =======================  ======================================  ===========================  ===================
 
