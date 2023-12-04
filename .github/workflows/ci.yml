@@ -69,7 +69,6 @@ jobs:
           S3_ENDPOINT: https://s3.sbg.cloud.ovh.net/
           S3_REGION: sbg
           S3_BUCKET_NAME: quetz
-          QUETZ_S3_BUCKET_NAME: quetz
         run: |
           # install dev dependencies
           pip install -e .[all,dev]
@@ -87,7 +86,6 @@ jobs:
           S3_ENDPOINT: https://s3.sbg.cloud.ovh.net/
           S3_REGION: sbg
           S3_BUCKET_NAME: quetz
-          QUETZ_S3_BUCKET_NAME: quetz
         run: |
           if [ "$TEST_DB_BACKEND" == "postgres" ]; then
             export QUETZ_TEST_DATABASE="postgresql://postgres:mysecretpassword@${POSTGRES_HOST}:${POSTGRES_PORT}/postgres"
@@ -99,9 +97,6 @@ jobs:
           fi
 
           export QUETZ_IS_TEST=1
-
-          echo "S3_BUCKET_NAME: $S3_BUCKET_NAME"
-          echo "QUETZ_S3_BUCKET_NAME: $QUETZ_S3_BUCKET_NAME"
 
           pytest -v ./quetz/tests/ --cov-config=pyproject.toml --cov=. --cov-report=xml
 
