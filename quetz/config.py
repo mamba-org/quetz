@@ -62,6 +62,7 @@ class Config:
                 ConfigEntry("package_unpack_threads", int, 1),
                 ConfigEntry("frontend_dir", str, default=""),
                 ConfigEntry("redirect_http_to_https", bool, False),
+                ConfigEntry("rattler_cache_dir", str, default="rattler_cache"),
             ],
         ),
         ConfigSection(

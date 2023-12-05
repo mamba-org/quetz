@@ -1,3 +1,4 @@
+exclude: "^quetz/tests/data/test-server/"
 repos:
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0
