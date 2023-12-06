@@ -225,6 +225,13 @@ class Config:
             ],
             required=False,
         ),
+        ConfigSection(
+            "storage",
+            [
+                ConfigEntry("soft_delete_channel", bool, required=False, default=False),
+                ConfigEntry("soft_delete_package", bool, required=False, default=False),
+            ],
+        ),
     ]
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]
