@@ -1914,9 +1914,7 @@ def serve_path(
 
     if channel.mirror_channel_url and channel.mirror_mode == "proxy":
         repository = RemoteRepository(channel.mirror_channel_url, session)
-        if not pkgstore.file_exists(channel.name, path):
-            download_remote_file(repository, pkgstore, channel.name, path)
-        elif path.endswith((".json", ".json.bz2", ".json.gz", ".json.zst")):
+        if path.endswith((".json", ".json.bz2", ".json.gz", ".json.zst")):
             # repodata.json and current_repodata.json are cached locally
             # for channel.ttl seconds
             # if one of the compressed file is requested, we check and download
@@ -1927,9 +1925,14 @@ def serve_path(
                 json_path = path
             else:
                 json_path = path[: -len(suffix)]
-            _, fmtime, _ = pkgstore.get_filemetadata(channel.name, json_path)
+            try:
+                _, fmtime, _ = pkgstore.get_filemetadata(channel.name, json_path)
+            except FileNotFoundError:
+                fmtime = 0
             if time.time() - fmtime >= channel.ttl:
                 download_remote_file(repository, pkgstore, channel.name, json_path)
+        elif not pkgstore.file_exists(channel.name, path):
+            download_remote_file(repository, pkgstore, channel.name, path)
 
     if (
         is_package_request or pkgstore.kind == "LocalStore"
