@@ -1,4 +1,6 @@
+import bz2
 import concurrent.futures
+import gzip
 import json
 import os
 import subprocess
@@ -11,6 +13,7 @@ from unittest.mock import MagicMock
 from urllib.parse import urlparse
 
 import pytest
+import zstandard
 
 from quetz import hookimpl, rest_models
 from quetz.authorization import Rules
@@ -1503,6 +1506,67 @@ def test_download_remote_file_current_repodata(
         f"/get/{server_proxy_channel.name}/noarch/current_repodata.json"
     )
     assert response.status_code == 200
+    # current_repodata content is the same as test_repodata_json in the test repo
     assert response.content == test_repodata_json
     # download_repodata isn't used (download done with repository.open)
     assert not mock_download_repodata.called
+
+
+@pytest.fixture(scope="function")
+def config_extra(request) -> str:
+    return (
+        "[compression]\n"
+        f"bz2_enabled = {str(request.param[0]).lower()}\n"
+        f"gz_enabled = {str(request.param[1]).lower()}\n"
+        f"zst_enabled = {str(request.param[2]).lower()}\n"
+    )
+
+
+@pytest.mark.parametrize(
+    "config_extra",
+    [
+        (False, False, False),
+        (False, False, True),
+        (True, True, True),
+        (True, True, False),
+        (False, True, True),
+    ],
+    indirect=True,
+)
+@mock.patch("quetz.tasks.mirror.download_repodata")
+def test_download_remote_file_repodata_compressed(
+    mock_download_repodata,
+    client,
+    server_proxy_channel,
+    test_repodata_json,
+    config,
+):
+    """Test downloading compressed repodata.json."""
+    # download from remote server using download_repodata
+    mock_download_repodata.return_value = test_repodata_json
+    assert not mock_download_repodata.called
+    is_at_least_one_extension_enabled = False
+    for extension in ("bz2", "gz", "zst"):
+        response = client.get(
+            f"/get/{server_proxy_channel.name}/noarch/repodata.json.{extension}"
+        )
+        if getattr(config, f"compression_{extension}_enabled"):
+            is_at_least_one_extension_enabled = True
+            assert response.status_code == 200
+            if extension == "bz2":
+                data = bz2.decompress(response.content)
+            elif extension == "gz":
+                data = gzip.decompress(response.content)
+            else:
+                data = zstandard.ZstdDecompressor().decompress(response.content)
+            assert data == test_repodata_json
+        else:
+            assert response.status_code == 404
+    if is_at_least_one_extension_enabled:
+        # Check that download_repodata is called only once
+        # (json file downloaded and compressed the first time only)
+        # cache used afterwards
+        assert mock_download_repodata.call_count == 1
+    else:
+        # No extension enabled - only 404 returned
+        assert mock_download_repodata.call_count == 0

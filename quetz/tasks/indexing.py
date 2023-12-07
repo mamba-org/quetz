@@ -88,7 +88,9 @@ def _subdir_key(dir):
     return _subdir_order.get(dir, dir)
 
 
-def validate_packages(dao, pkgstore, channel_name):
+def validate_packages(
+    dao, pkgstore, channel_name, bz2_enabled, gz_enabled, zst_enabled
+):
     # for now we're just validating the size of the uploaded file
     logger.info("Starting package validation")
 
@@ -175,10 +177,25 @@ def validate_packages(dao, pkgstore, channel_name):
         logger.info(f"Wrong size: {wrong_size}")
         logger.info(f"Not uploaded: {inexistent}")
 
-    update_indexes(dao, pkgstore, channel_name)
+    update_indexes(
+        dao,
+        pkgstore,
+        channel_name,
+        bz2_enabled=bz2_enabled,
+        gz_enabled=gz_enabled,
+        zst_enabled=zst_enabled,
+    )
 
 
-def update_indexes(dao, pkgstore, channel_name, subdirs=None):
+def update_indexes(
+    dao,
+    pkgstore,
+    channel_name,
+    subdirs=None,
+    bz2_enabled=False,
+    gz_enabled=False,
+    zst_enabled=False,
+):
     jinjaenv = _jinjaenv()
     channeldata = channel_data.export(dao, channel_name)
 
@@ -187,7 +204,16 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
 
     # Generate channeldata.json and its compressed version
     chandata_json = json.dumps(channeldata, indent=2, sort_keys=False)
-    add_static_file(chandata_json, channel_name, None, "channeldata.json", pkgstore)
+    add_static_file(
+        chandata_json,
+        channel_name,
+        None,
+        "channeldata.json",
+        pkgstore,
+        bz2_enabled=bz2_enabled,
+        gz_enabled=gz_enabled,
+        zst_enabled=zst_enabled,
+    )
 
     # Generate index.html for the "root" directory
     channel_index = jinjaenv.get_template("channeldata-index.html.j2").render(
@@ -196,7 +222,7 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
         subdirs=subdirs,
         current_time=datetime.now(timezone.utc),
     )
-
+    # No compressed version created
     add_static_file(channel_index, channel_name, None, "index.html", pkgstore)
 
     # NB. No rss.xml is being generated here
@@ -227,7 +253,15 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
         repodata = json.dumps(raw_repodata, indent=2, sort_keys=False)
 
         add_temp_static_file(
-            repodata, channel_name, sdir, "repodata.json", tempdir_path, files
+            repodata,
+            channel_name,
+            sdir,
+            "repodata.json",
+            tempdir_path,
+            files,
+            bz2_enabled=bz2_enabled,
+            gz_enabled=gz_enabled,
+            zst_enabled=zst_enabled,
         )
 
     try:
@@ -251,6 +285,7 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
             current_time=datetime.now(timezone.utc),
             add_files=files[sdir],
         )
+        # No compressed version created
         add_static_file(subdir_index_html, channel_name, sdir, "index.html", pkgstore)
 
     # recursively walk through the tree

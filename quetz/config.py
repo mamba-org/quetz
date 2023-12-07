@@ -233,6 +233,14 @@ class Config:
                 ConfigEntry("soft_delete_package", bool, required=False, default=False),
             ],
         ),
+        ConfigSection(
+            "compression",
+            [
+                ConfigEntry("gz_enabled", bool, default=True),
+                ConfigEntry("bz2_enabled", bool, default=True),
+                ConfigEntry("zst_enabled", bool, default=False),
+            ],
+        ),
     ]
     _config_dirs = [_site_dir, _user_dir]
     _config_files = [os.path.join(d, _filename) for d in _config_dirs]
@@ -495,6 +503,20 @@ class Config:
                     "redirect_expiration": int(self.local_store_redirect_expiration),
                 }
             )
+
+    def get_enabled_compression_extensions(self):
+        return [
+            ext
+            for ext in ("bz2", "gz", "zst")
+            if getattr(self, f"compression_{ext}_enabled")
+        ]
+
+    def get_disabled_compression_extensions(self):
+        return [
+            ext
+            for ext in ("bz2", "gz", "zst")
+            if not getattr(self, f"compression_{ext}_enabled")
+        ]
 
     def configured_section(self, section: str) -> bool:
         """Return if a given section has been configured.

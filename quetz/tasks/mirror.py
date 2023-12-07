@@ -147,7 +147,11 @@ async def download_repodata(repository: RemoteRepository, channel: str, platform
 
 
 def download_remote_file(
-    repository: RemoteRepository, pkgstore: PackageStore, channel: str, path: str
+    repository: RemoteRepository,
+    pkgstore: PackageStore,
+    channel: str,
+    path: str,
+    config: Config,
 ):
     """Download a file from a remote repository to a package store"""
 
@@ -165,13 +169,31 @@ def download_remote_file(
         if path.endswith("/repodata.json"):
             platform = str(PurePath(path).parent)
             repodata = asyncio.run(download_repodata(repository, channel, platform))
-            add_static_file(repodata, channel, None, path, pkgstore)
+            add_static_file(
+                repodata,
+                channel,
+                None,
+                path,
+                pkgstore,
+                bz2_enabled=config.compression_bz2_enabled,
+                gz_enabled=config.compression_gz_enabled,
+                zst_enabled=config.compression_zst_enabled,
+            )
         else:
             remote_file = repository.open(path)
             data_stream = remote_file.file
 
             if path.endswith(".json"):
-                add_static_file(data_stream.read(), channel, None, path, pkgstore)
+                add_static_file(
+                    data_stream.read(),
+                    channel,
+                    None,
+                    path,
+                    pkgstore,
+                    bz2_enabled=config.compression_bz2_enabled,
+                    gz_enabled=config.compression_gz_enabled,
+                    zst_enabled=config.compression_zst_enabled,
+                )
             else:
                 pkgstore.add_package(data_stream, channel, path)
 
@@ -480,7 +502,15 @@ def initial_sync_mirror(
         any_updated |= handle_batch(update_batch)
 
     if any_updated:
-        indexing.update_indexes(dao, pkgstore, channel_name, subdirs=[arch])
+        indexing.update_indexes(
+            dao,
+            pkgstore,
+            channel_name,
+            subdirs=[arch],
+            bz2_enabled=config.compression_bz2_enabled,
+            gz_enabled=config.compression_gz_enabled,
+            zst_enabled=config.compression_zst_enabled,
+        )
 
 
 def create_packages_from_channeldata(

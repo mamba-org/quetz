@@ -52,7 +52,11 @@ class Task:
         self.db = db
         self.jobs_dao = JobsDao(db)
         self.dao = dao.Dao(db)
-        self.pkgstore = get_config().get_package_store()
+        config = get_config()
+        self.pkgstore = config.get_package_store()
+        self.bz2_enabled = config.compression_bz2_enabled
+        self.gz_enabled = config.compression_gz_enabled
+        self.zst_enabled = config.compression_zst_enabled
 
     def execute_channel_action(
         self,
@@ -100,7 +104,12 @@ class Task:
             )
         elif action == ChannelActionEnum.validate_packages:
             auth.assert_validate_package_cache(channel_name)
-            extra_args = dict(channel_name=channel.name)
+            extra_args = dict(
+                channel_name=channel.name,
+                bz2_enabled=self.bz2_enabled,
+                gz_enabled=self.gz_enabled,
+                zst_enabled=self.zst_enabled,
+            )
             task = self.jobs_dao.create_job(
                 action.encode("ascii"),
                 user_id,
