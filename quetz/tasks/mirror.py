@@ -175,9 +175,7 @@ def download_remote_file(
                 None,
                 path,
                 pkgstore,
-                bz2_enabled=config.compression_bz2_enabled,
-                gz_enabled=config.compression_gz_enabled,
-                zst_enabled=config.compression_zst_enabled,
+                compression=config.get_compression_config(),
             )
         else:
             remote_file = repository.open(path)
@@ -190,9 +188,7 @@ def download_remote_file(
                     None,
                     path,
                     pkgstore,
-                    bz2_enabled=config.compression_bz2_enabled,
-                    gz_enabled=config.compression_gz_enabled,
-                    zst_enabled=config.compression_zst_enabled,
+                    compression=config.get_compression_config(),
                 )
             else:
                 pkgstore.add_package(data_stream, channel, path)
@@ -508,9 +504,7 @@ def initial_sync_mirror(
             pkgstore,
             channel_name,
             subdirs=[arch],
-            bz2_enabled=config.compression_bz2_enabled,
-            gz_enabled=config.compression_gz_enabled,
-            zst_enabled=config.compression_zst_enabled,
+            compression=config.get_compression_config(),
         )
 
 

@@ -7,6 +7,7 @@ import pytest
 import zstandard
 
 from quetz import channel_data
+from quetz.config import CompressionConfig
 from quetz.tasks.indexing import update_indexes
 
 
@@ -37,9 +38,7 @@ def test_update_indexes_empty_channel(
         dao,
         pkgstore,
         public_channel.name,
-        bz2_enabled=bz2_enabled,
-        gz_enabled=gz_enabled,
-        zst_enabled=zst_enabled,
+        compression=CompressionConfig(bz2_enabled, gz_enabled, zst_enabled),
     )
 
     files = pkgstore.list_files(public_channel.name)
@@ -81,9 +80,7 @@ def test_update_indexes_empty_package(
         dao,
         pkgstore,
         public_channel.name,
-        bz2_enabled=bz2_enabled,
-        gz_enabled=gz_enabled,
-        zst_enabled=zst_enabled,
+        compression=CompressionConfig(bz2_enabled, gz_enabled, zst_enabled),
     )
 
     files = pkgstore.list_files(public_channel.name)
@@ -132,9 +129,7 @@ def test_update_indexes_with_package_version(
         dao,
         pkgstore,
         public_channel.name,
-        bz2_enabled=bz2_enabled,
-        gz_enabled=gz_enabled,
-        zst_enabled=zst_enabled,
+        compression=CompressionConfig(bz2_enabled, gz_enabled, zst_enabled),
     )
 
     files = pkgstore.list_files(public_channel.name)

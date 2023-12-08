@@ -173,12 +173,7 @@ def reindex_packages_from_store(
 
         try:
             update_indexes(
-                dao,
-                pkgstore,
-                channel_name,
-                bz2_enabled=config.compression_bz2_enabled,
-                gz_enabled=config.compression_gz_enabled,
-                zst_enabled=config.compression_zst_enabled,
+                dao, pkgstore, channel_name, compression=config.get_compression_config()
             )
             dao.db.commit()
         except IntegrityError:
