@@ -4,6 +4,7 @@
 import logging
 import logging.config
 import os
+from dataclasses import dataclass
 from distutils.util import strtobool
 from secrets import token_bytes
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Type, Union
@@ -22,6 +23,24 @@ _site_dir = appdirs.site_config_dir("quetz")
 _user_dir = appdirs.user_config_dir("quetz")
 
 PAGINATION_LIMIT = 20
+COMPRESSION_EXTENSIONS = ["bz2", "gz", "zst"]
+
+
+@dataclass
+class CompressionConfig:
+    bz2_enabled: bool
+    gz_enabled: bool
+    zst_enabled: bool
+
+    def enabled_extensions(self):
+        return [
+            ext for ext in COMPRESSION_EXTENSIONS if getattr(self, f"{ext}_enabled")
+        ]
+
+    def disabled_extensions(self):
+        return [
+            ext for ext in COMPRESSION_EXTENSIONS if not getattr(self, f"{ext}_enabled")
+        ]
 
 
 class ConfigEntry(NamedTuple):
@@ -452,6 +471,20 @@ class Config:
 
         return config
 
+    def get_compression_config(self) -> CompressionConfig:
+        """Return the compression configuration.
+
+        Returns
+        -------
+        compression_config : CompressionConfig
+            The compression configuration
+        """
+        return CompressionConfig(
+            self.compression_bz2_enabled,
+            self.compression_gz_enabled,
+            self.compression_zst_enabled,
+        )
+
     def get_package_store(self) -> pkgstores.PackageStore:
         """Return the appropriate package store as set in the config.
 
@@ -503,20 +536,6 @@ class Config:
                     "redirect_expiration": int(self.local_store_redirect_expiration),
                 }
             )
-
-    def get_enabled_compression_extensions(self):
-        return [
-            ext
-            for ext in ("bz2", "gz", "zst")
-            if getattr(self, f"compression_{ext}_enabled")
-        ]
-
-    def get_disabled_compression_extensions(self):
-        return [
-            ext
-            for ext in ("bz2", "gz", "zst")
-            if not getattr(self, f"compression_{ext}_enabled")
-        ]
 
     def configured_section(self, section: str) -> bool:
         """Return if a given section has been configured.

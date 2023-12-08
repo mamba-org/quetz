@@ -80,12 +80,7 @@ def test_delete_package_versions_with_package(
     assert package_version.package_name == public_package.name
 
     update_indexes(
-        dao,
-        pkgstore,
-        public_channel.name,
-        bz2_enabled=config.compression_bz2_enabled,
-        gz_enabled=config.compression_gz_enabled,
-        zst_enabled=config.compression_zst_enabled,
+        dao, pkgstore, public_channel.name, compression=config.get_compression_config()
     )
 
     # Get package files

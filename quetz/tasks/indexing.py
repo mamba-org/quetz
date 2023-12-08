@@ -9,6 +9,7 @@ import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 from jinja2.exceptions import UndefinedError
@@ -16,6 +17,7 @@ from jinja2.exceptions import UndefinedError
 import quetz.config
 from quetz import channel_data, repo_data
 from quetz.condainfo import MAX_CONDA_TIMESTAMP
+from quetz.config import CompressionConfig
 from quetz.db_models import PackageVersion
 from quetz.utils import add_static_file, add_temp_static_file
 
@@ -89,7 +91,7 @@ def _subdir_key(dir):
 
 
 def validate_packages(
-    dao, pkgstore, channel_name, bz2_enabled, gz_enabled, zst_enabled
+    dao, pkgstore, channel_name, compression: Optional[CompressionConfig] = None
 ):
     # for now we're just validating the size of the uploaded file
     logger.info("Starting package validation")
@@ -181,9 +183,7 @@ def validate_packages(
         dao,
         pkgstore,
         channel_name,
-        bz2_enabled=bz2_enabled,
-        gz_enabled=gz_enabled,
-        zst_enabled=zst_enabled,
+        compression=compression,
     )
 
 
@@ -192,9 +192,7 @@ def update_indexes(
     pkgstore,
     channel_name,
     subdirs=None,
-    bz2_enabled=False,
-    gz_enabled=False,
-    zst_enabled=False,
+    compression: Optional[CompressionConfig] = None,
 ):
     jinjaenv = _jinjaenv()
     channeldata = channel_data.export(dao, channel_name)
@@ -210,9 +208,7 @@ def update_indexes(
         None,
         "channeldata.json",
         pkgstore,
-        bz2_enabled=bz2_enabled,
-        gz_enabled=gz_enabled,
-        zst_enabled=zst_enabled,
+        compression=compression,
     )
 
     # Generate index.html for the "root" directory
@@ -226,7 +222,7 @@ def update_indexes(
     add_static_file(channel_index, channel_name, None, "index.html", pkgstore)
 
     # NB. No rss.xml is being generated here
-    files = {}
+    files: Dict[str, Any] = {}
     packages = {}
     subdir_template = jinjaenv.get_template("subdir-index.html.j2")
 
@@ -259,9 +255,7 @@ def update_indexes(
             "repodata.json",
             tempdir_path,
             files,
-            bz2_enabled=bz2_enabled,
-            gz_enabled=gz_enabled,
-            zst_enabled=zst_enabled,
+            compression=compression,
         )
 
     try:

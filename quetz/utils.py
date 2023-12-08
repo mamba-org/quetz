@@ -24,6 +24,7 @@ from urllib.parse import unquote
 import zstandard
 from sqlalchemy import String, and_, cast, collate, not_, or_
 
+from .config import CompressionConfig
 from .db_models import Channel, Package, PackageVersion, User
 
 # Same values as conda-index
@@ -61,17 +62,17 @@ def add_static_file(
     fname,
     pkgstore,
     file_index=None,
-    bz2_enabled=False,
-    gz_enabled=False,
-    zst_enabled=False,
+    compression: Optional[CompressionConfig] = None,
 ):
-    compressed = compress_file(contents, bz2_enabled, gz_enabled, zst_enabled)
+    if compression is None:
+        compression = CompressionConfig(False, False, False)
+    compressed = compress_file(contents, compression)
     path = f"{subdir}/{fname}" if subdir else fname
-    if bz2_enabled:
+    if compression.bz2_enabled:
         pkgstore.add_file(compressed.bz2_file, channel_name, f"{path}.bz2")
-    if gz_enabled:
+    if compression.gz_enabled:
         pkgstore.add_file(compressed.gz_file, channel_name, f"{path}.gz")
-    if zst_enabled:
+    if compression.zst_enabled:
         pkgstore.add_file(compressed.zst_file, channel_name, f"{path}.zst")
     pkgstore.add_file(compressed.raw_file, channel_name, f"{path}")
 
@@ -86,11 +87,11 @@ def add_temp_static_file(
     fname,
     temp_dir,
     file_index=None,
-    bz2_enabled=False,
-    gz_enabled=False,
-    zst_enabled=False,
+    compression: Optional[CompressionConfig] = None,
 ):
-    compressed = compress_file(contents, bz2_enabled, gz_enabled, zst_enabled)
+    if compression is None:
+        compression = CompressionConfig(False, False, False)
+    compressed = compress_file(contents, compression)
 
     temp_dir = Path(temp_dir)
 
@@ -106,13 +107,13 @@ def add_temp_static_file(
 
     with open(file_path, "wb") as fo:
         fo.write(compressed.raw_file)
-    if bz2_enabled:
+    if compressed.bz2_file:
         with open(f"{file_path}.bz2", "wb") as fo:
             fo.write(compressed.bz2_file)
-    if gz_enabled:
+    if compressed.gz_file:
         with open(f"{file_path}.gz", "wb") as fo:
             fo.write(compressed.gz_file)
-    if zst_enabled:
+    if compressed.zst_file:
         with open(f"{file_path}.zst", "wb") as fo:
             fo.write(compressed.zst_file)
 
@@ -121,19 +122,19 @@ def add_temp_static_file(
 
 
 def compress_file(
-    contents: Union[str, bytes], bz2_enabled=False, gz_enabled=False, zst_enabled=False
+    contents: Union[str, bytes], compression: CompressionConfig
 ) -> Compressed:
     if not isinstance(contents, bytes):
         raw_file = contents.encode("utf-8")
     else:
         raw_file = contents
-    bz2_file = bz2.compress(raw_file) if bz2_enabled else None
-    gz_file = gzip.compress(raw_file) if gz_enabled else None
+    bz2_file = bz2.compress(raw_file) if compression.bz2_enabled else None
+    gz_file = gzip.compress(raw_file) if compression.gz_enabled else None
     zst_file = (
         zstandard.ZstdCompressor(
             level=ZSTD_COMPRESS_LEVEL, threads=ZSTD_COMPRESS_THREADS
         ).compress(raw_file)
-        if zst_enabled
+        if compression.zst_enabled
         else None
     )
     return Compressed(raw_file, bz2_file, gz_file, zst_file)

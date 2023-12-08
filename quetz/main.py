@@ -756,9 +756,7 @@ def post_channel(
             dao,
             pkgstore,
             new_channel.name,
-            bz2_enabled=config.compression_bz2_enabled,
-            gz_enabled=config.compression_gz_enabled,
-            zst_enabled=config.compression_zst_enabled,
+            compression=config.get_compression_config(),
         )
 
     # register mirror
@@ -919,9 +917,7 @@ def delete_package(
         pkgstore,
         channel_name,
         platforms,
-        bz2_enabled=config.compression_bz2_enabled,
-        gz_enabled=config.compression_gz_enabled,
-        zst_enabled=config.compression_zst_enabled,
+        compression=config.get_compression_config(),
     )
 
 
@@ -1287,9 +1283,7 @@ def delete_package_version(
         pkgstore,
         channel_name,
         [platform],
-        bz2_enabled=config.compression_bz2_enabled,
-        gz_enabled=config.compression_gz_enabled,
-        zst_enabled=config.compression_zst_enabled,
+        compression=config.get_compression_config(),
     )
 
 
@@ -1484,9 +1478,7 @@ def post_file_to_package(
         dao,
         pkgstore,
         package.channel_name,
-        bz2_enabled=config.compression_bz2_enabled,
-        gz_enabled=config.compression_gz_enabled,
-        zst_enabled=config.compression_zst_enabled,
+        compression=config.get_compression_config(),
     )
 
 
@@ -1578,9 +1570,7 @@ async def post_upload(
         dao,
         pkgstore,
         channel_name,
-        bz2_enabled=config.compression_bz2_enabled,
-        gz_enabled=config.compression_gz_enabled,
-        zst_enabled=config.compression_zst_enabled,
+        compression=config.get_compression_config(),
     )
 
 
@@ -1607,9 +1597,7 @@ def post_file_to_channel(
         dao,
         pkgstore,
         channel.name,
-        bz2_enabled=config.compression_bz2_enabled,
-        gz_enabled=config.compression_gz_enabled,
-        zst_enabled=config.compression_zst_enabled,
+        compression=config.get_compression_config(),
     )
 
 
@@ -1943,8 +1931,9 @@ def serve_path(
     chunk_size = 10_000
 
     # Ensure we don't serve an old compressed file if this compression is now disabled
+    compression = config.get_compression_config()
     disabled_compressed_json_extensions = tuple(
-        f".json.{ext}" for ext in config.get_disabled_compression_extensions()
+        f".json.{ext}" for ext in compression.disabled_extensions()
     )
     if path.endswith(disabled_compressed_json_extensions):
         suffix = PurePath(path).suffix
@@ -1981,7 +1970,7 @@ def serve_path(
     if channel.mirror_channel_url and channel.mirror_mode == "proxy":
         repository = RemoteRepository(channel.mirror_channel_url, session)
         enabled_compressed_json_extensions = tuple(
-            f".json.{ext}" for ext in config.get_enabled_compression_extensions()
+            f".json.{ext}" for ext in compression.enabled_extensions()
         )
         if path.endswith((".json",) + enabled_compressed_json_extensions):
             # repodata.json and current_repodata.json are cached locally

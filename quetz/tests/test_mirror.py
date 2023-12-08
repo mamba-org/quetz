@@ -1513,7 +1513,9 @@ def test_download_remote_file_current_repodata(
 
 
 @pytest.fixture(scope="function")
-def config_extra(request) -> str:
+def config_extra(request=None) -> str:
+    if request is None:
+        return ""
     return (
         "[compression]\n"
         f"bz2_enabled = {str(request.param[0]).lower()}\n"
