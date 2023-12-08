@@ -196,6 +196,7 @@ def download_remote_file(
                 )
             else:
                 pkgstore.add_package(data_stream, channel, path)
+        logger.debug(f"Added {path} from {channel} to pkgstore")
 
     pkgstore.delete_download_lock(channel, path)
 
