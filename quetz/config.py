@@ -477,7 +477,7 @@ class Config:
         Returns
         -------
         compression_config : CompressionConfig
-            The compression configuration
+            Class defining which compressions are enabled (bzip2, gzip and zstandard)
         """
         return CompressionConfig(
             self.compression_bz2_enabled,
