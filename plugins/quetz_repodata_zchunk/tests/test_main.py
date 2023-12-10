@@ -112,8 +112,11 @@ def test_repodata_zchunk(
     package_file_name,
     dao,
     db,
+    config,
 ):
-    indexing.update_indexes(dao, pkgstore, channel_name)
+    indexing.update_indexes(
+        dao, pkgstore, channel_name, compression=config.get_compression_config()
+    )
 
     index_path = os.path.join(
         pkgstore.channels_dir,
