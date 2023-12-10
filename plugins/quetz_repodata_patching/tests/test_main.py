@@ -288,6 +288,7 @@ def test_post_package_indexing(
     channel_name,
     package_repodata_patches,
     db,
+    config,
     package_file_name,
     repodata_stem,
     compressed_repodata,
@@ -301,7 +302,9 @@ def test_post_package_indexing(
         yield db
 
     with mock.patch("quetz_repodata_patching.main.get_db_manager", get_db):
-        indexing.update_indexes(dao, pkgstore, channel_name)
+        indexing.update_indexes(
+            dao, pkgstore, channel_name, compression=config.get_compression_config()
+        )
 
     ext = "json.bz2" if compressed_repodata else "json"
     open_ = bz2.open if compressed_repodata else open
@@ -372,6 +375,7 @@ def test_index_html(
     package_file_name,
     dao,
     db,
+    config,
     remove_instructions,
 ):
     @contextmanager
@@ -379,7 +383,9 @@ def test_index_html(
         yield db
 
     with mock.patch("quetz_repodata_patching.main.get_db_manager", get_db):
-        indexing.update_indexes(dao, pkgstore, channel_name)
+        indexing.update_indexes(
+            dao, pkgstore, channel_name, compression=config.get_compression_config()
+        )
 
     index_path = os.path.join(
         pkgstore.channels_dir,
@@ -412,6 +418,7 @@ def test_patches_for_subdir(
     package_repodata_patches,
     dao,
     db,
+    config,
     package_subdir,
     patches_subdir,
 ):
@@ -420,7 +427,9 @@ def test_patches_for_subdir(
         yield db
 
     with mock.patch("quetz_repodata_patching.main.get_db_manager", get_db):
-        indexing.update_indexes(dao, pkgstore, channel_name)
+        indexing.update_indexes(
+            dao, pkgstore, channel_name, compression=config.get_compression_config()
+        )
 
     index_path = os.path.join(
         pkgstore.channels_dir,
@@ -466,13 +475,16 @@ def test_no_repodata_patches_package(
     package_file_name,
     dao,
     db,
+    config,
 ):
     @contextmanager
     def get_db():
         yield db
 
     with mock.patch("quetz_repodata_patching.main.get_db_manager", get_db):
-        indexing.update_indexes(dao, pkgstore, channel_name)
+        indexing.update_indexes(
+            dao, pkgstore, channel_name, compression=config.get_compression_config()
+        )
 
     index_path = os.path.join(
         pkgstore.channels_dir,

@@ -15,6 +15,7 @@ from quetz.utils import add_temp_static_file
 
 config = Config()
 pkgstore = config.get_package_store()
+compression = config.get_compression_config()
 
 
 def update_dict(packages, instructions):
@@ -147,6 +148,7 @@ def post_package_indexing(tempdir: Path, channel_name, subdirs, files, packages)
                     "repodata_from_packages.json",
                     tempdir,
                     files,
+                    compression=compression,
                 )
 
                 patch_repodata(repodata, patch_instructions)
@@ -162,4 +164,5 @@ def post_package_indexing(tempdir: Path, channel_name, subdirs, files, packages)
                     "repodata.json",
                     tempdir,
                     files,
+                    compression=compression,
                 )
