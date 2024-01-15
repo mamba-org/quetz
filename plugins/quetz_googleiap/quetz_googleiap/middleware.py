@@ -55,13 +55,13 @@ class GoogleIAMMiddleware(BaseHTTPMiddleware):
         count = request.session.get("count", 0)
         request.session["count"] = count + 1
 
-        db = next(get_db(get_config()))
-        dao = Dao(db)
-
         user_id = request.headers.get("x-goog-authenticated-user-id")
         email = request.headers.get("x-goog-authenticated-user-email")
 
         if user_id and email:
+            db = next(get_db(get_config()))
+            dao = Dao(db)
+
             _, email = email.split(":", 1)
             _, user_id = user_id.split(":", 1)
 
@@ -77,8 +77,8 @@ class GoogleIAMMiddleware(BaseHTTPMiddleware):
                 )
             user_channel = email_to_channel_name(email)
 
-            logger.info(f"Creating channel for user: {user_channel}")
             if dao.get_channel(email_to_channel_name(user_channel)) is None:
+                logger.info(f"Creating channel for user: {user_channel}")
                 channel = rest_models.Channel(
                     name=user_channel,
                     private=False,
@@ -87,10 +87,12 @@ class GoogleIAMMiddleware(BaseHTTPMiddleware):
                 dao.create_channel(channel, user.id, "owner")
 
             self.google_role_for_user(user_id, dao)
-
+            user_id = uuid.UUID(bytes=user.id)
+            # drop the db and dao to remove the connection
+            del db, dao
             # we also need to find the role of the user
             request.session['identity_provider'] = "dummy"
-            request.session["user_id"] = str(uuid.UUID(bytes=user.id))
+            request.session["user_id"] = str(user_id)
         else:
             request.session["user_id"] = None
             request.session["identity_provider"] = None
