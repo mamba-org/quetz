@@ -56,7 +56,7 @@ class GoogleIAMMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request, call_next):
         # ignore middleware if it is not configured
-        if not self.configured:
+        if not self.configured or request.url.path.startswith("/health"):
             response = await call_next(request)
             return response
 
