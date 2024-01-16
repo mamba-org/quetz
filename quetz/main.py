@@ -654,7 +654,7 @@ def delete_channel(
     auth.assert_delete_channel(channel)
     dao.delete_channel(channel.name)
     try:
-        if not config.storage.soft_delete_channel:
+        if not config.storage_soft_delete_channel:
             pkgstore.remove_channel(channel.name)
     except FileNotFoundError:
         logger.warning(
@@ -893,7 +893,7 @@ def delete_package(
     db.commit()
 
     for filename in filenames:
-        if not config.storage.soft_delete_package:
+        if not config.storage_soft_delete_package:
             pkgstore.delete_file(channel_name, filename)
 
     dao.update_channel_size(channel_name)
@@ -1161,7 +1161,7 @@ def delete_package_version(
     db.commit()
 
     path = os.path.join(platform, filename)
-    if not config.storage.soft_delete_package:
+    if not config.storage_soft_delete_package:
         pkgstore.delete_file(channel_name, path)
 
     dao.cleanup_channel_db(channel_name, package_name)
