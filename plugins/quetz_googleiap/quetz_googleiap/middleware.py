@@ -60,11 +60,6 @@ class GoogleIAMMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
             return response
 
-        # Check if the session has a specific key, for example 'count'.
-        # If it does, increment its value. If it doesn't, set it to 1.
-        count = request.session.get("count", 0)
-        request.session["count"] = count + 1
-
         user_id = request.headers.get("x-goog-authenticated-user-id")
         email = request.headers.get("x-goog-authenticated-user-email")
 
