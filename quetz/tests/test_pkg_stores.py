@@ -253,6 +253,13 @@ def test_move_file(any_store, channel, channel_name):
 
     assert_files(pkg_store, channel_name, ['test_2.txt'])
 
+def test_copy_file(any_store, channel, channel_name):
+    pkg_store = any_store
+
+    pkg_store.add_file("content", channel_name, "test.txt")
+    pkg_store.copy_file(channel_name, "test.txt", channel_name, "test_2.txt")
+
+    assert_files(pkg_store, channel_name, ['test.txt', 'test_2.txt'])
 
 @pytest.mark.parametrize("redirect_enabled", [False, True])
 @pytest.mark.parametrize("redirect_endpoint", ["/files", "/static"])
