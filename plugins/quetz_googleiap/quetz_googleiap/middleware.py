@@ -28,7 +28,9 @@ class GoogleIAMMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, config: Config):
         if config is not None:
             self.configure(config)
-        self.last_checked = dict()
+        else:
+            self.configured = False
+
         super().__init__(app)
 
     def configure(self, config: Config):
@@ -46,10 +48,18 @@ class GoogleIAMMiddleware(BaseHTTPMiddleware):
         # load configuration values
         if config.configured_section("googleiam"):
             self.server_admin_emails = config.googleiam_server_admin_emails
+            logger.info("Google IAM successfully configured")
+            logger.info(f"Google IAM server admin emails: {self.server_admin_emails}")
+            self.configured = True
         else:
-            raise Exception("Google IAM is not configured")
+            self.configured = False
 
     async def dispatch(self, request, call_next):
+        # ignore middleware if it is not configured
+        if not self.configured:
+            response = await call_next(request)
+            return response
+
         # Check if the session has a specific key, for example 'count'.
         # If it does, increment its value. If it doesn't, set it to 1.
         count = request.session.get("count", 0)
