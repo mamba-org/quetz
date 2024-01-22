@@ -1770,7 +1770,7 @@ def start_sync_download_counts():
 
 
 @app.on_event("shutdown")
-async def stop_sync_donwload_counts():
+async def stop_sync_download_counts():
     app.sync_download_task.cancel()
     try:
         await app.sync_download_task

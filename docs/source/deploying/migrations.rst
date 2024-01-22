@@ -5,7 +5,7 @@ When the data classes in Quetz are modified (for example, a column is added, rem
 
 .. note::
 
-   Before running any of the commands below, you need to make sure that your database is backed up. The backup process depends on the infrastrcuture, but in the simplest case it may involve the dump of the whole database (using ``pg_dump`` for example).
+   Before running any of the commands below, you need to make sure that your database is backed up. The backup process depends on the infrastructure, but in the simplest case it may involve the dump of the whole database (using ``pg_dump`` for example).
 
 Migrating database
 ------------------

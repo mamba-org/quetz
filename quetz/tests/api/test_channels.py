@@ -275,7 +275,7 @@ def remove_jobs(db):
 def test_channel_names_are_case_insensitive(
     auth_client, maintainer, remove_package_versions
 ):
-    channel_name = "MyChanneL"
+    channel_name = "MyChannel"
 
     response = auth_client.post(
         "/api/channels", json={"name": channel_name, "private": False}
@@ -348,7 +348,7 @@ def test_channel_names_are_case_insensitive(
 
 
 def test_unique_channel_names_are_case_insensitive(auth_client, maintainer):
-    channel_name = "MyChanneL"
+    channel_name = "MyChannel"
 
     response = auth_client.post(
         "/api/channels", json={"name": channel_name, "private": False}

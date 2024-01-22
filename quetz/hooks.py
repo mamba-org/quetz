@@ -22,7 +22,7 @@ def register_router() -> 'fastapi.APIRouter':
 def post_add_package_version(
     version: 'quetz.db_models.PackageVersion', condainfo: 'quetz.condainfo.CondaInfo'
 ) -> None:
-    """hook for post-processsing after adding a package file.
+    """hook for post-processing after adding a package file.
 
     :param quetz.db_models.PackageVersion version:
         package version model that was added in to the database
@@ -42,7 +42,7 @@ def post_package_indexing(
     files: dict,
     packages: dict,
 ) -> None:
-    """hook for post-processsing after building indexes.
+    """hook for post-processing after building indexes.
 
     :param quetz.pkgstores.PackageStore pkgstore:
         package store used to store/retrieve packages
@@ -70,7 +70,7 @@ def post_index_creation(
     channel_name: str,
     subdir: str,
 ) -> None:
-    """hook for post-processsing after creating package index.
+    """hook for post-processing after creating package index.
 
     :param dict raw_repodata:
         the package index

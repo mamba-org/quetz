@@ -334,14 +334,14 @@ class Supervisor:
             .outerjoin(Job)
             .filter(running_job)
             .group_by(Task.job_id)
-            # select jobs where all tasks are finsihed
+            # select jobs where all tasks are finished
             .having(all_true(task_done))
             .all()
         )
         for job_id, repeat, failed in results:
             if repeat:
                 # job with repeat non-null repeat column should be
-                # kept runing until cancelled
+                # kept running until cancelled
                 status = JobStatus.pending
             elif failed:
                 status = JobStatus.failed

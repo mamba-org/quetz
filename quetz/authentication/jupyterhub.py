@@ -60,7 +60,7 @@ class JupyterConfigEntry:
 
 
 class JupyterhubAuthenticator(OAuthAuthenticator):
-    """Use Oauth2 protcol to authenticate with jupyterhub server, which acts
+    """Use OAuth2 protocol to authenticate with jupyterhub server, which acts
     as identity provider.
 
     To activate add the following section to the ``config.toml`` (see :ref:`configfile`):
@@ -74,13 +74,13 @@ class JupyterhubAuthenticator(OAuthAuthenticator):
       client_id = "quetz_client"
       client_secret = "super-secret"
 
-      # token enpoint of Jupyterhub, needs to be accessible from Quetz server
+      # token endpoint of Jupyterhub, needs to be accessible from Quetz server
       access_token_url = "http://JUPYTERHUB_HOST:PORT/hub/api/oauth2/token"
 
       # authorize endpoint of JupyterHub, needs to be accessible from users' browser
       authorize_url = "http://JUPYTERHUB_HOST:PORT/hub/api/oauth2/authorize"
 
-      # API root, needs to be accesible from Quetz server
+      # API root, needs to be accessible from Quetz server
       api_base_url = "http://JUPYTERHUB_HOST:PORT/hub/api/"
 
     To configure quetz as an oauth client in JupyterHub, you will need to define

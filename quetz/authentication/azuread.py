@@ -16,7 +16,7 @@ class AzureADAuthenticator(OAuthAuthenticator):
       tenant_id = "tenant-name or id"
 
     You can obtain ``client_id`` and ``client_secret`` by registering your
-    application with AzureAD platfrom at this URL:
+    application with AzureAD platform at this URL:
     `https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/RegisteredApps`
 
     The ``tenant_id`` can either be a specific tenant's GUID identifier or one of three

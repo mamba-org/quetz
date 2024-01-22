@@ -18,7 +18,7 @@ class GoogleAuthenticator(OAuthAuthenticator):
       client_secret = "03728444a12abff17e9444fd231b4379d58f0b"
 
     You can obtain ``client_id`` and ``client_secret`` by registering your
-    application with Google platfrom at this URL:
+    application with Google platform at this URL:
     `<https://console.developers.google.com/apis/credentials>`_.
     """
 

@@ -57,7 +57,7 @@ def synchronize_metrics_from_mirrors(
             packages = response_data["packages"]
         except KeyError:
             logger.error(
-                f"malfromated respose received from {metrics_url}: "
+                f"malfromated response received from {metrics_url}: "
                 "missing 'packages' key"
             )
             continue

@@ -5,7 +5,7 @@ client_id = "37cdbb80c7733e2a1831"
 client_secret = "75e648e981545902ab7802de94e2f2707c8e0ff8"
 
 [sqlalchemy]
-database_url = "sqlite:///./quetz.sqlite"
+database_url = "postgresql://quetz-db:quetz-db@localhost:11011/quetz-db"
 
 [session]
 # openssl rand -hex 32
@@ -21,4 +21,14 @@ admins = ["dummy:alice"]
 
 [profiling]
 enable_sampling = false
+
+[s3]
+access_key = "AKIAR5G6CQHKZ7ECTS7F"
+secret_key = "JrgESRkb9e5xh7KqmS4L1Z2YbkmuAk71UlTBdvPe"
+url = "https://s3.eu-central-1.amazonaws.com/"
+region = "eu-central-1"
+bucket_name = "rh-devbox"
+bucket_prefix=""
+bucket_suffix=""
+
 

@@ -165,9 +165,9 @@ def _parse_sort_by(query, model, sortstr: str):
     sorts = sortstr.split(',')
 
     for s in sorts:
-        splitted = s.split(':')
-        if len(splitted) == 2:
-            field, order = splitted
+        split_result = s.split(':')
+        if len(split_result) == 2:
+            field, order = split_result
         else:
             field = s
             order = 'desc'
@@ -1000,7 +1000,7 @@ class Dao:
             .order_by(PackageVersion.filename)
         )
 
-    def get_channel_datas(self, channel_name: str):
+    def get_channel_data(self, channel_name: str):
         # Returns iterator
         return (
             self.db.query(Package.name, Package.channeldata)

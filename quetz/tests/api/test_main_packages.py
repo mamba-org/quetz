@@ -901,7 +901,7 @@ def api_key(db, dao: Dao, owner, private_channel):
                 ],
             )
         ),
-        "API key with role restruction",
+        "API key with role restriction",
     )
 
     yield key

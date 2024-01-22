@@ -1161,7 +1161,7 @@ c.JupyterHub.services = [
 #
 #  This function is called after the user has passed all authentication checks
 #  and is ready to successfully authenticate. This function must return the
-#  authentication dict reguardless of changes to it.
+#  authentication dict regardless of changes to it.
 #
 #  This maybe a coroutine.
 #

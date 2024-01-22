@@ -1,0 +1,5 @@
+[default.extend-words]
+fo = "fo"
+
+[files]
+extend-exclude = ["quetz/migrations/*.po", "quetz/tests/authentification/test_oauth.py"]

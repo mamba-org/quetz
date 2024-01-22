@@ -98,7 +98,7 @@ For example, the custom authenticator might be:
 Registering authenticator
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The standard way to register an authenticator with Quetz, is to distibute it as a plugin
+The standard way to register an authenticator with Quetz, is to distribute it as a plugin
 (see :ref:`plugins_section`). 
 To automatize the creation of a plugin, check out our cookiecutter `template`_.
 
