@@ -91,7 +91,7 @@ class GoogleIAMMiddleware(BaseHTTPMiddleware):
                 )
                 dao.create_channel(channel, user.id, "owner")
 
-            self.google_role_for_user(user_id, dao)
+            self.google_role_for_user(user_id, email, dao)
             user_id = uuid.UUID(bytes=user.id)
             # drop the db and dao to remove the connection
             del db, dao
@@ -105,15 +105,17 @@ class GoogleIAMMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         return response
 
-    def google_role_for_user(self, user_id, dao):
-        if not user_id:
+    def google_role_for_user(self, user_id, username, dao):
+        if not user_id or not username:
             return
 
-        if user_id in self.server_admin_emails:
-            logger.info(f"User {user_id} is server admin")
+        if username in self.server_admin_emails:
+            logger.info(f"User '{username}' with user id '{user_id}' is server admin")
             dao.set_user_role(user_id, "owner")
         else:
-            logger.info(f"User {user_id} is not a server admin")
+            logger.info(
+                f"User '{username}' with user id '{user_id}' is not a server admin"
+            )
             dao.set_user_role(user_id, "member")
 
 
