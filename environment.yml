@@ -42,14 +42,14 @@ dependencies:
   - adlfs
   - importlib_metadata
   - pre-commit
-  - pytest
+  - pytest 7.*
   - pytest-mock
   - rq
   - libcflib
   - mamba
   - conda-content-trust
   - pyinstrument
-  - pytest-asyncio
+  - pytest-asyncio 
   - pytest-timeout
   - pydantic >=2
   - pip:
