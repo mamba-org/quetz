@@ -653,11 +653,13 @@ def delete_channel(
     channel: db_models.Channel = Depends(get_channel_allow_proxy),
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
+    config=Depends(get_config),
 ):
     auth.assert_delete_channel(channel)
     dao.delete_channel(channel.name)
     try:
-        pkgstore.remove_channel(channel.name)
+        if not config.storage_soft_delete_channel:
+            pkgstore.remove_channel(channel.name)
     except FileNotFoundError:
         logger.warning(
             f"trying to remove non-existent package store for channel {channel.name}"
@@ -895,7 +897,8 @@ def delete_package(
     db.commit()
 
     for filename in filenames:
-        pkgstore.delete_file(channel_name, filename)
+        if not config.storage_soft_delete_package:
+            pkgstore.delete_file(channel_name, filename)
 
     dao.update_channel_size(channel_name)
 
@@ -1162,7 +1165,8 @@ def delete_package_version(
     db.commit()
 
     path = os.path.join(platform, filename)
-    pkgstore.delete_file(channel_name, path)
+    if not config.storage_soft_delete_package:
+        pkgstore.delete_file(channel_name, path)
 
     dao.cleanup_channel_db(channel_name, package_name)
     dao.update_channel_size(channel_name)
