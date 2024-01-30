@@ -49,7 +49,7 @@ dependencies:
   - mamba
   - conda-content-trust
   - pyinstrument
-  - pytest-asyncio 
+  - pytest-asyncio
   - pytest-timeout
   - pydantic >=2
   - pip:
