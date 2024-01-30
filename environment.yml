@@ -42,7 +42,7 @@ dependencies:
   - adlfs
   - importlib_metadata
   - pre-commit
-  - pytest
+  - pytest 7.*
   - pytest-mock
   - rq
   - libcflib
