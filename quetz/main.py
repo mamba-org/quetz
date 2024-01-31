@@ -919,7 +919,7 @@ def post_package(
     dao: Dao = Depends(get_dao),
 ):
     # here we use the owner_id as user_id. In case the authentication
-    # was done using an API Key, we want to attribute the ned package
+    # was done using an API Key, we want to attribute the uploaded package
     # to the owner of that API Key and not the anonymous API Key itself.
     user_id = auth.assert_owner()
 
