@@ -72,14 +72,14 @@ Configure default user permissions, creating default channel and super-admin per
    admins = ["github:admin_user"]
    # users with maintainer role
    maintainers = ["google:other_user"]
-   # users with memeber role
+   # users with member role
    members = ["github:some", "github:random", "github:name"]
    # default role assigned to new users
    # leave out if role should be null
    default_role = "member"
    # create a default channel for new users named {username}
    create_default_channel = false
-   # wether to collect email addresses when users register
+   # whether to collect email addresses when users register
    collect_emails = false
 
 You can use one of the following options to configure privileged users:
@@ -193,7 +193,7 @@ Quetz can store packages in Google Cloud Storage. To configure, use the followin
     region="..."
 
 :project: The Google Cloud Project ID to work under
-:token: A token to pass the `gcsfs`. See the `gcsfs documention <https://gcsfs.readthedocs.io/en/latest/index.html#credentials>`_ for valid values.
+:token: A token to pass the `gcsfs`. See the `gcsfs documentation <https://gcsfs.readthedocs.io/en/latest/index.html#credentials>`_ for valid values.
 :bucket_prefix:
 :bucket_suffix: channel buckets on GCS are created with the following semantics: ``{bucket_prefix}{channel_name}{bucket_suffix}``
 :cache_timeout: Timeout in s after which local GCS cache entries are invalidated. Set to a value <=0 to disable caching completely. Default is that entries are never invalidated.
@@ -270,9 +270,9 @@ You can also use a couple of environment variables to configure the behaviour of
 Variable                 description                             values                       default
 =======================  ======================================  ===========================  ===================
 ``QUETZ_LOG_LEVEL``      log level                               ERROR, INFO, WARNING, DEBUG  INFO or config file
-``QUETZ_API_KEY``        api key used by quetz-client log level  string  
+``QUETZ_API_KEY``        api key used by quetz-client            string  
 ``QUETZ_TEST_DATABASE``  uri to the database used in tests       string                       sqlite:///:memory:
-``QUETZ_TEST_DBINIT``    method to create db tabels in tests     "create-tables" or           "create-tables"
+``QUETZ_TEST_DBINIT``    method to create db tables in tests     "create-tables" or           "create-tables"
                                                                  "use-migrations" 
 ``S3_ACCESS_KEY``        access key to s3 (used in tests)        string                                         
 ``S3_SECRET_KEY``        secret key to s3 (used in tests)        string                                         

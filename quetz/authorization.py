@@ -262,7 +262,7 @@ class Rules:
                 )
                 self.assert_channel_roles(role.channel, required_channel_roles)
             else:
-                # create key without assigning special channel/package privilages
+                # create key without assigning special channel/package privileges
                 return True
 
     def assert_delete_api_key(self, api_key):

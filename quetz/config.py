@@ -408,18 +408,18 @@ class Config:
             if key.startswith(_env_prefix)
         }
         for var, value in quetz_var.items():
-            splitted_key = var.split('_')
-            config_key = splitted_key[1].lower()
+            split_key = var.split('_')
+            config_key = split_key[1].lower()
             idx = 2
 
             # look for the first level of config_map.
             # It must be done in loop as the key itself can contains '_'.
             first_level = None
-            while idx < len(splitted_key):
+            while idx < len(split_key):
                 first_level = self._find_first_level_config(config_key)
                 if first_level:
                     break
-                config_key += f"_{ splitted_key[idx].lower()}"
+                config_key += f"_{ split_key[idx].lower()}"
                 idx += 1
 
             # no first_level found, the variable is useless.
@@ -430,7 +430,7 @@ class Config:
                 config[first_level.name] = value
             # the first level is a section.
             elif isinstance(first_level, ConfigSection):
-                entry = "_".join(splitted_key[idx:]).lower()
+                entry = "_".join(split_key[idx:]).lower()
                 # the entry does not exist in section, the variable is useless.
                 if entry not in [
                     section_entry.name for section_entry in first_level.entries
@@ -439,7 +439,7 @@ class Config:
                 # add the entry to the config.
                 if first_level.name not in config:
                     config[first_level.name]: Dict[str, Any] = {}
-                config[first_level.name]["_".join(splitted_key[idx:]).lower()] = value
+                config[first_level.name]["_".join(split_key[idx:]).lower()] = value
 
         return config
 
@@ -506,7 +506,7 @@ class Config:
         Returns
         -------
         bool
-            Wether or not the given section is configured
+            Whether or not the given section is configured
         """
 
         return bool(self.config.get(section))

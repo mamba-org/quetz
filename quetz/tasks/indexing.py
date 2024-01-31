@@ -123,7 +123,7 @@ def validate_packages(dao, pkgstore, channel_name):
         in_ls_not_db = ls_result_set - db_result_set
         in_db_not_ls = db_result_set - ls_result_set
 
-        valid, inexistant, wrong_size = 0, 0, 0
+        valid, inexistent, wrong_size = 0, 0, 0
 
         # remove all files that are in database and not uploaded
         for f in in_db_not_ls:
@@ -138,7 +138,7 @@ def validate_packages(dao, pkgstore, channel_name):
                 .one()
             )
             dao.db.delete(db_pkg_to_delete)
-            inexistant += 1
+            inexistent += 1
 
         db_dict = dict(db_result)
         for f in ls_result:
@@ -173,7 +173,7 @@ def validate_packages(dao, pkgstore, channel_name):
 
         logger.info(f"Valid files: {valid}")
         logger.info(f"Wrong size: {wrong_size}")
-        logger.info(f"Not uploaded: {inexistant}")
+        logger.info(f"Not uploaded: {inexistent}")
 
     update_indexes(dao, pkgstore, channel_name)
 

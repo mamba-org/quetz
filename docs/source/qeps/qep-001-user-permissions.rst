@@ -61,7 +61,7 @@ Roles can be configure with a config file:
    admins = ["wolfv"]
    # users with maintainer role
    maintainers = ["btel"]
-   # users with memeber role
+   # users with member role
    members = ["some", "random", "name"]
    # default role assigned to new users
    # leave out if role should be null

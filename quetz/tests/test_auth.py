@@ -25,17 +25,17 @@ class Data:
         self.keya = "akey"
         self.keyb = "bkey"
 
-        self.usera = User(id=uuid.uuid4().bytes, username='usera')
-        Profile(name='usera', user=self.usera, avatar_url='')
-        db.add(self.usera)
+        self.user_a = User(id=uuid.uuid4().bytes, username='user_a')
+        Profile(name='user_a', user=self.user_a, avatar_url='')
+        db.add(self.user_a)
 
-        self.userb = User(id=uuid.uuid4().bytes, username='userb')
-        Profile(name='userb', user=self.userb, avatar_url='')
-        db.add(self.userb)
+        self.user_b = User(id=uuid.uuid4().bytes, username='user_b')
+        Profile(name='user_b', user=self.user_b, avatar_url='')
+        db.add(self.user_b)
 
-        self.userc = User(id=uuid.uuid4().bytes, username='userc', role="owner")
-        Profile(name='userc', user=self.userc, avatar_url='')
-        db.add(self.userc)
+        self.user_c = User(id=uuid.uuid4().bytes, username='user_c', role="owner")
+        Profile(name='user_c', user=self.user_c, avatar_url='')
+        db.add(self.user_c)
 
         assert len(db.query(User).all()) == 3
 
@@ -43,8 +43,8 @@ class Data:
             key=self.keya,
             time_created=date.today(),
             expire_at=date(2030, 1, 1),
-            user_id=self.usera.id,
-            owner_id=self.usera.id,
+            user_id=self.user_a.id,
+            owner_id=self.user_a.id,
         )
 
         db.add(self.keya_obj)
@@ -53,8 +53,8 @@ class Data:
                 key=self.keyb,
                 time_created=date.today(),
                 expire_at=date(2030, 1, 1),
-                user_id=self.userb.id,
-                owner_id=self.userb.id,
+                user_id=self.user_b.id,
+                owner_id=self.user_b.id,
             )
         )
 
@@ -75,7 +75,7 @@ class Data:
             build_string="",
             filename="filename.tar.bz2",
             info="{}",
-            uploader_id=self.usera.id,
+            uploader_id=self.user_a.id,
             size=101,
         )
         self.package_version_2 = PackageVersion(
@@ -89,19 +89,19 @@ class Data:
             build_string="",
             filename="filename2.tar.bz2",
             info="{}",
-            uploader_id=self.usera.id,
+            uploader_id=self.user_a.id,
             size=101,
         )
 
         self.channel_member = ChannelMember(
-            channel=self.channel2, user=self.usera, role='maintainer'
+            channel=self.channel2, user=self.user_a, role='maintainer'
         )
         self.channel_member_userc = ChannelMember(
-            channel=self.channel2, user=self.userc, role='owner'
+            channel=self.channel2, user=self.user_c, role='owner'
         )
 
         self.package_member = PackageMember(
-            channel=self.channel2, user=self.userc, package=self.package2, role="owner"
+            channel=self.channel2, user=self.user_c, package=self.package2, role="owner"
         )
 
         for el in [
@@ -235,7 +235,7 @@ def test_private_channels(data, client):
     assert response.status_code == 200
     assert len(response.json()) == 2
     assert ('role', data.channel_member.role) in response.json()[0].items()
-    assert response.json()[0]['user']['id'] == str(uuid.UUID(bytes=data.usera.id))
+    assert response.json()[0]['user']['id'] == str(uuid.UUID(bytes=data.user_a.id))
 
     # Package #
 
@@ -328,7 +328,7 @@ def test_private_channels(data, client):
     assert len(response.json()) == 1
 
     # Package Search #
-    # query = f"channel:test -format:conda uploader:{data.usera.username}"
+    # query = f"channel:test -format:conda uploader:{data.user_a.username}"
     query = "channel:test"
     query = quote(query)
     response = client.get(f'/api/packages/search/?q={query}')
@@ -336,7 +336,7 @@ def test_private_channels(data, client):
     assert len(response.json()) == 1
     assert response.json()[0]['name'] == data.package1.name
 
-    # query = f"format:conda platform:linux-64,noarch uploader:{data.userb.username}"
+    # query = f"format:conda platform:linux-64,noarch uploader:{data.user_b.username}"
     # query = quote(query)
     # response = client.get(
     #     f'/api/packages/search/?q={query}', headers={"X-Api-Key": data.keyb}
@@ -463,7 +463,7 @@ def test_private_channels_download(db, client, data, channel_dirs):
 
 
 def test_create_api_key(data, client):
-    response = client.get(f"/api/dummylogin/{data.userc.username}")
+    response = client.get(f"/api/dummylogin/{data.user_c.username}")
     assert response.status_code == 200
 
     response = client.post(
@@ -537,7 +537,7 @@ def test_create_api_key(data, client):
 
 
 def test_use_wildcard_api_key_to_authenticate(data, client):
-    response = client.get(f"/api/dummylogin/{data.userc.username}")
+    response = client.get(f"/api/dummylogin/{data.user_c.username}")
     assert response.status_code == 200
 
     response = client.post(
@@ -629,7 +629,7 @@ def test_authorizations_with_deleted_api_key(data: Data, db):
 
     user_id = auth.get_user()
 
-    assert user_id == data.usera.id
+    assert user_id == data.user_a.id
 
     data.keya_obj.deleted = True
 
@@ -643,7 +643,7 @@ def test_authorizations_with_deleted_api_key(data: Data, db):
 
 
 def test_authorizations_with_expired_api_key(data, client):
-    response = client.get(f"/api/dummylogin/{data.userc.username}")
+    response = client.get(f"/api/dummylogin/{data.user_c.username}")
     assert response.status_code == 200
 
     response = client.post(
@@ -675,8 +675,8 @@ def test_authorizations_with_api_key_no_expiry(data, client, db):
         key=key,
         time_created=date.today(),
         expire_at=None,
-        user_id=data.usera.id,
-        owner_id=data.usera.id,
+        user_id=data.user_a.id,
+        owner_id=data.user_a.id,
     )
     db.add(keya_obj)
     db.commit()

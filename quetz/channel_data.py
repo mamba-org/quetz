@@ -81,7 +81,7 @@ def export(dao, channel_name):
     packages = channeldata["packages"]
     subdirs = set(['noarch'])
 
-    for name, info in dao.get_channel_datas(channel_name):
+    for name, info in dao.get_channel_data(channel_name):
         if info is not None:
             data = json.loads(info)
             packages[name] = data

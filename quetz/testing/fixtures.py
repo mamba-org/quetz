@@ -120,10 +120,10 @@ def auto_rollback():
 @pytest.fixture
 def session_maker(sql_connection, create_tables, auto_rollback):
     # run the tests with a separate external DB transaction
-    # so that we can easily rollback all db changes (even if commited)
+    # so that we can easily rollback all db changes (even if committed)
     # done by the test client
 
-    # Note: when rollback is explictly called in the implementation,
+    # Note: when rollback is explicitly called in the implementation,
     #       it will remove all objects created in the test even the ones
     #       that were already committed!
 
@@ -255,7 +255,7 @@ def app(config, db, mocker):
 
     mocker.patch("quetz.database.get_session", get_session_mock)
 
-    # overiding dependency works with all requests handlers that
+    # overriding dependency works with all requests handlers that
     # depend on quetz.deps.get_db
     app.dependency_overrides[get_db] = lambda: db
 

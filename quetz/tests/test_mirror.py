@@ -1245,7 +1245,7 @@ def dummy_user(db):
 def test_create_packages_from_channeldata_update_existing(
     dao, dummy_user, local_channel, db, local_package
 ):
-    # update exisiting package
+    # update existing package
 
     channeldata = json.loads(channeldata_json)
 
