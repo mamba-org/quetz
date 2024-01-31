@@ -940,6 +940,95 @@ def post_package(
     dao.create_package(channel.name, new_package, user_id, authorization.OWNER)
 
 
+@api_router.post(
+    "/channels/{channel_name}/packages/copy",
+    status_code=201,
+    tags=["packages"],
+)
+def copy_package(
+    source_channel: str,
+    source_package: str,
+    subdir: str,
+    filename: str,
+    background_tasks: BackgroundTasks,
+    channel: db_models.Channel = Depends(
+        ChannelChecker(allow_proxy=False, allow_mirror=False),
+    ),
+    auth: authorization.Rules = Depends(get_rules),
+    dao: Dao = Depends(get_dao),
+):
+    user_id = auth.assert_owner()
+
+    # get channel as object
+    source_channel_obj = dao.get_channel(source_channel)
+    if not source_channel_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Channel {source_channel} not found",
+        )
+    auth.assert_channel_read(source_channel_obj)
+
+    package_version = dao.get_package_version_by_filename(
+        source_channel, source_package, filename, subdir
+    )
+
+    if not package_version:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Package {source_channel}/{source_package} not found",
+        )
+
+    # this should always be true
+    if package_version.size:
+        # make sure that we are not over the size limit
+        dao.assert_size_limits(channel.name, package_version.size)
+
+    # assert that user can create a package in the target channel
+    auth.assert_create_package(channel.name)
+    if not dao.get_package(channel.name, package_version.package.name):
+        package_model = rest_models.Package(
+            name=package_version.package.name,
+            summary=package_version.package.summary,
+            description=package_version.package.description,
+            url=package_version.package.url,
+        )
+
+        dao.create_package(channel.name, package_model, user_id, authorization.OWNER)
+
+    try:
+        version = dao.create_version(
+            channel_name=channel.name,
+            package_name=package_version.package.name,
+            package_format=package_version.package_format,
+            platform=package_version.platform,
+            version=package_version.version,
+            build_number=package_version.build_number,
+            build_string=package_version.build_string,
+            size=package_version.size,
+            filename=package_version.filename,
+            info=package_version.info,
+            uploader_id=user_id,
+            upsert=False,
+        )
+    except IntegrityError:
+        logger.error(
+            f"duplicate package '{package_version.package.name}' "
+            f"in channel '{channel.name}'"
+        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Duplicate")
+
+    target_name = os.path.join(subdir, filename)
+    pkgstore.copy_file(source_channel, target_name, channel.name, target_name)
+    file_object = pkgstore.serve_path(channel.name, target_name)
+
+    condainfo = CondaInfo(file_object, filename, lazy=True)
+    pm.hook.post_add_package_version(version=version, condainfo=condainfo)
+
+    wrapped_bg_task = background_task_wrapper(indexing.update_indexes, logger)
+    # Background task to update indexes
+    background_tasks.add_task(wrapped_bg_task, dao, pkgstore, channel.name)
+
+
 @api_router.get(
     "/channels/{channel_name}/members",
     response_model=List[rest_models.Member],
