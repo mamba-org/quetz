@@ -439,20 +439,23 @@ def test_private_channels_download(db, client, data, channel_dirs):
     assert response.text == "file content 0"
 
     # fail on private channel without credentials
-    response = client.get('/get/privatechannel/noarch/current_repodata.json')
-    assert response.status_code == 401
+    for method in [client.get, client.head]:
+        response = method('/get/privatechannel/noarch/current_repodata.json')
+        assert response.status_code == 401
 
     # fail on private channel with invalid credentials
-    response = client.get(
-        '/t/[invalid-api-key]/get/privatechannel/noarch/current_repodata.json'
-    )
-    assert response.status_code == 401
+    for method in [client.get, client.head]:
+        response = method(
+            '/t/[invalid-api-key]/get/privatechannel/noarch/current_repodata.json'
+        )
+        assert response.status_code == 401
 
     # fail on private channel with non member user
-    response = client.get(
-        f'/t/{data.keyb}/get/privatechannel/noarch/current_repodata.json'
-    )
-    assert response.status_code == 403
+    for method in [client.get, client.head]:
+        response = method(
+            f'/t/{data.keyb}/get/privatechannel/noarch/current_repodata.json'
+        )
+        assert response.status_code == 403
 
     # succeed on private channel with member user
     response = client.get(
@@ -615,7 +618,6 @@ def test_use_wildcard_api_key_to_authenticate(data, client):
     response = client.get(
         "/api/channels/my-new-channel/members", headers={"X-API-Key": channel_key}
     )
-
     assert response.status_code == 403
 
     response = client.get(
@@ -665,7 +667,6 @@ def test_authorizations_with_expired_api_key(data, client):
     response = client.get(
         "/api/channels/privatechannel/members", headers={"X-API-Key": key}
     )
-
     assert response.status_code == 401
 
 
