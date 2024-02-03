@@ -1,13 +1,17 @@
 import os
 import shutil
 import tempfile
-from typing import List
+from functools import partial
+from typing import Callable, List
 
 import pytest
 from alembic.command import upgrade as alembic_upgrade
+from alembic.config import Config as AlembicConfig
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 
 import quetz
+from quetz import cli
 from quetz.cli import _alembic_config
 from quetz.config import Config
 from quetz.dao import Dao
@@ -79,6 +83,16 @@ def use_migrations() -> bool:
         raise ValueError(
             f"QUETZ_TEST_DBINIT should be either {CREATE_TABLES} or {USE_MIGRATIONS}"
         )
+
+
+@pytest.fixture
+def run_migrations(
+    alembic_config: AlembicConfig,
+    database_url: str,
+    mocker: MockerFixture,
+) -> Callable[[], None]:
+    mocker.patch("quetz.cli._alembic_config", return_value=alembic_config)
+    return partial(cli._run_migrations, database_url)
 
 
 @pytest.fixture

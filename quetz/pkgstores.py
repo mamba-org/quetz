@@ -122,7 +122,7 @@ class PackageStore(abc.ABC):
     def get_filemetadata(self, channel: str, src: str) -> Tuple[int, int, str]:
         """get file metadata: returns (file size, last modified time, etag)"""
 
-    @abc.abstractclassmethod
+    @abc.abstractmethod
     def cleanup_temp_files(self, channel: str, dry_run: bool = False):
         """clean up temporary `*.json{HASH}.[bz2|gz]` files from pkgstore"""
 
