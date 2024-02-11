@@ -178,7 +178,12 @@ def job_wrapper(
         api_key = None
         if user_id:
             browser_session['user_id'] = user_id
-        auth = Rules(api_key, browser_session, db)
+        auth = Rules(
+            api_key,
+            browser_session,
+            db,
+            supertoken=config.get_supertoken(),
+        )
     if not session:
         session = get_remote_session()
 

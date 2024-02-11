@@ -175,6 +175,7 @@ class Config:
         ConfigSection(
             "users",
             [
+                ConfigEntry("supertoken", str, default=None, required=False),
                 ConfigEntry("admins", list, default=list),
                 ConfigEntry("maintainers", list, default=list),
                 ConfigEntry("members", list, default=list),
@@ -494,6 +495,16 @@ class Config:
                     'redirect_expiration': int(self.local_store_redirect_expiration),
                 }
             )
+
+    def get_supertoken(self) -> Optional[str]:
+        """Return the super token if it is set in the config.
+
+        Returns
+        -------
+        supertoken : Optional[str]
+            The super token
+        """
+        return self.config.get("users", {}).get("supertoken")
 
     def configured_section(self, section: str) -> bool:
         """Return if a given section has been configured.

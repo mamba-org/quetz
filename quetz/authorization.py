@@ -34,8 +34,37 @@ class ServerRole(str, enum.Enum):
 
 
 class Rules:
-    def __init__(self, API_key: Optional[str], session: dict, db: Session):
-        self.API_key = API_key
+    def __init__(
+        self,
+        API_key: Optional[str],
+        session: dict,
+        db: Session,
+        supertoken: Optional[str] = None,
+    ):
+        """
+        Parameters
+        ----------
+        API_key: str
+            The API key used for authentication
+        session: dict
+            The session cookie used for authentication
+        db: Session
+            The database session
+        supertoken: str
+            Supertoken that can be used to bypass role checks
+        """
+        if supertoken and API_key == supertoken:
+            if len(supertoken) < 32:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Supertoken too short, must be at least 32 characters long",
+                )
+            self.API_key = None
+            self.is_supertoken = True
+        else:
+            self.API_key = API_key
+            self.is_supertoken = False
+
         self.session = session
         self.db = db
 
@@ -135,6 +164,9 @@ class Rules:
             return self.assert_server_roles([SERVER_OWNER, SERVER_MAINTAINER])
 
     def assert_server_roles(self, roles: list, msg: Optional[str] = None):
+        if self.is_supertoken:
+            return "supertoken"
+
         user_id = self.assert_user()
 
         if not self.has_server_roles(user_id, roles):
