@@ -70,7 +70,7 @@ Configure default user permissions, creating default channel and super-admin per
    [users]
    # an optional supertoken that can be used to bypass authorization
    # e.g. for CI pipelines that need to rely on pre-configured tokens for the initial
-   # technial superuser. Length should be at least 32 characters.
+   # technial superuser. Length must be at least 32 characters.
    supertoken = "use `openssl rand -hex 32` to generate a random token"
    # users with owner role
    admins = ["github:admin_user"]
