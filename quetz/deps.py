@@ -84,8 +84,14 @@ def get_rules(
     request: Request,
     session: dict = Depends(get_session),
     db: Session = Depends(get_db),
+    config: Config = Depends(get_config),
 ):
-    return authorization.Rules(request.headers.get("x-api-key"), session, db)
+    return authorization.Rules(
+        request.headers.get("x-api-key"),
+        session,
+        db,
+        supertoken=config.get_supertoken(),
+    )
 
 
 def get_tasks_worker(
