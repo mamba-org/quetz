@@ -60,13 +60,17 @@ class Rules:
                     detail="Supertoken too short, must be at least 32 characters long",
                 )
             self.API_key = None
-            self.is_supertoken = True
+            self._is_supertoken = True
         else:
             self.API_key = API_key
-            self.is_supertoken = False
+            self._is_supertoken = False
 
         self.session = session
         self.db = db
+
+    @property
+    def is_supertoken(self) -> bool:
+        return self._is_supertoken
 
     def get_valid_api_key(self) -> Optional[ApiKey]:
         if not self.API_key:
