@@ -44,8 +44,27 @@ def post_index_creation(raw_repodata: dict, channel_name, subdir):
                 "packages.conda", {}
             )
             for name, metadata in packages.items():
+                # Only sign the relevant metadata
+                signable_metadata_keys = [
+                    "build",
+                    "build_number",
+                    "constrains",
+                    "depends",
+                    "license",
+                    "name",
+                    "version",
+                    "subdir",
+                    "size",
+                    "timestamp",
+                    "md5",
+                    "sha256",
+                ]
+                metadata_to_sign = {
+                    k: metadata[k] for k in signable_metadata_keys if k in metadata
+                }
                 sig = libmamba_api.sign(
-                    json.dumps(metadata, indent=2, sort_keys=True), query[0].private_key
+                    json.dumps(metadata_to_sign, indent=2, sort_keys=True),
+                    query[0].private_key,
                 )
                 if name not in signatures:
                     signatures[name] = {}

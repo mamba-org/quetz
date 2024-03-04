@@ -4,6 +4,7 @@
 import json
 
 from quetz import db_models
+from quetz.condainfo import MAX_CONDA_TIMESTAMP
 
 
 def export(dao, channel_name, subdir):
@@ -22,6 +23,9 @@ def export(dao, channel_name, subdir):
         ):
             data = json.loads(info)
             data['time_modified'] = int(time_modified.timestamp())
+            if 'timestamp' in data and data['timestamp'] > MAX_CONDA_TIMESTAMP:
+                # Convert timestamp from milliseconds to seconds
+                data['timestamp'] //= 1000
             if format == db_models.PackageFormatEnum.conda:
                 packages_conda[filename] = data
             else:
