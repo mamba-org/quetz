@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from conda_build.index import _build_current_repodata
+from conda_index.index import _build_current_repodata
 
 import quetz
 from quetz.utils import add_temp_static_file
