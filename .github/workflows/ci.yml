@@ -98,7 +98,7 @@ jobs:
 
           export QUETZ_IS_TEST=1
 
-          pytest -v ./quetz/tests/ --cov-config=pyproject.toml --cov=. --cov-report=xml
+          pytest -vvv ./quetz/tests/ --cov-config=pyproject.toml --cov=. --cov-report=xml  --timeout=60
 
       - name: Test the plugins
         shell: bash -l -eo pipefail {0}
