@@ -18,6 +18,18 @@ from quetz.config import Config
 from quetz.db_models import Base, Identity, User
 from quetz.testing.utils import Interrupt
 
+
+import socket
+from contextlib import closing
+
+def find_free_port():
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(('', 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return str(s.getsockname()[1])
+    
+
+    
 runner = CliRunner()
 
 
@@ -607,7 +619,7 @@ def test_start_server_local_with_deployment_and_config_file(
 ):
     """Starting server with deployment directory"""
 
-    p = Process(target=cli.app, args=(["start", config_dir, "--port", "8001"],))
+    p = Process(target=cli.app, args=(["start", config_dir, "--port", find_free_port()],))
     with Interrupt():
         p.start()
     p.join()
@@ -629,7 +641,7 @@ def test_start_server_local_with_deployment_without_config_file(
     using environmental variables instead
     """
 
-    p = Process(target=cli.app, args=(["start", config_dir, "--port", "8001"],))
+    p = Process(target=cli.app, args=(["start", config_dir, "--port", find_free_port()],))
     with Interrupt():
         p.start()
     p.join()
@@ -650,7 +662,7 @@ def test_start_server_s3_without_deployment_without_config_file(
     using environmental variables and remote storage.
     """
 
-    p = Process(target=cli.app, args=(["start", "--port", "8001"],))
+    p = Process(target=cli.app, args=(["start", "--port", find_free_port()],))
     with Interrupt():
         p.start()
     p.join()
