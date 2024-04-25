@@ -14,7 +14,7 @@ class DummyHandlers(BaseAuthenticationHandlers):
 
 class DummyAuthenticator(BaseAuthenticator):
     handler_cls = DummyHandlers
-    provider = 'testprovider'
+    provider = "testprovider"
 
     def configure(self, config):
         self.is_enabled = True

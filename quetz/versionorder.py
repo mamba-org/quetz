@@ -18,8 +18,8 @@ class InvalidVersionSpec(ValueError):
         super(InvalidVersionSpec, self).__init__(message)
 
 
-version_check_re = re.compile(r'^[\*\.\+!_0-9a-z]+$')
-version_split_re = re.compile(r'([0-9]+|[*]+|[^0-9*]+)')
+version_check_re = re.compile(r"^[\*\.\+!_0-9a-z]+$")
+version_split_re = re.compile(r"([0-9]+|[*]+|[^0-9*]+)")
 
 
 class VersionOrder:
@@ -137,13 +137,13 @@ class VersionOrder:
         # version comparison is case-insensitive
         version = vstr.strip().rstrip().lower()
         # basic validity checks
-        if version == '':
+        if version == "":
             raise InvalidVersionSpec(vstr, "empty version string")
         invalid = not version_check_re.match(version)
-        if invalid and '-' in version and '_' not in version:
+        if invalid and "-" in version and "_" not in version:
             # Allow for dashes as long as there are no underscores
             # as well, by converting the former to the latter.
-            version = version.replace('-', '_')
+            version = version.replace("-", "_")
             invalid = not version_check_re.match(version)
         if invalid:
             raise InvalidVersionSpec(vstr, "invalid character(s)")
@@ -154,10 +154,10 @@ class VersionOrder:
         self.fillvalue = 0
 
         # find epoch
-        split_epoch = version.split('!')
+        split_epoch = version.split("!")
         if len(split_epoch) == 1:
             # epoch not given => set it to '0'
-            epoch = ['0']
+            epoch = ["0"]
         elif len(split_epoch) == 2:
             # epoch given, must be an integer
             if not split_epoch[0].isdigit():
@@ -168,13 +168,13 @@ class VersionOrder:
             raise InvalidVersionSpec(vstr, "duplicated epoch separator '!'")
 
         # find local version string
-        split_local = version.split('+')
+        split_local = version.split("+")
         if len(split_local) == 1:
             # no local version
             self.local = []
         elif len(split_local) == 2:
             # local version given
-            self.local = split_local[1].replace('_', '.').split('.')
+            self.local = split_local[1].replace("_", ".").split(".")
             version = split_local[0]
         else:
             raise InvalidVersionSpec(vstr, "duplicated local version separator '+'")
@@ -185,10 +185,10 @@ class VersionOrder:
             # individually. Implements the instructions for openssl-like versions
             # > You can work-around this problem by appending a dash to plain version
             #   numbers
-            split_version = version[:-1].replace('_', '.').split('.')
+            split_version = version[:-1].replace("_", ".").split(".")
             split_version[-1] += "_"
         else:
-            split_version = version.replace('_', '.').split('.')
+            split_version = version.replace("_", ".").split(".")
         self.version = epoch + split_version
 
         # split components into runs of numerals and non-numerals,
@@ -201,13 +201,13 @@ class VersionOrder:
                 for j in range(len(c)):
                     if c[j].isdigit():
                         c[j] = int(c[j])
-                    elif c[j] == 'post':
+                    elif c[j] == "post":
                         # ensure number < 'post' == infinity
-                        c[j] = float('inf')
-                    elif c[j] == 'dev':
+                        c[j] = float("inf")
+                    elif c[j] == "dev":
                         # ensure '*' < 'DEV' < '_' < 'a' < number
                         # by upper-casing (all other strings are lower case)
-                        c[j] = 'DEV'
+                        c[j] = "DEV"
                 if v[k][0].isdigit():
                     v[k] = c  # type: ignore
                 else:

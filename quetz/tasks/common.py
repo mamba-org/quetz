@@ -73,11 +73,11 @@ class Task:
             auth.assert_synchronize_mirror(channel_name)
             extra_args = dict(
                 channel_name=channel_name,
-                includelist=channel_metadata.get('includelist', None),
-                excludelist=channel_metadata.get('excludelist', None),
+                includelist=channel_metadata.get("includelist", None),
+                excludelist=channel_metadata.get("excludelist", None),
             )
             task = self.jobs_dao.create_job(
-                action.encode('ascii'),
+                action.encode("ascii"),
                 user_id,
                 extra_args=extra_args,
                 start_at=start_at,
@@ -88,11 +88,11 @@ class Task:
             extra_args = dict(
                 channel_name=channel_name,
                 use_repodata=True,
-                includelist=channel_metadata.get('includelist', None),
-                excludelist=channel_metadata.get('excludelist', None),
+                includelist=channel_metadata.get("includelist", None),
+                excludelist=channel_metadata.get("excludelist", None),
             )
             task = self.jobs_dao.create_job(
-                action.encode('ascii'),
+                action.encode("ascii"),
                 user_id,
                 extra_args=extra_args,
                 start_at=start_at,
@@ -102,7 +102,7 @@ class Task:
             auth.assert_validate_package_cache(channel_name)
             extra_args = dict(channel_name=channel.name)
             task = self.jobs_dao.create_job(
-                action.encode('ascii'),
+                action.encode("ascii"),
                 user_id,
                 extra_args=extra_args,
                 start_at=start_at,
@@ -112,7 +112,7 @@ class Task:
             auth.assert_reindex_channel(channel_name)
             extra_args = dict(channel_name=channel.name)
             task = self.jobs_dao.create_job(
-                action.encode('ascii'),
+                action.encode("ascii"),
                 user_id,
                 extra_args=extra_args,
                 start_at=start_at,
@@ -124,7 +124,7 @@ class Task:
                 channel_name=channel_name,
             )
             task = self.jobs_dao.create_job(
-                action.encode('ascii'),
+                action.encode("ascii"),
                 user_id,
                 extra_args=extra_args,
                 start_at=start_at,
@@ -134,7 +134,7 @@ class Task:
             auth.assert_reindex_channel(channel_name)
             extra_args = dict(channel_name=channel.name)
             task = self.jobs_dao.create_job(
-                action.encode('ascii'),
+                action.encode("ascii"),
                 user_id,
                 extra_args=extra_args,
                 start_at=start_at,
@@ -148,14 +148,14 @@ class Task:
                 dry_run=dry_run,
             )
             task = self.jobs_dao.create_job(
-                f"db_{action}".encode('ascii'),
+                f"db_{action}".encode("ascii"),
                 user_id,
                 extra_args=extra_args,
                 start_at=start_at,
                 repeat_every_seconds=repeat_every_seconds,
             )
             task = self.jobs_dao.create_job(
-                f"pkgstore_{action}".encode('ascii'),
+                f"pkgstore_{action}".encode("ascii"),
                 user_id,
                 extra_args=extra_args,
                 start_at=start_at,

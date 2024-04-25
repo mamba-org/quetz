@@ -18,7 +18,7 @@ from quetz.db_models import PackageVersion
 from quetz.jobs.models import ItemsSelection, Job, JobStatus, Task, TaskStatus
 from quetz.jobs.rest_models import parse_job_manifest
 
-logger = logging.getLogger('quetz.tasks')
+logger = logging.getLogger("quetz.tasks")
 
 
 class any_true(FunctionElement):
@@ -27,14 +27,14 @@ class any_true(FunctionElement):
     type = Boolean()
 
 
-@compiles(any_true, 'sqlite')
+@compiles(any_true, "sqlite")
 def sqlite_any(element, compiler, **kw):
-    return f'max({compiler.process(element.clauses, **kw)})'
+    return f"max({compiler.process(element.clauses, **kw)})"
 
 
-@compiles(any_true, 'postgresql')
+@compiles(any_true, "postgresql")
 def pg_any(element, compiler, **kw):
-    return f'bool_or({compiler.process(element.clauses, **kw)})'
+    return f"bool_or({compiler.process(element.clauses, **kw)})"
 
 
 class all_true(FunctionElement):
@@ -43,14 +43,14 @@ class all_true(FunctionElement):
     type = Boolean()
 
 
-@compiles(all_true, 'sqlite')
+@compiles(all_true, "sqlite")
 def sqlite_all(element, compiler, **kw):
-    return f'min({compiler.process(element.clauses, **kw)})'
+    return f"min({compiler.process(element.clauses, **kw)})"
 
 
-@compiles(all_true, 'postgresql')
+@compiles(all_true, "postgresql")
 def pg_all(element, compiler, **kw):
-    return f'bool_and({compiler.process(element.clauses, **kw)})'
+    return f"bool_and({compiler.process(element.clauses, **kw)})"
 
 
 def build_queue(job):
@@ -58,13 +58,13 @@ def build_queue(job):
 
 
 def parse_conda_spec(conda_spec: str):
-    pattern = r'([a-zA-Z\*][^ =<>!~]*)([><!=~,\.0-9]+[0-9])?'
+    pattern = r"([a-zA-Z\*][^ =<>!~]*)([><!=~,\.0-9]+[0-9])?"
     exprs_list = re.findall(pattern, conda_spec)
 
     package_specs = []
     for name, versions in exprs_list:
         version_spec = None
-        for spec_str in versions.split(','):
+        for spec_str in versions.split(","):
             if spec_str.startswith("=="):
                 condition = ("eq", spec_str[2:])
             elif spec_str.startswith(">="):
@@ -97,17 +97,17 @@ def mk_sql_expr(dict_spec: List[Dict]):
     def _make_op(column, expr):
         op = expr[0]
         v = expr[1:]
-        if op == 'eq':
+        if op == "eq":
             return column == v[0]
-        elif op == 'in':
+        elif op == "in":
             return column.in_(v[0])
-        elif op == 'lt':
+        elif op == "lt":
             return column < v[0]
-        elif op == 'gt':
+        elif op == "gt":
             return column > v[0]
-        elif op == 'gte':
+        elif op == "gte":
             return column >= v[0]
-        elif op == 'lte':
+        elif op == "lte":
             return column <= v[0]
         elif op == "like":
             return column.ilike(v[0].replace("*", "%"))
@@ -245,7 +245,7 @@ class Supervisor:
 
         action_name = ""
         try:
-            action_name = task.job.manifest.decode('ascii')
+            action_name = task.job.manifest.decode("ascii")
             action_func = parse_job_manifest(action_name)
         except UnicodeDecodeError:
             try:
@@ -282,7 +282,7 @@ class Supervisor:
                 kwargs = {}
             else:
                 kwargs = {
-                    'package_version': {
+                    "package_version": {
                         "filename": task.package_version.filename,
                         "channel_name": task.package_version.channel_name,
                         "package_format": task.package_version.package_format,

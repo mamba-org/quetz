@@ -17,7 +17,7 @@
 ## Set the log level by value or name.
 #  Choices: any of [0, 10, 20, 30, 40, 50, 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL']
 #  Default: 30
-c.Application.log_level = 'DEBUG'
+c.Application.log_level = "DEBUG"
 
 ## Instead of starting the Application, dump configuration to stdout
 #  Default: False
@@ -454,7 +454,7 @@ c.Application.log_level = 'DEBUG'
 
 ## Set the log level by value or name.
 #  See also: Application.log_level
-c.JupyterHub.log_level = 'DEBUG'
+c.JupyterHub.log_level = "DEBUG"
 
 ## Specify path to a logo image to override the Jupyter logo in the banner.
 #  Default: ''
@@ -568,13 +568,13 @@ c.JupyterHub.log_level = 'DEBUG'
 
 c.JupyterHub.services = [
     {
-        'name': 'quetz',
-        'url': 'http://web:8000',
+        "name": "quetz",
+        "url": "http://web:8000",
         # any secret >8 characters, you'll use api_token to
         # authenticate api requests to the hub from your service
-        'oauth_client_id': 'quetz_client',
-        'oauth_redirect_uri': 'http://localhost:8000/auth/jupyterhub/authorize',
-        'api_token': 'super-secret',
+        "oauth_client_id": "quetz_client",
+        "oauth_redirect_uri": "http://localhost:8000/auth/jupyterhub/authorize",
+        "api_token": "super-secret",
     }
 ]
 

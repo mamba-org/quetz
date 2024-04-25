@@ -13,7 +13,7 @@ from quetz.deps import get_dao, get_rules, get_session
 
 config = Config()
 
-logger = logging.getLogger('quetz')
+logger = logging.getLogger("quetz")
 
 catchall_router = APIRouter()
 
@@ -39,14 +39,14 @@ def _under_frontend_dir(path):
     return os.path.commonpath([path, fdir]) == fdir
 
 
-@catchall_router.get('/{resource:path}', include_in_schema=False)
+@catchall_router.get("/{resource:path}", include_in_schema=False)
 def static(
     resource: str,
     session: dict = Depends(get_session),
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
-    is_api_or_auth = resource.startswith(('api/', 'auth/'))
+    is_api_or_auth = resource.startswith(("api/", "auth/"))
     if is_api_or_auth:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
@@ -66,7 +66,7 @@ def static(
 
 def register(app):
     frontend_plugins = []
-    for entry_point in entry_points().select(group='quetz.frontend'):
+    for entry_point in entry_points().select(group="quetz.frontend"):
         frontend_plugins.append(entry_point)
 
     if len(frontend_plugins) > 1:
@@ -88,7 +88,7 @@ def register(app):
     # TODO do not add this in the final env, use nginx to route to static files
     app.include_router(catchall_router)
 
-    if hasattr(config, 'general_frontend_dir') and config.general_frontend_dir:
+    if hasattr(config, "general_frontend_dir") and config.general_frontend_dir:
         frontend_dir = config.general_frontend_dir
         logger.info(f"Configured frontend found: {config.general_frontend_dir}")
     elif os.path.isfile(f"{sys.prefix}/share/quetz/frontend/index.html"):

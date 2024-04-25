@@ -101,12 +101,12 @@ def validate_packages(dao, pkgstore, channel_name):
 
     logger.info(f"Checking {fs_chan}")
     ls_dirs = pkgstore.fs.ls(f"{fs_chan}", detail=True)
-    dirs = [d['name'].rsplit('/', 1)[1] for d in ls_dirs if d['type'] == 'directory']
+    dirs = [d["name"].rsplit("/", 1)[1] for d in ls_dirs if d["type"] == "directory"]
 
     for subdir in dirs:
         ls_result = pkgstore.fs.ls(f"{fs_chan}/{subdir}", detail=True)
 
-        ls_result_set = set([(res["name"].rsplit('/', 1)[1]) for res in ls_result])
+        ls_result_set = set([(res["name"].rsplit("/", 1)[1]) for res in ls_result])
         db_result = [
             (res.filename, json.loads(res.info)["size"])
             for res in dao.db.query(PackageVersion).filter(
@@ -142,7 +142,7 @@ def validate_packages(dao, pkgstore, channel_name):
 
         db_dict = dict(db_result)
         for f in ls_result:
-            filename = f["name"].rsplit('/', 1)[1]
+            filename = f["name"].rsplit("/", 1)[1]
             if filename in db_dict:
                 if db_dict[filename] != f["size"]:
                     # size of file in db and on filesystem does not match!
@@ -256,13 +256,13 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
     # recursively walk through the tree
     tmp_suffix = uuid.uuid4().hex
     after_upload_move = []
-    for path in tempdir_path.rglob('*.*'):
+    for path in tempdir_path.rglob("*.*"):
         # check whether the path is an actual file.
         # this fixes https://github.com/mamba-org/quetz/issues/540
         if not path.is_file():
             continue
         rel_path = path.relative_to(tempdir_path)
-        to_upload = open(path, 'rb')
+        to_upload = open(path, "rb")
         if len(rel_path.parts) == 2:
             channel_name, filename = rel_path.parts
             dest = f"{filename}{tmp_suffix}"

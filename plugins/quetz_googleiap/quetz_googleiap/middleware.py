@@ -96,7 +96,7 @@ class GoogleIAMMiddleware(BaseHTTPMiddleware):
             # drop the db and dao to remove the connection
             del db, dao
             # we also need to find the role of the user
-            request.session['identity_provider'] = "dummy"
+            request.session["identity_provider"] = "dummy"
             request.session["user_id"] = str(user_id)
         else:
             request.session["user_id"] = None

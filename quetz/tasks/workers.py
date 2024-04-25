@@ -43,7 +43,7 @@ def get_worker(config, num_procs=None):
     if worker == "thread":
         worker = ThreadingWorker(config)
     elif worker == "subprocess":
-        worker = SubprocessWorker(config, executor_args={'max_workers': num_procs})
+        worker = SubprocessWorker(config, executor_args={"max_workers": num_procs})
     elif worker == "redis":
         if rq_available:
             worker = RQManager(
@@ -81,7 +81,7 @@ class WorkerProcess:
             conn.send(exc)
             raise
         else:
-            conn.send('ok')
+            conn.send("ok")
         finally:
             conn.close()
 
@@ -177,7 +177,7 @@ def job_wrapper(
         browser_session: Dict[str, str] = {}
         api_key = None
         if user_id:
-            browser_session['user_id'] = user_id
+            browser_session["user_id"] = user_id
         auth = Rules(api_key, browser_session, db)
     if not session:
         session = get_remote_session()
@@ -311,8 +311,8 @@ class SubprocessWorker(PoolExecutorWorker):
     executor_cls = concurrent.futures.ProcessPoolExecutor
 
     def __init__(self, config: Config, executor_args: dict = {}):
-        if 'max_workers' not in executor_args:
-            executor_args['max_workers'] = 2
+        if "max_workers" not in executor_args:
+            executor_args["max_workers"] = 2
         super().__init__(config, executor_args)
 
     def execute(self, func, *args, **kwargs):

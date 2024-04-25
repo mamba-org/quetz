@@ -23,7 +23,7 @@ def harvest(package_version: dict, config, pkgstore: PackageStore, dao: Dao):
 
     logger.debug(f"Harvesting: {filename}, {channel}, {platform}")
     # TODO figure out how to handle properly either .conda or .tar.bz2
-    if not filename.endswith('.tar.bz2'):
+    if not filename.endswith(".tar.bz2"):
         return
 
     fh = pkgstore.serve_path(channel, Path(platform) / filename)
@@ -39,5 +39,5 @@ def harvest(package_version: dict, config, pkgstore: PackageStore, dao: Dao):
     pkgstore.add_file(
         json.dumps(result, indent=4, sort_keys=True),
         channel,
-        Path("metadata") / platform / filename.replace('.tar.bz2', '.json'),
+        Path("metadata") / platform / filename.replace(".tar.bz2", ".json"),
     )

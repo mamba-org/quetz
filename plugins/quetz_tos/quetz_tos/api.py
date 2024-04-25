@@ -34,7 +34,7 @@ def post_file(file):
     return file.filename
 
 
-@router.get("/api/tos", tags=['Terms of Service'])
+@router.get("/api/tos", tags=["Terms of Service"])
 def get_current_tos(lang: Union[str, None] = None, db: Session = Depends(get_db)):
     current_tos = (
         db.query(TermsOfService).order_by(TermsOfService.time_created.desc()).first()
@@ -54,7 +54,7 @@ def get_current_tos(lang: Union[str, None] = None, db: Session = Depends(get_db)
         if lang is None or lang == tos_file.language:
             tos_files.append(
                 {
-                    "content": data_bytes.decode('utf-8'),
+                    "content": data_bytes.decode("utf-8"),
                     "filename": tos_file.filename,
                     "language": tos_file.language,
                 }
@@ -74,7 +74,7 @@ def get_current_tos(lang: Union[str, None] = None, db: Session = Depends(get_db)
     }
 
 
-@router.get("/api/tos/status", status_code=201, tags=['Terms of Service'])
+@router.get("/api/tos/status", status_code=201, tags=["Terms of Service"])
 def get_current_tos_status(
     db: Session = Depends(get_db),
     dao: dao.Dao = Depends(get_dao),
@@ -106,7 +106,7 @@ def get_current_tos_status(
         )
 
 
-@router.post("/api/tos/sign", status_code=201, tags=['Terms of Service'])
+@router.post("/api/tos/sign", status_code=201, tags=["Terms of Service"])
 def sign_current_tos(
     tos_id: str = "",
     db: Session = Depends(get_db),
@@ -174,7 +174,7 @@ def sign_current_tos(
         )
 
 
-@router.post("/api/tos/upload", status_code=201, tags=['Terms of Service'])
+@router.post("/api/tos/upload", status_code=201, tags=["Terms of Service"])
 def upload_tos(
     lang: List[str] = Query(...),
     db: Session = Depends(get_db),

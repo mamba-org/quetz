@@ -68,7 +68,7 @@ def package(dao, user, channel, db):
 
 @fixture
 def package_version(user, channel, db, dao, package):
-    package_format = 'tarbz2'
+    package_format = "tarbz2"
     package_info = '{"size": 5000, "subdir": "linux-64"}'
 
     version = dao.create_version(

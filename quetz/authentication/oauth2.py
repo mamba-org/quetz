@@ -24,7 +24,7 @@ class OAuthHandlers(BaseAuthenticationHandlers):
         self.router.add_api_route("/revoke", self.revoke, methods=["GET"])
 
     async def login(self, request: Request):
-        redirect_uri = request.url_for(f'authorize_{self.authenticator.provider}')
+        redirect_uri = request.url_for(f"authorize_{self.authenticator.provider}")
         return await self.authenticator.client.authorize_redirect(
             request, str(redirect_uri)
         )

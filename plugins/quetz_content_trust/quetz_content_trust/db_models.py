@@ -6,19 +6,19 @@ from sqlalchemy.orm import relationship
 from quetz.db_models import UUID, Base
 
 association_table = Table(
-    'delegations_keys',
+    "delegations_keys",
     Base.metadata,
-    Column('role_delegations_id', ForeignKey('role_delegations.id'), primary_key=True),
+    Column("role_delegations_id", ForeignKey("role_delegations.id"), primary_key=True),
     Column(
-        'signing_keys_public_key',
-        ForeignKey('signing_keys.public_key'),
+        "signing_keys_public_key",
+        ForeignKey("signing_keys.public_key"),
         primary_key=True,
     ),
 )
 
 
 class ContentTrustRole(Base):
-    __tablename__ = 'content_trust_roles'
+    __tablename__ = "content_trust_roles"
 
     id = Column(
         UUID, primary_key=False, unique=True, default=lambda: uuid.uuid4().bytes
@@ -30,7 +30,7 @@ class ContentTrustRole(Base):
     timestamp = Column(String, nullable=False)
     expiration = Column(String, nullable=False)
 
-    delegator_id = Column(UUID, ForeignKey('role_delegations.id'), nullable=True)
+    delegator_id = Column(UUID, ForeignKey("role_delegations.id"), nullable=True)
     delegations = relationship(
         "RoleDelegation",
         backref="issuer",
@@ -44,11 +44,11 @@ class ContentTrustRole(Base):
 
 
 class RoleDelegation(Base):
-    __tablename__ = 'role_delegations'
+    __tablename__ = "role_delegations"
 
     id = Column(UUID, primary_key=True, default=lambda: uuid.uuid4().bytes)
 
-    issuer_id = Column(UUID, ForeignKey('content_trust_roles.id'), nullable=False)
+    issuer_id = Column(UUID, ForeignKey("content_trust_roles.id"), nullable=False)
     consumers = relationship(
         "ContentTrustRole",
         backref="delegator",
@@ -69,10 +69,10 @@ class RoleDelegation(Base):
 
 
 class SigningKey(Base):
-    __tablename__ = 'signing_keys'
+    __tablename__ = "signing_keys"
 
     public_key = Column(String, primary_key=True)
     private_key = Column(String)
     time_created = Column(Date, nullable=False, server_default=func.current_date())
-    user_id = Column(UUID, ForeignKey('users.id'))
-    channel_name = Column(String, ForeignKey('channels.name'))
+    user_id = Column(UUID, ForeignKey("users.id"))
+    channel_name = Column(String, ForeignKey("channels.name"))

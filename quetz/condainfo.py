@@ -71,7 +71,7 @@ def get_subdir_compat(info):
         arch = info["arch"]
         platform = info["platform"]
         if arch == "x86_64":
-            subdir = platform + '-64'
+            subdir = platform + "-64"
     return subdir
 
 
@@ -148,7 +148,7 @@ class CondaInfo:
     def _load_jsons(self, tar):
         self.info = json.load(tar.extractfile("info/index.json"))
 
-        self.info['subdir'] = get_subdir_compat(self.info)
+        self.info["subdir"] = get_subdir_compat(self.info)
 
         try:
             self.about = json.load(tar.extractfile("info/about.json"))

@@ -40,7 +40,7 @@ def check_package_membership(package_name, includelist, excludelist):
 
 
 def add_static_file(contents, channel_name, subdir, fname, pkgstore, file_index=None):
-    if type(contents) is not bytes:
+    if not isinstance(contents, bytes):
         raw_file = contents.encode("utf-8")
     else:
         raw_file = contents
@@ -61,7 +61,7 @@ def add_static_file(contents, channel_name, subdir, fname, pkgstore, file_index=
 def add_temp_static_file(
     contents, channel_name, subdir, fname, temp_dir, file_index=None
 ):
-    if type(contents) is not bytes:
+    if not isinstance(contents, bytes):
         raw_file = contents.encode("utf-8")
     else:
         raw_file = contents
@@ -78,16 +78,16 @@ def add_temp_static_file(
 
     file_path = path / fname
 
-    with open(file_path, 'wb') as fo:
+    with open(file_path, "wb") as fo:
         fo.write(raw_file)
 
     bz2_file = bz2.compress(raw_file)
     gzp_file = gzip.compress(raw_file)
 
-    with open(f"{file_path}.bz2", 'wb') as fo:
+    with open(f"{file_path}.bz2", "wb") as fo:
         fo.write(bz2_file)
 
-    with open(f"{file_path}.gz", 'wb') as fo:
+    with open(f"{file_path}.gz", "wb") as fo:
         fo.write(gzp_file)
 
     if file_index:
@@ -117,18 +117,18 @@ def add_entry_for_index(files, subdir, fname, data_bytes):
 
 def parse_query(search_type, query):
     accepted_filters = []
-    if search_type == 'package':
+    if search_type == "package":
         accepted_filters = [
-            'channel',
-            'description',
-            'summary',
+            "channel",
+            "description",
+            "summary",
             # 'format',
-            'platform',
+            "platform",
             # 'version',
             # 'uploader',
         ]
-    elif search_type == 'channel':
-        accepted_filters = ['description', 'private']
+    elif search_type == "channel":
+        accepted_filters = ["description", "private"]
     query = unquote(query.strip())
 
     args = shlex.split(query)
@@ -136,12 +136,12 @@ def parse_query(search_type, query):
     filters = []
 
     for arg in args:
-        if ':' in arg:
-            key, val = arg.split(':', 1)
+        if ":" in arg:
+            key, val = arg.split(":", 1)
             if (
-                key.startswith('-') and key[1:] in accepted_filters
+                key.startswith("-") and key[1:] in accepted_filters
             ) or key in accepted_filters:
-                filters.append((key, val.split(',')))
+                filters.append((key, val.split(",")))
         else:
             arg = arg.strip('"').strip("'")
             keywords.append(arg)
@@ -154,23 +154,23 @@ def apply_custom_query(search_type, db, keywords, filters):
     negation_argument = None
     each_keyword_condition = None
     for i, each_keyword in enumerate(keywords):
-        if each_keyword == 'NOT':
+        if each_keyword == "NOT":
             negation_argument = keywords[i + 1]
-            if search_type == 'package':
-                each_keyword_condition = Package.name.notlike(f'%{negation_argument}%')
-            elif search_type == 'channel':
+            if search_type == "package":
+                each_keyword_condition = Package.name.notlike(f"%{negation_argument}%")
+            elif search_type == "channel":
                 each_keyword_condition = collate(Channel.name, "und-x-icu").notlike(
-                    f'%{negation_argument}%'
+                    f"%{negation_argument}%"
                 )
             else:
                 raise KeyError(search_type)
         else:
             if each_keyword != negation_argument:
-                if search_type == 'package':
-                    each_keyword_condition = Package.name.ilike(f'%{each_keyword}%')
-                elif search_type == 'channel':
+                if search_type == "package":
+                    each_keyword_condition = Package.name.ilike(f"%{each_keyword}%")
+                elif search_type == "channel":
                     each_keyword_condition = collate(Channel.name, "und-x-icu").ilike(
-                        f'%{each_keyword}%'
+                        f"%{each_keyword}%"
                     )
                 else:
                     raise KeyError(search_type)
@@ -181,38 +181,38 @@ def apply_custom_query(search_type, db, keywords, filters):
     for each_filter in filters:
         key, values = each_filter
         negate = False
-        if key.startswith('-'):
+        if key.startswith("-"):
             key = key[1:]
             negate = True
         each_filter_conditions = []
         for each_val in values:
             each_val_condition = None
             each_val = each_val.strip('"').strip("'")
-            if search_type == 'package':
-                if key == 'channel':
+            if search_type == "package":
+                if key == "channel":
                     each_val_condition = collate(Channel.name, "und-x-icu").ilike(
-                        f'%{(each_val)}%'
+                        f"%{(each_val)}%"
                     )
-                elif key == 'description':
+                elif key == "description":
                     each_val_condition = Package.description.contains(each_val)
-                elif key == 'summary':
+                elif key == "summary":
                     each_val_condition = Package.summary.contains(each_val)
-                elif key == 'format':
+                elif key == "format":
                     each_val_condition = cast(
                         PackageVersion.package_format, String
-                    ).ilike(f'%{(each_val)}%')
-                elif key == 'platform':
-                    each_val_condition = Package.platforms.ilike(f'%{(each_val)}%')
-                elif key == 'version':
-                    each_val_condition = PackageVersion.version.ilike(f'%{(each_val)}%')
-                elif key == 'uploader':
-                    each_val_condition = User.username.ilike(f'%{(each_val)}%')
+                    ).ilike(f"%{(each_val)}%")
+                elif key == "platform":
+                    each_val_condition = Package.platforms.ilike(f"%{(each_val)}%")
+                elif key == "version":
+                    each_val_condition = PackageVersion.version.ilike(f"%{(each_val)}%")
+                elif key == "uploader":
+                    each_val_condition = User.username.ilike(f"%{(each_val)}%")
                 else:
                     raise KeyError(key)
-            elif search_type == 'channel':
-                if key == 'description':
+            elif search_type == "channel":
+                if key == "description":
                     each_val_condition = Channel.description.contains(each_val)
-                elif key == 'private':
+                elif key == "private":
                     each_val_condition = Channel.private.is_(
                         bool(distutils.util.strtobool(each_val))
                     )
@@ -246,7 +246,7 @@ class TicToc:
 
 def generate_random_key(length=32):
     alphabet = string.ascii_letters + string.digits
-    return ''.join(secrets.choice(alphabet) for i in range(length))
+    return "".join(secrets.choice(alphabet) for i in range(length))
 
 
 def background_task_wrapper(func: Callable, logger: logging.Logger) -> Callable:

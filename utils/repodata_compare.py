@@ -1,6 +1,6 @@
 import requests
 
-my_headers = {'accept-encoding': 'gzip'}
+my_headers = {"accept-encoding": "gzip"}
 
 anaconda = requests.get(
     "https://conda.anaconda.org/conda-forge/linux-64/repodata.json", headers=my_headers
@@ -39,7 +39,7 @@ def compare_pkg_rec(a, b):
             continue
 
         bx = b[key]
-        if type(ax) is list:
+        if isinstance(ax, list):
             ax = sorted(ax)
             bx = sorted(bx)
 

@@ -36,7 +36,7 @@ def parse_job_manifest(function_name):
     if len(paths) == 2:
         plugin_name, job_name = paths
         entry_points = tuple(
-            get_entry_points().select(group='quetz.jobs', name=plugin_name)
+            get_entry_points().select(group="quetz.jobs", name=plugin_name)
         )
         if not entry_points:
             raise ValueError(
@@ -83,7 +83,7 @@ def parse_job_name(v):
 class JobBase(BaseModel):
     """New job spec"""
 
-    manifest: str = Field(None, title='Name of the function')
+    manifest: str = Field(None, title="Name of the function")
 
     start_at: Optional[datetime] = Field(
         None, title="date and time the job should start, if None it starts immediately"
@@ -104,47 +104,47 @@ class JobBase(BaseModel):
 
         parse_job_manifest(function_name)
 
-        return function_name.encode('ascii')
+        return function_name.encode("ascii")
 
 
 class JobCreate(JobBase):
     """Create job spec"""
 
-    items_spec: str = Field(..., title='Item selector spec')
+    items_spec: str = Field(..., title="Item selector spec")
 
 
 class JobUpdateModel(BaseModel):
     """Modify job spec items (status and items_spec)"""
 
-    items_spec: str = Field(None, title='Item selector spec')
-    status: JobStatus = Field(None, title='Change status')
+    items_spec: str = Field(None, title="Item selector spec")
+    status: JobStatus = Field(None, title="Change status")
     force: bool = Field(False, title="force re-running job on all matching packages")
 
 
 class Job(JobBase):
-    id: int = Field(None, title='Unique id for job')
-    owner_id: uuid.UUID = Field(None, title='User id of the owner')
+    id: int = Field(None, title="Unique id for job")
+    owner_id: uuid.UUID = Field(None, title="User id of the owner")
 
-    created: datetime = Field(None, title='Created at')
+    created: datetime = Field(None, title="Created at")
 
-    status: JobStatus = Field(None, title='Status of the job (running, paused, ...)')
+    status: JobStatus = Field(None, title="Status of the job (running, paused, ...)")
 
-    items_spec: Optional[str] = Field(None, title='Item selector spec')
+    items_spec: Optional[str] = Field(None, title="Item selector spec")
     model_config = ConfigDict(from_attributes=True)
 
 
 class Task(BaseModel):
-    id: int = Field(None, title='Unique id for task')
-    job_id: int = Field(None, title='ID of the parent job')
-    package_version: dict = Field(None, title='Package version')
-    created: datetime = Field(None, title='Created at')
-    status: TaskStatus = Field(None, title='Status of the task (running, paused, ...)')
+    id: int = Field(None, title="Unique id for task")
+    job_id: int = Field(None, title="ID of the parent job")
+    package_version: dict = Field(None, title="Package version")
+    created: datetime = Field(None, title="Created at")
+    status: TaskStatus = Field(None, title="Status of the task (running, paused, ...)")
 
     @field_validator("package_version", mode="before")
     @classmethod
     def convert_package_version(cls, v):
         if v:
-            return {'filename': v.filename, 'id': uuid.UUID(bytes=v.id).hex}
+            return {"filename": v.filename, "id": uuid.UUID(bytes=v.id).hex}
         else:
             return {}
 

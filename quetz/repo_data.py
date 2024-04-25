@@ -21,7 +21,7 @@ def export(dao, channel_name, subdir):
             channel_name, subdir
         ):
             data = json.loads(info)
-            data['time_modified'] = int(time_modified.timestamp())
+            data["time_modified"] = int(time_modified.timestamp())
             if format == db_models.PackageFormatEnum.conda:
                 packages_conda[filename] = data
             else:

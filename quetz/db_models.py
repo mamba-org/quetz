@@ -42,17 +42,17 @@ UUID = LargeBinary(length=16)
 
 
 class User(Base):
-    __tablename__ = 'users'
+    __tablename__ = "users"
 
     id = Column(UUID, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
 
-    identities = relationship('Identity', back_populates='user', uselist=True)
+    identities = relationship("Identity", back_populates="user", uselist=True)
     emails = relationship(
-        'Email', back_populates='user', uselist=True, cascade="all,delete-orphan"
+        "Email", back_populates="user", uselist=True, cascade="all,delete-orphan"
     )
     profile = relationship(
-        'Profile', uselist=False, back_populates='user', cascade="all,delete-orphan"
+        "Profile", uselist=False, back_populates="user", cascade="all,delete-orphan"
     )
 
     role = Column(String, nullable=True)
@@ -70,8 +70,8 @@ class Email(Base):
 
     __table_args__ = (
         ForeignKeyConstraint(
-            ['provider', 'identity_id'],
-            ['identities.provider', 'identities.identity_id'],
+            ["provider", "identity_id"],
+            ["identities.provider", "identities.identity_id"],
         ),
     )
 
@@ -79,19 +79,19 @@ class Email(Base):
     identity_id = Column(String, primary_key=True)
     email = Column(String, primary_key=True, unique=True)
 
-    user_id = Column(UUID, ForeignKey('users.id'))
+    user_id = Column(UUID, ForeignKey("users.id"))
 
     verified = Column(Boolean)
     primary = Column(Boolean)
 
-    user = relationship('User', back_populates='emails')
+    user = relationship("User", back_populates="emails")
     identity = relationship(
-        'Identity', foreign_keys=[provider, identity_id], back_populates='emails'
+        "Identity", foreign_keys=[provider, identity_id], back_populates="emails"
     )
 
 
 Index(
-    'email_index',
+    "email_index",
     Email.provider,
     Email.identity_id,
     Email.email,
@@ -100,61 +100,61 @@ Index(
 
 
 class Identity(Base):
-    __tablename__ = 'identities'
+    __tablename__ = "identities"
 
     provider = Column(String, primary_key=True)
     identity_id = Column(String, primary_key=True)
     username = Column(String)
-    user_id = Column(UUID, ForeignKey('users.id'))
+    user_id = Column(UUID, ForeignKey("users.id"))
 
-    user = relationship('User', back_populates='identities')
-    emails = relationship('Email', back_populates='identity')
+    user = relationship("User", back_populates="identities")
+    emails = relationship("Email", back_populates="identity")
 
 
-Index('identity_index', Identity.provider, Identity.identity_id, unique=True)
+Index("identity_index", Identity.provider, Identity.identity_id, unique=True)
 
 
 class Profile(Base):
-    __tablename__ = 'profiles'
+    __tablename__ = "profiles"
 
     name = Column(String, nullable=True)
     avatar_url = Column(String)
-    user_id = Column(UUID, ForeignKey('users.id'), primary_key=True)
-    user = relationship('User', back_populates='profile')
+    user_id = Column(UUID, ForeignKey("users.id"), primary_key=True)
+    user = relationship("User", back_populates="profile")
 
 
 class ChannelMember(Base):
-    __tablename__ = 'channel_members'
+    __tablename__ = "channel_members"
 
     channel_name = Column(
-        String, ForeignKey('channels.name'), primary_key=True, index=True
+        String, ForeignKey("channels.name"), primary_key=True, index=True
     )
-    user_id = Column(UUID, ForeignKey('users.id'), primary_key=True, index=True)
+    user_id = Column(UUID, ForeignKey("users.id"), primary_key=True, index=True)
     role = Column(String)
 
-    channel = relationship('Channel', back_populates="members")
+    channel = relationship("Channel", back_populates="members")
 
     user = relationship(
-        'User', backref=backref("channel_members", cascade="all,delete-orphan")
+        "User", backref=backref("channel_members", cascade="all,delete-orphan")
     )
 
     def __repr__(self):
         return (
-            f'ChannelMember<{self.user.username} -> {self.channel_name} ({self.role})>'
+            f"ChannelMember<{self.user.username} -> {self.channel_name} ({self.role})>"
         )
 
 
 class Package(Base):
-    __tablename__ = 'packages'
+    __tablename__ = "packages"
 
     name = Column(String, primary_key=True, index=True)
     channel_name = Column(
-        String, ForeignKey('channels.name'), primary_key=True, index=True
+        String, ForeignKey("channels.name"), primary_key=True, index=True
     )
     description = Column(Text)
     summary = Column(Text)
 
-    channel = relationship('Channel', uselist=False, back_populates='packages')
+    channel = relationship("Channel", uselist=False, back_populates="packages")
 
     # channeldata is always from the most recent version
     channeldata = Column(String)
@@ -191,7 +191,7 @@ class Package(Base):
 
 
 class Channel(Base):
-    __tablename__ = 'channels'
+    __tablename__ = "channels"
 
     name = Column(
         String(100, collation="nocase"),
@@ -202,17 +202,17 @@ class Channel(Base):
     private = Column(Boolean, default=False)
     mirror_channel_url = Column(String)
     mirror_mode = Column(String)
-    channel_metadata = Column(String, server_default='{}', nullable=False)
+    channel_metadata = Column(String, server_default="{}", nullable=False)
     timestamp_mirror_sync = Column(Integer, default=0)
     size = Column(BigInteger, default=0)
     size_limit = Column(BigInteger, default=None)
-    ttl = Column(Integer, server_default=f'{60 * 60 * 10}', nullable=False)  # 10 hours
+    ttl = Column(Integer, server_default=f"{60 * 60 * 10}", nullable=False)  # 10 hours
 
     packages = relationship(
-        'Package', back_populates='channel', cascade="all,delete", uselist=True
+        "Package", back_populates="channel", cascade="all,delete", uselist=True
     )
 
-    members = relationship('ChannelMember', cascade="all,delete")
+    members = relationship("ChannelMember", cascade="all,delete")
 
     mirrors = relationship("ChannelMirror", cascade="all, delete", uselist=True)
 
@@ -246,7 +246,7 @@ class Channel(Base):
 
 
 class PackageMember(Base):
-    __tablename__ = 'package_members'
+    __tablename__ = "package_members"
     __table_args__ = (
         ForeignKeyConstraint(
             ["channel_name", "package_name"], ["packages.channel_name", "packages.name"]
@@ -269,45 +269,45 @@ class PackageMember(Base):
     # see also : https://docs.sqlalchemy.org/en/13/orm/join_conditions.html#overlapping-foreign-keys # noqa
 
     package = relationship(
-        'Package',
+        "Package",
         backref=backref("members", cascade="all,delete"),
         primaryjoin="and_(Package.name == foreign(PackageMember.package_name),"
         "Package.channel_name == PackageMember.channel_name)",
     )
     channel = relationship(
-        'Channel', backref=backref("package_members", cascade="all,delete")
+        "Channel", backref=backref("package_members", cascade="all,delete")
     )
-    user = relationship('User', backref=backref("packages", cascade="all,delete"))
+    user = relationship("User", backref=backref("packages", cascade="all,delete"))
 
     def __repr__(self):
-        return f'<PackageMember channel_name={self.channel_name}, \
-                  package_name={self.package_name}, role={self.role}>'
+        return f"<PackageMember channel_name={self.channel_name}, \
+                  package_name={self.package_name}, role={self.role}>"
 
 
 class ApiKey(Base):
-    __tablename__ = 'api_keys'
+    __tablename__ = "api_keys"
 
     key = Column(String, primary_key=True, index=True)
     description = Column(String)
     time_created = Column(Date, nullable=False, server_default=func.current_date())
     expire_at = Column(Date)
     deleted = Column(Boolean, default=False)
-    user_id = Column(UUID, ForeignKey('users.id'))
-    owner_id = Column(UUID, ForeignKey('users.id'))
+    user_id = Column(UUID, ForeignKey("users.id"))
+    owner_id = Column(UUID, ForeignKey("users.id"))
 
     user = relationship(
-        'User',
+        "User",
         foreign_keys=[user_id],
         backref=backref("api_keys_user", cascade="all,delete-orphan"),
     )
     owner = relationship(
-        'User',
+        "User",
         foreign_keys=[owner_id],
         backref=backref("api_keys_owner", cascade="all,delete-orphan"),
     )
 
     def __repr__(self):
-        return f'<ApiKey key={self.key}>'
+        return f"<ApiKey key={self.key}>"
 
 
 class PackageFormatEnum(enum.Enum):
@@ -316,7 +316,7 @@ class PackageFormatEnum(enum.Enum):
 
 
 class PackageVersion(Base):
-    __tablename__ = 'package_versions'
+    __tablename__ = "package_versions"
     __table_args__ = (
         ForeignKeyConstraint(
             ["channel_name", "package_name"], ["packages.channel_name", "packages.name"]
@@ -340,14 +340,14 @@ class PackageVersion(Base):
 
     filename = Column(String)
     info = Column(String)
-    uploader_id = Column(UUID, ForeignKey('users.id'))
+    uploader_id = Column(UUID, ForeignKey("users.id"))
     time_created = Column(DateTime(timezone=True), server_default=func.now())
     time_modified = Column(DateTime(timezone=True), server_default=func.now())
     package = relationship(
         "Package", backref=backref("package_versions", cascade="all,delete-orphan")
     )
 
-    uploader = relationship('User')
+    uploader = relationship("User")
 
 
 class ChannelMirror(Base):
@@ -362,13 +362,13 @@ class ChannelMirror(Base):
 
 
 Index(
-    'package_version_name_index',
+    "package_version_name_index",
     PackageVersion.channel_name,
     PackageVersion.package_name,
 )
 
 Index(
-    'package_version_filename_index',
+    "package_version_filename_index",
     PackageVersion.channel_name,
     PackageVersion.filename,
     PackageVersion.platform,
@@ -383,7 +383,7 @@ UniqueConstraint(
     PackageVersion.version,
     PackageVersion.build_string,
     PackageVersion.build_number,
-    name='package_version_index',
+    name="package_version_index",
 )
 
 
@@ -396,6 +396,6 @@ collation = DDL(
 
 event.listen(
     Channel.__table__,
-    'before_create',
-    collation.execute_if(dialect='postgresql'),  # type: ignore
+    "before_create",
+    collation.execute_if(dialect="postgresql"),  # type: ignore
 )

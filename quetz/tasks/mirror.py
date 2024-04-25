@@ -125,7 +125,7 @@ def download_remote_file(
         remote_file = repository.open(path)
         data_stream = remote_file.file
 
-        if path.endswith('.json'):
+        if path.endswith(".json"):
             add_static_file(data_stream.read(), channel, None, path, pkgstore)
         else:
             pkgstore.add_package(data_stream, channel, path)
@@ -209,7 +209,7 @@ def handle_repodata_package(
     from quetz.main import pm
 
     channel_name = channel.name
-    proxylist = channel.load_channel_metadata().get('proxylist', [])
+    proxylist = channel.load_channel_metadata().get("proxylist", [])
     user_id = auth.assert_user()
 
     total_size = 0
@@ -423,7 +423,7 @@ def initial_sync_mirror(
                     logger.debug(f"updating package {package_name} from {arch}")
 
                 update_batch.append((path, package_name, metadata))
-                update_size += metadata.get('size', 100_000)
+                update_size += metadata.get("size", 100_000)
 
             if len(update_batch) >= max_batch_length or update_size >= max_batch_size:
                 logger.debug(f"Executing batch with {update_size}")

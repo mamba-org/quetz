@@ -18,10 +18,10 @@ def api_keys(other_user, user, db, dao: Dao):
         )
 
     keys = [
-        key_factory(user, "key", '2030-01-01', []),
-        key_factory(other_user, "other_key", '2030-01-01', []),
-        key_factory(other_user, "other_user_is_user", '2030-01-01', []),
-        key_factory(user, "user_is_user", '2030-01-01', []),
+        key_factory(user, "key", "2030-01-01", []),
+        key_factory(other_user, "other_key", "2030-01-01", []),
+        key_factory(other_user, "other_user_is_user", "2030-01-01", []),
+        key_factory(user, "user_is_user", "2030-01-01", []),
     ]
 
     yield {k.description: k for k in keys}
@@ -115,7 +115,7 @@ def test_list_keys_subrole(auth_client, dao, user, private_channel):
             dict(
                 description="user-key",
                 roles=[
-                    {"channel": private_channel.name, 'package': None, "role": "owner"}
+                    {"channel": private_channel.name, "package": None, "role": "owner"}
                 ],
             )
         ),
@@ -126,7 +126,7 @@ def test_list_keys_subrole(auth_client, dao, user, private_channel):
     returned_keys = {key["description"]: key["roles"] for key in response.json()}
     assert len(returned_keys) == 1
     assert "user-key" in returned_keys
-    assert returned_keys['user-key'] == [
+    assert returned_keys["user-key"] == [
         {"channel": private_channel.name, "package": None, "role": "owner"}
     ]
 
@@ -143,7 +143,7 @@ def test_list_keys_without_roles(auth_client, dao, user):
     returned_keys = {key["description"]: key["roles"] for key in response.json()}
     assert len(returned_keys) == 1
     assert "user-key" in returned_keys
-    assert returned_keys['user-key'] is None
+    assert returned_keys["user-key"] is None
 
 
 def test_unlist_delete_api_keys(auth_client, api_keys, db, private_channel, user):

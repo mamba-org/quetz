@@ -146,7 +146,7 @@ def test_upload_wrong_file_type(auth_client, public_channel):
         f"/api/channels/{public_channel.name}/files/", files=files
     )
     assert response.status_code == 400
-    assert "not a bzip2 file" in response.json()['detail']
+    assert "not a bzip2 file" in response.json()["detail"]
 
 
 def test_increment_download_count(

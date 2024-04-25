@@ -7,7 +7,7 @@ from quetz.db_models import UUID, Base
 
 
 class TermsOfServiceFile(Base):
-    __tablename__ = 'quetz_tos_file'
+    __tablename__ = "quetz_tos_file"
 
     id = Column(UUID, primary_key=True, default=lambda: uuid.uuid4().bytes)
     filename = Column(String)
@@ -16,7 +16,7 @@ class TermsOfServiceFile(Base):
 
 
 class TermsOfService(Base):
-    __tablename__ = 'quetz_tos'
+    __tablename__ = "quetz_tos"
 
     id = Column(UUID, primary_key=True, default=lambda: uuid.uuid4().bytes)
     uploader_id = Column(UUID)
@@ -26,10 +26,10 @@ class TermsOfService(Base):
 
 class TermsOfServiceSignatures(Base):
     __tablename__ = "quetz_tos_signatures"
-    __table_args__ = (UniqueConstraint('tos_id', 'user_id'),)
+    __table_args__ = (UniqueConstraint("tos_id", "user_id"),)
 
-    tos_id = Column(UUID, ForeignKey('quetz_tos.id'), primary_key=True)
-    user_id = Column(UUID, ForeignKey('users.id'), primary_key=True)
+    tos_id = Column(UUID, ForeignKey("quetz_tos.id"), primary_key=True)
+    user_id = Column(UUID, ForeignKey("users.id"), primary_key=True)
     time_created = Column(DateTime, nullable=False, server_default=func.now())
     tos = relationship(
         "TermsOfService",

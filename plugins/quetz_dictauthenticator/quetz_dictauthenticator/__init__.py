@@ -31,5 +31,5 @@ class DictionaryAuthenticator(SimpleAuthenticator):
         super().configure(config)
 
     async def authenticate(self, request, data, **kwargs):
-        if self.passwords.get(data['username']) == data['password']:
-            return data['username']
+        if self.passwords.get(data["username"]) == data["password"]:
+            return data["username"]

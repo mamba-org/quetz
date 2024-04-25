@@ -30,22 +30,22 @@ def set_metrics(*args):
 
 
 def get_engine(db_url, reuse_engine=True, postgres_kwargs=None, **kwargs) -> Engine:
-    if db_url.startswith('sqlite'):
-        kwargs.setdefault('connect_args', {'check_same_thread': False})
+    if db_url.startswith("sqlite"):
+        kwargs.setdefault("connect_args", {"check_same_thread": False})
 
-    if db_url.endswith(':memory:'):
+    if db_url.endswith(":memory:"):
         # If we're using an in-memory database, ensure that only one connection
         # is ever created.
-        kwargs.setdefault('poolclass', StaticPool)
+        kwargs.setdefault("poolclass", StaticPool)
 
     global engine
 
     if not engine or not reuse_engine:
-        if db_url.startswith('postgres'):
+        if db_url.startswith("postgres"):
             engine = create_engine(
                 db_url, **(postgres_kwargs if postgres_kwargs else {}), **kwargs
             )
-            for event_name in ['connect', 'close', 'checkin', 'checkout']:
+            for event_name in ["connect", "close", "checkin", "checkout"]:
                 event.listen(engine, event_name, set_metrics)
         else:
             engine = create_engine(db_url, **kwargs)
@@ -56,8 +56,8 @@ def get_engine(db_url, reuse_engine=True, postgres_kwargs=None, **kwargs) -> Eng
         def on_close(dbapi_conn, conn_record):
             logger.debug("connection closed: %s", engine.pool.status())
 
-        event.listen(engine, 'connect', on_connect)
-        event.listen(engine, 'close', on_close)
+        event.listen(engine, "connect", on_connect)
+        event.listen(engine, "close", on_close)
 
     return engine
 
