@@ -94,12 +94,12 @@ def test_set_user_roles_user_exists(
     user = get_user(db, config_dir)
     assert user
 
-    assert user.role == 'owner'
+    assert user.role == "owner"
     assert user.username == "bartosz"
 
 
 @pytest.mark.parametrize("default_role", [None, "member"])
-@pytest.mark.parametrize("current_role", ['owner', 'member', 'maintainer'])
+@pytest.mark.parametrize("current_role", ["owner", "member", "maintainer"])
 def test_set_user_roles_user_has_role(
     db, config, config_dir, user, mocker, user_with_identity, current_role, default_role
 ):
@@ -183,14 +183,14 @@ def dummy_migration_plugin() -> Path:
     pkg_path = path / "dummy"
 
     os.makedirs(pkg_path / "versions")
-    with open(pkg_path / "dummy_module.py", 'w') as fid:
+    with open(pkg_path / "dummy_module.py", "w") as fid:
         fid.write("class DummyPlugin: pass")
-    with open(pkg_path / "__init__.py", 'w') as fid:
+    with open(pkg_path / "__init__.py", "w") as fid:
         fid.write("")
 
     # add entry points
     os.makedirs(path / "dummy-0.0.0.dist-info")
-    with open(path / "dummy-0.0.0.dist-info" / "entry_points.txt", 'w') as fid:
+    with open(path / "dummy-0.0.0.dist-info" / "entry_points.txt", "w") as fid:
         fid.writelines(
             [
                 "[quetz.models]\nquetz-plugin = dummy.dummy_module\n",
@@ -357,7 +357,7 @@ def test_multi_head(
         fid.write(alembic_env)
     with open(quetz_migrations_path / "script.py.mako", "w") as fid:
         fid.write(script_mako)
-    with open(quetz_versions_path / "0000_initial.py", 'w') as fid:
+    with open(quetz_versions_path / "0000_initial.py", "w") as fid:
         fid.write(quetz_rev)
 
     alembic_config.set_main_option(
@@ -380,7 +380,7 @@ def test_multi_head(
     rev_file = next((plugin_versions_path).glob("*test_revision.py"))
     with open(rev_file) as fid:
         content = fid.read()
-    assert 'down_revision = None' in content
+    assert "down_revision = None" in content
     assert "depends_on = 'quetz'" in content
     import re
 
@@ -448,7 +448,7 @@ wrong_cli_args = [
 ]
 
 
-@pytest.mark.parametrize('cli_args', wrong_cli_args)
+@pytest.mark.parametrize("cli_args", wrong_cli_args)
 def test_create_exists_errors(cli_args):
     """Create command raises if deployment exists and not force deleted."""
     with mock.patch("quetz.cli._is_deployment", lambda x: True):
@@ -482,28 +482,28 @@ def empty_config_on_exit() -> None:
 
 def test_create_conf(empty_deployment_dir: Path, empty_config_on_exit: None):
     """Create command with create conf cretes the needed files and folder."""
-    runner.invoke(cli.app, ['create', str(empty_deployment_dir), '--create-conf'])
-    assert empty_deployment_dir.joinpath('config.toml').exists()
-    assert empty_deployment_dir.joinpath('channels').exists()
-    assert empty_deployment_dir.joinpath('quetz.sqlite').exists()
+    runner.invoke(cli.app, ["create", str(empty_deployment_dir), "--create-conf"])
+    assert empty_deployment_dir.joinpath("config.toml").exists()
+    assert empty_deployment_dir.joinpath("channels").exists()
+    assert empty_deployment_dir.joinpath("quetz.sqlite").exists()
 
 
 def test_create_exists_delete(empty_deployment_dir: Path, empty_config_on_exit: None):
     """Existing deployment is removed if delete arg is used."""
-    runner.invoke(cli.app, ['create', str(empty_deployment_dir), '--create-conf'])
+    runner.invoke(cli.app, ["create", str(empty_deployment_dir), "--create-conf"])
     creation_time = empty_deployment_dir.stat().st_mtime
     runner.invoke(
-        cli.app, ['create', str(empty_deployment_dir), '--delete', '--create-conf']
+        cli.app, ["create", str(empty_deployment_dir), "--delete", "--create-conf"]
     )
     assert empty_deployment_dir.stat().st_mtime > creation_time
-    assert empty_deployment_dir.joinpath('config.toml').exists()
-    assert empty_deployment_dir.joinpath('channels').exists()
-    assert empty_deployment_dir.joinpath('quetz.sqlite').exists()
+    assert empty_deployment_dir.joinpath("config.toml").exists()
+    assert empty_deployment_dir.joinpath("channels").exists()
+    assert empty_deployment_dir.joinpath("quetz.sqlite").exists()
 
 
 def test_create_no_config(empty_deployment_dir: Path, empty_config_on_exit: None):
     """Error on create command with empty deployment and no config."""
-    res = runner.invoke(cli.app, ['create', str(empty_deployment_dir)])
+    res = runner.invoke(cli.app, ["create", str(empty_deployment_dir)])
     assert res.exit_code == 1
     assert "No configuration file provided." in res.output
 
@@ -512,8 +512,8 @@ def test_create_extra_file_in_deployment(
     empty_deployment_dir: Path, empty_config_on_exit: None
 ):
     """Error on create command with extra files in deployment."""
-    empty_deployment_dir.joinpath('extra_file.txt').touch()
-    res = runner.invoke(cli.app, ['create', str(empty_deployment_dir)])
+    empty_deployment_dir.joinpath("extra_file.txt").touch()
+    res = runner.invoke(cli.app, ["create", str(empty_deployment_dir)])
     assert res.exit_code == 1
     assert "Quetz deployment not allowed at" in res.output
 
@@ -523,7 +523,7 @@ def test_create_missing_copy_conf(
 ):
     """Error on create command with wrong copy-conf path."""
     res = runner.invoke(
-        cli.app, ['create', str(empty_deployment_dir), "--copy-conf", "none.toml"]
+        cli.app, ["create", str(empty_deployment_dir), "--copy-conf", "none.toml"]
     )
     assert res.exit_code == 1
     assert "Config file to copy does not exist" in res.output

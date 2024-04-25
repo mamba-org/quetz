@@ -45,11 +45,11 @@ try:
           be in ``shadow`` group.
         """
 
-        provider: str = 'pam'
+        provider: str = "pam"
         handler_cls = FormHandlers
 
         service: str = "login"
-        encoding: str = 'utf8'
+        encoding: str = "utf8"
         check_account: bool = True
 
         # configure server roles
@@ -149,11 +149,11 @@ try:
             if request.client:
                 host = request.client.host
 
-            username = data['username']
+            username = data["username"]
             try:
                 pamela.authenticate(
                     username,
-                    data['password'],
+                    data["password"],
                     service=self.service,
                     encoding=self.encoding,
                 )

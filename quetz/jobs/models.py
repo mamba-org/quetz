@@ -61,7 +61,7 @@ class Job(Base):
     )
 
     tasks = sa.orm.relationship(
-        'Task', back_populates='job', cascade="all,delete-orphan", uselist=True
+        "Task", back_populates="job", cascade="all,delete-orphan", uselist=True
     )
 
     extra_args = sa.Column(sa.String(), nullable=True)
@@ -85,7 +85,7 @@ class Task(Base):
     job_id = sa.Column(
         sa.Integer, sa.ForeignKey("jobs.id", ondelete="cascade"), nullable=False
     )
-    job = sa.orm.relationship("Job", back_populates='tasks')
+    job = sa.orm.relationship("Job", back_populates="tasks")
     package_version_id = sa.Column(
         UUID, sa.ForeignKey("package_versions.id", ondelete="cascade"), nullable=True
     )

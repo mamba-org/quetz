@@ -63,7 +63,7 @@ def synchronize_metrics_from_mirrors(
             continue
 
         for platform_filename, data in packages.items():
-            platform, filename = platform_filename.split('/')
+            platform, filename = platform_filename.split("/")
             for s in data["series"]:
                 timestamp = datetime.fromisoformat(s["timestamp"])
                 count = s["count"]

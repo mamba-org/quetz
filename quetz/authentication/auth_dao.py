@@ -19,7 +19,7 @@ from . import base
 def create_user_with_identity(
     dao: Dao,
     provider: str,
-    profile: 'base.UserProfile',
+    profile: "base.UserProfile",
     default_role: Optional[str],
     default_channels: Optional[List[str]],
 ) -> User:
@@ -57,14 +57,14 @@ def create_user_with_identity(
     return user
 
 
-def user_profile_changed(user, identity, profile: 'base.UserProfile'):
+def user_profile_changed(user, identity, profile: "base.UserProfile"):
     if (
-        identity.username != profile['login']
-        or user.profile.name != profile['name']
-        or user.profile.avatar_url != profile['avatar_url']
+        identity.username != profile["login"]
+        or user.profile.name != profile["name"]
+        or user.profile.avatar_url != profile["avatar_url"]
         or set((e.verified, e.primary, e.email) for e in user.emails)
         != set(
-            (e['verified'], e['primary'], e['email']) for e in profile.get('emails', [])
+            (e["verified"], e["primary"], e["email"]) for e in profile.get("emails", [])
         )
     ):
         return True
@@ -73,15 +73,15 @@ def user_profile_changed(user, identity, profile: 'base.UserProfile'):
 
 
 def update_user_from_profile(
-    db: Session, user, identity, profile: 'base.UserProfile'
+    db: Session, user, identity, profile: "base.UserProfile"
 ) -> User:
-    identity.username = profile['login']
-    user.profile.name = profile['name']
-    user.profile.avatar_url = profile['avatar_url']
+    identity.username = profile["login"]
+    user.profile.name = profile["name"]
+    user.profile.avatar_url = profile["avatar_url"]
 
     # check if any email already registered
     emails = []
-    for e in profile.get('emails', []):
+    for e in profile.get("emails", []):
         if not e["verified"]:
             continue
 
@@ -118,7 +118,7 @@ def update_user_from_profile(
 def get_user_by_identity(
     dao: Dao,
     provider: str,
-    profile: 'base.UserProfile',
+    profile: "base.UserProfile",
     config: Config,
     default_role: Optional[str] = None,
     default_channels: Optional[List[str]] = None,
@@ -131,7 +131,7 @@ def get_user_by_identity(
         user, identity = db.query(User, Identity).join(Identity).filter(
             Identity.provider == provider
         ).filter(
-            Identity.identity_id == str(profile['id']),
+            Identity.identity_id == str(profile["id"]),
         ).one_or_none() or (
             None,
             None,

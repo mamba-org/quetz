@@ -81,8 +81,8 @@ def test_delete_package_versions_with_package(
     ]
 
     # Get repodata content
-    package_dir = Path(pkgstore.channels_dir) / public_channel.name / 'linux-64'
-    with open(package_dir / 'repodata.json', 'r') as fd:
+    package_dir = Path(pkgstore.channels_dir) / public_channel.name / "linux-64"
+    with open(package_dir / "repodata.json", "r") as fd:
         repodata = json.load(fd)
 
     # Check that all packages are initially in repodata
@@ -110,7 +110,7 @@ def test_delete_package_versions_with_package(
     assert len(versions) == 0
 
     # Check that repodata content has been updated
-    with open(package_dir / 'repodata.json', 'r') as fd:
+    with open(package_dir / "repodata.json", "r") as fd:
         repodata = json.load(fd)
 
     assert repodata["info"] == repodata["info"]
@@ -136,11 +136,11 @@ def test_get_paginated_package_versions(
     )
 
     assert response.status_code == 200
-    assert isinstance(response.json().get('pagination'), dict)
-    assert response.json().get('pagination').get('all_records_count') == 1
+    assert isinstance(response.json().get("pagination"), dict)
+    assert response.json().get("pagination").get("all_records_count") == 1
 
-    assert isinstance(response.json().get('result'), list)
-    assert len(response.json().get('result')) == 1
+    assert isinstance(response.json().get("result"), list)
+    assert len(response.json().get("result")) == 1
 
 
 def test_get_package_version(auth_client, public_channel, package_version, dao):
@@ -310,11 +310,11 @@ def test_upload_package_version(
         condainfo = CondaInfo(fid, package_filename)
         condainfo._parse_conda()
 
-    package_dir = Path(pkgstore.channels_dir) / public_channel.name / 'linux-64'
+    package_dir = Path(pkgstore.channels_dir) / public_channel.name / "linux-64"
 
     if package_name == "my-package":
         assert response.status_code == 400
-        detail = response.json()['detail']
+        detail = response.json()["detail"]
         assert "package endpoint" in detail
         assert "does not match" in detail
         assert "test-package" in detail
@@ -323,9 +323,9 @@ def test_upload_package_version(
     else:
         assert response.status_code == 201
         db.refresh(public_channel)
-        assert public_channel.size == condainfo.info['size']
+        assert public_channel.size == condainfo.info["size"]
         assert pkgstore.serve_path(
-            public_channel.name, str(Path(condainfo.info['subdir']) / package_filename)
+            public_channel.name, str(Path(condainfo.info["subdir"]) / package_filename)
         )
         assert package_filename in os.listdir(package_dir)
 
@@ -388,10 +388,10 @@ def test_upload_package_version_wrong_filename(
         auth_client, public_channel, public_package, Path(package_filename)
     )
 
-    package_dir = Path(pkgstore.channels_dir) / public_channel.name / 'linux-64'
+    package_dir = Path(pkgstore.channels_dir) / public_channel.name / "linux-64"
 
     assert response.status_code == 400
-    detail = response.json()['detail']
+    detail = response.json()["detail"]
     assert "info file" in detail
     assert "do not match" in detail
     assert "my-package" in detail
@@ -425,8 +425,8 @@ def test_upload_duplicate_package_version(
 
     def get_repodata():
         """Helper function to read repo data"""
-        package_dir = Path(pkgstore.channels_dir) / public_channel.name / 'linux-64'
-        return json.loads((package_dir / 'repodata.json').read_text())
+        package_dir = Path(pkgstore.channels_dir) / public_channel.name / "linux-64"
+        return json.loads((package_dir / "repodata.json").read_text())
 
     # Test setup: path1 is a package we will upload
     path1 = Path(__file__).parent.parent / "data" / "test-package-0.1-0.tar.bz2"
@@ -472,7 +472,7 @@ def test_upload_duplicate_package_version(
 
     # Check that the file in the store is OK
     file_in_store = (
-        Path(pkgstore.channels_dir) / public_channel.name / 'linux-64' / path1.name
+        Path(pkgstore.channels_dir) / public_channel.name / "linux-64" / path1.name
     )
     assert size1 == os.path.getsize(file_in_store)
     assert (sha1, md51) == sha_and_md5(file_in_store)
@@ -482,7 +482,7 @@ def test_upload_duplicate_package_version(
 
     # Expect 409 since the file already exists
     assert response.status_code == 409
-    detail = response.json()['detail']
+    detail = response.json()["detail"]
     assert "Duplicate" in detail
 
     # Check meta data is OK: It should not have changed with respect to before
@@ -491,7 +491,7 @@ def test_upload_duplicate_package_version(
 
     # Check that the file in the store is OK
     file_in_store = (
-        Path(pkgstore.channels_dir) / public_channel.name / 'linux-64' / path1.name
+        Path(pkgstore.channels_dir) / public_channel.name / "linux-64" / path1.name
     )
 
     # File in store should  not be the second file
@@ -561,7 +561,7 @@ def test_check_channel_size_limits(
         )
 
     assert response.status_code == 422
-    detail = response.json()['detail']
+    detail = response.json()["detail"]
     assert "quota" in detail
     with pytest.raises(FileNotFoundError):
         pkgstore.serve_path(
@@ -581,8 +581,8 @@ def test_delete_package_version(
     update_indexes(dao, pkgstore, public_channel.name)
 
     # Get repodata content and check that package is inside
-    package_dir = Path(pkgstore.channels_dir) / public_channel.name / 'linux-64'
-    with open(package_dir / 'repodata.json', 'r') as fd:
+    package_dir = Path(pkgstore.channels_dir) / public_channel.name / "linux-64"
+    with open(package_dir / "repodata.json", "r") as fd:
         repodata = json.load(fd)
     assert filename in repodata["packages"].keys()
 
@@ -608,7 +608,7 @@ def test_delete_package_version(
     assert public_channel.size == 0
 
     # Check that repodata content has been updated
-    with open(package_dir / 'repodata.json', 'r') as fd:
+    with open(package_dir / "repodata.json", "r") as fd:
         repodata = json.load(fd)
     assert filename not in repodata["packages"].keys()
 
@@ -684,8 +684,8 @@ def test_validate_package_names_files_endpoint(
         condainfo._parse_conda()
 
     # patch conda info
-    condainfo.info['name'] = package_name
-    condainfo.channeldata['packagename'] = package_name
+    condainfo.info["name"] = package_name
+    condainfo.channeldata["packagename"] = package_name
 
     mocked_cls = mocker.patch("quetz.main.CondaInfo")
     mocked_cls.return_value = condainfo
@@ -702,12 +702,12 @@ def test_validate_package_names_files_endpoint(
 
         with pytest.raises(FileNotFoundError):
             pkgstore.serve_path(
-                public_channel.name, f'linux-64/{package_name}-0.1-0.tar.bz2'
+                public_channel.name, f"linux-64/{package_name}-0.1-0.tar.bz2"
             )
     else:
         assert response.status_code == 201
         assert pkgstore.serve_path(
-            public_channel.name, f'linux-64/{package_name}-0.1-0.tar.bz2'
+            public_channel.name, f"linux-64/{package_name}-0.1-0.tar.bz2"
         )
 
 
@@ -752,7 +752,7 @@ def test_validation_hook(auth_client, public_channel, plugin, config):
     assert response.status_code == 422
     assert "test-package not allowed" in response.json()["detail"]
     with pytest.raises(FileNotFoundError):
-        pkgstore.serve_path(public_channel.name, 'linux-64/test-package-0.1-0.tar.bz2')
+        pkgstore.serve_path(public_channel.name, "linux-64/test-package-0.1-0.tar.bz2")
 
 
 @pytest.mark.parametrize(
@@ -782,7 +782,7 @@ def test_package_current_version(
     if isinstance(package_data, list):
         assert len(package_data) == 1
         package_data = package_data[0]
-    assert package_data['current_version'] == v2o.version
+    assert package_data["current_version"] == v2o.version
 
     # delete v0.2 os-x and linux-64 package
     response = auth_client.delete(
@@ -806,7 +806,7 @@ def test_package_current_version(
     if isinstance(package_data, list):
         assert len(package_data) == 1
         package_data = package_data[0]
-    assert package_data['current_version'] == v1n.version
+    assert package_data["current_version"] == v1n.version
 
 
 @pytest.mark.parametrize("package_name", ["test-package"])
@@ -844,8 +844,8 @@ def test_package_channel_data_attributes(
     response = auth_client.get(f"/api/channels/{channel_name}/packages/test-package")
     assert response.status_code == 200
     content = response.json()
-    assert content['platforms'] == ['linux-64']
-    assert content['url'].startswith("https://")
+    assert content["platforms"] == ["linux-64"]
+    assert content["url"].startswith("https://")
 
 
 @pytest.fixture
@@ -862,7 +862,7 @@ def owner(db, dao: Dao):
 @pytest.fixture
 def private_channel(db, dao: Dao, owner):
     # create a channel
-    channel_data = Channel(name='private-channel', private=True)
+    channel_data = Channel(name="private-channel", private=True)
     channel = dao.create_channel(channel_data, owner.id, "owner")
 
     yield channel
@@ -873,7 +873,7 @@ def private_channel(db, dao: Dao, owner):
 
 @pytest.fixture
 def private_package(db, owner, private_channel, dao):
-    package_data = Package(name='test-package')
+    package_data = Package(name="test-package")
 
     package = dao.create_package(private_channel.name, package_data, owner.id, "owner")
 
@@ -894,9 +894,9 @@ def api_key(db, dao: Dao, owner, private_channel):
                 expire_at="2099-12-31",
                 roles=[
                     {
-                        'role': 'maintainer',
-                        'package': None,
-                        'channel': private_channel.name,
+                        "role": "maintainer",
+                        "package": None,
+                        "channel": private_channel.name,
                     }
                 ],
             )
@@ -913,7 +913,7 @@ def api_key(db, dao: Dao, owner, private_channel):
 
 def test_upload_package_with_api_key(client, dao: Dao, owner, private_channel, api_key):
     # set api key of the anonymous user 'owner_key' to headers
-    client.headers['X-API-Key'] = api_key.key
+    client.headers["X-API-Key"] = api_key.key
 
     # post new package
     response = client.post(
@@ -925,7 +925,7 @@ def test_upload_package_with_api_key(client, dao: Dao, owner, private_channel, a
     # we used the anonymous user of the API key for upload,
     # but expect the owner to be the package owner
     member = dao.get_package_member(
-        private_channel.name, 'test-package', username=owner.username
+        private_channel.name, "test-package", username=owner.username
     )
     assert member
 
@@ -934,7 +934,7 @@ def test_upload_file_to_package_with_api_key(
     dao: Dao, client, owner, private_channel, private_package, api_key
 ):
     # set api key of the anonymous user 'owner_key' to headers
-    client.headers['X-API-Key'] = api_key.key
+    client.headers["X-API-Key"] = api_key.key
 
     package_filename = "test-package-0.1-0.tar.bz2"
     with open(package_filename, "rb") as fid:
@@ -952,7 +952,7 @@ def test_upload_file_to_package_with_api_key(
         channel_name=private_channel.name,
         package_name=private_package.name,
         filename=package_filename,
-        platform='linux-64',
+        platform="linux-64",
     )
     assert version
     assert version.uploader == owner
@@ -962,7 +962,7 @@ def test_upload_file_to_channel_with_api_key(
     dao: Dao, client, owner, private_channel, api_key
 ):
     # set api key of the anonymous user 'owner_key' to headers
-    client.headers['X-API-Key'] = api_key.key
+    client.headers["X-API-Key"] = api_key.key
 
     package_filename = "test-package-0.1-0.tar.bz2"
     with open(package_filename, "rb") as fid:
@@ -977,9 +977,9 @@ def test_upload_file_to_channel_with_api_key(
     # but expect the owner to be the package owner
     version = dao.get_package_version_by_filename(
         channel_name=private_channel.name,
-        package_name='test-package',
+        package_name="test-package",
         filename=package_filename,
-        platform='linux-64',
+        platform="linux-64",
     )
     assert version
     assert version.uploader == owner

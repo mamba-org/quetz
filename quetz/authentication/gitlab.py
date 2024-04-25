@@ -37,13 +37,13 @@ class GitlabAuthenticator(OAuthAuthenticator):
     collect_emails = False
 
     # oauth client params
-    scope = 'openid'
+    scope = "openid"
 
     # endpoint urls
     validate_token_url = "user"
 
     async def userinfo(self, request, token):
-        resp = await self.client.get('/oauth/userinfo', token=token)
+        resp = await self.client.get("/oauth/userinfo", token=token)
         profile = resp.json()
         gitlab_profile = {
             "id": profile["sub"],
@@ -54,7 +54,7 @@ class GitlabAuthenticator(OAuthAuthenticator):
 
         # https://docs.gitlab.com/ee/integration/openid_connect_provider.html#shared-information
         if self.collect_emails:
-            emails = await self.client.get('/api/v4/user/emails', token=token)
+            emails = await self.client.get("/api/v4/user/emails", token=token)
             emails_res = []
             emails_res.append(
                 {
@@ -82,16 +82,16 @@ class GitlabAuthenticator(OAuthAuthenticator):
 
     def configure(self, config):
         if config.configured_section("gitlab"):
-            self.access_token_url = f'{config.gitlab_url}/oauth/token'
-            self.authorize_url = f'{config.gitlab_url}/oauth/authorize'
-            self.api_base_url = f'{config.gitlab_url}/api/v4'
-            self.revoke_url = f'{config.gitlab_url}/oauth/applications'
+            self.access_token_url = f"{config.gitlab_url}/oauth/token"
+            self.authorize_url = f"{config.gitlab_url}/oauth/authorize"
+            self.api_base_url = f"{config.gitlab_url}/api/v4"
+            self.revoke_url = f"{config.gitlab_url}/oauth/applications"
             self.client_id = config.gitlab_client_id
             self.client_secret = config.gitlab_client_secret
             self.is_enabled = True
             if config.configured_section("users"):
                 self.collect_emails = config.users_collect_emails
-                self.scope = 'openid email read_user'
+                self.scope = "openid email read_user"
 
         else:
             self.is_enabled = False

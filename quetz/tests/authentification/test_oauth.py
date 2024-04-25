@@ -43,9 +43,9 @@ def config_extra(default_role, user_roles):
     config_values = ["[users]"]
     if default_role:
         config_values.append(f'default_role = "{default_role}"')
-    for group in ['admins', 'members', 'maintainers']:
+    for group in ["admins", "members", "maintainers"]:
         group_users = user_roles.get(group, [])
-        config_values.append(f'{group} = {group_users}')
+        config_values.append(f"{group} = {group_users}")
     return "\n".join(config_values)
 
 
@@ -57,8 +57,8 @@ def login():
 @pytest.fixture
 def github_response(login):
     response = {
-        '/login/oauth/access_token': {'body': {'access_token': 'b'}},
-        '/user': {
+        "/login/oauth/access_token": {"body": {"access_token": "b"}},
+        "/user": {
             "body": {
                 "login": login,
                 "avatar_url": "",
@@ -74,20 +74,20 @@ def github_response(login):
 @pytest.fixture
 def azuread_response(login):
     response = {
-        '/3cd6563a-bbcf-4e30-bbc6-ea3445c75c79/oauth2/v2.0/token': {
-            'body': {'access_token': 'b'}
+        "/3cd6563a-bbcf-4e30-bbc6-ea3445c75c79/oauth2/v2.0/token": {
+            "body": {"access_token": "b"}
         },
-        '/oidc/userinfo': {
+        "/oidc/userinfo": {
             "body": {
-                'sub': login + '_id',
-                'name': 'monalisa',
-                'family_name': 'Lisa',
-                'given_name': 'Mona',
-                'picture': 'https://graph.microsoft.com/v1.0/me/photo/$value',
-                'email': login,
+                "sub": login + "_id",
+                "name": "monalisa",
+                "family_name": "Lisa",
+                "given_name": "Mona",
+                "picture": "https://graph.microsoft.com/v1.0/me/photo/$value",
+                "email": login,
             }
         },
-        '/3cd6563a-bbcf-4e30-bbc6-ea3445c75c79/v2.0/.well-known/openid-configuration': {
+        "/3cd6563a-bbcf-4e30-bbc6-ea3445c75c79/v2.0/.well-known/openid-configuration": {
             "body": {
                 "token_endpoint": "https://login.microsoftonline.com/"
                 "3cd6563a-bbcf-4e30-bbc6-ea3445c75c79/oauth2/v2.0/token",
@@ -158,10 +158,10 @@ def azuread_response(login):
 @pytest.fixture
 def jupyter_response(login):
     response = {
-        '/hub/api/oauth2/token': {
-            'body': {'access_token': 'b', 'token_type': 'Bearer'}
+        "/hub/api/oauth2/token": {
+            "body": {"access_token": "b", "token_type": "Bearer"}
         },
-        '/hub/api/authorizations/token/b': {
+        "/hub/api/authorizations/token/b": {
             "body": {
                 "name": login,
             }
@@ -228,7 +228,7 @@ mD1rl6xev7GRoqUYdKYdt9NJyDGEULZ6NbIWyXo3kTp7HdQLRn0BJg==
 )
 @pytest.fixture
 def google_response(login):
-    google_client_id = 'aaa'
+    google_client_id = "aaa"
     key = GOOGLE_PRIVATE_KEY
     cert = GOOGLE_CERT
 
@@ -256,10 +256,10 @@ def google_response(login):
 
     header = {"alg": "RS256", "kid": "1"}
 
-    id_token = jwt.encode(header, payload, key).decode('ascii')
+    id_token = jwt.encode(header, payload, key).decode("ascii")
     response = {
-        '/token': {'body': {'access_token': access_token, "id_token": id_token}},
-        '/oauth2/v3/certs': {
+        "/token": {"body": {"access_token": access_token, "id_token": id_token}},
+        "/oauth2/v3/certs": {
             "body": {
                 "keys": [
                     {
@@ -269,7 +269,7 @@ def google_response(login):
                 ]
             }
         },
-        '/.well-known/openid-configuration': {
+        "/.well-known/openid-configuration": {
             "body": {
                 "issuer": "https://accounts.google.com",
                 "authorization_endpoint": "https://accounts.google.com/o/oauth2/v2/auth",  # noqa
@@ -331,20 +331,20 @@ def oauth_server(request, config, app, provider_spec):
     # we need to remove the client, because it might have been already
     # registered in quetz.main
 
-    if provider == 'test_github':
+    if provider == "test_github":
         auth_module = auth_github.GithubAuthenticator
     elif provider == "test_google":
         auth_module = auth_google.GoogleAuthenticator
-    elif provider == 'test_jupyter':
+    elif provider == "test_jupyter":
         auth_module = JupyterhubAuthenticator
-    elif provider == 'test_azuread':
+    elif provider == "test_azuread":
         auth_module = AzureADAuthenticator
     else:
         raise Exception(f"not recognised provider {provider}")
 
     module = auth_module(
         config,
-        client_kwargs={'app': server_app},
+        client_kwargs={"app": server_app},
         provider=provider,
         app=app,
     )
@@ -370,7 +370,7 @@ def routed_client(app, oauth_server):
 
 @pytest.mark.parametrize("config_extra", ["[users]\ncreate_default_channel = true"])
 def test_config_create_default_channel(routed_client, db, oauth_server, config):
-    response = routed_client.get(f'/auth/{oauth_server.provider}/authorize')
+    response = routed_client.get(f"/auth/{oauth_server.provider}/authorize")
 
     assert response.status_code == 200
 
@@ -383,7 +383,7 @@ def test_config_create_default_channel(routed_client, db, oauth_server, config):
     assert user == channel.members[0].user
 
 
-@pytest.mark.parametrize("default_role", [None, 'member'])
+@pytest.mark.parametrize("default_role", [None, "member"])
 @pytest.mark.parametrize(
     "user_group,expected_role",
     [
@@ -396,7 +396,7 @@ def test_config_create_default_channel(routed_client, db, oauth_server, config):
 def test_config_create_user_with_role(
     routed_client, db, oauth_server, config, default_role, expected_role, login
 ):
-    response = routed_client.get(f'/auth/{oauth_server.provider}/authorize')
+    response = routed_client.get(f"/auth/{oauth_server.provider}/authorize")
 
     assert response.status_code == 200
 
@@ -411,7 +411,7 @@ def test_config_create_user_with_role(
         assert user.role is None
 
 
-@pytest.mark.parametrize("default_role", [None, 'member'])
+@pytest.mark.parametrize("default_role", [None, "member"])
 @pytest.mark.parametrize("user_roles", [{"admins": ["other_provider:user-with-role"]}])
 def test_config_create_user_with_role_in_different_provider(
     routed_client, db, oauth_server, config, default_role, login
@@ -419,7 +419,7 @@ def test_config_create_user_with_role_in_different_provider(
     # if the user logins from a different provider than the one specified
     # in config, default_role should be assumed
 
-    response = routed_client.get(f'/auth/{oauth_server.provider}/authorize')
+    response = routed_client.get(f"/auth/{oauth_server.provider}/authorize")
 
     assert response.status_code == 200
 
@@ -442,7 +442,7 @@ def channel(db):
 
 @pytest.mark.parametrize("config_extra", ["[users]\ncreate_default_channel = true"])
 def test_config_create_default_channel_exists(routed_client, db, oauth_server, channel):
-    response = routed_client.get(f'/auth/{oauth_server.provider}/authorize')
+    response = routed_client.get(f"/auth/{oauth_server.provider}/authorize")
 
     assert response.status_code == 200
 
@@ -484,7 +484,7 @@ def test_config_user_exists(
     db.add(profile)
     db.commit()
 
-    response = routed_client.get(f'/auth/{oauth_server.provider}/authorize')
+    response = routed_client.get(f"/auth/{oauth_server.provider}/authorize")
 
     assert response.status_code == 200
 
@@ -507,7 +507,7 @@ def test_config_user_exists(
 @pytest.fixture
 def some_identity(user, db):
     identity = Identity(
-        provider="some-provider", user=user, identity_id='some-identity'
+        provider="some-provider", user=user, identity_id="some-identity"
     )
     db.add(identity)
     db.commit()
@@ -530,7 +530,7 @@ def test_config_user_with_identity_exists(
     # we should not be allowed to associate a social account with a user that
     # already has an identity from a different provider
 
-    response = routed_client.get(f'/auth/{oauth_server.provider}/authorize')
+    response = routed_client.get(f"/auth/{oauth_server.provider}/authorize")
     db.refresh(user)
     assert len(user.identities) == 1
     assert user.identities[0].provider == "some-provider"

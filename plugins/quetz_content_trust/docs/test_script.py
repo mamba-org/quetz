@@ -36,9 +36,9 @@ def root_role_file(test_data_dir, offline_keys):
                     "threshold": 1,
                 },
             },
-            "expiration": expiration.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            "expiration": expiration.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "metadata_spec_version": "0.6.0",
-            "timestamp": timestamp.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            "timestamp": timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "type": "root",
             "version": 1,
         },
@@ -72,9 +72,9 @@ def key_mgr_role_file(test_data_dir, offline_keys, signing_key):
                     "threshold": 1,
                 }
             },
-            "expiration": expiration.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            "expiration": expiration.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "metadata_spec_version": "0.6.0",
-            "timestamp": timestamp.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            "timestamp": timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "type": "key_mgr",
             "version": 1,
         },
@@ -103,9 +103,9 @@ def pkg_mgr_role_file(test_data_dir, private_key, public_key):
         "signatures": {},
         "signed": {
             "delegations": {},
-            "expiration": expiration.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            "expiration": expiration.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "metadata_spec_version": "0.6.0",
-            "timestamp": timestamp.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            "timestamp": timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "type": "pkg_mgr",
             "version": 1,
         },
@@ -159,7 +159,7 @@ if __name__ == "__main__":
     # Upload a 'root' role
     response = s.post(
         "http://127.0.0.1:8000/api/content-trust/channel0/roles?type=root",
-        files={"file": (root_file.name, open(root_file, 'rb'))},
+        files={"file": (root_file.name, open(root_file, "rb"))},
     )
     assert response.status_code == 201
     print("'root' role file uploaded")
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     # Upload a 'key_mgr' role
     response = s.post(
         "http://127.0.0.1:8000/api/content-trust/channel0/roles?type=key_mgr",
-        files={"file": (key_mgr_file.name, open(key_mgr_file, 'rb'))},
+        files={"file": (key_mgr_file.name, open(key_mgr_file, "rb"))},
     )
     assert response.status_code == 201
     print("'key_mgr' (targets) role file uploaded")
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     # Upload a 'pkg_mgr' role
     response = s.post(
         "http://127.0.0.1:8000/api/content-trust/channel0/roles?type=pkg_mgr",
-        files={"file": (pkg_mgr_file.name, open(pkg_mgr_file, 'rb'))},
+        files={"file": (pkg_mgr_file.name, open(pkg_mgr_file, "rb"))},
     )
     assert response.status_code == 201
     print("'pkg_mgr' (targets delegation) role file uploaded")
@@ -189,7 +189,7 @@ if __name__ == "__main__":
     response = s.post(
         "http://127.0.0.1:8000/api/channels/channel0/files/",
         headers={"X-API-Key": f"{api_key}"},
-        files=[("files", open(test_tarball, 'rb'))],
+        files=[("files", open(test_tarball, "rb"))],
     )
     assert response.status_code == 201
     print("'test-package' package uploaded")

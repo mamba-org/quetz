@@ -13,7 +13,7 @@ def trust_roles():
 def package_files(pkgstore, channel, trust_roles):
     pkgstore.create_channel(channel.name)
     for filename in trust_roles:
-        with open(filename, 'rb') as fid:
+        with open(filename, "rb") as fid:
             content = fid.read()
         pkgstore.add_file(content, channel.name, f"linux-64/{filename}")
 
@@ -35,7 +35,7 @@ def test_post_root_role_permissions(
 
     response = client.post(
         f"/api/content-trust/{channel.name}/roles?type=root",
-        files={"file": (root_role_file.name, open(root_role_file, 'rb'))},
+        files={"file": (root_role_file.name, open(root_role_file, "rb"))},
     )
     assert response.status_code == expected_status
 
@@ -45,7 +45,7 @@ def test_post_root_role(client, channel, db, root_role_file, offline_keys):
 
     client.post(
         f"/api/content-trust/{channel.name}/roles?type=root",
-        files={"file": (root_role_file.name, open(root_role_file, 'rb'))},
+        files={"file": (root_role_file.name, open(root_role_file, "rb"))},
     )
 
     # Check keys
@@ -107,7 +107,7 @@ def test_delegation_cascade_deletion(client, channel, db, root_role_file):
 
     client.post(
         f"/api/content-trust/{channel.name}/roles?type=root",
-        files={"file": (root_role_file.name, open(root_role_file, 'rb'))},
+        files={"file": (root_role_file.name, open(root_role_file, "rb"))},
     )
 
     root_delegation = (
@@ -128,13 +128,13 @@ def test_overwrite_root_role(client, root_role_file, channel):
 
     response = client.post(
         f"/api/content-trust/{channel.name}/roles?type=root",
-        files={"file": (root_role_file.name, open(root_role_file, 'rb'))},
+        files={"file": (root_role_file.name, open(root_role_file, "rb"))},
     )
     assert response.status_code == 201
 
     response = client.post(
         f"/api/content-trust/{channel.name}/roles?type=root",
-        files={"file": (root_role_file.name, open(root_role_file, 'rb'))},
+        files={"file": (root_role_file.name, open(root_role_file, "rb"))},
     )
     assert response.status_code == 409
 
@@ -179,13 +179,13 @@ def test_post_key_mgr_role(
 
     response = client.post(
         f"/api/content-trust/{channel.name}/roles?type=root",
-        files={"file": (root_role_file.name, open(root_role_file, 'rb'))},
+        files={"file": (root_role_file.name, open(root_role_file, "rb"))},
     )
     assert response.status_code == expected_status
 
     response = client.post(
         f"/api/content-trust/{channel.name}/roles?type=key_mgr",
-        files={"file": (key_mgr_role_file.name, open(key_mgr_role_file, 'rb'))},
+        files={"file": (key_mgr_role_file.name, open(key_mgr_role_file, "rb"))},
     )
     assert response.status_code == expected_status
 
@@ -207,7 +207,7 @@ def test_post_key_mgr_role_wo_delegation(
 
     response = client.post(
         f"/api/content-trust/{channel.name}/roles?type=key_mgr",
-        files={"file": (key_mgr_role_file.name, open(key_mgr_role_file, 'rb'))},
+        files={"file": (key_mgr_role_file.name, open(key_mgr_role_file, "rb"))},
     )
     assert response.status_code == expected_status
 
@@ -249,19 +249,19 @@ def test_post_pkg_mgr_role(
 
     response = client.post(
         f"/api/content-trust/{channel.name}/roles?type=root",
-        files={"file": (root_role_file.name, open(root_role_file, 'rb'))},
+        files={"file": (root_role_file.name, open(root_role_file, "rb"))},
     )
     assert response.status_code == expected_status
 
     response = client.post(
         f"/api/content-trust/{channel.name}/roles?type=key_mgr",
-        files={"file": (key_mgr_role_file.name, open(key_mgr_role_file, 'rb'))},
+        files={"file": (key_mgr_role_file.name, open(key_mgr_role_file, "rb"))},
     )
     assert response.status_code == expected_status
 
     response = client.post(
         f"/api/content-trust/{channel.name}/roles?type=pkg_mgr",
-        files={"file": (pkg_mgr_role_file.name, open(pkg_mgr_role_file, 'rb'))},
+        files={"file": (pkg_mgr_role_file.name, open(pkg_mgr_role_file, "rb"))},
     )
     assert response.status_code == expected_status
 
@@ -291,19 +291,19 @@ def test_post_pkg_mgr_role_wo_delegation(
 
     response = client.post(
         f"/api/content-trust/{channel.name}/roles?type=pkg_mgr",
-        files={"file": (pkg_mgr_role_file.name, open(pkg_mgr_role_file, 'rb'))},
+        files={"file": (pkg_mgr_role_file.name, open(pkg_mgr_role_file, "rb"))},
     )
     assert response.status_code == expected_status
 
     response = client.post(
         f"/api/content-trust/{channel.name}/roles?type=root",
-        files={"file": (root_role_file.name, open(root_role_file, 'rb'))},
+        files={"file": (root_role_file.name, open(root_role_file, "rb"))},
     )
     assert response.status_code == delegators_status
 
     response = client.post(
         f"/api/content-trust/{channel.name}/roles?type=pkg_mgr",
-        files={"file": (pkg_mgr_role_file.name, open(pkg_mgr_role_file, 'rb'))},
+        files={"file": (pkg_mgr_role_file.name, open(pkg_mgr_role_file, "rb"))},
     )
     assert response.status_code == expected_status
 

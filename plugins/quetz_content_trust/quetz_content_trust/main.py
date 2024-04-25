@@ -30,7 +30,7 @@ def post_index_creation(raw_repodata: dict, channel_name, subdir):
                 db_models.RoleDelegation.type == "pkg_mgr",
                 db_models.SigningKey.private_key is not None,
             )
-            .order_by(desc('time_created'))
+            .order_by(desc("time_created"))
             .all()
         )
 

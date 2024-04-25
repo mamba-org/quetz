@@ -64,7 +64,7 @@ def generate_channel_suggest_map(db, channel_name, subdir):
     subq = (
         db.query(
             PackageVersion.package_name,
-            func.max(PackageVersion.version).label('max_version'),
+            func.max(PackageVersion.version).label("max_version"),
         )
         .filter(PackageVersion.channel_name == channel_name)
         .filter(PackageVersion.platform == subdir)

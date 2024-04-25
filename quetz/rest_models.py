@@ -11,7 +11,7 @@ from typing import Generic, List, Optional, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class BaseProfile(BaseModel):
@@ -37,7 +37,7 @@ class User(BaseUser):
 Profile.model_rebuild()
 
 
-Role = Field(None, pattern='owner|maintainer|member')
+Role = Field(None, pattern="owner|maintainer|member")
 
 
 class Member(BaseModel):
@@ -47,8 +47,8 @@ class Member(BaseModel):
 
 
 class Pagination(BaseModel):
-    skip: int = Field(0, title='The number of skipped records')
-    limit: int = Field(0, title='The maximum number of returned records')
+    skip: int = Field(0, title="The number of skipped records")
+    limit: int = Field(0, title="The maximum number of returned records")
     all_records_count: int = Field(0, title="The number of available records")
 
 
@@ -58,9 +58,9 @@ class MirrorMode(str, Enum):
 
 
 class ChannelBase(BaseModel):
-    name: str = Field(None, title='The name of the channel', max_length=50)
+    name: str = Field(None, title="The name of the channel", max_length=50)
     description: Optional[str] = Field(
-        None, title='The description of the channel', max_length=300
+        None, title="The description of the channel", max_length=300
     )
     private: bool = Field(True, title="channel should be private")
     size_limit: Optional[int] = Field(None, title="size limit of the channel")
@@ -104,14 +104,14 @@ class ChannelActionEnum(str, Enum):
     * `cleanup_dry_run` -- display what changes `cleanup` would do
     """
 
-    synchronize = 'synchronize'
+    synchronize = "synchronize"
     synchronize_repodata = "synchronize_repodata"
-    reindex = 'reindex'
-    generate_indexes = 'generate_indexes'
-    validate_packages = 'validate_packages'
-    synchronize_metrics = 'synchronize_metrics'
-    cleanup = 'cleanup'
-    cleanup_dry_run = 'cleanup_dry_run'
+    reindex = "reindex"
+    generate_indexes = "generate_indexes"
+    validate_packages = "validate_packages"
+    synchronize_metrics = "synchronize_metrics"
+    cleanup = "cleanup"
+    cleanup_dry_run = "cleanup_dry_run"
 
     # handlers for new actions should be registered in quetz.job.handlers
 
@@ -143,7 +143,7 @@ class Channel(ChannelBase):
         "(see /channels/{}/actions for description)",
     )
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def check_mirror_params(self) -> "Channel":
         mirror_url = self.mirror_channel_url
         mirror_mode = self.mirror_mode
@@ -173,10 +173,10 @@ class ChannelMirror(ChannelMirrorBase):
 
 class Package(BaseModel):
     name: str = Field(
-        None, title='The name of package', max_length=1500, pattern=r'^[a-z0-9-_\.]*$'
+        None, title="The name of package", max_length=1500, pattern=r"^[a-z0-9-_\.]*$"
     )
-    summary: Optional[str] = Field(None, title='The summary of the package')
-    description: Optional[str] = Field(None, title='The description of the package')
+    summary: Optional[str] = Field(None, title="The summary of the package")
+    description: Optional[str] = Field(None, title="The description of the package")
     url: Optional[str] = Field(None, title="project url")
     platforms: Optional[List[str]] = Field(None, title="supported platforms")
     current_version: Optional[str] = Field(None, title="latest version of any platform")
@@ -194,20 +194,20 @@ class Package(BaseModel):
 
 
 class PackageRole(BaseModel):
-    name: str = Field(title='The name of package')
-    channel_name: str = Field(title='The channel this package belongs to')
+    name: str = Field(title="The name of package")
+    channel_name: str = Field(title="The channel this package belongs to")
     role: str = Field(title="user role for this package")
     model_config = ConfigDict(from_attributes=True)
 
 
 class PackageSearch(Package):
-    channel_name: str = Field(None, title='The channel this package belongs to')
+    channel_name: str = Field(None, title="The channel this package belongs to")
 
 
 class ChannelSearch(BaseModel):
-    name: str = Field(None, title='The name of the channel', max_length=1500)
-    description: Optional[str] = Field(None, title='The description of the channel')
-    private: bool = Field(None, title='The visibility of the channel')
+    name: str = Field(None, title="The name of the channel", max_length=1500)
+    description: Optional[str] = Field(None, title="The description of the channel")
+    private: bool = Field(None, title="The visibility of the channel")
     model_config = ConfigDict(from_attributes=True)
 
 

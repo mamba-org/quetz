@@ -19,28 +19,28 @@ from quetz.pkgstores import (
 )
 
 s3_config = {
-    'key': os.environ.get("S3_ACCESS_KEY"),
-    'secret': os.environ.get("S3_SECRET_KEY"),
-    'url': os.environ.get("S3_ENDPOINT"),
-    'region': os.environ.get("S3_REGION"),
-    'bucket_name': os.environ.get("S3_BUCKET_NAME"),
-    'bucket_prefix': "test",
-    'bucket_suffix': "",
+    "key": os.environ.get("S3_ACCESS_KEY"),
+    "secret": os.environ.get("S3_SECRET_KEY"),
+    "url": os.environ.get("S3_ENDPOINT"),
+    "region": os.environ.get("S3_REGION"),
+    "bucket_name": os.environ.get("S3_BUCKET_NAME"),
+    "bucket_prefix": "test",
+    "bucket_suffix": "",
 }
 
 azure_config = {
-    'account_name': os.environ.get("AZURE_ACCOUNT_NAME"),
-    'account_access_key': os.environ.get("AZURE_ACCESS_KEY"),
-    'conn_str': os.environ.get("AZURE_CONN_STRING"),
-    'container_prefix': "test",
-    'container_suffix': "",
+    "account_name": os.environ.get("AZURE_ACCOUNT_NAME"),
+    "account_access_key": os.environ.get("AZURE_ACCESS_KEY"),
+    "conn_str": os.environ.get("AZURE_CONN_STRING"),
+    "container_prefix": "test",
+    "container_suffix": "",
 }
 
 gcs_config = {
-    'project': os.environ.get("GCS_PROJECT"),
-    'token': os.environ.get("GCS_TOKEN"),
-    'bucket_prefix': "test",
-    'bucket_suffix': "",
+    "project": os.environ.get("GCS_PROJECT"),
+    "token": os.environ.get("GCS_TOKEN"),
+    "bucket_prefix": "test",
+    "bucket_suffix": "",
 }
 
 test_dir = os.path.dirname(__file__)
@@ -60,7 +60,7 @@ def test_local_store(redirect_enabled):
     )
 
     pkg_store.add_file("content", "my-channel", "test.txt")
-    pkg_store.add_file("content".encode('ascii'), "my-channel", "test_2.txt")
+    pkg_store.add_file("content".encode("ascii"), "my-channel", "test_2.txt")
 
     files = pkg_store.list_files("my-channel")
 
@@ -72,18 +72,18 @@ def test_local_store(redirect_enabled):
     assert files == ["test_2.txt"]
 
     with pkg_store.serve_path("my-channel", "test_2.txt") as f:
-        assert f.read().decode('utf-8') == "content"
+        assert f.read().decode("utf-8") == "content"
 
     metadata = pkg_store.get_filemetadata("my-channel", "test_2.txt")
 
     assert metadata[0] > 0
-    assert type(metadata[1]) is float
+    assert isinstance(metadata[1], float)
 
     if has_xattr:
-        md5 = hashlib.md5("content".encode('ascii')).hexdigest()
+        md5 = hashlib.md5("content".encode("ascii")).hexdigest()
         assert metadata[2] == md5
     else:
-        assert type(metadata[2]) is str
+        assert isinstance(metadata[2], str)
 
     shutil.rmtree(temp_dir)
 
@@ -117,20 +117,20 @@ def local_store():
         pytest.param(
             "s3_store",
             marks=pytest.mark.skipif(
-                not s3_config['key'], reason="requires s3 credentials"
+                not s3_config["key"], reason="requires s3 credentials"
             ),
         ),
         pytest.param(
             "azure_store",
             marks=pytest.mark.skipif(
-                not azure_config['account_access_key'],
+                not azure_config["account_access_key"],
                 reason="requires azure credentials",
             ),
         ),
         pytest.param(
             "gcs_store",
             marks=pytest.mark.skipif(
-                not gcs_config['project'],
+                not gcs_config["project"],
                 reason="requires google cloud storage credentials",
             ),
         ),
@@ -146,7 +146,7 @@ def test_remove_dirs(any_store, channel_name):
     any_store.add_file("content", channel_name, "test.txt")
 
     with any_store.serve_path(channel_name, "test.txt") as f:
-        assert f.read().decode('utf-8') == "content"
+        assert f.read().decode("utf-8") == "content"
 
     any_store.remove_channel(channel_name)
 
@@ -218,8 +218,8 @@ def test_store_add_list_files(any_store, channel, channel_name):
 
     metadata = pkg_store.get_filemetadata(channel_name, "test_2.txt")
     assert metadata[0] > 0
-    assert type(metadata[1]) is float
-    assert type(metadata[2]) is str
+    assert isinstance(metadata[1], float)
+    assert isinstance(metadata[2], str)
 
 
 @pytest.mark.asyncio
@@ -251,7 +251,7 @@ def test_move_file(any_store, channel, channel_name):
     pkg_store.add_file("content", channel_name, "test.txt")
     pkg_store.move_file(channel_name, "test.txt", "test_2.txt")
 
-    assert_files(pkg_store, channel_name, ['test_2.txt'])
+    assert_files(pkg_store, channel_name, ["test_2.txt"])
 
 
 def test_copy_file(any_store, channel, channel_name):
@@ -260,7 +260,7 @@ def test_copy_file(any_store, channel, channel_name):
     pkg_store.add_file("content", channel_name, "test.txt")
     pkg_store.copy_file(channel_name, "test.txt", channel_name, "test_2.txt")
 
-    assert_files(pkg_store, channel_name, ['test.txt', 'test_2.txt'])
+    assert_files(pkg_store, channel_name, ["test.txt", "test_2.txt"])
 
 
 @pytest.mark.parametrize("redirect_enabled", [False, True])

@@ -273,7 +273,7 @@ def package_version(user, mirror_channel, db, dao):
     dao.update_package_channeldata(
         mirror_channel.name,
         new_package_data.name,
-        {'name': new_package_data.name, 'subdirs': ["noarch"]},
+        {"name": new_package_data.name, "subdirs": ["noarch"]},
     )
 
     version = dao.create_version(
@@ -736,7 +736,7 @@ def test_mirror_initial_sync(client, dummy_repo, owner, expected_paths, job_supe
     assert dummy_repo == [os.path.join(host, p) for p in expected_paths]
 
 
-@pytest.mark.parametrize("user_role", ['maintainer'])
+@pytest.mark.parametrize("user_role", ["maintainer"])
 def test_add_mirror_without_sync(auth_client, dummy_repo):
     host = "http://mirror3_host"
     response = auth_client.post(
@@ -770,7 +770,7 @@ def dummy_session_mock(app):
     app.dependency_overrides.pop(get_remote_session)
 
 
-@pytest.mark.parametrize("user_role", ['maintainer'])
+@pytest.mark.parametrize("user_role", ["maintainer"])
 def test_add_and_register_mirror(auth_client, dummy_session_mock):
     host = "http://mirror3_host/get/my-channel"
     response = auth_client.post(
@@ -792,12 +792,12 @@ def test_add_and_register_mirror(auth_client, dummy_session_mock):
     dummy_session_mock.post.assert_called_with(
         "http://mirror3_host/api/channels/my-channel/mirrors",
         json={
-            "url": base_url.copy_with(path=base_url_path + 'get/mirror-channel'),
+            "url": base_url.copy_with(path=base_url_path + "get/mirror-channel"),
             "api_endpoint": base_url.copy_with(
-                path=base_url_path + 'api/channels/mirror-channel'
+                path=base_url_path + "api/channels/mirror-channel"
             ),
             "metrics_endpoint": base_url.copy_with(
-                path=base_url_path + 'metrics/channels/mirror-channel'
+                path=base_url_path + "metrics/channels/mirror-channel"
             ),
         },
         headers={},
@@ -997,7 +997,7 @@ BTEL_REPODATA = b"""
     [
         {
             "/btel/channeldata.json": b'{"subdirs": ["linux-64"]}',
-            "/btel/linux-64/repodata_from_packages.json": b'<html/>',
+            "/btel/linux-64/repodata_from_packages.json": b"<html/>",
             "/btel/linux-64/repodata.json": BTEL_REPODATA,
             "/btel/linux-64/test-package-0.1-0.tar.bz2": DUMMY_PACKAGE,
             "/btel/linux-64/test-package-0.2-0.tar.bz2": DUMMY_PACKAGE_V2,
@@ -1031,7 +1031,7 @@ def test_packagelist_mirror_channel(
     response = client.get("/api/channels/mirror-channel-btel/packages")
     assert response.status_code == 200
     assert len(response.json()) == 1
-    assert response.json()[0]['name'] == expected_package
+    assert response.json()[0]["name"] == expected_package
 
 
 def test_includelist_and_excludelist_mirror_channel(owner, client):
@@ -1285,11 +1285,11 @@ def test_create_versions_from_repodata(dao, user, local_channel, db):
 @pytest.fixture
 def dummy_package_file(config, request):
     format = request.param if hasattr(request, "param") else ".tar.bz2"
-    if format == '.conda':
+    if format == ".conda":
         filepath = OTHER_DUMMY_PACKAGE_V2_CONDA
     else:  # default case: .tar.bz2
         filepath = OTHER_DUMMY_PACKAGE_V2
-    fid = open(filepath, 'rb')
+    fid = open(filepath, "rb")
 
     class DummyRemoteFile:
         filename = filepath.name
@@ -1377,4 +1377,4 @@ def test_handle_repodata_package_with_plugin(
         local_channel, files_metadata, dao, rules, False, pkgstore, config
     )
 
-    assert plugin.about['conda_version'] == '4.8.4'
+    assert plugin.about["conda_version"] == "4.8.4"

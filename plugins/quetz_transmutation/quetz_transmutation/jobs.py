@@ -43,11 +43,11 @@ def transmutation(package_version: dict, config, pkgstore: PackageStore, dao: Da
             logger.error(f"transmutation errors --> {errors}")
             return
 
-        filename_conda = os.path.basename(filename).replace('.tar.bz2', '.conda')
+        filename_conda = os.path.basename(filename).replace(".tar.bz2", ".conda")
 
         logger.info(f"Adding file to package store: {Path(platform) / filename_conda}")
 
-        with open(out_fn, 'rb') as f:
+        with open(out_fn, "rb") as f:
             calculate_file_hashes_and_size(info, f)
             f.seek(0)
             pkgstore.add_package(f, channel, str(Path(platform) / filename_conda))

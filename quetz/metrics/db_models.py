@@ -65,7 +65,7 @@ class PackageVersionMetric(Base):
 
     __table_args__ = (
         sa.Index(
-            'package_version_metric_index',
+            "package_version_metric_index",
             channel_name,
             platform,
             filename,

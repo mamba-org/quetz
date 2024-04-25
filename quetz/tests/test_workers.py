@@ -16,7 +16,7 @@ from quetz.tasks.workers import RQManager, SubprocessWorker, ThreadingWorker
 def sqlite_url(config_dir):
     # overriding sqlite_url to save to file so that
     # we can access the same db from a sub-process
-    return f'sqlite:///{config_dir}/quetz.db'
+    return f"sqlite:///{config_dir}/quetz.db"
 
 
 @pytest.fixture
@@ -95,7 +95,7 @@ def check_socket(host, port):
 
 
 def check_redis():
-    return check_socket('127.0.0.1', 6379)
+    return check_socket("127.0.0.1", 6379)
 
 
 @pytest.fixture(
@@ -104,7 +104,7 @@ def check_redis():
         "subprocess_worker",
         pytest.param(  # type: ignore
             "redis_worker",
-            marks=pytest.mark.skipif(not check_redis(), reason='no redis'),
+            marks=pytest.mark.skipif(not check_redis(), reason="no redis"),
         ),
     ]
 )
@@ -162,7 +162,7 @@ async def test_threading_worker_execute_with_dao(
     users = db.query(User).all()
 
     assert len(users) == 1
-    assert users[0].username == 'my-user'
+    assert users[0].username == "my-user"
 
     # we need to explicitly cleanup because sub-process did not use
     # our db fixture, this will be done at teardown in the db_cleanup fixture

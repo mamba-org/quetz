@@ -137,7 +137,7 @@ def sync_supervisor(db, dao, config):
 
 
 @pytest.mark.parametrize(
-    "action", ['reindex', 'generate_indexes', 'synchronize_metrics']
+    "action", ["reindex", "generate_indexes", "synchronize_metrics"]
 )
 @pytest.mark.parametrize(
     "channel_role,expected_code",
@@ -169,7 +169,7 @@ def test_channel_action_reindex(
             "repeat_every_seconds": None,
             "start_at": None,
         }
-        job_id = job_data['id']
+        job_id = job_data["id"]
     else:
         return
 
@@ -195,15 +195,15 @@ def test_channel_action_reindex(
     )
 
     assert response.status_code == 200
-    all_tasks = response.json()['result']
+    all_tasks = response.json()["result"]
 
     assert all_tasks == [
         {
             "job_id": job_id,
-            'created': ANY,
-            'id': ANY,
-            'package_version': {},
-            'status': 'created',
+            "created": ANY,
+            "id": ANY,
+            "package_version": {},
+            "status": "created",
         }
     ]
 
@@ -232,7 +232,7 @@ def test_create_delayed_action(
 
     assert response.status_code == 200
     job_data = response.json()
-    job_id = job_data['id']
+    job_id = job_data["id"]
 
     sync_supervisor.run_once()
 
@@ -242,7 +242,7 @@ def test_create_delayed_action(
     )
 
     assert response.status_code == 200
-    all_tasks = response.json()['result']
+    all_tasks = response.json()["result"]
 
     if wait_seconds is not None and wait_seconds > 0:
         assert not all_tasks
@@ -718,7 +718,7 @@ def test_list_channels(
     results = response.json()
 
     try:
-        results = results['result']
+        results = results["result"]
     except TypeError:
         # non-paginated response
         pass
@@ -744,8 +744,8 @@ def test_channel_package_members_count(
     if isinstance(channel_data, list):
         channel_data = channel_data[0]
 
-    assert channel_data['members_count'] == 1
-    assert channel_data['packages_count'] == 0
+    assert channel_data["members_count"] == 1
+    assert channel_data["packages_count"] == 0
 
     package = db_models.Package(channel=public_channel, name="test-package")
     db.add(package)
@@ -756,8 +756,8 @@ def test_channel_package_members_count(
     if isinstance(channel_data, list):
         channel_data = channel_data[0]
 
-    assert channel_data['packages_count'] == 1
-    assert channel_data['members_count'] == 1
+    assert channel_data["packages_count"] == 1
+    assert channel_data["members_count"] == 1
 
     package = db_models.Package(
         channel=private_channel, name="test-package-different-channel"
@@ -770,8 +770,8 @@ def test_channel_package_members_count(
     if isinstance(channel_data, list):
         channel_data = channel_data[0]
 
-    assert channel_data['packages_count'] == 1
-    assert channel_data['members_count'] == 1
+    assert channel_data["packages_count"] == 1
+    assert channel_data["members_count"] == 1
 
     channel_member = db_models.ChannelMember(
         channel=public_channel, user=other_user, role="member"
@@ -784,5 +784,5 @@ def test_channel_package_members_count(
     if isinstance(channel_data, list):
         channel_data = channel_data[0]
 
-    assert channel_data['packages_count'] == 1
-    assert channel_data['members_count'] == 2
+    assert channel_data["packages_count"] == 1
+    assert channel_data["members_count"] == 2

@@ -33,12 +33,12 @@ def package_name():
 
 @pytest.fixture
 def package_format():
-    return 'tarbz2'
+    return "tarbz2"
 
 
 @pytest.fixture
 def package_file_name(package_name, package_format):
-    if package_format == 'tarbz2':
+    if package_format == "tarbz2":
         return f"{package_name}-0.1-0.tar.bz2"
     elif package_format == "conda":
         return f"{package_name}-0.1-0.conda"
@@ -123,7 +123,7 @@ def test_repodata_zchunk(
     )
 
     assert os.path.isfile(index_path)
-    with open(index_path, 'r') as fid:
+    with open(index_path, "r") as fid:
         content = fid.read()
 
     assert "repodata.json" in content
@@ -137,9 +137,9 @@ def test_repodata_zchunk(
 
         assert os.path.isfile(repodata_path)
 
-        if fname.endswith('.zck'):
-            subprocess.check_call(['unzck', repodata_path])
-            with open('repodata.json') as f:
+        if fname.endswith(".zck"):
+            subprocess.check_call(["unzck", repodata_path])
+            with open("repodata.json") as f:
                 repodata_unzck = f.read()
 
             assert repodata == repodata_unzck  # NOQA # type: ignore

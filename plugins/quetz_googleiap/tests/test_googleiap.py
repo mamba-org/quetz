@@ -10,8 +10,8 @@ def test_authentication(client, db):
 
     # add headers
     headers = {
-        'X-Goog-Authenticated-User-Email': 'accounts.google.com:someone@tester.com',
-        'X-Goog-Authenticated-User-Id': 'accounts.google.com:someone@tester.com',
+        "X-Goog-Authenticated-User-Email": "accounts.google.com:someone@tester.com",
+        "X-Goog-Authenticated-User-Id": "accounts.google.com:someone@tester.com",
     }
 
     response = client.get("/api/me", headers=headers)

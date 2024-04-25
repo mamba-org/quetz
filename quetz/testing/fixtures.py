@@ -98,7 +98,7 @@ def alembic_config(database_url, sql_connection):
 @pytest.fixture
 def create_tables(alembic_config, engine, use_migrations):
     if use_migrations:
-        alembic_upgrade(alembic_config, 'heads', sql=False)
+        alembic_upgrade(alembic_config, "heads", sql=False)
     else:
         Base.metadata.create_all(engine)
 
@@ -133,7 +133,7 @@ def session_maker(sql_connection, create_tables, auto_rollback):
     if auto_rollback:
         trans = sql_connection.begin()
 
-    sql_connection.name = 'sqlite-test'
+    sql_connection.name = "sqlite-test"
     yield get_session_maker(sql_connection)
 
     if trans is not None:
