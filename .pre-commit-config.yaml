@@ -16,7 +16,7 @@ repos:
           - flake8-use-fstring
   - repo: https://github.com/pre-commit/mirrors-mypy
     # Note: updating to v1.0.0 a bit more work
-    rev: v0.902
+    rev: v1.0.0
     hooks:
       - id: mypy
         files: ^quetz/
