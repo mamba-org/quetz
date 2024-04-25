@@ -591,7 +591,7 @@ def test_post_new_job_manifest_validation(
         "/api/jobs", json={"items_spec": "*", "manifest": manifest}
     )
     assert response.status_code == 422
-    msg = response.json()['detail'][0]['msg']
+    msg = response.json()["detail"][0]["msg"]
     assert "invalid function" in msg
     for name in manifest.split(":"):
         assert name in msg
@@ -610,8 +610,8 @@ def test_post_new_job_invalid_items_spec(
         "/api/jobs", json={"items_spec": None, "manifest": manifest}
     )
     assert response.status_code == 422
-    msg = response.json()['detail']
-    assert "Input should be a valid string" in msg[0]['msg']
+    msg = response.json()["detail"]
+    assert "Input should be a valid string" in msg[0]["msg"]
 
 
 @pytest.mark.parametrize("user_role", ["owner"])
@@ -634,9 +634,9 @@ def test_post_new_job_from_plugin(
         "/api/jobs", json={"items_spec": "*", "manifest": manifest}
     )
     assert response.status_code == 201
-    job_id = response.json()['id']
+    job_id = response.json()["id"]
     job = db.get(Job, job_id)
-    assert job.manifest.decode('ascii') == manifest
+    assert job.manifest.decode("ascii") == manifest
 
     sync_supervisor.run_once()
 
@@ -657,10 +657,10 @@ def test_post_new_job_with_handler(
         "/api/jobs", json={"items_spec": "*", "manifest": "test_action"}
     )
     assert response.status_code == 201
-    job_id = response.json()['id']
+    job_id = response.json()["id"]
     job = db.get(Job, job_id)
     assert job.status == JobStatus.pending
-    assert job.manifest.decode('ascii') == "test_action"
+    assert job.manifest.decode("ascii") == "test_action"
 
     sync_supervisor.run_once()
 
@@ -707,8 +707,8 @@ def test_filter_jobs_by_status(auth_client, db, user, status, job_ids):
 
     assert response.status_code == 200
     response_data = response.json()
-    assert {job['id'] for job in response_data['result']} == set(job_ids)
-    assert response_data['pagination']['all_records_count'] == len(job_ids)
+    assert {job["id"] for job in response_data["result"]} == set(job_ids)
+    assert response_data["pagination"]["all_records_count"] == len(job_ids)
 
 
 @pytest.mark.parametrize("user_role", ["owner"])
@@ -764,12 +764,12 @@ def test_jobs_pagination(auth_client, skip, limit, many_jobs):
 
     jobs = response.json()["result"]
 
-    assert jobs[0]['id'] == skip
+    assert jobs[0]["id"] == skip
     if limit > 0:
-        assert jobs[-1]['id'] == min(n_jobs - 1, skip + limit - 1)
+        assert jobs[-1]["id"] == min(n_jobs - 1, skip + limit - 1)
         assert len(jobs) == min(n_jobs - skip, limit)
     else:
-        assert jobs[-1]['id'] == n_jobs - 1
+        assert jobs[-1]["id"] == n_jobs - 1
 
 
 @pytest.mark.parametrize(
@@ -798,16 +798,16 @@ def test_get_tasks(
     assert response.status_code == 200
     data = response.json()
 
-    assert len(data['result']) == expected_task_count
+    assert len(data["result"]) == expected_task_count
 
     if expected_task_count > 0:
-        assert data['result'][0]['id'] == task.id
-        assert data['result'][0]['job_id'] == job.id
+        assert data["result"][0]["id"] == task.id
+        assert data["result"][0]["job_id"] == job.id
 
 
 @pytest.fixture()
 def other_user(db):
-    other_user = User(id=uuid.uuid4().bytes, username='otheruser')
+    other_user = User(id=uuid.uuid4().bytes, username="otheruser")
 
     db.add(other_user)
 
@@ -829,7 +829,7 @@ def test_get_user_jobs(auth_client, db, user, package_version, other_user):
 
     response = auth_client.get("/api/jobs")
     assert response.status_code == 200
-    data = response.json()['result']
+    data = response.json()["result"]
     assert len(data) == 1
 
 

@@ -61,7 +61,7 @@ def package(dao, user, channel, db):
 @fixture
 def package_version(user, channel, db, dao, package):
     # create package version that will added to local repodata
-    package_format = 'tarbz2'
+    package_format = "tarbz2"
     package_info = '{"size": 5000, "subdirs":["noarch"]}'
 
     version = dao.create_version(

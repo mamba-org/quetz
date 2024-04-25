@@ -122,9 +122,10 @@ class PackageStore(abc.ABC):
     def get_filemetadata(self, channel: str, src: str) -> Tuple[int, int, str]:
         """get file metadata: returns (file size, last modified time, etag)"""
 
-    @abc.abstractclassmethod
+    @abc.abstractmethod
     def cleanup_temp_files(self, channel: str, dry_run: bool = False):
         """clean up temporary `*.json{HASH}.[bz2|gz]` files from pkgstore"""
+        pass
 
 
 # generate a secret token for use with nginx secure link
@@ -133,22 +134,22 @@ def nginx_secure_link(url: str, secret: str, expires=3600):
     future = datetime.datetime.utcnow() + datetime.timedelta(seconds=expires)
     expire_ts = calendar.timegm(future.timetuple())
 
-    hash_string = f"{expire_ts}{url} {secret}".encode('utf-8')
+    hash_string = f"{expire_ts}{url} {secret}".encode("utf-8")
     m = hashlib.md5(hash_string).digest()
 
     base64_hash = base64.urlsafe_b64encode(m)
-    base64_s = base64_hash.decode('utf-8').rstrip('=')
+    base64_s = base64_hash.decode("utf-8").rstrip("=")
     return base64_s, expire_ts
 
 
 class LocalStore(PackageStore):
     def __init__(self, config):
         self.fs: fsspec.AbstractFileSystem = fsspec.filesystem("file")
-        self.channels_dir = config['channels_dir']
-        self.redirect_enabled = config['redirect_enabled']
-        self.redirect_endpoint = config['redirect_endpoint']
-        self.redirect_secret = config.get('redirect_secret')
-        self.redirect_expiration = config.get('redirect_expiration')
+        self.channels_dir = config["channels_dir"]
+        self.redirect_enabled = config["redirect_enabled"]
+        self.redirect_endpoint = config["redirect_endpoint"]
+        self.redirect_secret = config.get("redirect_secret")
+        self.redirect_expiration = config.get("redirect_expiration")
 
         super().__init__()
 
@@ -193,7 +194,7 @@ class LocalStore(PackageStore):
         full_path = path.join(self.channels_dir, channel, destination)
         self.fs.makedirs(path.dirname(full_path), exist_ok=True)
 
-        async with aiofiles.open(full_path, 'wb') as f:
+        async with aiofiles.open(full_path, "wb") as f:
             await f.write(package.read())
 
     def add_file(
@@ -263,14 +264,14 @@ class LocalStore(PackageStore):
             try:
                 # xattr will fail here if executing on e.g. the tmp filesystem
                 attrs = xattr.xattr(filepath)
-                attrs['user.testifpermissionok'] = b''
+                attrs["user.testifpermissionok"] = b""
                 try:
-                    etag = attrs['user.etag'].decode('ascii')
+                    etag = attrs["user.etag"].decode("ascii")
                 except KeyError:
                     # calculate md5 sum
-                    with self.fs.open(filepath, 'rb') as f:
+                    with self.fs.open(filepath, "rb") as f:
                         etag = hashlib.md5(f.read()).hexdigest()
-                    attrs['user.etag'] = etag.encode('ascii')
+                    attrs["user.etag"] = etag.encode("ascii")
             except OSError:
                 xattr_failed = True
 
@@ -305,11 +306,11 @@ class S3Store(PackageStore):
             raise ModuleNotFoundError("S3 package store requires s3fs module")
 
         client_kwargs = {}
-        url = config.get('url')
+        url = config.get("url")
         region = config.get("region")
         self.bucket_name = config.get("bucket_name")
         if url:
-            client_kwargs['endpoint_url'] = url
+            client_kwargs["endpoint_url"] = url
         if not self.bucket_name:
             raise ValueError("bucket_name is required in s3 configuration")
         if region:
@@ -317,8 +318,8 @@ class S3Store(PackageStore):
 
         # When using IAM, key and secret will be empty, so need to pass None
         # to the s3fs constructor
-        key = config['key'] if config['key'] != '' else None
-        secret = config['secret'] if config['secret'] != '' else None
+        key = config["key"] if config["key"] != "" else None
+        secret = config["secret"] if config["secret"] != "" else None
         self._key = key
         self._secret = secret
         self._client_kwargs = client_kwargs
@@ -328,8 +329,8 @@ class S3Store(PackageStore):
             client_kwargs=client_kwargs,
         )
 
-        self.bucket_prefix = config['bucket_prefix']
-        self.bucket_suffix = config['bucket_suffix']
+        self.bucket_prefix = config["bucket_prefix"]
+        self.bucket_suffix = config["bucket_suffix"]
         super().__init__()
 
     @property
@@ -391,7 +392,7 @@ class S3Store(PackageStore):
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
     ) -> None:
-        if type(data) is str:
+        if isinstance(data, str):
             mode = "w"
         else:
             mode = "wb"
@@ -457,9 +458,9 @@ class S3Store(PackageStore):
             filepath = path.join(self._bucket_map(channel), src)
             infodata = fs.info(filepath)
 
-            mtime = infodata['LastModified'].timestamp()
-            msize = infodata['size']
-            etag = infodata['ETag']
+            mtime = infodata["LastModified"].timestamp()
+            msize = infodata["size"]
+            etag = infodata["ETag"]
 
             return (msize, mtime, etag)
 
@@ -484,7 +485,7 @@ class AzureBlobStore(PackageStore):
         except ModuleNotFoundError:
             raise ModuleNotFoundError("Azure Blob package store requires adlfs module")
 
-        self.storage_account_name = config.get('account_name')
+        self.storage_account_name = config.get("account_name")
         self.access_key = config.get("account_access_key")
         self.conn_string = config.get("conn_str")
 
@@ -494,8 +495,8 @@ class AzureBlobStore(PackageStore):
             account_key=self.access_key,
         )
 
-        self.container_prefix = config['container_prefix']
-        self.container_suffix = config['container_suffix']
+        self.container_prefix = config["container_prefix"]
+        self.container_suffix = config["container_suffix"]
         super().__init__()
 
     @property
@@ -556,7 +557,7 @@ class AzureBlobStore(PackageStore):
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
     ) -> None:
-        if type(data) is str:
+        if isinstance(data, str):
             mode = "w"
         else:
             mode = "wb"
@@ -624,9 +625,9 @@ class AzureBlobStore(PackageStore):
             filepath = path.join(self._container_map(channel), src)
             infodata = fs.info(filepath)
 
-            mtime = infodata['last_modified'].timestamp()
-            msize = infodata['size']
-            etag = infodata['etag']
+            mtime = infodata["last_modified"].timestamp()
+            msize = infodata["size"]
+            etag = infodata["etag"]
 
             return (msize, mtime, etag)
 
@@ -665,8 +666,8 @@ class GoogleCloudStorageStore(PackageStore):
             default_location=self.region,
         )
 
-        self.bucket_prefix = config['bucket_prefix']
-        self.bucket_suffix = config['bucket_suffix']
+        self.bucket_prefix = config["bucket_prefix"]
+        self.bucket_suffix = config["bucket_suffix"]
         super().__init__()
 
     @property
@@ -732,7 +733,7 @@ class GoogleCloudStorageStore(PackageStore):
     def add_file(
         self, data: Union[str, bytes], channel: str, destination: StrPath
     ) -> None:
-        if type(data) is str:
+        if isinstance(data, str):
             mode = "w"
         else:
             mode = "wb"
@@ -812,14 +813,14 @@ class GoogleCloudStorageStore(PackageStore):
             filepath = path.join(self._bucket_map(channel), src)
             infodata = fs.info(filepath)
 
-            if infodata['type'] != 'file':
+            if infodata["type"] != "file":
                 raise FileNotFoundError()
 
             mtime = datetime.datetime.fromisoformat(
-                infodata['updated'].replace('Z', '+00:00')
+                infodata["updated"].replace("Z", "+00:00")
             ).timestamp()
-            msize = infodata['size']
-            etag = infodata['etag']
+            msize = infodata["size"]
+            etag = infodata["etag"]
 
             return (msize, mtime, etag)
 

@@ -63,14 +63,14 @@ class date_trunc(FunctionElement):
     type = DateTime()
 
 
-@compiles(date_trunc, 'postgresql')
+@compiles(date_trunc, "postgresql")
 def pg_date_trunc(element, compiler, **kw):
     pg_map = {"H": "hour", "D": "day", "M": "month", "Y": "year"}
     period, date = list(element.clauses)
     return f"date_trunc('{pg_map[period.value.value]}', {compiler.process(date, **kw)})"
 
 
-@compiles(date_trunc, 'sqlite')
+@compiles(date_trunc, "sqlite")
 def sqlite_date_trunc(element, compiler, **kw):
     period, date = list(element.clauses)
     now_interval = round_timestamp(date.value, period.value)
@@ -108,7 +108,7 @@ class Upsert(Insert):
         self._inline = False
 
 
-@compiles(Upsert, 'postgresql')
+@compiles(Upsert, "postgresql")
 def upsert_pg(element, compiler, **kw):
     index_elements = element.index_elements
     values = element.values
@@ -125,7 +125,7 @@ def upsert_pg(element, compiler, **kw):
     return compiler.visit_insert(stmt)
 
 
-@compiles(Upsert, 'sqlite')
+@compiles(Upsert, "sqlite")
 def upsert_sql(element, compiler, **kw):
     # on_conflict_do_update does exist in sqlite
     # but it was ported to sqlalchemy only in version 1.4
@@ -156,25 +156,25 @@ def get_paginated_result(query: Query, skip: int, limit: int):
     if limit >= 0:
         query = query.limit(limit)
     return {
-        'pagination': {'skip': skip, 'limit': limit, 'all_records_count': count},
-        'result': query.all(),
+        "pagination": {"skip": skip, "limit": limit, "all_records_count": count},
+        "result": query.all(),
     }
 
 
 def _parse_sort_by(query, model, sortstr: str):
-    sorts = sortstr.split(',')
+    sorts = sortstr.split(",")
 
     for s in sorts:
-        split_result = s.split(':')
+        split_result = s.split(":")
         if len(split_result) == 2:
             field, order = split_result
         else:
             field = s
-            order = 'desc'
+            order = "desc"
 
         if hasattr(model, field):
             model_field = getattr(model, field)
-            if order == 'desc':
+            if order == "desc":
                 query = query.order_by(model_field.desc())
             else:
                 query = query.order_by(model_field.asc())
@@ -202,7 +202,7 @@ class Dao:
         except NoResultFound:
             logger.error("User not found")
 
-    def get_users(self, skip: int, limit: int, q: str, order_by: str = 'username:asc'):
+    def get_users(self, skip: int, limit: int, q: str, order_by: str = "username:asc"):
         query = (
             self.db.query(User)
             .filter(User.username.isnot(None))
@@ -210,7 +210,7 @@ class Dao:
         )
 
         if q:
-            query = query.filter(User.username.ilike(f'%{q}%'))
+            query = query.filter(User.username.ilike(f"%{q}%"))
 
         query = query.options(joinedload(User.profile))
 
@@ -273,7 +273,7 @@ class Dao:
             query = query.filter(Channel.private == False)  # noqa
 
         if q:
-            query = query.filter(Channel.name.ilike(f'%{q}%'))
+            query = query.filter(Channel.name.ilike(f"%{q}%"))
 
         if limit < 0:
             return query.all()
@@ -304,7 +304,7 @@ class Dao:
         role: Optional[str] = None,
         size_limit: Optional[int] = None,
     ):
-        if '_' in data.name:
+        if "_" in data.name:
             raise errors.ValidationError("_ should not be used in channel name")
         if not data.name.isascii():
             raise errors.ValidationError(
@@ -493,7 +493,7 @@ class Dao:
         query = self.db.query(Package).filter(Package.channel_name == channel_name)
 
         if q:
-            query = query.filter(Package.name.like(f'%{q}%'))
+            query = query.filter(Package.name.like(f"%{q}%"))
 
         if limit < 0:
             return query.all()
@@ -501,11 +501,11 @@ class Dao:
         if not order_by:
             query = query.order_by(Package.name.asc())
         else:
-            orders = order_by.split(',')
+            orders = order_by.split(",")
             for o in orders:
-                if o.startswith('latest_change'):
+                if o.startswith("latest_change"):
                     query = query.join(Package.current_package_version)
-                    if len(o.split(':')) == 2 and o.split(':') == 'desc':
+                    if len(o.split(":")) == 2 and o.split(":") == "desc":
                         query = query.order_by(PackageVersion.time_created.desc())
                     else:
                         query = query.order_by(PackageVersion.time_created.asc())
@@ -531,10 +531,10 @@ class Dao:
         keywords: List[str],
         filters: Optional[List[tuple]],
         user_id: Optional[bytes],
-        order_by: str = 'name:asc',
+        order_by: str = "name:asc",
     ):
         db = self.db.query(Package).join(Channel)
-        query = apply_custom_query('package', db, keywords, filters)
+        query = apply_custom_query("package", db, keywords, filters)
         if user_id:
             query = query.filter(
                 or_(
@@ -555,10 +555,10 @@ class Dao:
         keywords: List[str],
         filters: Optional[List[tuple]],
         user_id: Optional[bytes],
-        order_by: str = 'name:asc',
+        order_by: str = "name:asc",
     ):
         db = self.db.query(Channel)
-        query = apply_custom_query('channel', db, keywords, filters)
+        query = apply_custom_query("channel", db, keywords, filters)
         if user_id:
             query = query.filter(
                 or_(
@@ -975,7 +975,7 @@ class Dao:
         return query.one_or_none()
 
     def is_active_platform(self, channel_name: str, platform: str):
-        if platform == 'noarch':
+        if platform == "noarch":
             return True
 
         return (
@@ -1025,7 +1025,7 @@ class Dao:
 
     def update_channel_size(self, channel_name: str):
         channel_size = (
-            self.db.query(func.sum(PackageVersion.size).label('size'))
+            self.db.query(func.sum(PackageVersion.size).label("size"))
             .filter(PackageVersion.channel_name == channel_name)
             .scalar()
         )
@@ -1059,7 +1059,7 @@ class Dao:
         avatar_url: str,
         role: Optional[str],
         exist_ok: bool = False,
-        emails: Optional[List['auth_base.Email']] = None,
+        emails: Optional[List["auth_base.Email"]] = None,
     ):
         """create a user with profile and role
 
@@ -1163,7 +1163,7 @@ class Dao:
         return get_paginated_result(tasks, skip, limit)
 
     def create_job(self, user_id, job_model):
-        serialized = job_model.manifest.encode('ascii')
+        serialized = job_model.manifest.encode("ascii")
         job = Job(
             owner_id=user_id,
             manifest=serialized,
@@ -1189,9 +1189,7 @@ class Dao:
             PackageVersion.channel_name == channel
         ).filter(PackageVersion.filename == filename).filter(
             PackageVersion.platform == platform
-        ).update(
-            {PackageVersion.download_count: PackageVersion.download_count + incr}
-        )
+        ).update({PackageVersion.download_count: PackageVersion.download_count + incr})
 
         if timestamp is None:
             timestamp = datetime.utcnow()
@@ -1199,10 +1197,10 @@ class Dao:
         all_values = []
         for interval in IntervalType:
             values = {
-                'channel_name': channel,
-                'platform': platform,
-                'metric_name': metric_name,
-                'filename': filename,
+                "channel_name": channel,
+                "platform": platform,
+                "metric_name": metric_name,
+                "filename": filename,
                 "timestamp": date_trunc(interval, timestamp),
                 "period": interval,
                 "count": incr,
@@ -1211,12 +1209,12 @@ class Dao:
             all_values.append(values)
 
         index_elements = [
-            'channel_name',
-            'platform',
-            'filename',
-            'metric_name',
-            'period',
-            'timestamp',
+            "channel_name",
+            "platform",
+            "filename",
+            "metric_name",
+            "period",
+            "timestamp",
         ]
 
         stmt = Upsert(

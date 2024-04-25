@@ -20,21 +20,21 @@ def test_update_indexes_empty_channel(config, public_channel, dao, empty_channel
     files = pkgstore.list_files(public_channel.name)
 
     base_files = [
-        'channeldata.json',
-        'index.html',
-        'noarch/index.html',
-        'noarch/repodata.json',
+        "channeldata.json",
+        "index.html",
+        "noarch/index.html",
+        "noarch/repodata.json",
     ]
 
     expected_files = base_files.copy()
 
-    for suffix in ['.bz2', '.gz']:
+    for suffix in [".bz2", ".gz"]:
         expected_files.extend(s + suffix for s in base_files)
 
     assert sorted(files) == sorted(expected_files)
 
     channel_dir = Path(pkgstore.channels_dir) / public_channel.name
-    with open(channel_dir / 'channeldata.json', 'r') as fd:
+    with open(channel_dir / "channeldata.json", "r") as fd:
         assert json.load(fd) == empty_channeldata
 
 
@@ -48,21 +48,21 @@ def test_update_indexes_empty_package(
     files = pkgstore.list_files(public_channel.name)
 
     base_files = [
-        'channeldata.json',
-        'index.html',
-        'noarch/index.html',
-        'noarch/repodata.json',
+        "channeldata.json",
+        "index.html",
+        "noarch/index.html",
+        "noarch/repodata.json",
     ]
 
     expected_files = base_files.copy()
 
-    for suffix in ['.bz2', '.gz']:
+    for suffix in [".bz2", ".gz"]:
         expected_files.extend(s + suffix for s in base_files)
 
     assert sorted(files) == sorted(expected_files)
 
     channel_dir = Path(pkgstore.channels_dir) / public_channel.name
-    with open(channel_dir / 'channeldata.json', 'r') as fd:
+    with open(channel_dir / "channeldata.json", "r") as fd:
         channeldata = json.load(fd)
 
     assert public_package.name in channeldata["packages"].keys()
@@ -81,17 +81,17 @@ def test_update_indexes_with_package_version(
     files = pkgstore.list_files(public_channel.name)
 
     base_files = [
-        'channeldata.json',
-        'index.html',
-        'linux-64/index.html',
-        'linux-64/repodata.json',
-        'noarch/index.html',
-        'noarch/repodata.json',
+        "channeldata.json",
+        "index.html",
+        "linux-64/index.html",
+        "linux-64/repodata.json",
+        "noarch/index.html",
+        "noarch/repodata.json",
     ]
 
     expected_files = base_files.copy()
 
-    for suffix in ['.bz2', '.gz']:
+    for suffix in [".bz2", ".gz"]:
         expected_files.extend(s + suffix for s in base_files)
 
     expected_files.append(f"linux-64/{package_version.filename}")
@@ -99,7 +99,7 @@ def test_update_indexes_with_package_version(
     assert sorted(files) == sorted(expected_files)
 
     channel_dir = Path(pkgstore.channels_dir) / public_channel.name
-    with open(channel_dir / 'channeldata.json', 'r') as fd:
+    with open(channel_dir / "channeldata.json", "r") as fd:
         channeldata = json.load(fd)
 
     assert public_package.name in channeldata["packages"].keys()

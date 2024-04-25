@@ -30,7 +30,7 @@ class MockWorker:
         }
 
         if self.session:
-            resources['session'] = self.session
+            resources["session"] = self.session
 
         kwargs.update(resources)
         job_wrapper(func, self.config, *args, **kwargs)

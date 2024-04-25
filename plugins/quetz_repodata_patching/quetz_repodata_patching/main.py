@@ -63,8 +63,8 @@ def patch_repodata(repodata, patches):
             if revoked_pkg_name not in packages:
                 continue
             package = packages[revoked_pkg_name]
-            package['revoked'] = True
-            package["depends"].append('package_has_been_revoked')
+            package["revoked"] = True
+            package["depends"].append("package_has_been_revoked")
 
         # remove packages
         repodata.setdefault("removed", [])
@@ -77,7 +77,7 @@ def patch_repodata(repodata, patches):
 @contextmanager
 def extract_from_tarfile(fs):
     """extract patch_instruction.json from tar.bz2 package"""
-    with tarfile.open(mode='r:bz2', fileobj=fs) as patch_archive:
+    with tarfile.open(mode="r:bz2", fileobj=fs) as patch_archive:
         yield patch_archive
 
 

@@ -8,7 +8,6 @@ Fixtures for Quetz components
 # Copyright 2020 QuantStack
 # Distributed under the terms of the Modified BSD License.
 
-
 import uuid
 from pathlib import Path
 
@@ -96,7 +95,7 @@ def make_package_version(
         dao.update_package_channeldata(
             channel_name,
             package_name,
-            {'name': package_name, 'subdirs': [platform]},
+            {"name": package_name, "subdirs": [platform]},
         )
 
         dao.update_channel_size(channel_name)

@@ -39,12 +39,12 @@ def package_name():
 
 @pytest.fixture
 def package_format():
-    return 'tarbz2'
+    return "tarbz2"
 
 
 @pytest.fixture
 def package_file_name(package_name, package_format):
-    if package_format == 'tarbz2':
+    if package_format == "tarbz2":
         return f"{package_name}-0.1-0.tar.bz2"
     elif package_format == "conda":
         return f"{package_name}-0.1-0.conda"
@@ -110,7 +110,7 @@ def repodata_name(channel):
 def repodata_file_name(repodata_name, archive_format):
     version = "0.1"
     build_str = "0"
-    ext = "tar.bz2" if archive_format == 'tarbz2' else 'conda'
+    ext = "tar.bz2" if archive_format == "tarbz2" else "conda"
     return f"{repodata_name}-{version}-{build_str}.{ext}"
 
 
@@ -167,11 +167,11 @@ def patches_subdir():
 def repodata_archive(repodata_file_name, patch_content, archive_format, patches_subdir):
     from io import BytesIO
 
-    patch_instructions = json.dumps(patch_content).encode('ascii')
+    patch_instructions = json.dumps(patch_content).encode("ascii")
 
     def mk_tarfile(patch_instructions, compr=None):
         patch_instructions = BytesIO(patch_instructions)
-        mode = f'w|{compr}' if compr else 'w'
+        mode = f"w|{compr}" if compr else "w"
         tar_content = BytesIO()
         tar = tarfile.open(repodata_file_name, mode, fileobj=tar_content)
         info = tarfile.TarInfo(name=patches_subdir)
@@ -180,7 +180,7 @@ def repodata_archive(repodata_file_name, patch_content, archive_format, patches_
         info.mtime = time.time()
         tar.addfile(tarinfo=info)
 
-        info = tarfile.TarInfo(name=f'{patches_subdir}/patch_instructions.json')
+        info = tarfile.TarInfo(name=f"{patches_subdir}/patch_instructions.json")
         info.size = len(patch_instructions.getvalue())
         info.mtime = time.time()
         tar.addfile(tarinfo=info, fileobj=patch_instructions)
@@ -188,16 +188,16 @@ def repodata_archive(repodata_file_name, patch_content, archive_format, patches_
         tar_content.seek(0)
         return tar_content
 
-    if archive_format == 'tarbz2':
-        tar_content = mk_tarfile(patch_instructions, compr='bz2')
+    if archive_format == "tarbz2":
+        tar_content = mk_tarfile(patch_instructions, compr="bz2")
         yield tar_content
 
     else:
         file_content = BytesIO()
         tar_content = mk_tarfile(patch_instructions, compr=None)
         fn, _ = os.path.splitext(repodata_file_name)
-        with ZipFile(file_content, mode='w') as zf:
-            with zf.open(f"pkg-{fn}.tar.zst", mode='w') as zfobj:
+        with ZipFile(file_content, mode="w") as zf:
+            with zf.open(f"pkg-{fn}.tar.zst", mode="w") as zfobj:
                 cctx = zstandard.ZstdCompressor()
                 compressed = cctx.compress(tar_content.read())
                 zfobj.write(compressed)
@@ -315,7 +315,7 @@ def test_post_package_indexing(
     with open_(repodata_path) as fid:
         data = json.load(fid)
 
-    key = "packages" if package_format == 'tarbz2' else "packages.conda"
+    key = "packages" if package_format == "tarbz2" else "packages.conda"
 
     packages = data[key]
 
@@ -327,14 +327,14 @@ def test_post_package_indexing(
     )
 
     if not is_package_removed:
-        assert packages[package_file_name]['run_exports'] == {
+        assert packages[package_file_name]["run_exports"] == {
             "weak": ["otherpackage > 0.2"]
         }
 
         if is_package_revoked:
             revoked_pkg = packages[package_file_name]
             assert revoked_pkg.get("revoked", False)
-            assert 'package_has_been_revoked' in revoked_pkg["depends"]
+            assert "package_has_been_revoked" in revoked_pkg["depends"]
 
     else:
         assert package_file_name not in packages
@@ -351,7 +351,7 @@ def test_post_package_indexing(
     with open_(orig_repodata_path) as fid:
         data = json.load(fid)
     package_data = data[key][package_file_name]
-    assert package_data['run_exports'] == {"weak": ["otherpackage > 0.1"]}
+    assert package_data["run_exports"] == {"weak": ["otherpackage > 0.1"]}
     assert not package_data.get("revoked", False)
     assert "package_has_been_revoked" not in package_data
     assert not data.get("removed")
@@ -389,7 +389,7 @@ def test_index_html(
     )
 
     assert os.path.isfile(index_path)
-    with open(index_path, 'r') as fid:
+    with open(index_path, "r") as fid:
         content = fid.read()
 
     assert "repodata.json" in content
@@ -430,7 +430,7 @@ def test_patches_for_subdir(
     )
 
     assert os.path.isfile(index_path)
-    with open(index_path, 'r') as fid:
+    with open(index_path, "r") as fid:
         content = fid.read()
 
     assert "repodata.json" in content
@@ -454,9 +454,9 @@ def test_patches_for_subdir(
     pkg = packages[package_file_name]
 
     if patches_subdir == package_subdir:
-        assert pkg['run_exports'] == {"weak": ["otherpackage > 0.2"]}
+        assert pkg["run_exports"] == {"weak": ["otherpackage > 0.2"]}
     else:
-        assert pkg['run_exports'] == {"weak": ["otherpackage > 0.1"]}
+        assert pkg["run_exports"] == {"weak": ["otherpackage > 0.1"]}
 
 
 def test_no_repodata_patches_package(
@@ -482,7 +482,7 @@ def test_no_repodata_patches_package(
     )
 
     assert os.path.isfile(index_path)
-    with open(index_path, 'r') as fid:
+    with open(index_path, "r") as fid:
         content = fid.read()
 
     assert "repodata.json" in content
@@ -503,9 +503,9 @@ def test_no_repodata_patches_package(
 
     pkg = packages[package_file_name]
 
-    assert pkg['run_exports'] == {"weak": ["otherpackage > 0.1"]}
+    assert pkg["run_exports"] == {"weak": ["otherpackage > 0.1"]}
 
     assert not pkg.get("revoked", False)
-    assert 'package_has_been_revoked' not in pkg["depends"]
+    assert "package_has_been_revoked" not in pkg["depends"]
 
     assert package_file_name not in data.get("removed", ())

@@ -47,7 +47,7 @@ async def test_transmutation_endpoint(
 
     conda_version = (
         db.query(PackageVersion)
-        .filter(PackageVersion.package_format == 'conda')
+        .filter(PackageVersion.package_format == "conda")
         .one_or_none()
     )
 
@@ -82,7 +82,7 @@ def test_package_specs(
 
     assert response.status_code == 201
 
-    job_id = response.json()['id']
+    job_id = response.json()["id"]
 
     job = db.query(Job).filter(Job.id == job_id).one()
 

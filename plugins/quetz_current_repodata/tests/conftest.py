@@ -49,14 +49,14 @@ def channel(dao, user, db):
 
 @fixture
 def subdirs():
-    return ['linux-64']
+    return ["linux-64"]
 
 
 @fixture
 def files():
-    return {'linux-64': []}
+    return {"linux-64": []}
 
 
 @fixture
 def packages():
-    return {'linux-64': []}
+    return {"linux-64": []}

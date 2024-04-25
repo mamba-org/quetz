@@ -68,7 +68,7 @@ class AzureADAuthenticator(OAuthAuthenticator):
 
         # We have to remove the 'id_token' entry so we can save the token in a cookie
         # session
-        token.pop('id_token', None)
+        token.pop("id_token", None)
 
         auth_state = {"token": json.dumps(token), "provider": self.provider}
 
@@ -81,23 +81,23 @@ class AzureADAuthenticator(OAuthAuthenticator):
 
             tenant_id = config.azuread_tenant_id
             self.server_metadata_url = (
-                f'https://login.microsoftonline.com/{tenant_id}/v2.0/'
-                f'.well-known/openid-configuration'
+                f"https://login.microsoftonline.com/{tenant_id}/v2.0/"
+                f".well-known/openid-configuration"
             )
 
             # oauth client params
-            self.api_base_url = f'https://login.microsoftonline.com/{tenant_id}/v2.0'
+            self.api_base_url = f"https://login.microsoftonline.com/{tenant_id}/v2.0"
             self.access_token_url = (
-                f'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token'
+                f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
             )
             self.authorize_url = (
-                f'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/authorize'
+                f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/authorize"
             )
             # endpoints
             self.revoke_url = (
-                f'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/logout'
+                f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/logout"
             )
-            self.validate_token_url = 'https://graph.microsoft.com/oidc/userinfo'
+            self.validate_token_url = "https://graph.microsoft.com/oidc/userinfo"
 
             if config.configured_section("users"):
                 self.collect_emails = config.users_collect_emails

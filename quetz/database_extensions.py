@@ -69,10 +69,10 @@ if search_path:
 
 class _version_match(expression.FunctionElement):
     type = Numeric()
-    name = 'version_match'
+    name = "version_match"
 
 
-@compiles(_version_match, 'sqlite')
+@compiles(_version_match, "sqlite")
 def sqlite_version_match(element, compiler, **kw):
     return compiler.visit_function(element)
 
@@ -95,5 +95,5 @@ def load_plugins_after_connect(dbapi_connection, connection_record):
             cursor.execute(pg_create_function.format(libpath=pg_plugin))
 
 
-event.listen(Pool, 'first_connect', load_plugins_after_connect)
-event.listen(StaticPool, 'first_connect', load_plugins_after_connect)
+event.listen(Pool, "first_connect", load_plugins_after_connect)
+event.listen(StaticPool, "first_connect", load_plugins_after_connect)

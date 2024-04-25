@@ -22,13 +22,13 @@ class GoogleAuthenticator(OAuthAuthenticator):
     `<https://console.developers.google.com/apis/credentials>`_.
     """
 
-    provider = 'google'
-    server_metadata_url = 'https://accounts.google.com/.well-known/openid-configuration'
+    provider = "google"
+    server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
     scope = "openid email profile"
-    prompt = 'select_account'
+    prompt = "select_account"
 
-    revoke_url = 'https://myaccount.google.com/permissions'
-    validate_token_url = 'https://openidconnect.googleapis.com/v1/userinfo'
+    revoke_url = "https://myaccount.google.com/permissions"
+    validate_token_url = "https://openidconnect.googleapis.com/v1/userinfo"
 
     collect_emails = False
 
@@ -38,7 +38,7 @@ class GoogleAuthenticator(OAuthAuthenticator):
         github_profile = {
             "id": profile["sub"],
             "name": profile["name"],
-            "avatar_url": profile['picture'],
+            "avatar_url": profile["picture"],
             "email": profile["email"],
             "login": profile["email"],
         }

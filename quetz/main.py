@@ -158,7 +158,7 @@ class CondaTokenMiddleware(BaseHTTPMiddleware):
 app.add_middleware(CondaTokenMiddleware)
 
 plugin_middlewares: List[Type[BaseHTTPMiddleware]] = [
-    ep.load() for ep in entry_points().select(group='quetz.middlewares')
+    ep.load() for ep in entry_points().select(group="quetz.middlewares")
 ]
 
 for middleware in plugin_middlewares:
@@ -207,7 +207,7 @@ builtin_authenticators: List[Type[BaseAuthenticator]] = [
 ]
 
 plugin_authenticators: List[Type[BaseAuthenticator]] = [
-    ep.load() for ep in entry_points().select(group='quetz.authenticator')
+    ep.load() for ep in entry_points().select(group="quetz.authenticator")
 ]
 
 
@@ -758,10 +758,10 @@ def post_channel(
         mirror_url = str(new_channel.mirror_channel_url)
         mirror_url = mirror_url.replace("get", "api/channels")
         headers = {"x-api-key": mirror_api_key} if mirror_api_key else {}
-        api_endpoint = str(request.url.replace(query=None)) + '/' + new_channel.name
+        api_endpoint = str(request.url.replace(query=None)) + "/" + new_channel.name
         request.url
         response = session.post(
-            mirror_url + '/mirrors',
+            mirror_url + "/mirrors",
             json={
                 "url": api_endpoint.replace("api/channels", "get"),
                 "api_endpoint": api_endpoint,
@@ -1183,13 +1183,13 @@ def get_paginated_package_versions(
     )
     version_list = []
 
-    for version, profile, api_key_profile in version_profile_list['result']:
+    for version, profile, api_key_profile in version_profile_list["result"]:
         version_data = rest_models.PackageVersion.model_validate(version)
         version_list.append(version_data)
 
     return {
-        'pagination': version_profile_list['pagination'],
-        'result': version_list,
+        "pagination": version_profile_list["pagination"],
+        "result": version_list,
     }
 
 
@@ -1274,7 +1274,7 @@ def search(
     auth: authorization.Rules = Depends(get_rules),
 ):
     user_id = auth.get_user()
-    keywords, filters = parse_query('package', q)
+    keywords, filters = parse_query("package", q)
     return dao.search_packages(keywords, filters, user_id)
 
 
@@ -1287,7 +1287,7 @@ def channel_search(
     auth: authorization.Rules = Depends(get_rules),
 ):
     user_id = auth.get_user()
-    keywords, filters = parse_query('channel', q)
+    keywords, filters = parse_query("channel", q)
     return dao.search_channels(keywords, filters, user_id)
 
 
@@ -1660,7 +1660,7 @@ def handle_package_files(
             )
         else:
             channel_proxylist = json.loads(channel.channel_metadata).get(
-                'proxylist', []
+                "proxylist", []
             )
 
     pkgstore.create_channel(channel.name)
@@ -1740,7 +1740,7 @@ def handle_package_files(
                         pkgsize, _, _ = pkgstore.get_filemetadata(
                             channel.name, f"{condainfo.info['subdir']}/{file.filename}"
                         )
-                        if pkgsize != condainfo.info['size']:
+                        if pkgsize != condainfo.info["size"]:
                             raise errors.ValidationError(
                                 f"Uploaded package {file.filename} "
                                 "file size is wrong! Deleting"
@@ -1892,7 +1892,7 @@ def serve_path(
     if is_package_request:
         try:
             platform, filename = os.path.split(path)
-            package_name, version, hash_end = filename.rsplit('-', 2)
+            package_name, version, hash_end = filename.rsplit("-", 2)
             package_type = "tar.bz2" if hash_end.endswith(".tar.bz2") else "conda"
             DOWNLOAD_COUNT.labels(
                 channel=channel.name,
@@ -1907,7 +1907,7 @@ def serve_path(
 
     if is_package_request and channel.mirror_channel_url:
         # if we exclude the package from syncing, redirect to original URL
-        channel_proxylist = json.loads(channel.channel_metadata).get('proxylist', [])
+        channel_proxylist = json.loads(channel.channel_metadata).get("proxylist", [])
         if channel_proxylist and package_name and package_name in channel_proxylist:
             return RedirectResponse(f"{channel.mirror_channel_url}/{path}")
 
@@ -1939,15 +1939,15 @@ def serve_path(
     package_content_iter = None
 
     headers = {}
-    if accept_encoding and 'gzip' in accept_encoding and path.endswith('.json'):
+    if accept_encoding and "gzip" in accept_encoding and path.endswith(".json"):
         # return gzipped response
         try:
             package_content_iter = iter_chunks(
-                pkgstore.serve_path(channel.name, path + '.gz')
+                pkgstore.serve_path(channel.name, path + ".gz")
             )
-            path += '.gz'
-            headers['Content-Encoding'] = 'gzip'
-            headers['Content-Type'] = 'application/json'
+            path += ".gz"
+            headers["Content-Encoding"] = "gzip"
+            headers["Content-Type"] = "application/json"
         except FileNotFoundError:
             pass
 
@@ -1966,10 +1966,10 @@ def serve_path(
     fsize, fmtime, fetag = pkgstore.get_filemetadata(channel.name, path)
     headers.update(
         {
-            'Cache-Control': f'max-age={channel.ttl}',
-            'Content-Size': str(fsize),
-            'Last-Modified': formatdate(fmtime, usegmt=True),
-            'ETag': fetag,
+            "Cache-Control": f"max-age={channel.ttl}",
+            "Content-Size": str(fsize),
+            "Last-Modified": formatdate(fmtime, usegmt=True),
+            "ETag": fetag,
         }
     )
     return StreamingResponse(package_content_iter, headers=headers)

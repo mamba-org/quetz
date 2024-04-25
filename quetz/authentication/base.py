@@ -133,12 +133,12 @@ class BaseAuthenticationHandlers:
 
         user_id = str(uuid.UUID(bytes=user.id))
 
-        request.session['user_id'] = user_id
-        request.session['identity_provider'] = self.authenticator.provider
+        request.session["user_id"] = user_id
+        request.session["identity_provider"] = self.authenticator.provider
         request.session.update(user_data.get("auth_state", {}))
 
         # use 303 code so that the method is always changed to GET
-        resp = RedirectResponse('/', status_code=303)
+        resp = RedirectResponse("/", status_code=303)
 
         return resp
 
@@ -210,7 +210,7 @@ class BaseAuthenticator:
 
     async def user_role(self, request: Request, profile: UserProfile) -> Optional[str]:
         """return default role of the new user"""
-        login = profile['login']
+        login = profile["login"]
         user_str = f"{self.provider}:{login}"
 
         if user_str in self._admins:
@@ -253,7 +253,7 @@ class FormHandlers(BaseAuthenticationHandlers):
     authorize_methods = ["POST"]
 
     async def login(self, request: Request):
-        redirect_uri = request.url_for(f'authorize_{self.authenticator.provider}')
+        redirect_uri = request.url_for(f"authorize_{self.authenticator.provider}")
         data = f"""
 <html><body><h1>Login Page</h1>
 <form method="post" action="{redirect_uri}">
@@ -304,6 +304,6 @@ class SimpleAuthenticator(BaseAuthenticator):
         if data is None:
             return None
         elif data["username"] == data["password"]:
-            return data['username']
+            return data["username"]
         else:
             return None

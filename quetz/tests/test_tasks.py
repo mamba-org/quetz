@@ -24,7 +24,7 @@ def package_filenames():
 def package_files(pkgstore: PackageStore, channel_name, package_filenames):
     pkgstore.create_channel(channel_name)
     for filename in package_filenames:
-        with open(filename, 'rb') as fid:
+        with open(filename, "rb") as fid:
             content = fid.read()
         pkgstore.add_file(content, channel_name, f"linux-64/{filename}")
 
@@ -66,18 +66,18 @@ def test_reindex_package_files(
     assert channel.packages[0].name == "test-package"
     assert channel.packages[0].members[0].user.username == user.username
     assert (
-        channel.packages[0].package_versions[0].version == '0.1'
-        or channel.packages[0].package_versions[0].version == '0.2'
+        channel.packages[0].package_versions[0].version == "0.1"
+        or channel.packages[0].package_versions[0].version == "0.2"
     )
     assert (
-        channel.packages[0].package_versions[1].version == '0.1'
-        or channel.packages[0].package_versions[1].version == '0.2'
+        channel.packages[0].package_versions[1].version == "0.1"
+        or channel.packages[0].package_versions[1].version == "0.2"
     )
 
     repodata = pkgstore.serve_path(channel.name, "linux-64/repodata.json")
     repodata = json.load(repodata)
     assert repodata
-    assert len(repodata['packages']) == 2
+    assert len(repodata["packages"]) == 2
     assert set(repodata["packages"].keys()) == set(package_filenames)
 
 
@@ -100,23 +100,23 @@ def test_validate_packages(
     assert channel.packages[0].name == "test-package"
     assert channel.packages[0].members[0].user.username == user.username
     assert (
-        channel.packages[0].package_versions[0].version == '0.1'
-        or channel.packages[0].package_versions[0].version == '0.2'
+        channel.packages[0].package_versions[0].version == "0.1"
+        or channel.packages[0].package_versions[0].version == "0.2"
     )
     assert (
-        channel.packages[0].package_versions[1].version == '0.1'
-        or channel.packages[0].package_versions[1].version == '0.2'
+        channel.packages[0].package_versions[1].version == "0.1"
+        or channel.packages[0].package_versions[1].version == "0.2"
     )
 
     repodata = pkgstore.serve_path(channel.name, "linux-64/repodata.json")
     repodata = json.load(repodata)
     assert repodata
-    assert len(repodata['packages']) == 2
+    assert len(repodata["packages"]) == 2
     assert set(repodata["packages"].keys()) == set(package_filenames)
 
     remaining_pkg = channel.packages[0].package_versions[1].filename
     pkgstore.delete_file(
-        channel.name, f'linux-64/{channel.packages[0].package_versions[0].filename}'
+        channel.name, f"linux-64/{channel.packages[0].package_versions[0].filename}"
     )
 
     validate_packages(dao, pkgstore, channel_name)
@@ -126,7 +126,7 @@ def test_validate_packages(
     repodata = pkgstore.serve_path(channel.name, "linux-64/repodata.json")
     repodata = json.load(repodata)
     assert repodata
-    assert len(repodata['packages']) == 1
+    assert len(repodata["packages"]) == 1
     assert set(repodata["packages"].keys()) == set([remaining_pkg])
     assert len(channel.packages[0].package_versions) == 1
 
@@ -139,6 +139,6 @@ def test_validate_packages(
     repodata = pkgstore.serve_path(channel.name, "linux-64/repodata.json")
     repodata = json.load(repodata)
     assert repodata
-    assert len(repodata['packages']) == 0
+    assert len(repodata["packages"]) == 0
     assert set(repodata["packages"].keys()) == set([])
     assert len(channel.packages[0].package_versions) == 0

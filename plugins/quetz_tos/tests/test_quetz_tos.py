@@ -11,8 +11,8 @@ def upload_tos(client):
     url = "/api/tos/upload?lang=EN&lang=FR"
 
     files_to_upload = (
-        ('tos_files', ("tos_en.txt", b"demo tos en")),
-        ('tos_files', ("tos_fr.txt", b"demo tos fr")),
+        ("tos_files", ("tos_en.txt", b"demo tos en")),
+        ("tos_files", ("tos_fr.txt", b"demo tos fr")),
     )
 
     response = client.post(url, files=files_to_upload)
@@ -25,8 +25,8 @@ def test_tos_upload_by_member(client, member_user):
 
     response = upload_tos(client)
     assert response.status_code == 403
-    assert response.json()['detail'] == [
-        'To upload new Terms of Services you need to be a server owner.'
+    assert response.json()["detail"] == [
+        "To upload new Terms of Services you need to be a server owner."
     ]
 
 
@@ -36,34 +36,34 @@ def test_tos_upload_by_owner(client, owner_user):
 
     response = upload_tos(client)
     assert response.status_code == 201
-    assert response.content == b'null'
+    assert response.content == b"null"
 
 
 def test_get_tos(client, tos_file, tos):
-    response = client.get('/api/tos')
+    response = client.get("/api/tos")
 
-    assert response.json()['files'][0]['language'] == 'EN'
-    assert response.json()['files'][0]['filename'] == 'tos_en.txt'
-    assert response.json()['files'][0]['content'] == 'demo tos en'
+    assert response.json()["files"][0]["language"] == "EN"
+    assert response.json()["files"][0]["filename"] == "tos_en.txt"
+    assert response.json()["files"][0]["content"] == "demo tos en"
 
-    assert response.json()['files'][1]['language'] == 'FR'
-    assert response.json()['files'][1]['filename'] == 'tos_fr.txt'
-    assert response.json()['files'][1]['content'] == 'demo tos fr'
+    assert response.json()["files"][1]["language"] == "FR"
+    assert response.json()["files"][1]["filename"] == "tos_fr.txt"
+    assert response.json()["files"][1]["content"] == "demo tos fr"
 
-    response = client.get('/api/tos?lang=CH')
+    response = client.get("/api/tos?lang=CH")
     assert response.status_code == 404
 
-    response = client.get('/api/tos?lang=FR')
+    response = client.get("/api/tos?lang=FR")
     assert response.status_code == 200
-    assert len(response.json()['files']) == 1
-    assert response.json()['files'][0]['language'] == 'FR'
+    assert len(response.json()["files"]) == 1
+    assert response.json()["files"][0]["language"] == "FR"
 
 
 def test_tos_sign(client, member_user, tos_file, tos):
     response = client.get("/api/dummylogin/alice")
     assert response.status_code == 200
 
-    response = client.post('/api/tos/sign')
+    response = client.post("/api/tos/sign")
     assert response.status_code == 201
     assert response.content == b'"TOS signed for alice"'
 
@@ -72,7 +72,7 @@ def test_tos_already_signed(client, tos_sign):
     response = client.get("/api/dummylogin/alice")
     assert response.status_code == 200
 
-    response = client.post('/api/tos/sign')
+    response = client.post("/api/tos/sign")
     assert response.status_code == 201
     assert b"TOS already signed for alice" in response.content
 

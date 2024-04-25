@@ -50,8 +50,8 @@ def test_endpoint_without_metadata(
 def test_post_add_package_version(package_version, config, db, session_maker):
     filename = "test-package-0.1-0.tar.bz2"
 
-    with tempfile.SpooledTemporaryFile(mode='wb') as target:
-        with open(filename, 'rb') as fid:
+    with tempfile.SpooledTemporaryFile(mode="wb") as target:
+        with open(filename, "rb") as fid:
             shutil.copyfileobj(fid, target)
         target.seek(0)
         condainfo = CondaInfo(target, filename)
@@ -67,7 +67,7 @@ def test_post_add_package_version(package_version, config, db, session_maker):
 
     meta = db.query(db_models.PackageVersionMetadata).first()
 
-    assert meta.data == '{}'
+    assert meta.data == "{}"
 
     # modify runexport and re-save
     condainfo.run_exports = {"weak": ["somepackage < 0.3"]}

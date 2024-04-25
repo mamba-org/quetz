@@ -73,16 +73,16 @@ def _alembic_config(db_url: str) -> AlembicConfig:
 
     migration_modules = [
         f"{ep.module}:versions"
-        for ep in entry_points().select(group='quetz.migrations')
+        for ep in entry_points().select(group="quetz.migrations")
     ]
     migration_modules.append("quetz:migrations/versions")
 
     version_locations = " ".join(migration_modules)
 
     alembic_cfg = AlembicConfig()
-    alembic_cfg.set_main_option('script_location', script_location)
-    alembic_cfg.set_main_option('version_locations', version_locations)
-    alembic_cfg.set_main_option('sqlalchemy.url', db_url)
+    alembic_cfg.set_main_option("script_location", script_location)
+    alembic_cfg.set_main_option("version_locations", version_locations)
+    alembic_cfg.set_main_option("sqlalchemy.url", db_url)
     return alembic_cfg
 
 
@@ -98,7 +98,7 @@ def _run_migrations(
             db_engine = "SQLite"
         else:
             db_engine = db_url.split("/")[0]
-        logger.info('Running DB migrations on %s', db_engine)
+        logger.info("Running DB migrations on %s", db_engine)
         if not alembic_config:
             alembic_config = _alembic_config(db_url)
     command.upgrade(alembic_config, branch_name)
@@ -121,7 +121,7 @@ def _make_migrations(
     from quetz.jobs.models import Job, Task  # noqa
     from quetz.metrics.db_models import PackageVersionMetric  # noqa
 
-    for entry_point in entry_points().select(group='quetz.models'):
+    for entry_point in entry_points().select(group="quetz.models"):
         logger.debug("loading plugin %r", entry_point.name)
         entry_point.load()
         if entry_point.name == plugin_name:
@@ -132,7 +132,7 @@ def _make_migrations(
             f"models entrypoint (quetz.models) for plugin {plugin_name} not registered"
         )
 
-    logger.info('Making DB migrations on %r for %r', db_url, plugin_name)
+    logger.info("Making DB migrations on %r for %r", db_url, plugin_name)
     if not alembic_config and db_url:
         alembic_config = _alembic_config(db_url)
 
@@ -141,7 +141,7 @@ def _make_migrations(
         version_path = None  # Path(quetz.__file__).parent / 'migrations' / 'versions'
     else:
         entry_point = tuple(
-            entry_points().select(group='quetz.migrations', name=plugin_name)
+            entry_points().select(group="quetz.migrations", name=plugin_name)
         )[0]
         module = entry_point.load()
         version_path = str(Path(module.__file__).parent / "versions")
@@ -219,16 +219,16 @@ def _fill_test_database(db: Session) -> None:
     test_users = []
     dao = Dao(db)
     try:
-        for index, username in enumerate(['alice', 'bob', 'carol', 'dave']):
+        for index, username in enumerate(["alice", "bob", "carol", "dave"]):
             user = dao.create_user_with_role(username)
 
             identity = Identity(
-                provider='dummy',
+                provider="dummy",
                 identity_id=str(index),
                 username=username,
             )
 
-            profile = Profile(name=username.capitalize(), avatar_url='/avatar.jpg')
+            profile = Profile(name=username.capitalize(), avatar_url="/avatar.jpg")
 
             user.identities.append(identity)  # type: ignore
             user.profile = profile
@@ -237,22 +237,22 @@ def _fill_test_database(db: Session) -> None:
 
         for channel_index in range(3):
             channel = Channel(
-                name=f'channel{channel_index}',
-                description=f'Description of channel{channel_index}',
+                name=f"channel{channel_index}",
+                description=f"Description of channel{channel_index}",
                 private=False,
             )
 
             for package_index in range(random.randint(30, 60)):
                 package = Package(
-                    name=f'package{package_index}',
-                    summary=f'package {package_index} summary text',
-                    description=f'Description of package{package_index}',
+                    name=f"package{package_index}",
+                    summary=f"package {package_index} summary text",
+                    description=f"Description of package{package_index}",
                 )
                 channel.packages.append(package)  # type: ignore
 
                 test_user = test_users[random.randint(0, len(test_users) - 1)]
                 package_member = PackageMember(
-                    package=package, channel=channel, user=test_user, role='owner'
+                    package=package, channel=channel, user=test_user, role="owner"
                 )
 
                 db.add(package_member)
@@ -260,11 +260,11 @@ def _fill_test_database(db: Session) -> None:
             test_user = test_users[random.randint(0, len(test_users) - 1)]
 
             if channel_index == 0:
-                package = Package(name='xtensor', description='Description of xtensor')
+                package = Package(name="xtensor", description="Description of xtensor")
                 channel.packages.append(package)  # type: ignore
 
                 package_member = PackageMember(
-                    package=package, channel=channel, user=test_user, role='owner'
+                    package=package, channel=channel, user=test_user, role="owner"
                 )
 
                 db.add(package_member)
@@ -274,7 +274,7 @@ def _fill_test_database(db: Session) -> None:
 
                 key_user = User(id=uuid.uuid4().bytes)
                 api_key = ApiKey(
-                    key=key, description='test API key', user=test_user, owner=test_user
+                    key=key, description="test API key", user=test_user, owner=test_user
                 )
                 db.add(api_key)
                 print(f'Test API key created for user "{test_user.username}": {key}')
@@ -283,7 +283,7 @@ def _fill_test_database(db: Session) -> None:
                     user=key_user,
                     channel_name=channel.name,
                     package_name=package.name,
-                    role='maintainer',
+                    role="maintainer",
                 )
                 db.add(key_package_member)
 
@@ -292,7 +292,7 @@ def _fill_test_database(db: Session) -> None:
             channel_member = ChannelMember(
                 channel=channel,
                 user=test_user,
-                role='owner',
+                role="owner",
             )
 
             db.add(channel_member)
@@ -436,16 +436,16 @@ def create(
     if _is_deployment(deployment_folder):
         if exists_ok:
             logger.info(
-                f'Quetz deployment already exists at {deployment_folder}.\n'
-                f'Skipping creation.'
+                f"Quetz deployment already exists at {deployment_folder}.\n"
+                f"Skipping creation."
             )
             return
         if delete and (copy_conf or create_conf):
             shutil.rmtree(deployment_folder)
         else:
             typer.echo(
-                'Use the start command to start a deployment '
-                'or specify --delete with --copy-conf or --create-conf.',
+                "Use the start command to start a deployment "
+                "or specify --delete with --copy-conf or --create-conf.",
                 err=True,
             )
             raise typer.Abort()
@@ -456,8 +456,8 @@ def create(
     # when deleting Quetz instance
     if any(f != config_file for f in deployment_folder.iterdir()):
         typer.echo(
-            f'Quetz deployment not allowed at {path}.\n'
-            'The path should not contain more than the configuration file.',
+            f"Quetz deployment not allowed at {path}.\n"
+            "The path should not contain more than the configuration file.",
             err=True,
         )
         raise typer.Abort()
@@ -473,31 +473,31 @@ def create(
         except Exception as e:
             logger.warning(msg=e)
             typer.echo(
-                'No configuration file provided.\n'
-                'Use --create-conf or --copy-conf to produce a config file\n'
-                'or set up $QUETZ_SQLALCHEMY_DATABASE_URL and $QUETZ_SESSION_SECRET',
+                "No configuration file provided.\n"
+                "Use --create-conf or --copy-conf to produce a config file\n"
+                "or set up $QUETZ_SQLALCHEMY_DATABASE_URL and $QUETZ_SESSION_SECRET",
                 err=True,
             )
             raise typer.Abort()
 
     if copy_conf:
         if not os.path.exists(copy_conf):
-            typer.echo(f'Config file to copy does not exist {copy_conf}.', err=True)
+            typer.echo(f"Config file to copy does not exist {copy_conf}.", err=True)
             raise typer.Abort()
 
         typer.echo(f"Copying config file from {copy_conf} to {config_file}")
         shutil.copyfile(copy_conf, config_file)
 
     if not config_file.exists() and create_conf:
-        https = 'false' if dev else 'true'
+        https = "false" if dev else "true"
         conf = create_config(https=https)
-        with open(config_file, 'w') as f:
+        with open(config_file, "w") as f:
             f.write(conf)
 
     os.environ[_env_prefix + _env_config_file] = str(config_file.resolve())
     config = Config(str(config_file))
 
-    deployment_folder.joinpath('channels').mkdir(exist_ok=True)
+    deployment_folder.joinpath("channels").mkdir(exist_ok=True)
 
     with working_directory(db_path):
         db = get_session(config.sqlalchemy_database_url)
@@ -509,7 +509,7 @@ def create(
 
 def _get_config(path: Union[Path, str]) -> Config:
     """get config path"""
-    config_file = Path(path) / 'config.toml'
+    config_file = Path(path) / "config.toml"
     config = Config(str(config_file.resolve()))
     if not os.environ.get(_env_prefix + _env_config_file):
         os.environ[_env_prefix + _env_config_file] = str(config_file.resolve())
@@ -570,9 +570,9 @@ def start(
     if not _is_deployment(deployment_folder):
         if isinstance(config.get_package_store(), pkgstores.LocalStore):
             typer.echo(
-                'The specified directory is not a deployment and the package store '
-                'is set as local.\n'
-                'Use the create or run command to create a deployment.',
+                "The specified directory is not a deployment and the package store "
+                "is set as local.\n"
+                "Use the create or run command to create a deployment.",
                 err=True,
             )
             raise typer.Abort()
@@ -681,7 +681,7 @@ def delete(
 
     deployment_dir = Path(path)
     if not _is_deployment(deployment_dir):
-        typer.echo(f'No Quetz deployment found at {path}.', err=True)
+        typer.echo(f"No Quetz deployment found at {path}.", err=True)
         raise typer.Abort()
 
     if not force and not typer.confirm(f"Delete Quetz deployment at {path}?"):
@@ -695,13 +695,13 @@ def plugin(
     cmd: str,
     path: Annotated[str, typer.Argument(help="Path to the plugin folder")],
 ) -> None:
-    if cmd == 'install':
+    if cmd == "install":
         abs_path = Path(path).absolute()
         if not (abs_path / "setup.py").exists():
             raise ValueError(f"Could not find any setup.py file in {abs_path}/.")
         requirements = abs_path / "conda-requirements.txt"
 
-        conda_exes = ['mamba', 'conda', 'micromamba']
+        conda_exes = ["mamba", "conda", "micromamba"]
         conda_exe_path = None
         if requirements.exists():
             for conda_exe in conda_exes:
@@ -720,28 +720,28 @@ def plugin(
             subprocess.call(
                 [
                     conda_exe_path,
-                    'install',
-                    '--channel',
-                    'conda-forge',
-                    '--file',
+                    "install",
+                    "--channel",
+                    "conda-forge",
+                    "--file",
                     requirements,
                 ]
             )
 
-        pip_exe_path = find_executable('pip')
+        pip_exe_path = find_executable("pip")
         if pip_exe_path is None:
             # Try to install pip if it's missing
             if conda_exe_path is not None:
                 print("pip is missing, installing...")
                 subprocess.call(
-                    [conda_exe_path, 'install', '--channel', 'conda-forge', 'pip']
+                    [conda_exe_path, "install", "--channel", "conda-forge", "pip"]
                 )
-                pip_exe_path = find_executable('pip')
+                pip_exe_path = find_executable("pip")
 
         if pip_exe_path is None:
             print("Could not find pip to install the plugin.")
             exit(1)
-        subprocess.call([pip_exe_path, 'install', abs_path])
+        subprocess.call([pip_exe_path, "install", abs_path])
     else:
         print(f"Command '{cmd}' not yet understood.")
 

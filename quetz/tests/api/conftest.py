@@ -59,7 +59,7 @@ def private_package_version(
     dao.update_package_channeldata(
         private_channel.name,
         private_package.name,
-        {'name': package_name, 'subdirs': [platform]},
+        {"name": package_name, "subdirs": [platform]},
     )
 
     return version

@@ -408,7 +408,7 @@ class Config:
             if key.startswith(_env_prefix)
         }
         for var, value in quetz_var.items():
-            split_key = var.split('_')
+            split_key = var.split("_")
             config_key = split_key[1].lower()
             idx = 2
 
@@ -451,47 +451,47 @@ class Config:
         package_store : pkgstores.PackageStore
             The package store instance to enact package operations against
         """
-        if self.config.get('s3'):
+        if self.config.get("s3"):
             return pkgstores.S3Store(
                 {
-                    'key': self.s3_access_key,
-                    'secret': self.s3_secret_key,
-                    'url': self.s3_url,
-                    'region': self.s3_region,
-                    'bucket_name': self.s3_bucket_name,
-                    'bucket_prefix': self.s3_bucket_prefix,
-                    'bucket_suffix': self.s3_bucket_suffix,
+                    "key": self.s3_access_key,
+                    "secret": self.s3_secret_key,
+                    "url": self.s3_url,
+                    "region": self.s3_region,
+                    "bucket_name": self.s3_bucket_name,
+                    "bucket_prefix": self.s3_bucket_prefix,
+                    "bucket_suffix": self.s3_bucket_suffix,
                 }
             )
-        elif self.config.get('azure_blob'):
+        elif self.config.get("azure_blob"):
             return pkgstores.AzureBlobStore(
                 {
-                    'account_name': self.azure_blob_account_name,
-                    'account_access_key': self.azure_blob_account_access_key,
-                    'conn_str': self.azure_blob_conn_str,
-                    'container_prefix': self.azure_blob_container_prefix,
-                    'container_suffix': self.azure_blob_container_suffix,
+                    "account_name": self.azure_blob_account_name,
+                    "account_access_key": self.azure_blob_account_access_key,
+                    "conn_str": self.azure_blob_conn_str,
+                    "container_prefix": self.azure_blob_container_prefix,
+                    "container_suffix": self.azure_blob_container_suffix,
                 }
             )
-        elif self.config.get('gcs'):
+        elif self.config.get("gcs"):
             return pkgstores.GoogleCloudStorageStore(
                 {
-                    'project': self.gcs_project,
-                    'token': self.gcs_token,
-                    'bucket_prefix': self.gcs_bucket_prefix,
-                    'bucket_suffix': self.gcs_bucket_suffix,
-                    'cache_timeout': self.gcs_cache_timeout,
-                    'region': self.gcs_region,
+                    "project": self.gcs_project,
+                    "token": self.gcs_token,
+                    "bucket_prefix": self.gcs_bucket_prefix,
+                    "bucket_suffix": self.gcs_bucket_suffix,
+                    "cache_timeout": self.gcs_cache_timeout,
+                    "region": self.gcs_region,
                 }
             )
         else:
             return pkgstores.LocalStore(
                 {
-                    'channels_dir': 'channels',
-                    'redirect_enabled': self.local_store_redirect_enabled,
-                    'redirect_endpoint': self.local_store_redirect_endpoint,
-                    'redirect_secret': self.local_store_redirect_secret,
-                    'redirect_expiration': int(self.local_store_redirect_expiration),
+                    "channels_dir": "channels",
+                    "redirect_enabled": self.local_store_redirect_enabled,
+                    "redirect_endpoint": self.local_store_redirect_endpoint,
+                    "redirect_secret": self.local_store_redirect_secret,
+                    "redirect_expiration": int(self.local_store_redirect_expiration),
                 }
             )
 
@@ -522,7 +522,7 @@ def create_config(
     client_secret: str = "",
     database_url: str = "sqlite:///./quetz.sqlite",
     secret: str = token_bytes(32).hex(),
-    https: str = 'true',
+    https: str = "true",
 ) -> str:
     """Create a configuration file from a template.
 
@@ -544,8 +544,8 @@ def create_config(
     configuration : str
         The configuration
     """
-    with open(os.path.join(os.path.dirname(__file__), _filename), 'r') as f:
-        config = ''.join(f.readlines())
+    with open(os.path.join(os.path.dirname(__file__), _filename), "r") as f:
+        config = "".join(f.readlines())
 
     return config.format(client_id, client_secret, database_url, secret, https)
 
@@ -585,7 +585,7 @@ def get_logger_config(config, loggers):
             "use_colors": True,
         },
         "basic": {"format": "%(levelprefix)s [%(name)s] %(message)s"},
-        "timestamp": {"format": '%(asctime)s %(levelname)s %(name)s  %(message)s'},
+        "timestamp": {"format": "%(asctime)s %(levelname)s %(name)s  %(message)s"},
     }
 
     curdir = os.getcwd()

@@ -73,9 +73,9 @@ def test_config_is_singleton(config):
 def test_config_with_path(config_dir, config_base):
     one_path = os.path.join(config_dir, "one_config.toml")
     other_path = os.path.join(config_dir, "other_config.toml")
-    with open(one_path, 'w') as fid:
+    with open(one_path, "w") as fid:
         fid.write("\n".join([config_base, "[users]\nadmins=['one']"]))
-    with open(other_path, 'w') as fid:
+    with open(other_path, "w") as fid:
         fid.write("\n".join([config_base, "[users]\nadmins=['other']"]))
 
     Config._instances = {}
@@ -112,7 +112,7 @@ def test_config_extend_require(config):
 
 
 @pytest.mark.parametrize(
-    "config_extra", ["[extra_plugin]\nsome=\"testvalue\"\nconfig=\"othervalue\"\n"]
+    "config_extra", ['[extra_plugin]\nsome="testvalue"\nconfig="othervalue"\n']
 )
 def test_config_extend(config):
     config.register(
@@ -128,9 +128,9 @@ def test_config_extend(config):
         ]
     )
 
-    assert config.extra_plugin_some == 'testvalue'
-    assert config.extra_plugin_config == 'othervalue'
-    assert config.extra_plugin_has_default == 'iamdefault'
+    assert config.extra_plugin_some == "testvalue"
+    assert config.extra_plugin_config == "othervalue"
+    assert config.extra_plugin_has_default == "iamdefault"
 
     config._config_map.pop()
 

@@ -110,9 +110,9 @@ def root_role_file(tmp_path, offline_keys):
                     "threshold": 1,
                 },
             },
-            "expiration": expiration.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            "expiration": expiration.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "metadata_spec_version": "0.6.0",
-            "timestamp": timestamp.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            "timestamp": timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "type": "root",
             "version": 1,
         },
@@ -147,9 +147,9 @@ def key_mgr_role_file(tmp_path, offline_keys, signing_key):
                     "threshold": 1,
                 }
             },
-            "expiration": expiration.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            "expiration": expiration.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "metadata_spec_version": "0.6.0",
-            "timestamp": timestamp.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            "timestamp": timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "type": "key_mgr",
             "version": 1,
         },
@@ -179,9 +179,9 @@ def pkg_mgr_role_file(tmp_path, offline_keys, signing_key):
         "signatures": {},
         "signed": {
             "delegations": {},
-            "expiration": expiration.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            "expiration": expiration.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "metadata_spec_version": "0.6.0",
-            "timestamp": timestamp.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            "timestamp": timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "type": "pkg_mgr",
             "version": 1,
         },
@@ -204,20 +204,20 @@ def signed_package(
 ):
     client.post(
         f"/api/content-trust/{channel.name}/roles?type=root",
-        files={"file": (root_role_file.name, open(root_role_file, 'rb'))},
+        files={"file": (root_role_file.name, open(root_role_file, "rb"))},
     )
     client.post(
         f"/api/content-trust/{channel.name}/roles?type=key_mgr",
-        files={"file": (key_mgr_role_file.name, open(key_mgr_role_file, 'rb'))},
+        files={"file": (key_mgr_role_file.name, open(key_mgr_role_file, "rb"))},
     )
     client.post(
         f"/api/content-trust/{channel.name}/roles?type=pkg_mgr",
-        files={"file": (pkg_mgr_role_file.name, open(pkg_mgr_role_file, 'rb'))},
+        files={"file": (pkg_mgr_role_file.name, open(pkg_mgr_role_file, "rb"))},
     )
 
     pkg_filename = "test-package-0.1-0.tar.bz2"
-    url = f'/api/channels/{channel.name}/files/'
-    files_to_upload = {'files': (pkg_filename, open(pkg_filename, 'rb'))}
+    url = f"/api/channels/{channel.name}/files/"
+    files_to_upload = {"files": (pkg_filename, open(pkg_filename, "rb"))}
     client.post(url, files=files_to_upload)
 
     yield pkg_filename

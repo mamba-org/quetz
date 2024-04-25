@@ -24,12 +24,10 @@ class JupyterConfigEntry:
     # maybe someone will find a solution later
     # https://github.com/python/mypy/issues/2566#issuecomment-703998877
     @overload
-    def __get__(self, instance: None, owner: Any) -> "JupyterConfigEntry":
-        ...
+    def __get__(self, instance: None, owner: Any) -> "JupyterConfigEntry": ...
 
     @overload
-    def __get__(self, instance: object, owner: Any) -> str:
-        ...
+    def __get__(self, instance: object, owner: Any) -> str: ...
 
     def __get__(self, obj, objtype) -> str:
         return getattr(self.config, self.config_attr_name)
@@ -108,7 +106,7 @@ class JupyterhubAuthenticator(OAuthAuthenticator):
       ]
     """  # noqa
 
-    provider = 'jupyterhub'
+    provider = "jupyterhub"
 
     # TODO: need to figure out how to use type annotations with descriptors
     # see also: https://github.com/python/mypy/pull/2266
@@ -131,7 +129,7 @@ class JupyterhubAuthenticator(OAuthAuthenticator):
         profile = response.json()
 
         github_profile = {
-            "id": profile["name"] + '_id',
+            "id": profile["name"] + "_id",
             "name": profile["name"],
             "avatar_url": "",
             "login": profile["name"],
@@ -139,8 +137,8 @@ class JupyterhubAuthenticator(OAuthAuthenticator):
         return github_profile
 
     async def _get_user_for_token(self, token):
-        headers = {'Authorization': f'token {self.client_secret}'}
-        access_token = quote(token['access_token'], safe='')
+        headers = {"Authorization": f"token {self.client_secret}"}
+        access_token = quote(token["access_token"], safe="")
 
         # authlib client will be place token in query params
         # which are ignored by jupyterhub
@@ -148,7 +146,7 @@ class JupyterhubAuthenticator(OAuthAuthenticator):
         # which puts the token as path parameter
         # https://jupyterhub.readthedocs.io/en/stable/_static/rest-api/index.html#path--authorizations-token--token-  # noqa
         resp = await self.client.get(
-            f'authorizations/token/{access_token}', token=token, headers=headers
+            f"authorizations/token/{access_token}", token=token, headers=headers
         )
         return resp
 

@@ -11,7 +11,7 @@ hookspec = pluggy.HookspecMarker("quetz")
 
 
 @hookspec
-def register_router() -> 'fastapi.APIRouter':
+def register_router() -> "fastapi.APIRouter":
     """add extra endpoints to the url tree.
 
     It should return an :py:class:`fastapi.APIRouter` with new endpoints definitions.
@@ -20,7 +20,7 @@ def register_router() -> 'fastapi.APIRouter':
 
 @hookspec
 def post_add_package_version(
-    version: 'quetz.db_models.PackageVersion', condainfo: 'quetz.condainfo.CondaInfo'
+    version: "quetz.db_models.PackageVersion", condainfo: "quetz.condainfo.CondaInfo"
 ) -> None:
     """hook for post-processing after adding a package file.
 
