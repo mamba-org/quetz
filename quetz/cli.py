@@ -412,15 +412,6 @@ def create(
         bool,
         typer.Option(help="Skip the creation if deployment already exists."),
     ] = False,
-    dev: Annotated[
-        bool,
-        typer.Option(
-            help=(
-                "Enable/disable dev mode "
-                "(fills the database with test data and allows http access)"
-            ),
-        ),
-    ] = False,
 ):
     """Create a new Quetz deployment."""
 
@@ -462,6 +453,7 @@ def create(
         )
         raise typer.Abort()
 
+    config = None
     if not config_file.exists() and not create_conf and not copy_conf:
         try:
             # If no config file is provided or created, try to get config
@@ -489,8 +481,7 @@ def create(
         shutil.copyfile(copy_conf, config_file)
 
     if not config_file.exists() and create_conf:
-        https = "false" if dev else "true"
-        conf = create_config(https=https)
+        conf = create_config(https=str(config.is_dev() if config else True))
         with open(config_file, "w") as f:
             f.write(conf)
 
@@ -502,7 +493,7 @@ def create(
     with working_directory(db_path):
         db = get_session(config.sqlalchemy_database_url)
         _run_migrations(config.sqlalchemy_database_url)
-        if dev:
+        if config.is_dev():
             _fill_test_database(db)
         _set_user_roles(db, config)
 
@@ -556,7 +547,6 @@ def start(
     To be started, a deployment has to be already created.
     At this time, only Uvicorn is supported as manager.
     """
-
     logger.info(f"deploying quetz from directory {path}")
 
     if path:
@@ -591,6 +581,7 @@ def start(
         import quetz
 
         quetz_src = os.path.dirname(quetz.__file__)
+
         uvicorn.run(
             "quetz.main:app",
             reload=reload,
@@ -630,15 +621,6 @@ def run(
         bool,
         typer.Option(help="Skip the creation if deployment already exists."),
     ] = False,
-    dev: Annotated[
-        bool,
-        typer.Option(
-            help=(
-                "Enable/disable dev mode "
-                "(fills the database with test data and allows http access)"
-            ),
-        ),
-    ] = False,
     port: Annotated[int, typer.Option(help="The port to bind")] = 8000,
     host: Annotated[
         str, typer.Option(help="The network interface to bind")
@@ -665,7 +647,7 @@ def run(
     It performs sequentially create and start operations."""
 
     abs_path = os.path.abspath(path)
-    create(abs_path, copy_conf, create_conf, delete, skip_if_exists, dev)
+    create(abs_path, copy_conf, create_conf, delete, skip_if_exists)
     start(abs_path, port, host, proxy_headers, log_level, reload)
 
 

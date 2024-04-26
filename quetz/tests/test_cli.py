@@ -124,11 +124,7 @@ def test_init_db_create_test_users(db, config, mocker, config_dir):
         return db
 
     with mock.patch("quetz.cli.get_session", get_db):
-        cli.create(
-            Path(config_dir) / "new-deployment",
-            copy_conf="config.toml",
-            dev=True,
-        )
+        cli.create(Path(config_dir) / "new-deployment", copy_conf="config.toml")
 
     user = db.query(User).filter(User.username == "alice").one_or_none()
 

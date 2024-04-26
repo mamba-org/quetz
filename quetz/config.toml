@@ -1,3 +1,6 @@
+[general]
+dev = true
+
 [github]
 # Register the app here: https://github.com/settings/applications/new
 client_id = "{}"

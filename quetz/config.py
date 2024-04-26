@@ -59,6 +59,7 @@ class Config:
         ConfigSection(
             "general",
             [
+                ConfigEntry("dev", bool, required=True),
                 ConfigEntry("package_unpack_threads", int, 1),
                 ConfigEntry("frontend_dir", str, default=""),
                 ConfigEntry("redirect_http_to_https", bool, False),
@@ -287,7 +288,6 @@ class Config:
         deployment_config : str, optional
             The configuration stored at deployment level
         """
-
         self.config: Dict[str, Any] = {}
 
         # only try to get config from config file if it exists.
@@ -407,6 +407,7 @@ class Config:
             for key, value in os.environ.items()
             if key.startswith(_env_prefix)
         }
+
         for var, value in quetz_var.items():
             split_key = var.split("_")
             config_key = split_key[1].lower()
@@ -442,6 +443,16 @@ class Config:
                 config[first_level.name]["_".join(split_key[idx:]).lower()] = value
 
         return config
+
+    def is_dev(self) -> bool:
+        """Return whether the application is in development mode.
+
+        Returns
+        -------
+        bool
+            Whether the application is in development mode
+        """
+        return str(self.config.get("general", {}).get("dev", False)).lower() == "true"
 
     def get_package_store(self) -> pkgstores.PackageStore:
         """Return the appropriate package store as set in the config.
