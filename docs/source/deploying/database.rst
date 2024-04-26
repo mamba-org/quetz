@@ -29,7 +29,7 @@ You can then create a database in PostgreSQL for quetz tables:
 Deploying Quetz with PostgreSQL backend
 """""""""""""""""""""""""""""""""""""""
 
-Then in your configuration file (such as `dev_config.toml`) replace the `[sqlalchemy]` section with:
+Then in your configuration file (such as `config.toml`) replace the `[sqlalchemy]` section with:
 
 .. code::
 

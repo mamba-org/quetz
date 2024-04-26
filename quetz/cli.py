@@ -393,7 +393,7 @@ def create(
     ],
     copy_conf: Annotated[
         Optional[str],
-        typer.Option(help="The configuration to copy from (e.g. dev_config.toml)"),
+        typer.Option(help="The configuration to copy from (e.g. config.toml)"),
     ] = None,
     create_conf: Annotated[
         bool,
@@ -602,7 +602,7 @@ def run(
     path: Annotated[str, typer.Argument(help="The path of the deployment")],
     copy_conf: Annotated[
         Optional[str],
-        typer.Option(help="The configuration to copy from (e.g. dev_config.toml)"),
+        typer.Option(help="The configuration to copy from (e.g. config.toml)"),
     ] = None,
     create_conf: Annotated[
         bool,

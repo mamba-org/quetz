@@ -1,6 +1,6 @@
 include *.md
 include alembic.ini
-include dev_config.toml
+include config.toml
 include environment.yml
 include init_db.py
 include .flake8

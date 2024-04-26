@@ -168,6 +168,9 @@ def config_base(database_url, plugins, config_auth):
     return f"""
 {config_auth}
 
+[general]
+dev = true
+
 [sqlalchemy]
 database_url = "{database_url}"
 

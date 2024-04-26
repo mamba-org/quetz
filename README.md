@@ -59,7 +59,7 @@ pip install -e .
 Use the CLI to create a `Quetz` instance:
 
 ```bash
-quetz run test_quetz --copy-conf ./dev_config.toml --dev --reload
+quetz run test_quetz --copy-conf ./config.toml --dev --reload
 ```
 
 Links:
@@ -188,7 +188,7 @@ sudo -u postgres psql -h localhost -c 'CREATE DATABASE quetz OWNER postgres;'
 
 ### Deploying Quetz with PostgreSQL backend
 
-Then in your configuration file (such as `dev_config.toml`) replace the `[sqlalchemy]` section with:
+Then in your configuration file (such as `config.toml`) replace the `[sqlalchemy]` section with:
 
 ```ini
 [sqlalchemy]

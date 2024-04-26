@@ -8,7 +8,7 @@ Config file
 
 Most functionalities of quetz can be configured with a config file in toml format, such as this one:
 
-.. literalinclude:: ../../../dev_config.toml
+.. literalinclude:: ../../../config.toml
 
 
 ``sqlalchemy`` section
