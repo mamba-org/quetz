@@ -84,7 +84,7 @@ def get_rules(
     request: Request,
     session: dict = Depends(get_session),
     db: Session = Depends(get_db),
-):
+) -> authorization.Rules:
     return authorization.Rules(request.headers.get("x-api-key"), session, db)
 
 

@@ -109,6 +109,12 @@ Quetz can also create a channel for a newly connected user:
 :redirect_http_to_https: Enforces that all incoming requests must be `https`. Any incoming requests to `http` will be redirected to the secure scheme instead. Defaults to `false`.
 :package_unpack_threads: Number of parallel threads used for unpacking. Defaults to `1`.
 
+.. code::
+
+   [general]
+   :dev: Whether to enable development features. Do not enable this in production.
+      Fills the database with test data and allows http access.
+
 ``session`` section
 ^^^^^^^^^^^^^^^^^^^
 

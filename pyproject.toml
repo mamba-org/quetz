@@ -58,6 +58,7 @@ venv = ".venv"
 venvPath= "."
 
 [tool.mypy]
+python_version = "3.8"
 ignore_missing_imports = true
 plugins = [
   "sqlmypy"

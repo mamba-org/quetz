@@ -270,22 +270,24 @@ async def route_logout(request):
     return RedirectResponse("/")
 
 
-@api_router.get("/dummylogin/{username}", tags=["dev"])
-def dummy_login(
-    username: str, dao: Dao = Depends(get_dao), session=Depends(get_session)
-):
-    user = dao.get_user_by_username(username)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User '{username}' not found",
-        )
+if config.is_dev():
 
-    logout(session)
-    session["user_id"] = str(uuid.UUID(bytes=user.id))
+    @api_router.get("/dummylogin/{username}", tags=["dev"])
+    def dummy_login(
+        username: str, dao: Dao = Depends(get_dao), session=Depends(get_session)
+    ):
+        user = dao.get_user_by_username(username)
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User '{username}' not found",
+            )
 
-    session["identity_provider"] = "dummy"
-    return RedirectResponse("/")
+        logout(session)
+        session["user_id"] = str(uuid.UUID(bytes=user.id))
+
+        session["identity_provider"] = "dummy"
+        return RedirectResponse("/")
 
 
 @api_router.get("/me", response_model=rest_models.Profile, tags=["users"])
