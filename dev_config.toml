@@ -1,5 +1,3 @@
-[general]
-dev = true
 
 [github]
 # Register the app here: https://github.com/settings/applications/new
@@ -24,4 +22,3 @@ admins = ["dummy:alice"]
 
 [profiling]
 enable_sampling = false
-

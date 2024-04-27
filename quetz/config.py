@@ -5,6 +5,7 @@ import logging
 import logging.config
 import os
 from distutils.util import strtobool
+from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Type, Union
 
@@ -59,7 +60,7 @@ class Config:
         ConfigSection(
             "general",
             [
-                ConfigEntry("dev", bool, required=True),
+                ConfigEntry("dev", bool, required=True, default=False),
                 ConfigEntry("package_unpack_threads", int, 1),
                 ConfigEntry("frontend_dir", str, default=""),
                 ConfigEntry("redirect_http_to_https", bool, False),
@@ -244,7 +245,7 @@ class Config:
             return cls._instances[None]
 
         try:
-            path = os.path.abspath(cls.find_file(deployment_config))
+            path = str(Path(cls.find_file(deployment_config)).absolute().resolve())
         except TypeError:
             # if not config path exists, set it to empty string.
             path = ""

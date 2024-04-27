@@ -393,7 +393,7 @@ def create(
     ],
     copy_conf: Annotated[
         Optional[str],
-        typer.Option(help="The configuration to copy from (e.g. config.toml)"),
+        typer.Option(help="The configuration to copy from (e.g. dev_config.toml)"),
     ] = None,
     create_conf: Annotated[
         bool,
@@ -481,7 +481,7 @@ def create(
         shutil.copyfile(copy_conf, config_file)
 
     if not config_file.exists() and create_conf:
-        conf = create_config(https=str(config.is_dev() if config else True))
+        conf = create_config(https=str(config.is_dev() if config else True).lower())
         with open(config_file, "w") as f:
             f.write(conf)
 
@@ -602,7 +602,7 @@ def run(
     path: Annotated[str, typer.Argument(help="The path of the deployment")],
     copy_conf: Annotated[
         Optional[str],
-        typer.Option(help="The configuration to copy from (e.g. config.toml)"),
+        typer.Option(help="The configuration to copy from (e.g. dev_config.toml)"),
     ] = None,
     create_conf: Annotated[
         bool,

@@ -1,1 +1,1 @@
-export QUETZ_CONFIG_FILE="${PWD}/config.toml"
+export QUETZ_CONFIG_FILE="${PWD}/dev_config.toml"
