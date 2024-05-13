@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y \
     bzip2 \
     ca-certificates \
     curl \
+    git \
     postgresql-client \
     && rm -rf /var/lib/{apt,dpkg,cache,log}
 RUN curl -L https://micro.mamba.pm/api/micromamba/linux-64/latest | \
