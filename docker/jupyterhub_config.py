@@ -572,7 +572,7 @@ c.JupyterHub.services = [
         "url": "http://web:8000",
         # any secret >8 characters, you'll use api_token to
         # authenticate api requests to the hub from your service
-        "oauth_client_id": "quetz_client",
+        "oauth_client_id": "service-quetz-client",
         "oauth_redirect_uri": "http://localhost:8000/auth/jupyterhub/authorize",
         "api_token": "super-secret",
     }
