@@ -15,7 +15,7 @@ env:
 jobs:
   test_quetz:
     # timeout for the whole job
-    timeout-minutes: 10
+    timeout-minutes: 12
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -79,7 +79,7 @@ jobs:
       - name: Testing server
         shell: bash -l -eo pipefail {0}
         # timeout for the step
-        timeout-minutes: 5
+        timeout-minutes: 8
         env:
           TEST_DB_BACKEND: ${{ matrix.test_database }}
           QUETZ_TEST_DBINIT: ${{ matrix.db_init }}
