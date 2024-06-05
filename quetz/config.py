@@ -4,6 +4,7 @@
 import logging
 import logging.config
 import os
+from dataclasses import dataclass
 from distutils.util import strtobool
 from secrets import token_bytes
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Type, Union
@@ -22,6 +23,24 @@ _site_dir = appdirs.site_config_dir("quetz")
 _user_dir = appdirs.user_config_dir("quetz")
 
 PAGINATION_LIMIT = 20
+COMPRESSION_EXTENSIONS = ["bz2", "gz", "zst"]
+
+
+@dataclass
+class CompressionConfig:
+    bz2_enabled: bool
+    gz_enabled: bool
+    zst_enabled: bool
+
+    def enabled_extensions(self):
+        return [
+            ext for ext in COMPRESSION_EXTENSIONS if getattr(self, f"{ext}_enabled")
+        ]
+
+    def disabled_extensions(self):
+        return [
+            ext for ext in COMPRESSION_EXTENSIONS if not getattr(self, f"{ext}_enabled")
+        ]
 
 
 class ConfigEntry(NamedTuple):
@@ -62,6 +81,7 @@ class Config:
                 ConfigEntry("package_unpack_threads", int, 1),
                 ConfigEntry("frontend_dir", str, default=""),
                 ConfigEntry("redirect_http_to_https", bool, False),
+                ConfigEntry("rattler_cache_dir", str, default="rattler_cache"),
             ],
         ),
         ConfigSection(
@@ -230,6 +250,14 @@ class Config:
             [
                 ConfigEntry("soft_delete_channel", bool, required=False, default=False),
                 ConfigEntry("soft_delete_package", bool, required=False, default=False),
+            ],
+        ),
+        ConfigSection(
+            "compression",
+            [
+                ConfigEntry("gz_enabled", bool, default=True),
+                ConfigEntry("bz2_enabled", bool, default=True),
+                ConfigEntry("zst_enabled", bool, default=False),
             ],
         ),
     ]
@@ -442,6 +470,20 @@ class Config:
                 config[first_level.name]["_".join(split_key[idx:]).lower()] = value
 
         return config
+
+    def get_compression_config(self) -> CompressionConfig:
+        """Return the compression configuration.
+
+        Returns
+        -------
+        compression_config : CompressionConfig
+            Class defining which compressions are enabled (bzip2, gzip and zstandard)
+        """
+        return CompressionConfig(
+            self.compression_bz2_enabled,
+            self.compression_gz_enabled,
+            self.compression_zst_enabled,
+        )
 
     def get_package_store(self) -> pkgstores.PackageStore:
         """Return the appropriate package store as set in the config.

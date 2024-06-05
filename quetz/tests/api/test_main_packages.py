@@ -65,14 +65,23 @@ def test_delete_package_non_member(
 
 
 def test_delete_package_versions_with_package(
-    auth_client, public_channel, public_package, package_version, dao, db, pkgstore
+    auth_client,
+    public_channel,
+    public_package,
+    package_version,
+    dao,
+    db,
+    pkgstore,
+    config,
 ):
     assert public_channel.size > 0
     assert public_channel.size == package_version.size
 
     assert package_version.package_name == public_package.name
 
-    update_indexes(dao, pkgstore, public_channel.name)
+    update_indexes(
+        dao, pkgstore, public_channel.name, compression=config.get_compression_config()
+    )
 
     # Get package files
     package_filenames = [

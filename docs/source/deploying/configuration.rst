@@ -245,6 +245,21 @@ the ``redis-server``.
 
 For more information, see :ref:`task_workers`.
 
+``compression`` section
+^^^^^^^^^^^^^^^^^^^^^^^
+
+You can configure which compressions are enabled for the ``repodata.json`` file.
+
+:gz_enabled: enable gzip compression
+:bz2_enabled: enable bzip2 compression
+:zst_enabled: enable zstandard compression
+
+.. note::
+
+   Compression is an expensive operation for big files.
+   Updating local channels index is done in the background, so this isnt' an issue.
+   But for proxy channels, compression is done after downloading the remote ``repodata.json`` and before to serve it.
+
 ``quotas`` section
 ^^^^^^^^^^^^^^^^^^
 

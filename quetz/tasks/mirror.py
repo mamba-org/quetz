@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import json
 import logging
@@ -5,11 +6,15 @@ import os
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 from http.client import IncompleteRead
+from pathlib import Path, PurePath
 from tempfile import SpooledTemporaryFile
 from typing import List
 
+import aiofiles
+import aiofiles.os
 import requests
 from fastapi import HTTPException, status
+from rattler import Channel, ChannelConfig, Platform, fetch_repo_data
 from tenacity import TryAgain, retry
 from tenacity.after import after_log
 from tenacity.stop import stop_after_attempt
@@ -59,6 +64,11 @@ class RemoteRepository:
     def open(self, path):
         return RemoteFile(self.host, path, self.session)
 
+    @property
+    def rattler_channel(self):
+        host_path = PurePath(self.host)
+        return Channel(host_path.name, ChannelConfig(f"{host_path.parent}/"))
+
 
 class RemoteServerError(Exception):
     pass
@@ -106,8 +116,42 @@ class RemoteFile:
         return json.load(self.file)
 
 
+async def download_repodata(repository: RemoteRepository, channel: str, platform: str):
+    cache_path = Path(Config().general_rattler_cache_dir) / channel / platform
+    logger.debug(f"Fetching {platform} repodata from {repository.rattler_channel}")
+    try:
+        await fetch_repo_data(
+            channels=[repository.rattler_channel],
+            platforms=[Platform(platform)],
+            cache_path=cache_path,
+            callback=None,
+        )
+    except Exception as e:
+        logger.error(f"Failed to fetch repodata: {e}")
+        raise
+    files = await aiofiles.os.listdir(cache_path)
+    try:
+        json_file = [
+            filename
+            for filename in files
+            if filename.endswith(".json") and not filename.endswith(".info.json")
+        ][0]
+    except IndexError:
+        logger.error(f"No json file found in rattler cache: {cache_path}")
+        raise RemoteFileNotFound
+    else:
+        async with aiofiles.open(cache_path / json_file, "rb") as f:
+            contents = await f.read()
+        logger.debug(f"Retrieved repodata from rattler cache: {cache_path / json_file}")
+        return contents
+
+
 def download_remote_file(
-    repository: RemoteRepository, pkgstore: PackageStore, channel: str, path: str
+    repository: RemoteRepository,
+    pkgstore: PackageStore,
+    channel: str,
+    path: str,
+    config: Config,
 ):
     """Download a file from a remote repository to a package store"""
 
@@ -122,13 +166,33 @@ def download_remote_file(
     # Acquire a lock to prevent multiple concurrent downloads of the same file
     with pkgstore.create_download_lock(channel, path):
         logger.debug(f"Downloading {path} from {channel} to pkgstore")
-        remote_file = repository.open(path)
-        data_stream = remote_file.file
-
-        if path.endswith(".json"):
-            add_static_file(data_stream.read(), channel, None, path, pkgstore)
+        if path.endswith("/repodata.json"):
+            platform = str(PurePath(path).parent)
+            repodata = asyncio.run(download_repodata(repository, channel, platform))
+            add_static_file(
+                repodata,
+                channel,
+                None,
+                path,
+                pkgstore,
+                compression=config.get_compression_config(),
+            )
         else:
-            pkgstore.add_package(data_stream, channel, path)
+            remote_file = repository.open(path)
+            data_stream = remote_file.file
+
+            if path.endswith(".json"):
+                add_static_file(
+                    data_stream.read(),
+                    channel,
+                    None,
+                    path,
+                    pkgstore,
+                    compression=config.get_compression_config(),
+                )
+            else:
+                pkgstore.add_package(data_stream, channel, path)
+        logger.debug(f"Added {path} from {channel} to pkgstore")
 
     pkgstore.delete_download_lock(channel, path)
 
@@ -435,7 +499,13 @@ def initial_sync_mirror(
         any_updated |= handle_batch(update_batch)
 
     if any_updated:
-        indexing.update_indexes(dao, pkgstore, channel_name, subdirs=[arch])
+        indexing.update_indexes(
+            dao,
+            pkgstore,
+            channel_name,
+            subdirs=[arch],
+            compression=config.get_compression_config(),
+        )
 
 
 def create_packages_from_channeldata(

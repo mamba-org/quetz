@@ -4,7 +4,11 @@ from pathlib import Path
 from conda_index.index import _build_current_repodata
 
 import quetz
+from quetz.config import Config
 from quetz.utils import add_temp_static_file
+
+config = Config()
+compression = config.get_compression_config()
 
 
 @quetz.hookimpl
@@ -25,4 +29,5 @@ def post_package_indexing(tempdir: Path, channel_name, subdirs, files, packages)
             "current_repodata.json",
             tempdir,
             files,
+            compression,
         )

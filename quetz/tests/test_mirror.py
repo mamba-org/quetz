@@ -1,13 +1,19 @@
+import bz2
 import concurrent.futures
+import gzip
 import json
 import os
+import subprocess
+import time
 import uuid
 from io import BytesIO
 from pathlib import Path
+from unittest import mock
 from unittest.mock import MagicMock
 from urllib.parse import urlparse
 
 import pytest
+import zstandard
 
 from quetz import hookimpl, rest_models
 from quetz.authorization import Rules
@@ -21,6 +27,7 @@ from quetz.tasks.mirror import (
     RemoteServerError,
     create_packages_from_channeldata,
     create_versions_from_repodata,
+    download_repodata,
     handle_repodata_package,
     initial_sync_mirror,
 )
@@ -170,7 +177,7 @@ def dummy_remote_session_object(app, dummy_response, repo_content, status_code):
 
     app.dependency_overrides[get_remote_session] = DummySession
 
-    return DummySession()
+    yield DummySession()
 
     app.dependency_overrides.pop(get_remote_session)
 
@@ -192,6 +199,26 @@ def mirror_package(mirror_channel, db):
 
     db.delete(pkg)
     db.commit()
+
+
+@pytest.mark.parametrize(
+    "host, name",
+    [
+        ("https://conda.anaconda.org/conda-forge", "conda-forge"),
+        ("https://conda.anaconda.org/conda-forge/", "conda-forge"),
+        ("https://repod.prefix.dev/conda-forge", "conda-forge"),
+        ("http://localhost:8000/mychannel", "mychannel"),
+        ("http://localhost:8000/path/mychannel", "mychannel"),
+    ],
+)
+def test_remote_repository_rattler_channel(host, name):
+    repository = RemoteRepository(host, session=None)
+    rattler_channel = repository.rattler_channel
+    assert rattler_channel.name == name
+    if host.endswith("/"):
+        assert rattler_channel.base_url == repository.host
+    else:
+        assert rattler_channel.base_url == f"{repository.host}/"
 
 
 def test_set_mirror_url(db, client, owner):
@@ -1378,3 +1405,170 @@ def test_handle_repodata_package_with_plugin(
     )
 
     assert plugin.about["conda_version"] == "4.8.4"
+
+
+@pytest.fixture(scope="session")
+def serve_repo_data() -> None:
+    port, repo_name = 8912, "test-repo"
+
+    test_data_dir = Path(__file__).parent / "data" / "test-server"
+
+    with subprocess.Popen(
+        [
+            "python",
+            str(test_data_dir / "reposerver.py"),
+            "-d",
+            str(test_data_dir / "repo"),
+            "-n",
+            repo_name,
+            "-p",
+            str(port),
+        ]
+    ) as proc:
+        time.sleep(0.5)
+        yield port, repo_name
+        proc.terminate()
+
+
+@pytest.fixture(scope="session")
+def test_repodata_json() -> bytes:
+    repodata_json_file = (
+        Path(__file__).parent
+        / "data"
+        / "test-server"
+        / "repo"
+        / "noarch"
+        / "repodata.json"
+    )
+    return repodata_json_file.read_bytes()
+
+
+@pytest.fixture
+def server_proxy_channel(db, serve_repo_data):
+    port, repo = serve_repo_data
+    channel = Channel(
+        name="server-proxy-channel",
+        mirror_channel_url=f"http://localhost:{port}/{repo}",
+        mirror_mode="proxy",
+    )
+    db.add(channel)
+    db.commit()
+
+    yield channel
+
+    db.delete(channel)
+    db.commit()
+
+
+@pytest.mark.asyncio
+async def test_download_repodata(
+    config,
+    test_repodata_json,
+    serve_repo_data,
+):
+    port, repo = serve_repo_data
+    repository = RemoteRepository(f"http://localhost:{port}/{repo}", session=None)
+    channel = "test-proxy-channel"
+    platform = "noarch"
+    rattler_cache_path = Path(config.general_rattler_cache_dir) / channel / platform
+    assert not rattler_cache_path.exists()
+    with mock.patch("quetz.tasks.mirror.Config", return_value=config):
+        result = await download_repodata(repository, channel, platform)
+    assert rattler_cache_path.is_dir()
+    assert result == test_repodata_json
+
+
+@mock.patch("quetz.tasks.mirror.download_repodata")
+def test_download_remote_file_repodata(
+    mock_download_repodata, client, server_proxy_channel, test_repodata_json
+):
+    """Test downloading repodata.json using download_repodata."""
+    # download from remote server using download_repodata
+    mock_download_repodata.return_value = test_repodata_json
+    assert not mock_download_repodata.called
+    response = client.get(f"/get/{server_proxy_channel.name}/noarch/repodata.json")
+    assert response.status_code == 200
+    assert response.content == test_repodata_json
+    assert mock_download_repodata.call_count == 1
+    # download from cache (download_repodata not called again)
+    response = client.get(f"/get/{server_proxy_channel.name}/noarch/repodata.json")
+    assert response.status_code == 200
+    assert response.content == test_repodata_json
+    assert mock_download_repodata.call_count == 1
+
+
+@mock.patch("quetz.tasks.mirror.download_repodata")
+def test_download_remote_file_current_repodata(
+    mock_download_repodata, client, server_proxy_channel, test_repodata_json
+):
+    """Test downloading current_repodata.json."""
+    response = client.get(
+        f"/get/{server_proxy_channel.name}/noarch/current_repodata.json"
+    )
+    assert response.status_code == 200
+    # current_repodata content is the same as test_repodata_json in the test repo
+    assert response.content == test_repodata_json
+    # download_repodata isn't used (download done with repository.open)
+    assert not mock_download_repodata.called
+
+
+@pytest.fixture(scope="function")
+def config_extra(request=None) -> str:
+    if request is None:
+        return ""
+    return (
+        "[compression]\n"
+        f"bz2_enabled = {str(request.param[0]).lower()}\n"
+        f"gz_enabled = {str(request.param[1]).lower()}\n"
+        f"zst_enabled = {str(request.param[2]).lower()}\n"
+    )
+
+
+@pytest.mark.parametrize(
+    "config_extra",
+    [
+        (False, False, False),
+        (False, False, True),
+        (True, True, True),
+        (True, True, False),
+        (False, True, True),
+    ],
+    indirect=True,
+)
+@mock.patch("quetz.tasks.mirror.download_repodata")
+def test_download_remote_file_repodata_compressed(
+    mock_download_repodata,
+    client,
+    server_proxy_channel,
+    test_repodata_json,
+    config,
+):
+    """Test downloading compressed repodata.json."""
+    # download from remote server using download_repodata
+    mock_download_repodata.return_value = test_repodata_json
+    assert not mock_download_repodata.called
+    is_at_least_one_extension_enabled = False
+    for extension in ("bz2", "gz", "zst"):
+        response = client.get(
+            f"/get/{server_proxy_channel.name}/noarch/repodata.json.{extension}"
+        )
+        if getattr(config, f"compression_{extension}_enabled"):
+            is_at_least_one_extension_enabled = True
+            assert response.status_code == 200
+            if extension == "bz2":
+                data = bz2.decompress(response.content)
+            elif extension == "gz":
+                data = gzip.decompress(response.content)
+            else:
+                data = zstandard.ZstdDecompressor().decompress(response.content)
+            assert data == test_repodata_json
+        else:
+            assert response.status_code == 404
+    if is_at_least_one_extension_enabled:
+        # Check that download_repodata is called only once
+        # (json file downloaded and compressed the first time only)
+        # cache used afterwards
+        assert mock_download_repodata.call_count == 1
+    else:
+        # No extension enabled - only 404 returned
+        assert mock_download_repodata.call_count == 0

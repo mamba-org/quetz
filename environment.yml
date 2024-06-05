@@ -52,5 +52,6 @@ dependencies:
   - pytest-asyncio
   - pytest-timeout
   - pydantic >=2
+  - py-rattler
   - pip:
       - git+https://github.com/jupyter-server/jupyter_releaser.git@v2

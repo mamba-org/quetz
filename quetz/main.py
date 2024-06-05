@@ -13,6 +13,7 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from email.utils import formatdate
+from pathlib import PurePath
 from tempfile import SpooledTemporaryFile, TemporaryFile
 from typing import Awaitable, Callable, List, Optional, Tuple, Type
 
@@ -694,7 +695,7 @@ def post_channel(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
     task: Task = Depends(get_tasks_worker),
-    config=Depends(get_config),
+    config: Config = Depends(get_config),
     session: requests.Session = Depends(get_remote_session),
 ):
     user_id = auth.assert_user()
@@ -751,7 +752,12 @@ def post_channel(
     channel = dao.create_channel(new_channel, user_id, authorization.OWNER, size_limit)
     pkgstore.create_channel(new_channel.name)
     if not is_proxy:
-        indexing.update_indexes(dao, pkgstore, new_channel.name)
+        indexing.update_indexes(
+            dao,
+            pkgstore,
+            new_channel.name,
+            compression=config.get_compression_config(),
+        )
 
     # register mirror
     if is_mirror and register_mirror:
@@ -878,6 +884,7 @@ def delete_package(
     db=Depends(get_db),
     auth: authorization.Rules = Depends(get_rules),
     dao: Dao = Depends(get_dao),
+    config: Config = Depends(get_config),
 ):
     auth.assert_package_delete(package)
 
@@ -904,7 +911,14 @@ def delete_package(
 
     wrapped_bg_task = background_task_wrapper(indexing.update_indexes, logger)
     # Background task to update indexes
-    background_tasks.add_task(wrapped_bg_task, dao, pkgstore, channel_name, platforms)
+    background_tasks.add_task(
+        wrapped_bg_task,
+        dao,
+        pkgstore,
+        channel_name,
+        platforms,
+        compression=config.get_compression_config(),
+    )
 
 
 @api_router.post(
@@ -1232,6 +1246,7 @@ def delete_package_version(
     dao: Dao = Depends(get_dao),
     db=Depends(get_db),
     auth: authorization.Rules = Depends(get_rules),
+    config: Config = Depends(get_config),
 ):
     version = dao.get_package_version_by_filename(
         channel_name, package_name, filename, platform
@@ -1262,7 +1277,14 @@ def delete_package_version(
 
     wrapped_bg_task = background_task_wrapper(indexing.update_indexes, logger)
     # Background task to update indexes
-    background_tasks.add_task(wrapped_bg_task, dao, pkgstore, channel_name, [platform])
+    background_tasks.add_task(
+        wrapped_bg_task,
+        dao,
+        pkgstore,
+        channel_name,
+        [platform],
+        compression=config.get_compression_config(),
+    )
 
 
 @api_router.get(
@@ -1444,13 +1466,20 @@ def post_file_to_package(
     channel: db_models.Channel = Depends(
         ChannelChecker(allow_proxy=False, allow_mirror=False),
     ),
+    config: Config = Depends(get_config),
 ):
     handle_package_files(package.channel, files, dao, auth, force, package=package)
     dao.update_channel_size(package.channel_name)
 
     wrapped_bg_task = background_task_wrapper(indexing.update_indexes, logger)
     # Background task to update indexes
-    background_tasks.add_task(wrapped_bg_task, dao, pkgstore, package.channel_name)
+    background_tasks.add_task(
+        wrapped_bg_task,
+        dao,
+        pkgstore,
+        package.channel_name,
+        compression=config.get_compression_config(),
+    )
 
 
 @api_router.post(
@@ -1465,6 +1494,7 @@ async def post_upload(
     force: bool = False,
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
+    config: Config = Depends(get_config),
 ):
     logger.debug(
         f"Uploading file {filename} with checksum {sha256} to channel {channel_name}"
@@ -1535,7 +1565,13 @@ async def post_upload(
 
     wrapped_bg_task = background_task_wrapper(indexing.update_indexes, logger)
     # Background task to update indexes
-    background_tasks.add_task(wrapped_bg_task, dao, pkgstore, channel_name)
+    background_tasks.add_task(
+        wrapped_bg_task,
+        dao,
+        pkgstore,
+        channel_name,
+        compression=config.get_compression_config(),
+    )
 
 
 @api_router.post("/channels/{channel_name}/files/", status_code=201, tags=["files"])
@@ -1548,6 +1584,7 @@ def post_file_to_channel(
     ),
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
+    config: Config = Depends(get_config),
 ):
     handle_package_files(channel, files, dao, auth, force)
 
@@ -1555,7 +1592,13 @@ def post_file_to_channel(
 
     wrapped_bg_task = background_task_wrapper(indexing.update_indexes, logger)
     # Background task to update indexes
-    background_tasks.add_task(wrapped_bg_task, dao, pkgstore, channel.name)
+    background_tasks.add_task(
+        wrapped_bg_task,
+        dao,
+        pkgstore,
+        channel.name,
+        compression=config.get_compression_config(),
+    )
 
 
 def _assert_filename_package_name_consistent(file_name: str, package_name: str):
@@ -1883,8 +1926,21 @@ def serve_path(
     accept_encoding: Optional[str] = Header(None),
     session=Depends(get_remote_session),
     dao: Dao = Depends(get_dao),
+    config: Config = Depends(get_config),
 ):
     chunk_size = 10_000
+
+    # Ensure we don't serve an old compressed file if this compression is now disabled
+    compression = config.get_compression_config()
+    disabled_compressed_json_extensions = tuple(
+        f".json.{ext}" for ext in compression.disabled_extensions()
+    )
+    if path.endswith(disabled_compressed_json_extensions):
+        suffix = PurePath(path).suffix
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"{channel.name}/{path} not found - {suffix} compression disabled",
+        )
 
     is_package_request = path.endswith((".tar.bz2", ".conda"))
 
@@ -1913,14 +1969,30 @@ def serve_path(
 
     if channel.mirror_channel_url and channel.mirror_mode == "proxy":
         repository = RemoteRepository(channel.mirror_channel_url, session)
-        if not pkgstore.file_exists(channel.name, path):
-            download_remote_file(repository, pkgstore, channel.name, path)
-        elif path.endswith(".json"):
+        enabled_compressed_json_extensions = tuple(
+            f".json.{ext}" for ext in compression.enabled_extensions()
+        )
+        if path.endswith((".json",) + enabled_compressed_json_extensions):
             # repodata.json and current_repodata.json are cached locally
             # for channel.ttl seconds
-            _, fmtime, _ = pkgstore.get_filemetadata(channel.name, path)
+            # if one of the compressed file is requested, we check and download
+            # the non compressed version if needed
+            # (compressed files are created locally and should all have the same fmtime)
+            suffix = PurePath(path).suffix
+            if suffix == ".json":
+                json_path = path
+            else:
+                json_path = path[: -len(suffix)]
+            try:
+                _, fmtime, _ = pkgstore.get_filemetadata(channel.name, json_path)
+            except FileNotFoundError:
+                fmtime = 0
             if time.time() - fmtime >= channel.ttl:
-                download_remote_file(repository, pkgstore, channel.name, path)
+                download_remote_file(
+                    repository, pkgstore, channel.name, json_path, config
+                )
+        elif not pkgstore.file_exists(channel.name, path):
+            download_remote_file(repository, pkgstore, channel.name, path, config)
 
     if (
         is_package_request or pkgstore.kind == "LocalStore"
@@ -1981,8 +2053,9 @@ def serve_channel_index(
     accept_encoding: Optional[str] = Header(None),
     session=Depends(get_remote_session),
     dao: Dao = Depends(get_dao),
+    config: Config = Depends(get_config),
 ):
-    return serve_path("index.html", channel, accept_encoding, session, dao)
+    return serve_path("index.html", channel, accept_encoding, session, dao, config)
 
 
 @app.get("/health/ready", status_code=status.HTTP_200_OK)

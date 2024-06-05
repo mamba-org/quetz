@@ -14,15 +14,31 @@ import sys
 import time
 import traceback
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Optional, Union
 from urllib.parse import unquote
 
+import zstandard
 from sqlalchemy import String, and_, cast, collate, not_, or_
 
+from .config import CompressionConfig
 from .db_models import Channel, Package, PackageVersion, User
+
+# Same values as conda-index
+# https://github.com/conda/conda-index/blob/58cfdba8cf37b0aa9f5876665025c5949f046a4b/conda_index/index/__init__.py#L46
+ZSTD_COMPRESS_LEVEL = 16
+ZSTD_COMPRESS_THREADS = -1  # automatic
+
+
+@dataclass
+class Compressed:
+    raw_file: bytes
+    bz2_file: Optional[bytes]
+    gz_file: Optional[bytes]
+    zst_file: Optional[bytes]
 
 
 def check_package_membership(package_name, includelist, excludelist):
@@ -39,32 +55,43 @@ def check_package_membership(package_name, includelist, excludelist):
     return True
 
 
-def add_static_file(contents, channel_name, subdir, fname, pkgstore, file_index=None):
-    if not isinstance(contents, bytes):
-        raw_file = contents.encode("utf-8")
-    else:
-        raw_file = contents
-    bz2_file = bz2.compress(raw_file)
-    gzp_file = gzip.compress(raw_file)
-
+def add_static_file(
+    contents,
+    channel_name,
+    subdir,
+    fname,
+    pkgstore,
+    file_index=None,
+    compression: Optional[CompressionConfig] = None,
+):
+    if compression is None:
+        compression = CompressionConfig(False, False, False)
+    compressed = compress_file(contents, compression)
     path = f"{subdir}/{fname}" if subdir else fname
-    pkgstore.add_file(bz2_file, channel_name, f"{path}.bz2")
-    pkgstore.add_file(gzp_file, channel_name, f"{path}.gz")
-    pkgstore.add_file(raw_file, channel_name, f"{path}")
+    if compression.bz2_enabled:
+        pkgstore.add_file(compressed.bz2_file, channel_name, f"{path}.bz2")
+    if compression.gz_enabled:
+        pkgstore.add_file(compressed.gz_file, channel_name, f"{path}.gz")
+    if compression.zst_enabled:
+        pkgstore.add_file(compressed.zst_file, channel_name, f"{path}.zst")
+    pkgstore.add_file(compressed.raw_file, channel_name, f"{path}")
 
     if file_index:
-        add_entry_for_index(file_index, subdir, fname, raw_file)
-        add_entry_for_index(file_index, subdir, f"{fname}.bz2", bz2_file)
-        add_entry_for_index(file_index, subdir, f"{fname}.gz", gzp_file)
+        add_compressed_entry_for_index(file_index, subdir, fname, compressed)
 
 
 def add_temp_static_file(
-    contents, channel_name, subdir, fname, temp_dir, file_index=None
+    contents,
+    channel_name,
+    subdir,
+    fname,
+    temp_dir,
+    file_index=None,
+    compression: Optional[CompressionConfig] = None,
 ):
-    if not isinstance(contents, bytes):
-        raw_file = contents.encode("utf-8")
-    else:
-        raw_file = contents
+    if compression is None:
+        compression = CompressionConfig(False, False, False)
+    compressed = compress_file(contents, compression)
 
     temp_dir = Path(temp_dir)
 
@@ -79,21 +106,48 @@ def add_temp_static_file(
     file_path = path / fname
 
     with open(file_path, "wb") as fo:
-        fo.write(raw_file)
-
-    bz2_file = bz2.compress(raw_file)
-    gzp_file = gzip.compress(raw_file)
-
-    with open(f"{file_path}.bz2", "wb") as fo:
-        fo.write(bz2_file)
-
-    with open(f"{file_path}.gz", "wb") as fo:
-        fo.write(gzp_file)
+        fo.write(compressed.raw_file)
+    if compressed.bz2_file:
+        with open(f"{file_path}.bz2", "wb") as fo:
+            fo.write(compressed.bz2_file)
+    if compressed.gz_file:
+        with open(f"{file_path}.gz", "wb") as fo:
+            fo.write(compressed.gz_file)
+    if compressed.zst_file:
+        with open(f"{file_path}.zst", "wb") as fo:
+            fo.write(compressed.zst_file)
 
     if file_index:
-        add_entry_for_index(file_index, subdir, fname, raw_file)
-        add_entry_for_index(file_index, subdir, f"{fname}.bz2", bz2_file)
-        add_entry_for_index(file_index, subdir, f"{fname}.gz", gzp_file)
+        add_compressed_entry_for_index(file_index, subdir, fname, compressed)
+
+
+def compress_file(
+    contents: Union[str, bytes], compression: CompressionConfig
+) -> Compressed:
+    if not isinstance(contents, bytes):
+        raw_file = contents.encode("utf-8")
+    else:
+        raw_file = contents
+    bz2_file = bz2.compress(raw_file) if compression.bz2_enabled else None
+    gz_file = gzip.compress(raw_file) if compression.gz_enabled else None
+    zst_file = (
+        zstandard.ZstdCompressor(
+            level=ZSTD_COMPRESS_LEVEL, threads=ZSTD_COMPRESS_THREADS
+        ).compress(raw_file)
+        if compression.zst_enabled
+        else None
+    )
+    return Compressed(raw_file, bz2_file, gz_file, zst_file)
+
+
+def add_compressed_entry_for_index(file_index, subdir, fname, compressed: Compressed):
+    add_entry_for_index(file_index, subdir, fname, compressed.raw_file)
+    if compressed.bz2_file:
+        add_entry_for_index(file_index, subdir, f"{fname}.bz2", compressed.bz2_file)
+    if compressed.gz_file:
+        add_entry_for_index(file_index, subdir, f"{fname}.gz", compressed.gz_file)
+    if compressed.zst_file:
+        add_entry_for_index(file_index, subdir, f"{fname}.zst", compressed.zst_file)
 
 
 def add_entry_for_index(files, subdir, fname, data_bytes):

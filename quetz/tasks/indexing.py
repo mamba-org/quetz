@@ -9,6 +9,7 @@ import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 from jinja2.exceptions import UndefinedError
@@ -16,6 +17,7 @@ from jinja2.exceptions import UndefinedError
 import quetz.config
 from quetz import channel_data, repo_data
 from quetz.condainfo import MAX_CONDA_TIMESTAMP
+from quetz.config import CompressionConfig
 from quetz.db_models import PackageVersion
 from quetz.utils import add_static_file, add_temp_static_file
 
@@ -88,7 +90,9 @@ def _subdir_key(dir):
     return _subdir_order.get(dir, dir)
 
 
-def validate_packages(dao, pkgstore, channel_name):
+def validate_packages(
+    dao, pkgstore, channel_name, compression: Optional[CompressionConfig] = None
+):
     # for now we're just validating the size of the uploaded file
     logger.info("Starting package validation")
 
@@ -175,10 +179,21 @@ def validate_packages(dao, pkgstore, channel_name):
         logger.info(f"Wrong size: {wrong_size}")
         logger.info(f"Not uploaded: {inexistent}")
 
-    update_indexes(dao, pkgstore, channel_name)
+    update_indexes(
+        dao,
+        pkgstore,
+        channel_name,
+        compression=compression,
+    )
 
 
-def update_indexes(dao, pkgstore, channel_name, subdirs=None):
+def update_indexes(
+    dao,
+    pkgstore,
+    channel_name,
+    subdirs=None,
+    compression: Optional[CompressionConfig] = None,
+):
     jinjaenv = _jinjaenv()
     channeldata = channel_data.export(dao, channel_name)
 
@@ -187,7 +202,14 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
 
     # Generate channeldata.json and its compressed version
     chandata_json = json.dumps(channeldata, indent=2, sort_keys=False)
-    add_static_file(chandata_json, channel_name, None, "channeldata.json", pkgstore)
+    add_static_file(
+        chandata_json,
+        channel_name,
+        None,
+        "channeldata.json",
+        pkgstore,
+        compression=compression,
+    )
 
     # Generate index.html for the "root" directory
     channel_index = jinjaenv.get_template("channeldata-index.html.j2").render(
@@ -196,11 +218,11 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
         subdirs=subdirs,
         current_time=datetime.now(timezone.utc),
     )
-
+    # No compressed version created
     add_static_file(channel_index, channel_name, None, "index.html", pkgstore)
 
     # NB. No rss.xml is being generated here
-    files = {}
+    files: Dict[str, Any] = {}
     packages = {}
     subdir_template = jinjaenv.get_template("subdir-index.html.j2")
 
@@ -227,7 +249,13 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
         repodata = json.dumps(raw_repodata, indent=2, sort_keys=False)
 
         add_temp_static_file(
-            repodata, channel_name, sdir, "repodata.json", tempdir_path, files
+            repodata,
+            channel_name,
+            sdir,
+            "repodata.json",
+            tempdir_path,
+            files,
+            compression=compression,
         )
 
     try:
@@ -251,6 +279,7 @@ def update_indexes(dao, pkgstore, channel_name, subdirs=None):
             current_time=datetime.now(timezone.utc),
             add_files=files[sdir],
         )
+        # No compressed version created
         add_static_file(subdir_index_html, channel_name, sdir, "index.html", pkgstore)
 
     # recursively walk through the tree

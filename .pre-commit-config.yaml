@@ -1,4 +1,4 @@
-exclude: (quetz/migrations)
+exclude: ^(quetz/migrations|quetz/tests/data/test-server/)
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.

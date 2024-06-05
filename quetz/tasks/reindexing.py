@@ -172,7 +172,9 @@ def reindex_packages_from_store(
         )
 
         try:
-            update_indexes(dao, pkgstore, channel_name)
+            update_indexes(
+                dao, pkgstore, channel_name, compression=config.get_compression_config()
+            )
             dao.db.commit()
         except IntegrityError:
             dao.rollback()
