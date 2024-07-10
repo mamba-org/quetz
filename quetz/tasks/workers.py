@@ -148,7 +148,7 @@ def job_wrapper(
         db = dao.db
         close_session = False
     else:
-        db = get_session(config.sqlalchemy_database_url)
+        db = get_session(config)
         close_session = True
 
     user_id: Optional[str]
