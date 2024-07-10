@@ -62,7 +62,7 @@ def test_post_add_package_version(package_version, config, db, session_maker):
 
     from quetz_runexports import main
 
-    with mock.patch("quetz_runexports.main.get_db_manager", get_db):
+    with mock.patch("quetz_runexports.main.get_session", get_db):
         main.post_add_package_version(package_version, condainfo)
 
     meta = db.query(db_models.PackageVersionMetadata).first()
@@ -71,7 +71,7 @@ def test_post_add_package_version(package_version, config, db, session_maker):
 
     # modify runexport and re-save
     condainfo.run_exports = {"weak": ["somepackage < 0.3"]}
-    with mock.patch("quetz_runexports.main.get_db_manager", get_db):
+    with mock.patch("quetz_runexports.main.get_session", get_db):
         main.post_add_package_version(package_version, condainfo)
 
     meta = db.query(db_models.PackageVersionMetadata).all()

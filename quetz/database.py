@@ -2,7 +2,6 @@
 # Distributed under the terms of the Modified BSD License.
 import logging
 import re
-from contextlib import contextmanager
 from typing import Callable
 
 from sqlalchemy import create_engine, event
@@ -66,19 +65,16 @@ def get_session_maker(engine) -> Callable[[], Session]:
     return sessionmaker(autocommit=False, autoflush=True, bind=engine)
 
 
-def get_session(db_url: str, **kwargs) -> Session:
+def get_session(config: Config | None) -> Session:
     """Get a database session.
-
-    Important note: this function is mocked during tests!
+    ea
+        Important note: this function is mocked during tests!
 
     """
-    return get_session_maker(get_engine(db_url, **kwargs))()
+    if config is None:
+        config = Config()
 
-
-@contextmanager
-def get_db_manager():
-    config = Config()
-    db = get_session(
+    engine = get_engine(
         db_url=config.sqlalchemy_database_url,
         echo=config.sqlalchemy_echo_sql,
         postgres_kwargs=dict(
@@ -86,11 +82,7 @@ def get_db_manager():
             max_overflow=config.sqlalchemy_postgres_max_overflow,
         ),
     )
-
-    try:
-        yield db
-    finally:
-        db.close()
+    return get_session_maker(engine)()
 
 
 def sanitize_db_url(db_url: str) -> str:

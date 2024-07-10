@@ -359,8 +359,8 @@ def add_user_roles(
     config = _get_config(path)
 
     with working_directory(path):
-        db = get_session(config.sqlalchemy_database_url)
-        _set_user_roles(db, config)
+        with get_session(config) as db:
+            _set_user_roles(db, config)
 
 
 @app.command()
@@ -500,11 +500,11 @@ def create(
     deployment_folder.joinpath("channels").mkdir(exist_ok=True)
 
     with working_directory(db_path):
-        db = get_session(config.sqlalchemy_database_url)
         _run_migrations(config.sqlalchemy_database_url)
-        if dev:
-            _fill_test_database(db)
-        _set_user_roles(db, config)
+        with get_session(config) as db:
+            if dev:
+                _fill_test_database(db)
+            _set_user_roles(db, config)
 
 
 def _get_config(path: Union[Path, str]) -> Config:
@@ -758,14 +758,12 @@ def start_supervisor_daemon(path: Path, num_procs=None):
     # is set there (it only matters for sqlite database).
     db_path = path if path.joinpath("config.toml").exists() else os.getcwd()
     with working_directory(db_path):
-        db = get_session(config.sqlalchemy_database_url)
-        supervisor = Supervisor(db, manager)
-        try:
-            supervisor.run()
-        except KeyboardInterrupt:
-            logger.info("stopping supervisor")
-        finally:
-            db.close()
+        with get_session(config) as db:
+            supervisor = Supervisor(db, manager)
+            try:
+                supervisor.run()
+            except KeyboardInterrupt:
+                logger.info("stopping supervisor")
 
 
 @app.command()

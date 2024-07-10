@@ -8,7 +8,7 @@ from libmambapy import bindings as libmamba_api
 
 from quetz import authorization
 from quetz.config import Config
-from quetz.database import get_db_manager
+from quetz.database import get_session
 from quetz.deps import get_rules
 
 from . import db_models
@@ -102,7 +102,7 @@ def post_role(
 ):
     auth.assert_channel_roles(channel, ["owner"])
 
-    with get_db_manager() as db:
+    with get_session() as db:
         existing_role_count = (
             db.query(db_models.ContentTrustRole)
             .filter(
@@ -190,7 +190,7 @@ def get_role(
 ):
     auth.assert_channel_roles(channel, ["owner", "maintainer", "member"])
 
-    with get_db_manager() as db:
+    with get_session() as db:
         query = (
             db.query(db_models.ContentTrustRole)
             .filter(db_models.ContentTrustRole.channel == channel)
@@ -211,7 +211,7 @@ def get_new_key(secret: bool = False):
     mamba_key = libmamba_api.Key.from_ed25519(key.public_key)
     private_key = key.private_key
 
-    with get_db_manager() as db:
+    with get_session() as db:
         db.add(key)
         db.commit()
 

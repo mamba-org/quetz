@@ -9,7 +9,7 @@ import zstandard
 
 import quetz
 from quetz.config import Config
-from quetz.database import get_db_manager
+from quetz.database import get_session
 from quetz.db_models import PackageFormatEnum, PackageVersion
 from quetz.utils import add_temp_static_file
 
@@ -107,7 +107,7 @@ def _load_instructions(tar, path):
 
 @quetz.hookimpl(tryfirst=True)
 def post_package_indexing(tempdir: Path, channel_name, subdirs, files, packages):
-    with get_db_manager() as db:
+    with get_session() as db:
         query = (
             db.query(PackageVersion)
             .filter(

@@ -21,11 +21,10 @@ from quetz.db_models import (
 def init_test_db():
     config = Config()
     init_db(config.sqlalchemy_database_url)
-    db = get_session(config.sqlalchemy_database_url)
 
-    testUsers = []
+    with get_session(config) as db:
+        testUsers = []
 
-    try:
         for index, username in enumerate(["alice", "bob", "carol", "dave"]):
             user = User(id=uuid.uuid4().bytes, username=username)
 
@@ -102,8 +101,6 @@ def init_test_db():
 
             db.add(channel_member)
         db.commit()
-    finally:
-        db.close()
 
 
 if __name__ == "__main__":

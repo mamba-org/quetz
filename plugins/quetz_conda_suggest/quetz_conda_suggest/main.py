@@ -4,7 +4,7 @@ from sqlalchemy import and_, func
 
 import quetz
 from quetz.config import Config
-from quetz.database import get_db_manager
+from quetz.database import get_session
 from quetz.db_models import PackageVersion
 from quetz.utils import add_entry_for_index
 
@@ -45,7 +45,7 @@ def post_add_package_version(version, condainfo):
             if command not in suggest_map:
                 suggest_map[command] = package
 
-    with get_db_manager() as db:
+    with get_session() as db:
         if not version.binfiles:
             metadata = db_models.CondaSuggestMetadata(
                 version_id=version.id, data=json.dumps(suggest_map)

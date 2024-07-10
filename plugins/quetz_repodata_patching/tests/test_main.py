@@ -300,7 +300,7 @@ def test_post_package_indexing(
     def get_db():
         yield db
 
-    with mock.patch("quetz_repodata_patching.main.get_db_manager", get_db):
+    with mock.patch("quetz_repodata_patching.main.get_session", get_db):
         indexing.update_indexes(dao, pkgstore, channel_name)
 
     ext = "json.bz2" if compressed_repodata else "json"
@@ -378,7 +378,7 @@ def test_index_html(
     def get_db():
         yield db
 
-    with mock.patch("quetz_repodata_patching.main.get_db_manager", get_db):
+    with mock.patch("quetz_repodata_patching.main.get_session", get_db):
         indexing.update_indexes(dao, pkgstore, channel_name)
 
     index_path = os.path.join(
@@ -419,7 +419,7 @@ def test_patches_for_subdir(
     def get_db():
         yield db
 
-    with mock.patch("quetz_repodata_patching.main.get_db_manager", get_db):
+    with mock.patch("quetz_repodata_patching.main.get_session", get_db):
         indexing.update_indexes(dao, pkgstore, channel_name)
 
     index_path = os.path.join(
@@ -471,7 +471,7 @@ def test_no_repodata_patches_package(
     def get_db():
         yield db
 
-    with mock.patch("quetz_repodata_patching.main.get_db_manager", get_db):
+    with mock.patch("quetz_repodata_patching.main.get_session", get_db):
         indexing.update_indexes(dao, pkgstore, channel_name)
 
     index_path = os.path.join(

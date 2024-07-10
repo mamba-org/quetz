@@ -2,7 +2,6 @@ import io
 import shutil
 import tarfile
 import tempfile
-from contextlib import contextmanager
 from unittest import mock
 
 import pytest
@@ -27,13 +26,12 @@ def test_post_add_package_version(package_version, db, config):
         target.seek(0)
         condainfo = CondaInfo(target, filename)
 
-    @contextmanager
     def get_db():
-        yield db
+        return db
 
     from quetz_conda_suggest import main
 
-    with mock.patch("quetz_conda_suggest.main.get_db_manager", get_db):
+    with mock.patch("quetz_conda_suggest.main.get_session", get_db):
         main.post_add_package_version(package_version, condainfo)
 
     meta = db.query(db_models.CondaSuggestMetadata).first()
@@ -50,7 +48,7 @@ def test_post_add_package_version(package_version, db, config):
         b"lib/libtpkg.so\n",
         b"lib/pkgconfig/libtpkg.pc\n",
     ]
-    with mock.patch("quetz_conda_suggest.main.get_db_manager", get_db):
+    with mock.patch("quetz_conda_suggest.main.get_session", get_db):
         main.post_add_package_version(package_version, condainfo)
 
     meta = db.query(db_models.CondaSuggestMetadata).all()
@@ -76,7 +74,6 @@ def test_conda_suggest_endpoint_with_upload(
     response = client.get("/api/dummylogin/madhurt")
     filename = "test-package-0.1-0.tar.bz2"
 
-    @contextmanager
     def get_db():
         yield db
 
@@ -114,7 +111,7 @@ def test_conda_suggest_endpoint_with_upload(
     tar.addfile(t, io.BytesIO(b))
     tar.close()
 
-    with mock.patch("quetz_conda_suggest.main.get_db_manager", get_db):
+    with mock.patch("quetz_conda_suggest.main.get_session", get_db):
         url = f"/api/channels/{channel.name}/files/"
         files = {"files": (filename, open(filename, "rb"))}
         response = client.post(url, files=files)

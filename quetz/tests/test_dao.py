@@ -7,7 +7,7 @@ from sqlalchemy.orm.exc import ObjectDeletedError
 
 from quetz import errors, rest_models
 from quetz.dao import Dao
-from quetz.database import get_session
+from quetz.database import get_engine, get_session_maker
 from quetz.db_models import Channel, Package, PackageVersion
 from quetz.metrics.db_models import IntervalType, PackageVersionMetric, round_timestamp
 
@@ -406,10 +406,11 @@ def db_extra(database_url):
     Use only for tests that require two sessions concurrently.
     For most cases you will want to use the db fixture (from quetz.testing.fixtures)"""
 
-    session = get_session(database_url)
-
+    engine = get_engine(
+        db_url=database_url,
+    )
+    session = get_session_maker(engine)()
     yield session
-
     session.close()
 
 

@@ -15,7 +15,6 @@ repos:
       - id: mypy
         files: ^quetz/
         additional_dependencies:
-          - sqlalchemy-stubs
           - types-click
           - types-Jinja2
           - types-mock

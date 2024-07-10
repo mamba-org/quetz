@@ -4,7 +4,7 @@ from pathlib import Path
 from sqlalchemy import desc
 
 import quetz
-from quetz.database import get_db_manager
+from quetz.database import get_session
 
 from . import db_models
 from .api import router
@@ -21,7 +21,7 @@ def register_router():
 def post_index_creation(raw_repodata: dict, channel_name, subdir):
     """Use available online keys to sign packages"""
 
-    with get_db_manager() as db:
+    with get_session() as db:
         query = (
             db.query(db_models.SigningKey)
             .join(db_models.RoleDelegation.keys)

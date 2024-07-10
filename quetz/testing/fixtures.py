@@ -1,7 +1,7 @@
 import os
 import shutil
 import tempfile
-from typing import List
+from typing import List, Iterator
 
 import pytest
 from alembic.command import upgrade as alembic_upgrade
@@ -13,6 +13,7 @@ from quetz.config import Config
 from quetz.dao import Dao
 from quetz.database import get_engine, get_session_maker
 from quetz.db_models import Base
+from sqlalchemy.orm import Session
 
 
 def pytest_configure(config):
@@ -118,7 +119,7 @@ def auto_rollback():
 
 
 @pytest.fixture
-def session_maker(sql_connection, create_tables, auto_rollback):
+def session_maker(sql_connection, create_tables, auto_rollback) -> Iterator[Session]:
     # run the tests with a separate external DB transaction
     # so that we can easily rollback all db changes (even if committed)
     # done by the test client
