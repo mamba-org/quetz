@@ -4,6 +4,7 @@ import logging
 import re
 from typing import Callable
 
+import sqlalchemy
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine.url import make_url
@@ -61,8 +62,10 @@ def get_engine(db_url, reuse_engine=True, postgres_kwargs=None, **kwargs) -> Eng
     return engine
 
 
-def get_session_maker(engine) -> Callable[[], Session]:
-    return sessionmaker(autocommit=False, autoflush=True, bind=engine)
+def get_session_maker(
+    bind: sqlalchemy.engine.Engine | sqlalchemy.engine.Connection,
+) -> Callable[[], Session]:
+    return sessionmaker(autocommit=False, autoflush=True, bind=bin)
 
 
 def get_session(config: Config | None) -> Session:

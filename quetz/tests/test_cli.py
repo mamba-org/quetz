@@ -8,6 +8,7 @@ from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
+import sqlalchemy
 import sqlalchemy as sa
 from alembic.script import ScriptDirectory
 from pytest_mock.plugin import MockerFixture
@@ -49,14 +50,14 @@ def user_with_identity(user, db):
     return identity
 
 
-def get_user(db, config_dir, username="bartosz"):
-    def get_db(_):
-        return db
-
-    with mock.patch("quetz.cli.get_session", get_db):
+def get_user(
+    session_maker: sqlalchemy.orm.sessionmaker, config_dir, username="bartosz"
+):
+    with mock.patch("quetz.cli.get_session", session_maker):
         cli.add_user_roles(config_dir)
 
-    return db.query(User).filter(User.username == username).one_or_none()
+    with session_maker() as db:
+        return db.query(User).filter(User.username == username).one_or_none()
 
 
 def test_init_db(db, config, config_dir, mocker):
@@ -81,9 +82,13 @@ def test_create_user_from_config(
 
 @pytest.mark.parametrize("user_group", [None])
 def test_set_user_roles_no_user(
-    db, config, config_dir, user_group, mocker: MockerFixture
+    session_maker_expire_on_commit,
+    config,
+    config_dir,
+    user_group,
+    mocker: MockerFixture,
 ):
-    user = get_user(db, config_dir)
+    user = get_user(session_maker_expire_on_commit, config_dir)
 
     assert user is None
 

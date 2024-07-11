@@ -1,9 +1,10 @@
 import os
 import shutil
 import tempfile
-from typing import List, Iterator
+from typing import List, Iterator, Callable
 
 import pytest
+import sqlalchemy.orm
 from alembic.command import upgrade as alembic_upgrade
 from fastapi.testclient import TestClient
 
@@ -30,13 +31,13 @@ def pytest_unconfigure(config):
 
 
 @pytest.fixture
-def sqlite_in_memory():
+def sqlite_in_memory() -> bool:
     """whether to create a sqlite DB in memory or on the filesystem."""
     return True
 
 
 @pytest.fixture
-def sqlite_url(sqlite_in_memory):
+def sqlite_url(sqlite_in_memory: bool) -> str:
     if sqlite_in_memory:
         yield "sqlite:///:memory:"
     else:
@@ -48,19 +49,19 @@ def sqlite_url(sqlite_in_memory):
 
 
 @pytest.fixture
-def database_url(sqlite_url):
+def database_url(sqlite_url: str) -> str:
     db_url = os.environ.get("QUETZ_TEST_DATABASE", sqlite_url)
     return db_url
 
 
 @pytest.fixture
-def sql_echo():
+def sql_echo() -> bool:
     """whether to activate SQL echo during the tests or not."""
     return False
 
 
 @pytest.fixture
-def engine(database_url, sql_echo):
+def engine(database_url: str, sql_echo: bool) -> sqlalchemy.Engine:
     sql_echo = bool(os.environ.get("QUETZ_TEST_ECHO_SQL", sql_echo))
     engine = get_engine(database_url, echo=sql_echo, reuse_engine=False)
     yield engine
@@ -119,7 +120,9 @@ def auto_rollback():
 
 
 @pytest.fixture
-def session_maker(sql_connection, create_tables, auto_rollback) -> Iterator[Session]:
+def session_maker(
+    sql_connection: sqlalchemy.Connection, create_tables, auto_rollback: bool
+) -> Iterator[sqlalchemy.orm.sessionmaker]:
     # run the tests with a separate external DB transaction
     # so that we can easily rollback all db changes (even if committed)
     # done by the test client
@@ -142,14 +145,22 @@ def session_maker(sql_connection, create_tables, auto_rollback) -> Iterator[Sess
 
 
 @pytest.fixture
-def expires_on_commit():
-    return True
+def session_maker_expire_on_commit(
+    session_maker,
+) -> Callable[[], sqlalchemy.orm.sessionmaker]:
+    def maker(*args, **kwargs) -> sqlalchemy.orm.Session:
+        session = session_maker()
+        session.expire_on_commit = True
+        return session
+
+    return maker
 
 
 @pytest.fixture
-def db(session_maker, expires_on_commit):
-    session = session_maker()
-    session.expire_on_commit = expires_on_commit
+def db(
+    session_maker_expire_on_commit: sqlalchemy.orm.sessionmaker,
+) -> Iterator[sqlalchemy.orm.Session]:
+    session = session_maker_expire_on_commit()
     yield session
     session.close()
 
