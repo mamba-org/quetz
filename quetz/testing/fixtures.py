@@ -146,7 +146,7 @@ def session_maker(
 
 @pytest.fixture
 def session_maker_expire_on_commit(
-    session_maker,
+    session_maker: sqlalchemy.orm.sessionmaker,
 ) -> Callable[[], sqlalchemy.orm.sessionmaker]:
     def maker(*args, **kwargs) -> sqlalchemy.orm.Session:
         session = session_maker()

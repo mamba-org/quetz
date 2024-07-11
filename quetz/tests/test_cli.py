@@ -4,6 +4,7 @@ import sys
 import tempfile
 from multiprocessing import Process
 from pathlib import Path
+from typing import Callable
 from unittest import mock
 from unittest.mock import MagicMock
 
@@ -71,9 +72,9 @@ def test_init_db(db, config, config_dir, mocker):
     [("admins", "owner"), ("maintainers", "maintainer"), ("members", "member")],
 )
 def test_create_user_from_config(
-    db, config, config_dir, user_group, expected_role, mocker, user_with_identity
+    session_maker_expire_on_commit, config, config_dir, user_group, expected_role, mocker, user_with_identity
 ):
-    user = get_user(db, config_dir)
+    user = get_user(session_maker_expire_on_commit, config_dir)
     assert user
 
     assert user.role == expected_role
@@ -94,9 +95,9 @@ def test_set_user_roles_no_user(
 
 
 def test_set_user_roles_user_exists(
-    db, config, config_dir, user, mocker, user_with_identity
+    session_maker_expire_on_commit, config, config_dir, user, mocker, user_with_identity
 ):
-    user = get_user(db, config_dir)
+    user = get_user(session_maker_expire_on_commit, config_dir)
     assert user
 
     assert user.role == "owner"
@@ -106,13 +107,17 @@ def test_set_user_roles_user_exists(
 @pytest.mark.parametrize("default_role", [None, "member"])
 @pytest.mark.parametrize("current_role", ["owner", "member", "maintainer"])
 def test_set_user_roles_user_has_role(
-    db, config, config_dir, user, mocker, user_with_identity, current_role, default_role
+    session_maker_expire_on_commit: sqlalchemy.orm.sessionmaker, config: Config, config_dir: str, user: User, mocker, user_with_identity: Identity, current_role: str, default_role: str | None
 ):
-    user.role = current_role
-    db.commit()
-    user = get_user(db, config_dir)
+
+    with session_maker_expire_on_commit() as db:
+        user.role = current_role
+        db.commit()
+
+    user = get_user(session_maker_expire_on_commit, config_dir)
     assert user
 
+    # TODO: I do not understand this test. Why is default_role parametrized?
     # role shouldn't be changed unless it's default role
     if current_role != default_role:
         assert user.role == current_role
@@ -122,20 +127,19 @@ def test_set_user_roles_user_has_role(
 
 
 @pytest.mark.parametrize("config_extra", ['[users]\nadmins = ["dummy:alice"]\n'])
-def test_init_db_create_test_users(db, config, mocker, config_dir):
+def test_init_db_create_test_users(session_maker_expire_on_commit: Callable[[], sqlalchemy.orm.Session], config, mocker, config_dir):
     _run_migrations: MagicMock = mocker.patch("quetz.cli._run_migrations")
 
-    def get_db(_):
-        return db
 
-    with mock.patch("quetz.cli.get_session", get_db):
+    with mock.patch("quetz.cli.get_session", session_maker_expire_on_commit):
         cli.create(
             Path(config_dir) / "new-deployment",
             copy_conf="config.toml",
             dev=True,
         )
 
-    user = db.query(User).filter(User.username == "alice").one_or_none()
+    with session_maker_expire_on_commit() as db:
+        user = db.query(User).filter(User.username == "alice").one_or_none()
 
     assert user.role == "owner"
 
