@@ -1,7 +1,7 @@
 import os
 import shutil
 import tempfile
-from typing import List, Iterator, Callable
+from typing import List, Iterator
 
 import pytest
 import sqlalchemy.orm
@@ -14,7 +14,6 @@ from quetz.config import Config
 from quetz.dao import Dao
 from quetz.database import get_engine, get_session_maker
 from quetz.db_models import Base
-from sqlalchemy.orm import Session
 
 
 def pytest_configure(config):
@@ -145,24 +144,11 @@ def session_maker(
 
 
 @pytest.fixture
-def session_maker_expire_on_commit(
-    session_maker: sqlalchemy.orm.sessionmaker,
-) -> Callable[[], sqlalchemy.orm.sessionmaker]:
-    def maker(*args, **kwargs) -> sqlalchemy.orm.Session:
-        session = session_maker()
-        session.expire_on_commit = True
-        return session
-
-    return maker
-
-
-@pytest.fixture
 def db(
-    session_maker_expire_on_commit: sqlalchemy.orm.sessionmaker,
+    session_maker: sqlalchemy.orm.sessionmaker,
 ) -> Iterator[sqlalchemy.orm.Session]:
-    session = session_maker_expire_on_commit()
-    yield session
-    session.close()
+    with session_maker() as db:
+        yield db
 
 
 @pytest.fixture
@@ -282,7 +268,7 @@ def app(config, db, mocker):
 
 
 @pytest.fixture
-def client(app):
+def client(app) -> TestClient:
     client = TestClient(app)
     return client
 

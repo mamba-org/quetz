@@ -3,6 +3,7 @@ import uuid
 
 import pytest
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import ObjectDeletedError
 
 from quetz import errors, rest_models
@@ -170,7 +171,7 @@ def test_update_channel_size(dao, channel, db, package_version):
 
 
 def test_increment_download_count(
-    dao: Dao, channel, db, package_version, session_maker
+    dao: Dao, channel: Channel, db: Session, package_version: PackageVersion
 ):
     assert package_version.download_count == 0
     now = datetime.datetime(2020, 10, 1, 10, 1, 10)

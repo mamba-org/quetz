@@ -5,8 +5,13 @@ from unittest import mock
 
 import pytest
 from quetz_runexports import db_models
+from sqlalchemy.orm import Session
+from starlette.testclient import TestClient
 
+from plugins.quetz_runexports.quetz_runexports.db_models import PackageVersionMetadata
 from quetz.condainfo import CondaInfo
+from quetz.config import Config
+from quetz.db_models import PackageVersion, Package, Channel
 
 pytest_plugins = "quetz.testing.fixtures"
 
@@ -17,13 +22,12 @@ def plugins():
 
 
 def test_run_exports_endpoint(
-    client,
-    channel,
-    package,
-    package_version,
-    package_runexports,
-    db,
-    session_maker,
+    client: TestClient,
+    channel: Channel,
+    package: Package,
+    package_version: PackageVersion,
+    package_runexports: PackageVersionMetadata,
+    db: Session,
 ):
     filename = package_version.filename
     platform = package_version.platform
@@ -36,7 +40,10 @@ def test_run_exports_endpoint(
 
 
 def test_endpoint_without_metadata(
-    client, channel, package, package_version, db, session_maker
+    client: TestClient,
+    channel: Channel,
+    package: Package,
+    package_version: PackageVersion,
 ):
     filename = package_version.filename
     platform = package_version.platform
@@ -47,7 +54,9 @@ def test_endpoint_without_metadata(
     assert response.status_code == 404
 
 
-def test_post_add_package_version(package_version, config, db, session_maker):
+def test_post_add_package_version(
+    package_version: PackageVersion, config: Config, db: Session
+):
     filename = "test-package-0.1-0.tar.bz2"
 
     with tempfile.SpooledTemporaryFile(mode="wb") as target:

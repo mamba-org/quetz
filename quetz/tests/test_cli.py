@@ -72,7 +72,7 @@ def test_init_db(db, config, config_dir, mocker):
     [("admins", "owner"), ("maintainers", "maintainer"), ("members", "member")],
 )
 def test_create_user_from_config(
-    session_maker_expire_on_commit,
+    session_maker,
     config,
     config_dir,
     user_group,
@@ -80,7 +80,7 @@ def test_create_user_from_config(
     mocker,
     user_with_identity,
 ):
-    user = get_user(session_maker_expire_on_commit, config_dir)
+    user = get_user(session_maker, config_dir)
     assert user
 
     assert user.role == expected_role
@@ -89,21 +89,21 @@ def test_create_user_from_config(
 
 @pytest.mark.parametrize("user_group", [None])
 def test_set_user_roles_no_user(
-    session_maker_expire_on_commit,
+    session_maker,
     config,
     config_dir,
     user_group,
     mocker: MockerFixture,
 ):
-    user = get_user(session_maker_expire_on_commit, config_dir)
+    user = get_user(session_maker, config_dir)
 
     assert user is None
 
 
 def test_set_user_roles_user_exists(
-    session_maker_expire_on_commit, config, config_dir, user, mocker, user_with_identity
+    session_maker, config, config_dir, user, mocker, user_with_identity
 ):
-    user = get_user(session_maker_expire_on_commit, config_dir)
+    user = get_user(session_maker, config_dir)
     assert user
 
     assert user.role == "owner"
@@ -113,7 +113,7 @@ def test_set_user_roles_user_exists(
 @pytest.mark.parametrize("default_role", [None, "member"])
 @pytest.mark.parametrize("current_role", ["owner", "member", "maintainer"])
 def test_set_user_roles_user_has_role(
-    session_maker_expire_on_commit: sqlalchemy.orm.sessionmaker,
+    session_maker: sqlalchemy.orm.sessionmaker,
     config: Config,
     config_dir: str,
     user: User,
@@ -123,14 +123,14 @@ def test_set_user_roles_user_has_role(
     default_role: str | None,
 ):
     # Arrange: Assign `current_role` to the user before we call the CLI
-    with session_maker_expire_on_commit() as db:
+    with session_maker() as db:
         user = db.query(User).filter(User.username == "bartosz").one_or_none()
         user.role = current_role
         assert user.role == current_role
         db.commit()
 
     # Act: Call the CLI
-    user = get_user(session_maker_expire_on_commit, config_dir)
+    user = get_user(session_maker, config_dir)
     assert user
 
     # Assert: role shouldn't be changed unless it's default role
@@ -143,21 +143,21 @@ def test_set_user_roles_user_has_role(
 
 @pytest.mark.parametrize("config_extra", ['[users]\nadmins = ["dummy:alice"]\n'])
 def test_init_db_create_test_users(
-    session_maker_expire_on_commit: Callable[[], sqlalchemy.orm.Session],
+    session_maker: Callable[[], sqlalchemy.orm.Session],
     config,
     mocker,
     config_dir,
 ):
     _run_migrations: MagicMock = mocker.patch("quetz.cli._run_migrations")
 
-    with mock.patch("quetz.cli.get_session", session_maker_expire_on_commit):
+    with mock.patch("quetz.cli.get_session", session_maker):
         cli.create(
             Path(config_dir) / "new-deployment",
             copy_conf="config.toml",
             dev=True,
         )
 
-    with session_maker_expire_on_commit() as db:
+    with session_maker() as db:
         user = db.query(User).filter(User.username == "alice").one_or_none()
 
     assert user.role == "owner"

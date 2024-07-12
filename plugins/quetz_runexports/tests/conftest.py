@@ -2,11 +2,12 @@ import json
 import uuid
 
 from pytest import fixture
-from quetz_runexports import db_models
+from sqlalchemy.orm import Session
 
+from plugins.quetz_runexports.quetz_runexports.db_models import PackageVersionMetadata
 from quetz import rest_models
 from quetz.dao import Dao
-from quetz.db_models import User
+from quetz.db_models import User, PackageVersion, Package, Channel
 
 pytest_plugins = "quetz.testing.fixtures"
 
@@ -17,7 +18,7 @@ def dao(db) -> Dao:
 
 
 @fixture
-def user(db):
+def user(db: Session) -> User:
     user = User(id=uuid.uuid4().bytes, username="bartosz")
     db.add(user)
     db.commit()
@@ -25,7 +26,7 @@ def user(db):
 
 
 @fixture
-def channel(dao, user, db):
+def channel(dao: Dao, user: User, db: Session):
     channel_data = rest_models.Channel(
         name="test-mirror-channel",
         private=False,
@@ -42,7 +43,7 @@ def channel(dao, user, db):
 
 
 @fixture
-def package(dao, user, channel, db):
+def package(dao: Dao, user: User, channel: Channel, db: Session) -> Package:
     new_package_data = rest_models.Package(name="test-package")
 
     package = dao.create_package(
@@ -59,7 +60,9 @@ def package(dao, user, channel, db):
 
 
 @fixture
-def package_version(user, channel, db, dao, package):
+def package_version(
+    dao: Dao, user: User, channel: Channel, db: Session, package: Package
+) -> PackageVersion:
     # create package version that will added to local repodata
     package_format = "tarbz2"
     package_info = '{"size": 5000, "subdirs":["noarch"]}'
@@ -85,8 +88,10 @@ def package_version(user, channel, db, dao, package):
 
 
 @fixture
-def package_runexports(package_version, db):
-    meta = db_models.PackageVersionMetadata(
+def package_runexports(
+    db: Session, package_version: PackageVersion
+) -> PackageVersionMetadata:
+    meta = PackageVersionMetadata(
         version_id=package_version.id,
         data=json.dumps({"weak": ["somepackage > 3.0"]}),
     )
