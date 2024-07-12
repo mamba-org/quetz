@@ -70,8 +70,8 @@ def get_session_maker(
 
 def get_session(config: Config | None) -> Session:
     """Get a database session.
-    ea
-        Important note: this function is mocked during tests!
+
+    Important note: this function is mocked during tests!
 
     """
     if config is None:

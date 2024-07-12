@@ -132,11 +132,11 @@ def db_cleanup(config):
 
     from quetz.database import get_session
 
-    db = get_session(config.sqlalchemy_database_url)
-    user = db.query(User).one_or_none()
-    if user:
-        db.delete(user)
-        db.commit()
+    with get_session(config) as db:
+        user = db.query(User).one_or_none()
+        if user:
+            db.delete(user)
+            db.commit()
 
 
 @pytest.mark.asyncio
