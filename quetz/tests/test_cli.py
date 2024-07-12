@@ -122,9 +122,11 @@ def test_set_user_roles_user_has_role(
     current_role: str,
     default_role: str | None,
 ):
-    # Arrange: The user has `current_role` before we call the CLI
+    # Arrange: Assign `current_role` to the user before we call the CLI
     with session_maker_expire_on_commit() as db:
+        user = db.query(User).filter(User.username == "bartosz").one_or_none()
         user.role = current_role
+        assert user.role == current_role
         db.commit()
 
     # Act: Call the CLI
