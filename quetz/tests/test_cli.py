@@ -72,7 +72,13 @@ def test_init_db(db, config, config_dir, mocker):
     [("admins", "owner"), ("maintainers", "maintainer"), ("members", "member")],
 )
 def test_create_user_from_config(
-    session_maker_expire_on_commit, config, config_dir, user_group, expected_role, mocker, user_with_identity
+    session_maker_expire_on_commit,
+    config,
+    config_dir,
+    user_group,
+    expected_role,
+    mocker,
+    user_with_identity,
 ):
     user = get_user(session_maker_expire_on_commit, config_dir)
     assert user
@@ -107,29 +113,40 @@ def test_set_user_roles_user_exists(
 @pytest.mark.parametrize("default_role", [None, "member"])
 @pytest.mark.parametrize("current_role", ["owner", "member", "maintainer"])
 def test_set_user_roles_user_has_role(
-    session_maker_expire_on_commit: sqlalchemy.orm.sessionmaker, config: Config, config_dir: str, user: User, mocker, user_with_identity: Identity, current_role: str, default_role: str | None
+    session_maker_expire_on_commit: sqlalchemy.orm.sessionmaker,
+    config: Config,
+    config_dir: str,
+    user: User,
+    mocker,
+    user_with_identity: Identity,
+    current_role: str,
+    default_role: str | None,
 ):
-
+    # Arrange: The user has `current_role` before we call the CLI
     with session_maker_expire_on_commit() as db:
         user.role = current_role
         db.commit()
 
+    # Act: Call the CLI
     user = get_user(session_maker_expire_on_commit, config_dir)
     assert user
 
-    # TODO: I do not understand this test. Why is default_role parametrized?
-    # role shouldn't be changed unless it's default role
+    # Assert: role shouldn't be changed unless it's default role
     if current_role != default_role:
-        assert user.role == current_role
+        assert current_role == user.role
     else:
-        assert user.role == "owner"
+        assert "owner" == user.role
     assert user.username == "bartosz"
 
 
 @pytest.mark.parametrize("config_extra", ['[users]\nadmins = ["dummy:alice"]\n'])
-def test_init_db_create_test_users(session_maker_expire_on_commit: Callable[[], sqlalchemy.orm.Session], config, mocker, config_dir):
+def test_init_db_create_test_users(
+    session_maker_expire_on_commit: Callable[[], sqlalchemy.orm.Session],
+    config,
+    mocker,
+    config_dir,
+):
     _run_migrations: MagicMock = mocker.patch("quetz.cli._run_migrations")
-
 
     with mock.patch("quetz.cli.get_session", session_maker_expire_on_commit):
         cli.create(
