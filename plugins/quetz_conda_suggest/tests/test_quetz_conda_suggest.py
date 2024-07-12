@@ -17,7 +17,9 @@ def test_conda_suggest_endpoint_without_upload(client, channel, subdir):
     assert response.json() == None  # noqa: E711
 
 
-def test_post_add_package_version(package_version, db, config):
+def test_post_add_package_version(
+    package_version, db, config, session_maker_expire_on_commit
+):
     filename = "test-package-0.1-0.tar.bz2"
 
     with tempfile.SpooledTemporaryFile(mode="wb") as target:
@@ -26,12 +28,11 @@ def test_post_add_package_version(package_version, db, config):
         target.seek(0)
         condainfo = CondaInfo(target, filename)
 
-    def get_db():
-        return db
-
     from quetz_conda_suggest import main
 
-    with mock.patch("quetz_conda_suggest.main.get_session", get_db):
+    with mock.patch(
+        "quetz_conda_suggest.main.get_session", session_maker_expire_on_commit
+    ):
         main.post_add_package_version(package_version, condainfo)
 
     meta = db.query(db_models.CondaSuggestMetadata).first()
@@ -48,7 +49,9 @@ def test_post_add_package_version(package_version, db, config):
         b"lib/libtpkg.so\n",
         b"lib/pkgconfig/libtpkg.pc\n",
     ]
-    with mock.patch("quetz_conda_suggest.main.get_session", get_db):
+    with mock.patch(
+        "quetz_conda_suggest.main.get_session", session_maker_expire_on_commit
+    ):
         main.post_add_package_version(package_version, condainfo)
 
     meta = db.query(db_models.CondaSuggestMetadata).all()
