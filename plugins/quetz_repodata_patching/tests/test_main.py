@@ -4,21 +4,24 @@ import os
 import tarfile
 import time
 import uuid
-from contextlib import contextmanager
+from io import BytesIO
 from unittest import mock
 from zipfile import ZipFile
 
 import pytest
 import zstandard
+from sqlalchemy.orm import sessionmaker, Session
 
-import quetz
-from quetz.db_models import Package, Profile, User
+from quetz.config import Config
+from quetz.dao import Dao
+from quetz.db_models import Package, Profile, User, PackageVersion
+from quetz.pkgstores import PackageStore
 from quetz.rest_models import Channel
 from quetz.tasks import indexing
 
 
 @pytest.fixture
-def user(db):
+def user(db: Session) -> User:
     user = User(id=uuid.uuid4().bytes, username="bartosz")
     profile = Profile(name="Bartosz", avatar_url="http:///avatar", user=user)
     db.add(user)
@@ -28,22 +31,22 @@ def user(db):
 
 
 @pytest.fixture
-def channel_name():
+def channel_name() -> str:
     return "my-channel"
 
 
 @pytest.fixture
-def package_name():
+def package_name() -> str:
     return "mytestpackage"
 
 
 @pytest.fixture
-def package_format():
+def package_format() -> str:
     return "tarbz2"
 
 
 @pytest.fixture
-def package_file_name(package_name, package_format):
+def package_file_name(package_name: str, package_format: str) -> str:
     if package_format == "tarbz2":
         return f"{package_name}-0.1-0.tar.bz2"
     elif package_format == "conda":
@@ -51,27 +54,27 @@ def package_file_name(package_name, package_format):
 
 
 @pytest.fixture
-def channel(dao: "quetz.dao.Dao", channel_name, user):
+def channel(dao: Dao, channel_name: str, user: User) -> Channel:
     channel_data = Channel(name=channel_name, private=False)
     channel = dao.create_channel(channel_data, user.id, "owner")
     return channel
 
 
 @pytest.fixture
-def package_subdir():
+def package_subdir() -> str:
     return "noarch"
 
 
 @pytest.fixture
 def package_version(
-    dao: "quetz.dao.Dao",
-    user,
-    channel,
-    package_name,
-    db,
-    package_file_name,
-    package_format,
-    package_subdir,
+    dao: Dao,
+    user: User,
+    channel: Channel,
+    package_name: str,
+    db: Session,
+    package_file_name: str,
+    package_format: str,
+    package_subdir: str,
 ):
     channel_data = json.dumps({"subdirs": [package_subdir]})
     package_data = Package(name=package_name)
@@ -101,13 +104,13 @@ def package_version(
 
 
 @pytest.fixture
-def repodata_name(channel):
+def repodata_name(channel: Channel) -> str:
     package_name = f"{channel.name}-repodata-patches"
     return package_name
 
 
 @pytest.fixture
-def repodata_file_name(repodata_name, archive_format):
+def repodata_file_name(repodata_name: str, archive_format: str) -> str:
     version = "0.1"
     build_str = "0"
     ext = "tar.bz2" if archive_format == "tarbz2" else "conda"
@@ -115,17 +118,17 @@ def repodata_file_name(repodata_name, archive_format):
 
 
 @pytest.fixture
-def revoke_instructions():
+def revoke_instructions() -> list[str]:
     return []
 
 
 @pytest.fixture
-def remove_instructions():
+def remove_instructions() -> list[str]:
     return []
 
 
 @pytest.fixture
-def patched_package_name(package_file_name):
+def patched_package_name(package_file_name: str) -> str:
     "name of the package in patch_instructions"
     # by default the name of the package in patch_instructions is the same
     # as the name of the dummy package
@@ -135,7 +138,11 @@ def patched_package_name(package_file_name):
 
 
 @pytest.fixture
-def patch_content(patched_package_name, revoke_instructions, remove_instructions):
+def patch_content(
+    patched_package_name: str,
+    revoke_instructions: list[str],
+    remove_instructions: list[str],
+) -> dict:
     d = {}
 
     package_file_name = patched_package_name
@@ -154,19 +161,22 @@ def patch_content(patched_package_name, revoke_instructions, remove_instructions
 
 
 @pytest.fixture
-def archive_format():
+def archive_format() -> str:
     return "tarbz2"
 
 
 @pytest.fixture()
-def patches_subdir():
+def patches_subdir() -> str:
     return "noarch"
 
 
 @pytest.fixture
-def repodata_archive(repodata_file_name, patch_content, archive_format, patches_subdir):
-    from io import BytesIO
-
+def repodata_archive(
+    repodata_file_name: str,
+    patch_content: dict,
+    archive_format: str,
+    patches_subdir: str,
+) -> BytesIO:
     patch_instructions = json.dumps(patch_content).encode("ascii")
 
     def mk_tarfile(patch_instructions, compr=None):
@@ -208,16 +218,20 @@ def repodata_archive(repodata_file_name, patch_content, archive_format, patches_
 
 @pytest.fixture
 def package_repodata_patches(
-    dao: "quetz.dao.Dao",
-    user,
-    channel,
-    db,
-    pkgstore,
-    repodata_name,
-    repodata_file_name,
-    repodata_archive,
-    archive_format,
-):
+    session_maker: sessionmaker,
+    pkgstore: PackageStore,
+    package_version: PackageVersion,
+    channel_name: str,
+    package_file_name: str,
+    dao: Dao,
+    db: Session,
+    user: User,
+    channel: Channel,
+    repodata_name: str,
+    repodata_file_name: str,
+    repodata_archive: BytesIO,
+    archive_format: str,
+) -> PackageVersion:
     package_name = repodata_name
     package_data = Package(name=package_name)
 
@@ -244,7 +258,7 @@ def package_repodata_patches(
 
 
 @pytest.fixture
-def pkgstore(config):
+def pkgstore(config: Config) -> PackageStore:
     pkgstore = config.get_package_store()
     return pkgstore
 
@@ -282,25 +296,22 @@ def pkgstore(config):
     ],
 )
 def test_post_package_indexing(
-    pkgstore,
-    dao,
-    package_version,
-    channel_name,
-    package_repodata_patches,
-    db,
-    package_file_name,
-    repodata_stem,
-    compressed_repodata,
-    revoke_instructions,
-    remove_instructions,
-    package_format,
-    patched_package_name,
+    session_maker: sessionmaker,
+    pkgstore: PackageStore,
+    package_version: PackageVersion,
+    package_repodata_patches: PackageVersion,
+    channel_name: str,
+    package_file_name: str,
+    dao: Dao,
+    db: Session,
+    repodata_stem: str,
+    compressed_repodata: bool,
+    revoke_instructions: list[str],
+    remove_instructions: list[str],
+    package_format: str,
+    patched_package_name: str,
 ):
-    @contextmanager
-    def get_db():
-        yield db
-
-    with mock.patch("quetz_repodata_patching.main.get_session", get_db):
+    with mock.patch("quetz_repodata_patching.main.get_session", session_maker):
         indexing.update_indexes(dao, pkgstore, channel_name)
 
     ext = "json.bz2" if compressed_repodata else "json"
@@ -365,20 +376,17 @@ def test_post_package_indexing(
     ],
 )
 def test_index_html(
-    pkgstore,
-    package_version,
-    package_repodata_patches,
-    channel_name,
-    package_file_name,
-    dao,
-    db,
-    remove_instructions,
+    session_maker: sessionmaker,
+    pkgstore: PackageStore,
+    package_version: PackageVersion,
+    package_repodata_patches: PackageVersion,
+    channel_name: str,
+    package_file_name: str,
+    dao: Dao,
+    db: Session,
+    remove_instructions: list[str],
 ):
-    @contextmanager
-    def get_db():
-        yield db
-
-    with mock.patch("quetz_repodata_patching.main.get_session", get_db):
+    with mock.patch("quetz_repodata_patching.main.get_session", session_maker):
         indexing.update_indexes(dao, pkgstore, channel_name)
 
     index_path = os.path.join(
@@ -405,21 +413,18 @@ def test_index_html(
 @pytest.mark.parametrize("package_subdir", ["linux-64", "noarch"])
 @pytest.mark.parametrize("patches_subdir", ["linux-64", "noarch"])
 def test_patches_for_subdir(
-    pkgstore,
-    package_version,
-    channel_name,
-    package_file_name,
-    package_repodata_patches,
-    dao,
-    db,
-    package_subdir,
-    patches_subdir,
+    pkgstore: PackageStore,
+    package_version: PackageVersion,
+    package_repodata_patches: PackageVersion,
+    channel_name: str,
+    package_file_name: str,
+    dao: Dao,
+    db: Session,
+    package_subdir: str,
+    patches_subdir: str,
+    session_maker: sessionmaker,
 ):
-    @contextmanager
-    def get_db():
-        yield db
-
-    with mock.patch("quetz_repodata_patching.main.get_session", get_db):
+    with mock.patch("quetz_repodata_patching.main.get_session", session_maker):
         indexing.update_indexes(dao, pkgstore, channel_name)
 
     index_path = os.path.join(
@@ -460,18 +465,14 @@ def test_patches_for_subdir(
 
 
 def test_no_repodata_patches_package(
-    pkgstore,
-    package_version,
-    channel_name,
-    package_file_name,
-    dao,
-    db,
+    pkgstore: PackageStore,
+    package_version: PackageVersion,
+    channel_name: str,
+    package_file_name: str,
+    dao: Dao,
+    session_maker: sessionmaker,
 ):
-    @contextmanager
-    def get_db():
-        yield db
-
-    with mock.patch("quetz_repodata_patching.main.get_session", get_db):
+    with mock.patch("quetz_repodata_patching.main.get_session", session_maker):
         indexing.update_indexes(dao, pkgstore, channel_name)
 
     index_path = os.path.join(
