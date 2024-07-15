@@ -910,16 +910,11 @@ class Dao:
             )
 
         elif upsert:
-            existing_versions.update(
-                {
-                    "filename": filename,
-                    "info": info,
-                    "uploader_id": uploader_id,
-                    "time_modified": datetime.utcnow(),
-                    "size": size,
-                },
-                synchronize_session="evaluate",
-            )
+            package_version.filename = filename
+            package_version.info = info
+            package_version.uploader_id = uploader_id
+            package_version.time_modified = datetime.utcnow()
+            package_version.size = size
         else:
             raise IntegrityError("duplicate package version", "", "")
 
