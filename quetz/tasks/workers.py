@@ -139,7 +139,7 @@ def job_wrapper(
     pkgstore = kwargs.pop("pkgstore", None)
     auth = kwargs.pop("auth", None)
     session = kwargs.pop("session", None)
-
+    kwargs.pop("dao", None)
     kwargs.pop("db", None)
     with get_session(config) as db:
         user_id: Optional[str]

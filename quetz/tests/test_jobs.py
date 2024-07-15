@@ -866,9 +866,13 @@ def sync_supervisor(db, dao, config):
 
 @pytest.fixture
 def mock_action(mocker):
-    func = mocker.Mock()
+    m = mocker.Mock()
+
+    def func(*args, **kwargs):
+        m(*args, **kwargs)
+
     mocker.patch("quetz.jobs.handlers.JOB_HANDLERS", {"test_action": func})
-    return func
+    return m
 
 
 def test_update_job_status(sync_supervisor, db, action_job):
