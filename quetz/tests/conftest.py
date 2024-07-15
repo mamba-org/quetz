@@ -45,13 +45,16 @@ def user(db, user_without_profile):
     )
     db.add(profile)
     db.commit()
+    profile_name = profile.name
+    profile_avatar_url = profile.avatar_url
+    profile_user_id = user_without_profile.id
 
     yield user_without_profile
 
     db.query(Profile).filter(
-        Profile.name == profile.name,
-        Profile.avatar_url == profile.avatar_url,
-        Profile.user_id == user_without_profile.id,
+        Profile.name == profile_name,
+        Profile.avatar_url == profile_avatar_url,
+        Profile.user_id == profile_user_id,
     ).delete()
 
     db.commit()

@@ -65,7 +65,9 @@ def get_engine(db_url, reuse_engine=True, postgres_kwargs=None, **kwargs) -> Eng
 def get_session_maker(
     bind: sqlalchemy.engine.Engine | sqlalchemy.engine.Connection,
 ) -> Callable[[], sessionmaker]:
-    return sessionmaker(autocommit=False, autoflush=True, bind=bind)
+    return sessionmaker(
+        autocommit=False, autoflush=True, bind=bind, expire_on_commit=False
+    )
 
 
 def get_session(config: Config | None) -> Session:

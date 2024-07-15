@@ -20,6 +20,7 @@ from sqlalchemy.types import DateTime
 from quetz import channel_data, errors, rest_models, versionorder
 from quetz.database_extensions import version_match
 from quetz.utils import apply_custom_query
+from .condainfo import CondaInfo
 
 from .db_models import (
     ApiKey,
@@ -33,6 +34,7 @@ from .db_models import (
     PackageVersion,
     Profile,
     User,
+    PackageFormatEnum,
 )
 from .jobs.models import Job, JobStatus, Task, TaskStatus
 from .metrics.db_models import (
@@ -809,17 +811,17 @@ class Dao:
 
     def create_version(
         self,
-        channel_name,
-        package_name,
-        package_format,
-        platform,
-        version,
-        build_number,
-        build_string,
-        filename,
-        info,
-        uploader_id,
-        size,
+        channel_name: str,
+        package_name: str,
+        package_format: PackageFormatEnum,
+        platform: str,
+        version: str,
+        build_number: int,
+        build_string: str,
+        filename: str,
+        info: CondaInfo,
+        uploader_id: bytes,
+        size: int,
         upsert: bool = False,
     ):
         # hold a lock on the package

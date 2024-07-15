@@ -140,6 +140,7 @@ def job_wrapper(
     auth = kwargs.pop("auth", None)
     session = kwargs.pop("session", None)
 
+    kwargs.pop("db", None)
     with get_session(config) as db:
         user_id: Optional[str]
         if task_id:
