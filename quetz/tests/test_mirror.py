@@ -282,7 +282,7 @@ def package_version(user, mirror_channel, db, dao):
         package_format,
         "noarch",
         "0.1",
-        "0",
+        0,
         "",
         "test-package-0.1-0.tar.bz2",
         package_info,

@@ -20,7 +20,6 @@ from sqlalchemy.types import DateTime
 from quetz import channel_data, errors, rest_models, versionorder
 from quetz.database_extensions import version_match
 from quetz.utils import apply_custom_query
-from .condainfo import CondaInfo
 
 from .db_models import (
     ApiKey,
@@ -819,11 +818,14 @@ class Dao:
         build_number: int,
         build_string: str,
         filename: str,
-        info: CondaInfo,
+        info: str,
         uploader_id: bytes,
         size: int,
         upsert: bool = False,
     ):
+        if not isinstance(build_number, int):
+            raise TypeError("build_number should be an integer")
+
         # hold a lock on the package
         package = (  # noqa
             self.db.query(Package)

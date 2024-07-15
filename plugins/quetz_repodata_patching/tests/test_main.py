@@ -92,7 +92,7 @@ def package_version(
         package_format,
         package_subdir,
         "0.1",
-        "0",
+        0,
         "0",
         package_file_name,
         package_info,

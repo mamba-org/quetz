@@ -48,7 +48,7 @@ def private_package_version(
         package_format,
         platform,
         "0.1",
-        "0",
+        0,
         "",
         str(filename),
         package_info,

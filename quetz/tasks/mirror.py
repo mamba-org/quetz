@@ -19,7 +19,7 @@ from quetz import authorization, rest_models
 from quetz.condainfo import CondaInfo, get_subdir_compat
 from quetz.config import Config
 from quetz.dao import Dao
-from quetz.db_models import PackageVersion
+from quetz.db_models import PackageVersion, PackageFormatEnum
 from quetz.errors import DBError
 from quetz.pkgstores import PackageStore
 from quetz.tasks import indexing
@@ -489,26 +489,26 @@ def create_version_from_metadata(
         dao.create_package(channel_name, package_info, user_id, "owner")
 
     if package_file_name.endswith(".conda"):
-        pkg_format = "conda"
+        pkg_format = PackageFormatEnum.conda
     elif package_file_name.endswith(".tar.bz2"):
-        pkg_format = "tarbz2"
+        pkg_format = PackageFormatEnum.tarbz2
     else:
         raise ValueError(
             f"Unknown package format for package {package_file_name}"
             f"in channel {channel_name}"
         )
     version = dao.create_version(
-        channel_name,
-        package_name,
-        pkg_format,
-        get_subdir_compat(package_data),
-        package_data["version"],
-        int(package_data["build_number"]),
-        package_data["build"],
-        package_file_name,
-        json.dumps(package_data),
-        user_id,
-        package_data["size"],
+        channel_name=channel_name,
+        package_name=package_name,
+        package_format=pkg_format,
+        platform=get_subdir_compat(package_data),
+        version=package_data["version"],
+        build_number=int(package_data["build_number"]),
+        build_string=package_data["build"],
+        filename=package_file_name,
+        info=json.dumps(package_data),
+        uploader_id=user_id,
+        size=package_data["size"],
     )
 
     return version

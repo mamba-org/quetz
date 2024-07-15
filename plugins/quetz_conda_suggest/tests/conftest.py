@@ -77,7 +77,7 @@ def package_version(user, channel, db, dao, package):
         package_format,
         "linux-64",
         "0.1",
-        "0",
+        0,
         "0",
         "test-package-0.1-0.tar.bz2",
         package_info,
