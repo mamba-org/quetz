@@ -93,14 +93,14 @@ def sql_connection(engine):
 @pytest.fixture
 def alembic_config(database_url, sql_connection):
     alembic_config = _alembic_config(database_url)
-    alembic_config.attributes["connection"] = sql_connection
+    alembic_config.attributes["engine"] = sql_connection.engine
     return alembic_config
 
 
 @pytest.fixture
 def create_tables(alembic_config, engine, use_migrations):
     if use_migrations:
-        alembic_upgrade(alembic_config, "heads", sql=False)
+        alembic_upgrade(alembic_config, "head", sql=False)
     else:
         Base.metadata.create_all(engine)
 
