@@ -137,7 +137,18 @@ def session_maker(
         trans = sql_connection.begin()
 
     sql_connection.name = "sqlite-test"
-    yield get_session_maker(sql_connection)
+
+    session_maker = get_session_maker(sql_connection)
+
+    def wrapper(*args, **kwargs):
+        """
+        Wrapper function that accepts and ignores args / kwargs
+        to allow for mocking of database.get_session, which accepts
+        a Config object in the real implementation.
+        """
+        return session_maker()
+
+    yield wrapper
 
     if trans is not None:
         trans.rollback()
