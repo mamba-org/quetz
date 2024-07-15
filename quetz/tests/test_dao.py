@@ -173,33 +173,43 @@ def test_update_channel_size(dao, channel, db, package_version):
 def test_increment_download_count(
     dao: Dao, channel: Channel, db: Session, package_version: PackageVersion
 ):
+    # Arrange: Create new package version that was never downloaded
     assert package_version.download_count == 0
     now = datetime.datetime(2020, 10, 1, 10, 1, 10)
+
+    # Act: Increment download count
     dao.incr_download_count(
         channel.name, package_version.filename, package_version.platform, timestamp=now
     )
 
+    # Assert: Download count is incremented in PackageVersionMetric table
     download_counts = db.query(PackageVersionMetric).all()
     for m in download_counts:
         assert m.count == 1
-
     assert len(download_counts) == len(IntervalType)
 
+    # Assert: Download count is incremented on the PackageVersion object itself
     db.refresh(package_version)
     assert package_version.download_count == 1
 
+    # Act: Increment download count again
     dao.incr_download_count(
         channel.name, package_version.filename, package_version.platform, timestamp=now
     )
+
+    # Assert: Download count is incremented in PackageVersionMetric table
     download_counts = db.query(PackageVersionMetric).all()
     for m in download_counts:
         assert m.count == 2
 
     assert len(download_counts) == len(IntervalType)
 
+    # Assert: Download count is incremented on the PackageVersion object itself
     db.refresh(package_version)
     assert package_version.download_count == 2
 
+    # Act: Increment download count again,
+    # but this time with a time stamp shifted by one day
     dao.incr_download_count(
         channel.name,
         package_version.filename,
@@ -207,6 +217,8 @@ def test_increment_download_count(
         timestamp=now + datetime.timedelta(days=1),
     )
 
+    # Assert
+    # This time, two new metrics are created (intervals H and D)
     download_counts = db.query(PackageVersionMetric).all()
     assert len(download_counts) == len(IntervalType) + 2
 
