@@ -66,7 +66,7 @@ def get_session_maker(
     bind: sqlalchemy.engine.Engine | sqlalchemy.engine.Connection,
 ) -> Callable[[], sessionmaker]:
     return sessionmaker(
-        autocommit=False, autoflush=True, bind=bind, expire_on_commit=False
+        autocommit=False, autoflush=True, bind=bind, expire_on_commit=True
     )
 
 
