@@ -4,6 +4,7 @@ import os
 import uuid
 from io import BytesIO
 from pathlib import Path
+from unittest import mock
 from unittest.mock import MagicMock
 from urllib.parse import urlparse
 
@@ -820,7 +821,7 @@ empty_archive = b""
         ]
     ],
 )
-def test_wrong_package_format(client, dummy_repo, owner, job_supervisor):
+def test_wrong_package_format(session_maker, client, dummy_repo, owner, job_supervisor):
     response = client.get("/api/dummylogin/bartosz")
     assert response.status_code == 200
 
@@ -837,8 +838,8 @@ def test_wrong_package_format(client, dummy_repo, owner, job_supervisor):
     )
 
     assert response.status_code == 201
-
-    job_supervisor.run_once()
+    with mock.patch("quetz.database.get_session", session_maker):
+        job_supervisor.run_once()
 
     assert dummy_repo == [
         "http://mirror3_host/channeldata.json",

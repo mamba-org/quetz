@@ -2,6 +2,7 @@ import os
 import shutil
 import tempfile
 from typing import List, Iterator
+from unittest import mock
 
 import pytest
 import sqlalchemy.orm
@@ -158,8 +159,9 @@ def session_maker(
 def db(
     session_maker: sqlalchemy.orm.sessionmaker,
 ) -> Iterator[sqlalchemy.orm.Session]:
-    with session_maker() as db:
-        yield db
+    with mock.patch("quetz.database.get_session", session_maker):
+        with session_maker() as db:
+            yield db
 
 
 @pytest.fixture
@@ -256,13 +258,6 @@ def app(config, db, mocker):
 
     from quetz.deps import get_db
     from quetz.main import app
-
-    # mocking is required for some functions that do not use fastapi
-    # dependency injection (mainly non-request functions)
-    def get_session_mock(*args, **kwargs):
-        return db
-
-    mocker.patch("quetz.database.get_session", get_session_mock)
 
     # overriding dependency works with all requests handlers that
     # depend on quetz.deps.get_db
