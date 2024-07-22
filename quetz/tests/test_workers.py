@@ -8,6 +8,7 @@ from fastapi import BackgroundTasks
 
 from quetz.authorization import Rules
 from quetz.dao import Dao
+from quetz.database import get_session_maker
 from quetz.db_models import User
 from quetz.tasks.workers import RQManager, SubprocessWorker, ThreadingWorker
 
@@ -124,19 +125,23 @@ def function_with_dao(dao: Dao):
 
 
 @pytest.fixture
-def db_cleanup(config):
+def db_cleanup(engine):
     # we can't use the db fixture for cleaning up because
     # it automatically rollsback all operations
 
     yield
 
-    from quetz.database import get_session
+    with engine.connect() as con:
+        session_maker = get_session_maker(con)
+        with session_maker() as db:
+            user = db.query(User).one_or_none()
+            if user:
+                db.delete(user)
+                db.commit()
 
-    with get_session(config) as db:
-        user = db.query(User).one_or_none()
-        if user:
-            db.delete(user)
-            db.commit()
+        with session_maker() as db:
+            user = db.query(User).one_or_none()
+            assert user is None
 
 
 @pytest.mark.asyncio

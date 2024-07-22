@@ -19,7 +19,9 @@ from quetz.db_models import Base
 
 def pytest_configure(config):
     pytest.quetz_variables = {
-        var: value for var, value in os.environ.items() if var.startswith("QUETZ_")
+        var: value
+        for var, value in os.environ.items()
+        if var.startswith("QUETZ_") and not var.startswith("QUETZ_TEST")
     }
     for var in pytest.quetz_variables:
         del os.environ[var]
@@ -158,10 +160,10 @@ def session_maker(
 @pytest.fixture
 def db(
     session_maker: sqlalchemy.orm.sessionmaker,
-) -> Iterator[sqlalchemy.orm.Session]:
+) -> sqlalchemy.orm.Session:
     with mock.patch("quetz.database.get_session", session_maker):
         with session_maker() as db:
-            yield db
+            return db
 
 
 @pytest.fixture

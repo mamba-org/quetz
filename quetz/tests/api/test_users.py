@@ -176,7 +176,6 @@ def test_delete_user_permission(
     other_user, auth_client, db, user_role, target_user, expected_status, user, api_keys
 ):
     response = auth_client.delete(f"/api/users/{target_user}")
-
     deleted_user = db.query(User).filter(User.username == target_user).one_or_none()
 
     if expected_status == 200:
@@ -196,11 +195,12 @@ def test_delete_user_permission(
         assert deleted_user.api_keys_user
 
     # check if other users were not accidently removed
-    existing_user = db.query(User).filter(User.username != target_user).one_or_none()
-    assert existing_user
-    assert existing_user.profile
-    assert existing_user.api_keys_owner
-    assert existing_user.api_keys_user
+    existing_users = db.query(User).filter(User.username != target_user).all()
+    assert existing_users
+    for existing_user in existing_users:
+        assert existing_user.profile
+        assert existing_user.api_keys_owner
+        assert existing_user.api_keys_user
 
 
 @pytest.mark.parametrize("user_role", ["owner"])
