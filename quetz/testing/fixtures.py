@@ -17,17 +17,17 @@ from quetz.database import get_engine, get_session_maker
 from quetz.db_models import Base
 
 
-# def pytest_configure(config):
-#     pytest.quetz_variables = {
-#         var: value for var, value in os.environ.items() if var.startswith("QUETZ_")
-#     }
-#     for var in pytest.quetz_variables:
-#         del os.environ[var]
+def pytest_configure(config):
+    pytest.quetz_variables = {
+        var: value for var, value in os.environ.items() if var.startswith("QUETZ_")
+    }
+    for var in pytest.quetz_variables:
+        del os.environ[var]
 
 
-# def pytest_unconfigure(config):
-#     for var, value in pytest.quetz_variables.items():
-#         os.environ[var] = value
+def pytest_unconfigure(config):
+    for var, value in pytest.quetz_variables.items():
+        os.environ[var] = value
 
 
 @pytest.fixture
