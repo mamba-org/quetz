@@ -1,2 +1,2 @@
 mamba
-conda-build >=3.20
+conda-build >=3.20,<24.7.0

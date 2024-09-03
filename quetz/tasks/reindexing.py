@@ -137,7 +137,7 @@ def reindex_packages_from_store(
     user_id = uuid_to_bytes(user_id)
     pkgstore = config.get_package_store()
     all_files = pkgstore.list_files(channel_name)
-    pkg_files = [f for f in all_files if f.endswith(".tar.bz2")]
+    pkg_files = [f for f in all_files if f.endswith((".tar.bz2", ".conda"))]
     nthreads = config.general_package_unpack_threads
 
     logger.debug(f"Found {len(pkg_db)} packages for channel {channel_name} in database")
