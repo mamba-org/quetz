@@ -294,7 +294,7 @@ class Config:
         if path:
             self.config.update(self._read_config(path))
 
-        self.config.update(self._get_environ_config())
+        self.config = recursively_merge_dictionaries(self.config, self._get_environ_config())
         self._trigger_update_config()
 
     def _trigger_update_config(self):
@@ -640,3 +640,28 @@ def get_plugin_manager(config=None) -> pluggy.PluginManager:
     else:
         pm.load_setuptools_entrypoints("quetz")
     return pm
+
+
+def recursively_merge_dictionaries(base_dict, other_dict):
+    """Recursively merge dictionaries. Overwrite duplicates with values from `other_dict`.
+
+    Parameters
+    ----------
+    base_dict : dict
+        The base dictionary to merge onto.
+    other_dict : dict
+        The dictionary containing prefered values.
+
+    Returns
+    -------
+    base_dict : dict
+        The dictionary containing the superset of `base_dict` and `other_dict` with values
+        of duplicate keys taken from `other_dict`.
+    """
+
+    for key, value in other_dict.items():
+        if key in base_dict and isinstance(base_dict[key], dict) and isinstance(value, dict):
+            base_dict[key] = recursively_merge_dictionaries(base_dict[key], value)
+        else:
+            base_dict[key] = value
+    return base_dict

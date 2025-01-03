@@ -164,10 +164,8 @@ client_secret = "bbb"
 
 
 @pytest.fixture
-def config_base(database_url, plugins, config_auth):
+def config_base(database_url, plugins):
     return f"""
-{config_auth}
-
 [sqlalchemy]
 database_url = "{database_url}"
 
@@ -177,6 +175,14 @@ https_only = false
 
 [plugins]
 enabled = {plugins}
+"""
+
+
+@pytest.fixture
+def config_base_with_auth(database_url, plugins, config_base, config_auth):
+    return f"""
+{config_auth}
+{config_base}
 """
 
 
