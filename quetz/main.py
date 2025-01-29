@@ -1466,6 +1466,11 @@ async def post_upload(
     dao: Dao = Depends(get_dao),
     auth: authorization.Rules = Depends(get_rules),
 ):
+    # here we use the owner_id as user_id. In case the authentication
+    # was done using an API Key, we want to attribute the uploaded package
+    # to the owner of that API Key and not the anonymous API Key itself.
+    user_id = auth.assert_owner()
+    
     logger.debug(
         f"Uploading file {filename} with checksum {sha256} to channel {channel_name}"
     )
@@ -1480,11 +1485,6 @@ async def post_upload(
         raise HTTPException(
             status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="Wrong SHA256 checksum"
         )
-
-    # here we use the owner_id as user_id. In case the authentication
-    # was done using an API Key, we want to attribute the uploaded package
-    # to the owner of that API Key and not the anonymous API Key itself.
-    user_id = auth.assert_owner()
 
     auth.assert_create_package(channel_name)
     condainfo = CondaInfo((body), filename)
