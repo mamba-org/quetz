@@ -2,8 +2,9 @@ name: quetz
 channels:
   - https://repo.mamba.pm/conda-forge
 dependencies:
-  - python>=3.7
+  - python>=3.7,<3.12.0a
   - pip
+  - hatchling
   - fastapi
   - typer >=0.9,<1.0
   - authlib=0.15.5
