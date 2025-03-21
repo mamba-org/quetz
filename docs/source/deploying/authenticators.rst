@@ -49,6 +49,12 @@ Jupyterhub
 .. autoclass:: quetz.authentication.jupyterhub.JupyterhubAuthenticator
 
 
+Azure Active Directory
+^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: quetz.authentication.azuread.AzureADAuthenticator
+
+
 
 Custom authenticators
 ---------------------
